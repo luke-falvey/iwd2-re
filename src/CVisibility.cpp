@@ -7,7 +7,19 @@
 #include "CPathSearch.h"
 #include "CSearchBitmap.h"
 #include "CUtil.h"
+#include "CVidInf.h"
 #include "CVidMode.h"
+
+// Maps a search map row (12 pixels) inside a 96-pixel band to a visibility
+// map row (32 pixels) inside the same band.
+//
+// 0x84EDC4
+const BYTE CVisibilityMap::SEARCH_TO_VIS_Y[8] = { 0, 0, 1, 1, 1, 2, 2, 2 };
+
+// Maps a visibility map row inside a 96-pixel band to a search map row.
+//
+// 0x84EDCC
+const BYTE CVisibilityMap::VIS_TO_SEARCH_Y[3] = { 0, 2, 5 };
 
 // 0x84EDCF
 const BYTE CVisibilityMap::EXPLORED_RANGE_0 = 4;
@@ -132,14 +144,25 @@ CVisibilityMap::~CVisibilityMap()
 // 0x551840
 BOOL CVisibilityMap::AddCharacter(const CPoint& pos, LONG charId, const BYTE* pVisibleTerrainTable)
 {
-    for (SHORT nIndex = 0; nIndex < 6; nIndex++) {
+    SHORT nIndex;
+    for (nIndex = 0; nIndex < 6; nIndex++) {
         if (m_aCharacterIds[nIndex] == CGameObjectArray::INVALID_INDEX) {
             m_aCharacterIds[nIndex] = charId;
-            PrivateAddCharacter(charId, 1 << nIndex, pVisibleTerrainTable);
-            return TRUE;
+            break;
+        }
+
+        if (m_aCharacterIds[nIndex] == charId) {
+            break;
         }
     }
-    return FALSE;
+
+    if (nIndex == 6) {
+        return FALSE;
+    }
+
+    PrivateAddCharacter(pos, 1 << nIndex, pVisibleTerrainTable);
+
+    return TRUE;
 }
 
 // 0x5518A0
@@ -197,16 +220,326 @@ void CVisibilityMap::ClimbWall(const CPoint& ptStart, const CPoint& ptEnd, BYTE 
     }
 }
 
+// NOTE: The fog-of-war tile rect types passed to `GetFogOWarTileRect` are
+// read from byte constants at 0x85DE43 (0) through 0x85DE4A (7). Types 0-3
+// address the 32x32 quarters of `CVIDINF_SURFACE_6`, types 4-7 the quarters
+// of `CVIDINF_SURFACE_7`.
+
 // 0x551A90
 void CVisibilityMap::BltDitherPattern(LPDIRECTDRAWSURFACE pSurface, const TILE_CODE& tileCode)
 {
-    // TODO: Incomplete.
+    CVidInf* pVidInf = static_cast<CVidInf*>(g_pBaldurChitin->GetCurrentVideoMode());
+    BYTE aTileCodes[4];
+    BYTE aPositions[4][2];
+    CRect rSrc;
+    CRect rDest;
+    DDBLTFX fx;
+    HRESULT hr;
+    BYTE nFogWarCode;
+    BYTE nExploredCode;
+    INT x;
+    INT y;
+
+    aPositions[0][0] = 0;
+    aPositions[0][1] = 0;
+    aPositions[1][0] = 32;
+    aPositions[1][1] = 0;
+    aPositions[2][0] = 0;
+    aPositions[2][1] = 32;
+    aPositions[3][0] = 32;
+    aPositions[3][1] = 32;
+
+    aTileCodes[0] = tileCode.tileNW;
+    aTileCodes[1] = tileCode.tileNE;
+    aTileCodes[2] = tileCode.tileSW;
+    aTileCodes[3] = tileCode.tileSE;
+
+    fx.dwSize = sizeof(fx);
+
+    for (int index = 0; index < 4; index++) {
+        nExploredCode = (aTileCodes[index] & FOGOWAR_EXPLORED_MASK) >> FOGOWAR_EXPLORED_SHIFT;
+        nFogWarCode = (aTileCodes[index] & FOGOWAR_MASK) >> FOGOWAR_SHIFT;
+        x = aPositions[index][0];
+        y = aPositions[index][1];
+
+        switch (nFogWarCode) {
+        case 3:
+            if (nExploredCode != 3) {
+                pVidInf->GetFogOWarTileRect(5, rSrc);
+                do {
+                    hr = g_pBaldurChitin->cVideo.cVidBlitter.BltFast(pSurface,
+                        x,
+                        y,
+                        pVidInf->pSurfaces[CVIDINF_SURFACE_7],
+                        &rSrc,
+                        DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
+                } while (!pVidInf->CheckResults(hr));
+            }
+            break;
+        case 6:
+            if (nExploredCode != 6) {
+                pVidInf->GetFogOWarTileRect(4, rSrc);
+                fx.dwDDFX = DDBLTFX_MIRRORLEFTRIGHT | DDBLTFX_MIRRORUPDOWN;
+                do {
+                    rDest.SetRect(x, y, x + 32, y + 32);
+                    hr = g_pBaldurChitin->cVideo.cVidBlitter.Blt(pSurface,
+                        &rDest,
+                        pVidInf->pSurfaces[CVIDINF_SURFACE_7],
+                        &rSrc,
+                        DDBLT_WAIT | DDBLT_KEYSRC | DDBLT_DDFX,
+                        &fx);
+                } while (!pVidInf->CheckResults(hr));
+            }
+            break;
+        case 7:
+            if (nExploredCode != 7) {
+                pVidInf->GetFogOWarTileRect(7, rSrc);
+                fx.dwDDFX = DDBLTFX_MIRRORLEFTRIGHT | DDBLTFX_MIRRORUPDOWN;
+                do {
+                    rDest.SetRect(x, y, x + 32, y + 32);
+                    hr = g_pBaldurChitin->cVideo.cVidBlitter.Blt(pSurface,
+                        &rDest,
+                        pVidInf->pSurfaces[CVIDINF_SURFACE_7],
+                        &rSrc,
+                        DDBLT_WAIT | DDBLT_KEYSRC | DDBLT_DDFX,
+                        &fx);
+                } while (!pVidInf->CheckResults(hr));
+            }
+            break;
+        case 9:
+            if (nExploredCode != 9) {
+                pVidInf->GetFogOWarTileRect(4, rSrc);
+                do {
+                    hr = g_pBaldurChitin->cVideo.cVidBlitter.BltFast(pSurface,
+                        x,
+                        y,
+                        pVidInf->pSurfaces[CVIDINF_SURFACE_7],
+                        &rSrc,
+                        DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
+                } while (!pVidInf->CheckResults(hr));
+            }
+            break;
+        case 11:
+            if (nExploredCode != 11) {
+                pVidInf->GetFogOWarTileRect(6, rSrc);
+                do {
+                    hr = g_pBaldurChitin->cVideo.cVidBlitter.BltFast(pSurface,
+                        x,
+                        y,
+                        pVidInf->pSurfaces[CVIDINF_SURFACE_7],
+                        &rSrc,
+                        DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
+                } while (!pVidInf->CheckResults(hr));
+            }
+            break;
+        case 12:
+            if (nExploredCode != 12) {
+                pVidInf->GetFogOWarTileRect(5, rSrc);
+                fx.dwDDFX = DDBLTFX_MIRRORLEFTRIGHT | DDBLTFX_MIRRORUPDOWN;
+                do {
+                    rDest.SetRect(x, y, x + 32, y + 32);
+                    hr = g_pBaldurChitin->cVideo.cVidBlitter.Blt(pSurface,
+                        &rDest,
+                        pVidInf->pSurfaces[CVIDINF_SURFACE_7],
+                        &rSrc,
+                        DDBLT_WAIT | DDBLT_KEYSRC | DDBLT_DDFX,
+                        &fx);
+                } while (!pVidInf->CheckResults(hr));
+            }
+            break;
+        case 13:
+            if (nExploredCode != 13) {
+                pVidInf->GetFogOWarTileRect(7, rSrc);
+                do {
+                    hr = g_pBaldurChitin->cVideo.cVidBlitter.BltFast(pSurface,
+                        x,
+                        y,
+                        pVidInf->pSurfaces[CVIDINF_SURFACE_7],
+                        &rSrc,
+                        DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
+                } while (!pVidInf->CheckResults(hr));
+            }
+            break;
+        case 14:
+            if (nExploredCode != 14) {
+                pVidInf->GetFogOWarTileRect(6, rSrc);
+                fx.dwDDFX = DDBLTFX_MIRRORLEFTRIGHT | DDBLTFX_MIRRORUPDOWN;
+                do {
+                    rDest.SetRect(x, y, x + 32, y + 32);
+                    hr = g_pBaldurChitin->cVideo.cVidBlitter.Blt(pSurface,
+                        &rDest,
+                        pVidInf->pSurfaces[CVIDINF_SURFACE_7],
+                        &rSrc,
+                        DDBLT_WAIT | DDBLT_KEYSRC | DDBLT_DDFX,
+                        &fx);
+                } while (!pVidInf->CheckResults(hr));
+            }
+            break;
+        case 15:
+            if (nExploredCode != 15) {
+                pVidInf->GetFogOWarTileRect(3, rSrc);
+                do {
+                    hr = g_pBaldurChitin->cVideo.cVidBlitter.BltFast(pSurface,
+                        x,
+                        y,
+                        pVidInf->pSurfaces[CVIDINF_SURFACE_6],
+                        &rSrc,
+                        DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
+                } while (!pVidInf->CheckResults(hr));
+            }
+            break;
+        }
+    }
 }
 
 // 0x551FF0
 void CVisibilityMap::BltFogOWar(LPDIRECTDRAWSURFACE pSurface, const TILE_CODE& tileCode)
 {
-    // TODO: Incomplete.
+    CVidInf* pVidInf = static_cast<CVidInf*>(g_pBaldurChitin->GetCurrentVideoMode());
+    BYTE aTileCodes[4];
+    BYTE aPositions[4][2];
+    CRect rSrc;
+    CRect rDest;
+    DDBLTFX fx;
+    HRESULT hr;
+    INT x;
+    INT y;
+
+    aPositions[0][0] = 0;
+    aPositions[0][1] = 0;
+    aPositions[1][0] = 32;
+    aPositions[1][1] = 0;
+    aPositions[2][0] = 0;
+    aPositions[2][1] = 32;
+    aPositions[3][0] = 32;
+    aPositions[3][1] = 32;
+
+    aTileCodes[0] = tileCode.tileNW;
+    aTileCodes[1] = tileCode.tileNE;
+    aTileCodes[2] = tileCode.tileSW;
+    aTileCodes[3] = tileCode.tileSE;
+
+    BltDitherPattern(pSurface, tileCode);
+
+    fx.dwSize = sizeof(fx);
+
+    for (int index = 0; index < 4; index++) {
+        x = aPositions[index][0];
+        y = aPositions[index][1];
+
+        switch ((aTileCodes[index] & FOGOWAR_EXPLORED_MASK) >> FOGOWAR_EXPLORED_SHIFT) {
+        case 3:
+            pVidInf->GetFogOWarTileRect(1, rSrc);
+            do {
+                hr = g_pBaldurChitin->cVideo.cVidBlitter.BltFast(pSurface,
+                    x,
+                    y,
+                    pVidInf->pSurfaces[CVIDINF_SURFACE_6],
+                    &rSrc,
+                    DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
+            } while (!pVidInf->CheckResults(hr));
+            break;
+        case 6:
+            pVidInf->GetFogOWarTileRect(0, rSrc);
+            fx.dwDDFX = DDBLTFX_MIRRORLEFTRIGHT | DDBLTFX_MIRRORUPDOWN;
+            do {
+                rDest.SetRect(x, y, x + 32, y + 32);
+                hr = g_pBaldurChitin->cVideo.cVidBlitter.Blt(pSurface,
+                    &rDest,
+                    pVidInf->pSurfaces[CVIDINF_SURFACE_6],
+                    &rSrc,
+                    DDBLT_WAIT | DDBLT_KEYSRC | DDBLT_DDFX,
+                    &fx);
+            } while (!pVidInf->CheckResults(hr));
+            break;
+        case 7:
+            pVidInf->GetFogOWarTileRect(2, rSrc);
+            fx.dwDDFX = DDBLTFX_MIRRORUPDOWN;
+            do {
+                rDest.SetRect(x, y, x + 32, y + 32);
+                hr = g_pBaldurChitin->cVideo.cVidBlitter.Blt(pSurface,
+                    &rDest,
+                    pVidInf->pSurfaces[CVIDINF_SURFACE_6],
+                    &rSrc,
+                    DDBLT_WAIT | DDBLT_KEYSRC | DDBLT_DDFX,
+                    &fx);
+            } while (!pVidInf->CheckResults(hr));
+            break;
+        case 9:
+            pVidInf->GetFogOWarTileRect(0, rSrc);
+            do {
+                hr = g_pBaldurChitin->cVideo.cVidBlitter.BltFast(pSurface,
+                    x,
+                    y,
+                    pVidInf->pSurfaces[CVIDINF_SURFACE_6],
+                    &rSrc,
+                    DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
+            } while (!pVidInf->CheckResults(hr));
+            break;
+        case 11:
+            pVidInf->GetFogOWarTileRect(2, rSrc);
+            do {
+                hr = g_pBaldurChitin->cVideo.cVidBlitter.BltFast(pSurface,
+                    x,
+                    y,
+                    pVidInf->pSurfaces[CVIDINF_SURFACE_6],
+                    &rSrc,
+                    DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
+            } while (!pVidInf->CheckResults(hr));
+            break;
+        case 12:
+            pVidInf->GetFogOWarTileRect(1, rSrc);
+            fx.dwDDFX = DDBLTFX_MIRRORLEFTRIGHT | DDBLTFX_MIRRORUPDOWN;
+            do {
+                rDest.SetRect(x, y, x + 32, y + 32);
+                hr = g_pBaldurChitin->cVideo.cVidBlitter.Blt(pSurface,
+                    &rDest,
+                    pVidInf->pSurfaces[CVIDINF_SURFACE_6],
+                    &rSrc,
+                    DDBLT_WAIT | DDBLT_KEYSRC | DDBLT_DDFX,
+                    &fx);
+            } while (!pVidInf->CheckResults(hr));
+            break;
+        case 13:
+            pVidInf->GetFogOWarTileRect(2, rSrc);
+            fx.dwDDFX = DDBLTFX_MIRRORLEFTRIGHT;
+            do {
+                rDest.SetRect(x, y, x + 32, y + 32);
+                hr = g_pBaldurChitin->cVideo.cVidBlitter.Blt(pSurface,
+                    &rDest,
+                    pVidInf->pSurfaces[CVIDINF_SURFACE_6],
+                    &rSrc,
+                    DDBLT_WAIT | DDBLT_KEYSRC | DDBLT_DDFX,
+                    &fx);
+            } while (!pVidInf->CheckResults(hr));
+            break;
+        case 14:
+            pVidInf->GetFogOWarTileRect(2, rSrc);
+            fx.dwDDFX = DDBLTFX_MIRRORLEFTRIGHT | DDBLTFX_MIRRORUPDOWN;
+            do {
+                rDest.SetRect(x, y, x + 32, y + 32);
+                hr = g_pBaldurChitin->cVideo.cVidBlitter.Blt(pSurface,
+                    &rDest,
+                    pVidInf->pSurfaces[CVIDINF_SURFACE_6],
+                    &rSrc,
+                    DDBLT_WAIT | DDBLT_KEYSRC | DDBLT_DDFX,
+                    &fx);
+            } while (!pVidInf->CheckResults(hr));
+            break;
+        case 15:
+            fx.dwFillColor = pVidInf->ConvertToSurfaceRGB(pVidInf->ApplyBrightnessContrast(RGB(0, 0, 0)));
+            do {
+                rDest.SetRect(x, y, x + 32, y + 32);
+                hr = g_pBaldurChitin->cVideo.cVidBlitter.Blt(pSurface,
+                    &rDest,
+                    NULL,
+                    NULL,
+                    DDBLT_WAIT | DDBLT_COLORFILL,
+                    &fx);
+            } while (!pVidInf->CheckResults(hr));
+            break;
+        }
+    }
 }
 
 // 0x552590
@@ -245,7 +578,7 @@ BYTE CVisibilityMap::GetSubTileCode(LONG nTile)
         code |= 0x8;
     }
 
-    code <<= 8;
+    code <<= FOGOWAR_SHIFT;
 
     if (!IsTileExplored(nTile)) {
         code |= 0x1;
@@ -273,7 +606,8 @@ void CVisibilityMap::GetTileCode(SHORT n64x64Tile, TILE_CODE& tileCode)
     LONG nBossTile = GetBossTile(n64x64Tile);
     LONG nSecondRowTile = m_nWidth + nBossTile;
 
-    BOOLEAN bCheckRight = (nBossTile + 1) % m_nWidth != 0;
+    // NOTE: Only the low byte of the remainder is kept.
+    BOOLEAN bCheckRight = static_cast<BOOLEAN>((nBossTile + 1) % m_nWidth);
     BOOLEAN bCheckDown = nSecondRowTile < m_nWidth * m_nHeight;
 
     CSingleLock mapLock(&m_critSect, FALSE);
@@ -391,7 +725,176 @@ void CVisibilityMap::Unmarshal(BYTE* pData, DWORD nData)
 // 0x552A50
 void CVisibilityMap::MarkTileLine(const CPoint& ptView, const CPoint& ptSearchMapView, LONG nDestX, LONG nDestY, const CPoint& ptOffset, BYTE charId, const BYTE* pVisibleTerrainTable, BOOLEAN bLookingUp)
 {
-    // TODO: Incomplete.
+    SHORT nXStep = 1;
+    SHORT nYStep = 1;
+    INT nFromX = ptView.x;
+    INT nFromY = ptView.y;
+    LONG nSearchX = ptSearchMapView.x;
+    LONG nSearchY = ptSearchMapView.y;
+    INT nToX = nDestX;
+    INT nToY = nDestY;
+    CRect rClip(0, 0, m_nWidth - 1, m_nHeight - 1);
+    SHORT nHighest = 0;
+    BOOLEAN bBlocked = FALSE;
+    LONG nLastX = -1;
+    LONG nLastY = -1;
+    SHORT nTableIndex;
+    SHORT nHeight;
+    CPoint ptTile;
+    LONG nSearchDestX;
+    LONG nSearchDestY;
+    LONG nDeltaX;
+    LONG nDeltaY;
+    LONG nError;
+    LONG nErrorInc;
+    LONG nErrorDiagInc;
+    BOOL bXMajor;
+
+    CVidMode::ClipLine(nFromX, nFromY, nToX, nToY, rClip);
+
+    nSearchDestX = 2 * nToX;
+    nSearchDestY = VIS_TO_SEARCH_Y[nToY % 3] + 8 * (nToY / 3);
+
+    nDeltaX = nSearchDestX - nSearchX;
+    nDeltaY = nSearchDestY - nSearchY;
+
+    if (nDeltaX < 0) {
+        nXStep = -1;
+        nDeltaX = -nDeltaX;
+    }
+
+    if (nDeltaY < 0) {
+        nYStep = -1;
+        nDeltaY = -nDeltaY;
+    }
+
+    // NOTE: The original has two copies of the loop below, one for each major
+    // axis. They only differ in how the line is stepped.
+    bXMajor = nDeltaX > nDeltaY;
+    if (bXMajor) {
+        nErrorInc = 2 * nDeltaY;
+        nError = nErrorInc - nDeltaX;
+        nErrorDiagInc = 2 * (nDeltaY - nDeltaX);
+    } else {
+        nErrorInc = 2 * nDeltaX;
+        nError = nErrorInc - nDeltaY;
+        nErrorDiagInc = 2 * (nDeltaX - nDeltaY);
+    }
+
+    while (nSearchX != nSearchDestX || nSearchY != nSearchDestY) {
+        if (nToX == m_nWidth - 1 && !bBlocked) {
+            ptTile.x = nToX;
+            ptTile.y = SEARCH_TO_VIS_Y[nSearchY & 7] + 3 * (nSearchY >> 3);
+            if (nLastX != ptTile.x || nLastY != ptTile.y) {
+                // NOTE: Uninline.
+                SetTileVisible(m_nWidth * ptTile.y + ptTile.x, charId);
+            }
+        } else if (nToY == m_nHeight - 1 && !bBlocked) {
+            ptTile.x = nSearchX >> 1;
+            ptTile.y = nToY;
+            if (nLastX != ptTile.x || nLastY != ptTile.y) {
+                // NOTE: Uninline.
+                SetTileVisible(m_nWidth * ptTile.y + ptTile.x, charId);
+            }
+        } else {
+            if (m_pSearchMap->GetLOSCost(CPoint(nSearchX, nSearchY), pVisibleTerrainTable, nTableIndex, m_bOutDoor) == CPathSearch::COST_IMPASSABLE) {
+                bBlocked = TRUE;
+
+                nHeight = m_pSearchMap->GetStructureHeight(nTableIndex);
+                if (nHeight < nHighest) {
+                    return;
+                }
+
+                nHighest = nHeight;
+
+                if (bLookingUp) {
+                    ptTile.x = nSearchX >> 1;
+                    ptTile.y = SEARCH_TO_VIS_Y[nSearchY & 7] + 3 * (nSearchY >> 3);
+                    if (nLastX != ptTile.x || nLastY != ptTile.y) {
+                        ClimbWall(ptTile, CPoint(nToX, nToY), charId, pVisibleTerrainTable, nHeight);
+                        nLastX = ptTile.x;
+                        nLastY = ptTile.y;
+                    }
+                }
+            } else {
+                if (bBlocked) {
+                    return;
+                }
+            }
+        }
+
+        ptTile.x = nSearchX >> 1;
+        ptTile.y = SEARCH_TO_VIS_Y[nSearchY & 7] + 3 * (nSearchY >> 3);
+        if (nLastX != ptTile.x || nLastY != ptTile.y) {
+            // NOTE: Uninline.
+            SetTileVisible(m_nWidth * ptTile.y + ptTile.x, charId);
+            nLastX = ptTile.x;
+            nLastY = ptTile.y;
+        }
+
+        if (nError <= 0) {
+            nError += nErrorInc;
+            if (bXMajor) {
+                nSearchX += nXStep;
+            } else {
+                nSearchY += nYStep;
+            }
+        } else {
+            nError += nErrorDiagInc;
+            nSearchY += nYStep;
+            nSearchX += nXStep;
+        }
+    }
+
+    if (nToX == m_nWidth - 1) {
+        ptTile.x = nToX;
+        ptTile.y = SEARCH_TO_VIS_Y[nSearchY & 7] + 3 * (nSearchY >> 3);
+        if (nLastX != ptTile.x || nLastY != ptTile.y) {
+            // NOTE: Uninline.
+            SetTileVisible(m_nWidth * ptTile.y + ptTile.x, charId);
+        }
+    } else if (nToY == m_nHeight - 1) {
+        ptTile.x = nSearchX >> 1;
+        ptTile.y = nToY;
+        if (nLastX != ptTile.x || nLastY != ptTile.y) {
+            // NOTE: Uninline.
+            SetTileVisible(m_nWidth * ptTile.y + ptTile.x, charId);
+        }
+    } else {
+        if (m_pSearchMap->GetLOSCost(CPoint(nSearchX, nSearchY), pVisibleTerrainTable, nTableIndex, m_bOutDoor) == CPathSearch::COST_IMPASSABLE) {
+            nHeight = m_pSearchMap->GetStructureHeight(nTableIndex);
+            if (nHeight < nHighest) {
+                return;
+            }
+
+            ptTile.x = nSearchX >> 1;
+            ptTile.y = SEARCH_TO_VIS_Y[nSearchY & 7] + 3 * (nSearchY >> 3);
+            if (nLastX == ptTile.x && nLastY == ptTile.y) {
+                return;
+            }
+
+            if (bLookingUp) {
+                ClimbWall(ptTile, CPoint(nToX, nToY), charId, pVisibleTerrainTable, nHeight);
+                return;
+            }
+
+            // NOTE: Uninline.
+            SetTileVisible(m_nWidth * ptTile.y + ptTile.x, charId);
+        } else {
+            if (bBlocked) {
+                return;
+            }
+
+            ptTile.x = nSearchX >> 1;
+            ptTile.y = SEARCH_TO_VIS_Y[nSearchY & 7] + 3 * (nSearchY >> 3);
+            if (nLastX == ptTile.x && nLastY == ptTile.y) {
+                return;
+            }
+
+            // NOTE: Uninline.
+            SetTileVisible(m_nWidth * ptTile.y + ptTile.x, charId);
+        }
+    }
 }
 
 // 0x553290
@@ -412,8 +915,8 @@ void CVisibilityMap::PrivateAddCharacter(const CPoint& ptPos, BYTE visId, const 
     ptSearchMapView.x = ptPos.x / CPathSearch::GRID_SQUARE_SIZEX;
     ptSearchMapView.y = ptPos.y / CPathSearch::GRID_SQUARE_SIZEY;
 
-    sub_553800(ptView, ptOffset, ptSearchMapView, visId, pVisibleTerrainTable);
-    sub_553990(ptView, ptOffset, ptSearchMapView, visId, pVisibleTerrainTable);
+    MarkEllipseCaps(ptView, ptOffset, ptSearchMapView, visId, pVisibleTerrainTable);
+    MarkEllipseSides(ptView, ptOffset, ptSearchMapView, visId, pVisibleTerrainTable);
 
     g_pBaldurChitin->cSoundMixer.GetListenPosition(ptEar, earZ);
     if (ptEar.x == -1 && ptEar.y == -1) {
@@ -435,9 +938,9 @@ void CVisibilityMap::RemoveCharacter(const CPoint& pos, LONG charId, const BYTE*
             m_aCharacterIds[nIndex] = CGameObjectArray::INVALID_INDEX;
 
             BYTE visId = 1 << nIndex;
-            if (visId != -1) {
-                sub_553440(pt, visId);
-                sub_5535D0(pt, visId);
+            if (visId != static_cast<BYTE>(-1)) {
+                ClearEllipseCaps(pt, visId);
+                ClearEllipseSides(pt, visId);
             }
 
             break;
@@ -445,16 +948,104 @@ void CVisibilityMap::RemoveCharacter(const CPoint& pos, LONG charId, const BYTE*
     }
 }
 
+// Clears `charId` from the rows covered by the top and bottom caps of the
+// visibility ellipse (see `MarkEllipseCaps`).
+//
 // 0x553440
-void CVisibilityMap::sub_553440(const CPoint& pt, BYTE charId)
+void CVisibilityMap::ClearEllipseCaps(const CPoint& pt, BYTE charId)
 {
-    // TODO: Incomplete.
+    LONG y = pt.y - field_10;
+    LONG nLeft = pt.x;
+    LONG nRight = pt.x + 1;
+    BYTE* pArc = field_12;
+    SHORT nCount = field_4;
+    SHORT nYStep = 1;
+    BYTE nArcStep;
+    LONG nStart;
+    LONG nEnd;
+    LONG nIndex;
+
+    for (INT nPass = 2; nPass != 0; nPass--) {
+        while (nCount-- > 0) {
+            if (*pArc++ == 0) {
+                while (nCount-- != 0) {
+                    nArcStep = *pArc;
+                    nLeft--;
+                    nRight++;
+                    pArc++;
+                    if (nArcStep != 0) {
+                        break;
+                    }
+                }
+            }
+
+            if (y >= 0 && y < m_nHeight) {
+                nStart = nLeft >= 0 ? nLeft : 0;
+                nIndex = m_nWidth * y + nStart;
+                nEnd = nRight < m_nWidth - 1 ? nRight : m_nWidth - 1;
+                for (LONG x = nStart; x <= nEnd; x++) {
+                    // NOTE: Uninline.
+                    DecrementVisibility(nIndex++, charId);
+                }
+            }
+
+            y += nYStep;
+            nLeft--;
+            nRight++;
+        }
+
+        y = pt.y + field_10;
+        nLeft = pt.x;
+        pArc = field_12;
+        nRight = pt.x + 1;
+        nCount = field_4;
+        nYStep = -1;
+    }
 }
 
+// Clears `charId` from the rows covered by the middle of the visibility
+// ellipse (see `MarkEllipseSides`).
+//
 // 0x5535D0
-void CVisibilityMap::sub_5535D0(const CPoint& pt, BYTE charId)
+void CVisibilityMap::ClearEllipseSides(const CPoint& pt, BYTE charId)
 {
-    // TODO: Incomplete.
+    LONG y = pt.y;
+    LONG nLeft = pt.x - field_E + 1;
+    LONG nRight = pt.x + field_E;
+    BYTE* pArc = field_16;
+    SHORT nCount = field_1A;
+    SHORT nYStep = -1;
+    LONG nStart;
+    LONG nEnd;
+    LONG nIndex;
+
+    for (INT nPass = 2; nPass != 0; nPass--) {
+        while (nCount-- >= 0) {
+            if (y >= 0 && y < m_nHeight) {
+                nStart = nLeft >= 0 ? nLeft : 0;
+                nIndex = m_nWidth * y + nStart;
+                nEnd = nRight < m_nWidth - 1 ? nRight : m_nWidth - 1;
+                for (LONG x = nStart; x <= nEnd; x++) {
+                    // NOTE: Uninline.
+                    DecrementVisibility(nIndex++, charId);
+                }
+            }
+
+            if (*pArc++ != 0) {
+                nLeft++;
+                nRight--;
+            }
+
+            y += nYStep;
+        }
+
+        y = pt.y + 1;
+        nYStep = 1;
+        nLeft = pt.x + field_16[0] - field_E + 1;
+        nRight = pt.x - field_16[0] + field_E;
+        nCount = field_1A - 1;
+        pArc = field_16 + 1;
+    }
 }
 
 // 0x553740
@@ -475,16 +1066,90 @@ void CVisibilityMap::SetAreaUnexplored()
     }
 }
 
+// Casts sight lines to the top and bottom arcs of the visibility ellipse
+// (`field_E` x `field_10` tiles), walking outwards from the centre column
+// along the `field_12` arc steps.
+//
 // 0x553800
-void CVisibilityMap::sub_553800(const CPoint& ptView, const CPoint& ptOffset, const CPoint& ptSearchMapView, BYTE charId, const BYTE* pVisibleTerrainTable)
+void CVisibilityMap::MarkEllipseCaps(const CPoint& ptView, const CPoint& ptOffset, const CPoint& ptSearchMapView, BYTE charId, const BYTE* pVisibleTerrainTable)
 {
-    // TODO: Incomplete.
+    LONG y = ptView.y - field_10;
+    LONG nLeft = ptView.x;
+    LONG nRight = ptView.x + 1;
+    BYTE* pArc = field_12;
+    BOOLEAN bLookingUp = TRUE;
+    SHORT nYStep = 1;
+    LONG nInnerLeft;
+    LONG nInnerRight;
+    SHORT nCount;
+
+    for (INT nPass = 2; nPass != 0; nPass--) {
+        nCount = field_4;
+        nInnerRight = nRight - 1;
+        nInnerLeft = nLeft + 1;
+        while (nCount-- > 0) {
+            MarkTileLine(ptView, ptSearchMapView, nLeft, y, ptOffset, charId, pVisibleTerrainTable, bLookingUp);
+            MarkTileLine(ptView, ptSearchMapView, nRight, y, ptOffset, charId, pVisibleTerrainTable, bLookingUp);
+
+            nLeft--;
+            nInnerLeft--;
+            nRight++;
+            nInnerRight++;
+
+            if (*pArc++ != 0) {
+                y += nYStep;
+                MarkTileLine(ptView, ptSearchMapView, nInnerLeft, y, ptOffset, charId, pVisibleTerrainTable, bLookingUp);
+                MarkTileLine(ptView, ptSearchMapView, nInnerRight, y, ptOffset, charId, pVisibleTerrainTable, bLookingUp);
+            }
+        }
+
+        y = ptView.y + field_10;
+        nLeft = ptView.x;
+        nRight = ptView.x + 1;
+        pArc = field_12;
+        bLookingUp = FALSE;
+        nYStep = -1;
+    }
 }
 
+// Casts sight lines to the left and right arcs of the visibility ellipse,
+// walking up and then down from the centre row along the `field_16` arc
+// steps.
+//
 // 0x553990
-void CVisibilityMap::sub_553990(const CPoint& ptView, const CPoint& ptOffset, const CPoint& ptSearchMapView, BYTE charId, const BYTE* pVisibleTerrainTable)
+void CVisibilityMap::MarkEllipseSides(const CPoint& ptView, const CPoint& ptOffset, const CPoint& ptSearchMapView, BYTE charId, const BYTE* pVisibleTerrainTable)
 {
-    // TODO: Incomplete.
+    LONG nLeft = ptView.x - field_E + 1;
+    LONG nRight = ptView.x + field_E;
+    LONG y = ptView.y;
+    BYTE* pArc = field_16;
+    SHORT nCount = field_1A;
+    BOOLEAN bLookingUp = TRUE;
+    SHORT nYStep = -1;
+
+    for (INT nPass = 2; nPass != 0; nPass--) {
+        while (nCount-- >= 0) {
+            MarkTileLine(ptView, ptSearchMapView, nLeft, y, ptOffset, charId, pVisibleTerrainTable, bLookingUp);
+            MarkTileLine(ptView, ptSearchMapView, nRight, y, ptOffset, charId, pVisibleTerrainTable, bLookingUp);
+
+            if (pArc != NULL && *pArc++ != 0) {
+                nLeft++;
+                nRight--;
+                MarkTileLine(ptView, ptSearchMapView, nLeft, y, ptOffset, charId, pVisibleTerrainTable, bLookingUp);
+                MarkTileLine(ptView, ptSearchMapView, nRight, y, ptOffset, charId, pVisibleTerrainTable, bLookingUp);
+            }
+
+            y += nYStep;
+        }
+
+        nLeft = ptView.x + field_16[0] - field_E + 1;
+        nRight = ptView.x - field_16[0] + field_E;
+        y = ptView.y + 1;
+        bLookingUp = FALSE;
+        pArc = field_16 + 1;
+        nYStep = 1;
+        nCount = field_1A - 1;
+    }
 }
 
 // 0x553B10
@@ -504,16 +1169,16 @@ void CVisibilityMap::Uninit()
 void CVisibilityMap::UpDate(const CPoint& ptOldPos, const CPoint& ptNewPos, LONG charId, const BYTE* pVisibleTerrainTable)
 {
     CPoint pt;
-    pt.x = ptNewPos.x / 32;
-    pt.y = ptNewPos.y / 32;
+    pt.x = ptOldPos.x / 32;
+    pt.y = ptOldPos.y / 32;
 
     // NOTE: Uninline.
     BYTE visId = GetCharacterPos(charId);
 
-    if (visId != -1) {
-        sub_553440(pt, visId);
-        sub_5535D0(pt, visId);
-        PrivateAddCharacter(charId, visId, pVisibleTerrainTable);
+    if (visId != static_cast<BYTE>(-1)) {
+        ClearEllipseCaps(pt, visId);
+        ClearEllipseSides(pt, visId);
+        PrivateAddCharacter(ptNewPos, visId, pVisibleTerrainTable);
     }
 }
 
@@ -779,4 +1444,14 @@ void CVisibilityMap::SetTileVisible(LONG nIndex, BYTE charId)
     UTIL_ASSERT_MSG((nIndex >= 0 && nIndex < m_nMapSize), "Index into vis map out of range in SetTileVisible");
 
     m_pMap[nIndex] |= charId | EXPLORED_FLAG;
+}
+
+// NOTE: Inlined.
+void CVisibilityMap::DecrementVisibility(LONG nIndex, BYTE charId)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CVisibility.cpp
+    // __LINE__: 2274
+    UTIL_ASSERT_MSG((nIndex >= 0 && nIndex < m_nMapSize), "Index into vis map out of range in DecrementVisibility");
+
+    m_pMap[nIndex] &= ~charId;
 }

@@ -16,6 +16,9 @@ public:
     static const BYTE EXPLORED_RANGE_5;
     static const BYTE EXPLORED_RANGE_6;
 
+    static const BYTE SEARCH_TO_VIS_Y[8];
+    static const BYTE VIS_TO_SEARCH_Y[3];
+
     static const BYTE SQUARE_SIZEX;
     static const BYTE SQUARE_SIZEY;
 
@@ -61,12 +64,12 @@ public:
     void MarkTileLine(const CPoint& ptView, const CPoint& ptSearchMapView, LONG nDestX, LONG nDestY, const CPoint& ptOffset, BYTE charId, const BYTE* pVisibleTerrainTable, BOOLEAN bLookingUp);
     void PrivateAddCharacter(const CPoint& ptPos, BYTE visId, const BYTE* pVisibleTerrainTable);
     void RemoveCharacter(const CPoint& pos, LONG charId, const BYTE* pVisibleTerrainTable);
-    void sub_553440(const CPoint& pt, BYTE charId);
-    void sub_5535D0(const CPoint& pt, BYTE charId);
+    void ClearEllipseCaps(const CPoint& pt, BYTE charId);
+    void ClearEllipseSides(const CPoint& pt, BYTE charId);
     void SetAreaExplored();
     void SetAreaUnexplored();
-    void sub_553800(const CPoint& ptView, const CPoint& ptSearchMapView, const CPoint& ptOffset, BYTE charId, const BYTE* pVisibleTerrainTable);
-    void sub_553990(const CPoint& ptView, const CPoint& ptSearchMapView, const CPoint& ptOffset, BYTE charId, const BYTE* pVisibleTerrainTable);
+    void MarkEllipseCaps(const CPoint& ptView, const CPoint& ptOffset, const CPoint& ptSearchMapView, BYTE charId, const BYTE* pVisibleTerrainTable);
+    void MarkEllipseSides(const CPoint& ptView, const CPoint& ptOffset, const CPoint& ptSearchMapView, BYTE charId, const BYTE* pVisibleTerrainTable);
     void Uninit();
     void UpDate(const CPoint& ptOldPos, const CPoint& ptNewPos, LONG charId, const BYTE* pVisibleTerrainTable);
     BOOLEAN IsTileExplored(LONG nIndex);
@@ -83,6 +86,7 @@ public:
     void SetTileExplored(LONG nIndex);
     void SetTileUnexplored(LONG nIndex);
     void SetTileVisible(LONG nIndex, BYTE charId);
+    void DecrementVisibility(LONG nIndex, BYTE charId);
 
     /* 0000 */ BYTE* m_pMap;
     /* 0004 */ BYTE field_4;
