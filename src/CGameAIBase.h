@@ -62,6 +62,10 @@ public:
 
     void CheckTimers(LONG cycles);
     void ClearTriggers();
+    CGameObject* GetTargetShareType(BYTE type);
+    CGameObject* GetTargetShareAIType(const CAIObjectType& type, BYTE objectType);
+    void ProcessPendingTriggers();
+    void DecodeSpell(LONG spellId, CString& sSpell);
     BOOL CheckAppropriateTarget(CSpell* pSpell, CGameAIBase* pTarget);
     BOOL PartyHasItem(const CResRef& resRef);
     void ApplyEffectToParty(CGameEffect* pEffect);

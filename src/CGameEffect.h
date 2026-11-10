@@ -714,6 +714,8 @@ class CGameEffectAnimationChange : public CGameEffect {
 public:
     CGameEffectAnimationChange(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+
+    /* 018C */ int field_18C;
 };
 
 class CGameEffectBaseAttackBonus : public CGameEffect {
