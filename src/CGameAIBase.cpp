@@ -3,6 +3,7 @@
 #include "CAIResponse.h"
 #include "CAIScript.h"
 #include "CAITrigger.h"
+#include "CAIUtil.h"
 #include "CBaldurChitin.h"
 #include "CBaldurProjector.h"
 #include "CGameArea.h"
@@ -321,11 +322,58 @@ CGameObject* CGameAIBase::GetTargetShareType(BYTE type)
 }
 
 // 0x45C030
-CGameObject* CGameAIBase::GetTargetShareAIType(const CAIObjectType& type, BYTE objectType)
+CGameObject* CGameAIBase::GetTargetShareType(const CAIObjectType& type, BYTE objectType)
 {
-    // TODO: Incomplete.
+    CGameObject* pObject = type.sub_40CCA0(this, FALSE);
 
-    return NULL;
+    if (pObject != NULL
+        && pObject->GetObjectType() == CGameObject::TYPE_SPRITE
+        && static_cast<CGameSprite*>(pObject)->GetDerivedStats()->m_cImmunitiesAIType.OnList(m_typeAI)) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        pObject = NULL;
+    }
+
+    UpdateTarget(pObject);
+
+    if (pObject != NULL) {
+        if ((pObject->GetObjectType() != objectType
+                && objectType != CGameObject::TYPE_AIBASE
+                && objectType != CGameObject::TYPE_NONE)
+            || (objectType == CGameObject::TYPE_AIBASE
+                && (pObject->GetObjectType() & CGameObject::TYPE_AIBASE) == 0)) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            UpdateTarget(NULL);
+            return NULL;
+        }
+
+        if (GetObjectType() == CGameObject::TYPE_SPRITE
+            && g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) == -1
+            && (static_cast<CGameSprite*>(this)->GetDerivedStats()->m_generalState & STATE_BLIND) != 0
+            && pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            const CPoint& ptTargetPos = pObject->GetPos();
+            CPoint ptTarget(ptTargetPos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                ptTargetPos.y / CPathSearch::GRID_SQUARE_SIZEY);
+            CPoint ptSelf(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                m_pos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+            LONG nSquares = CAIUtil::CountSquares(ptSelf, ptTarget);
+            if (nSquares > (static_cast<CGameSprite*>(this)->GetAnimation()->GetPersonalSpace() >> 1) + 4) {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                UpdateTarget(NULL);
+                return NULL;
+            }
+        }
+    }
+
+    UpdateTarget(pObject);
+
+    return pObject;
 }
 
 // 0x45C300
@@ -390,12 +438,6 @@ void CGameAIBase::RemoveFromArea()
     }
 
     delete this;
-}
-
-// 0x45D3E0
-void CGameAIBase::DecodeSpell(LONG spellId, CString& sSpell)
-{
-    // TODO: Incomplete.
 }
 
 // 0x44CC70
@@ -541,6 +583,45 @@ void CGameAIBase::SetScript(SHORT level, CAIScript* script)
         m_movementScript = script;
         break;
     }
+}
+
+// 0x45D3E0
+void CGameAIBase::DecodeSpell(INT nID, CString& sSpell)
+{
+    if (nID == 0) {
+        nID = field_588;
+        if (nID == 0) {
+            sSpell = "";
+            return;
+        }
+    }
+
+    CString sResRef("");
+    sResRef += "SP";
+
+    switch (nID / 1000) {
+    case 1:
+        sResRef += "PR";
+        break;
+    case 2:
+        sResRef += "WI";
+        break;
+    case 3:
+        sResRef += "IN";
+        break;
+    default:
+        sResRef = "MARW";
+
+        CString sError;
+        sError.Format("Invalid or missing spell ID (check SPELL.IDS): %d", nID);
+        break;
+    }
+
+    CString sNumber;
+    sNumber.Format("%03d", nID % 1000);
+    sResRef += sNumber;
+
+    sSpell = sResRef;
 }
 
 // 0x45D6A0
@@ -733,6 +814,11 @@ void CGameAIBase::ApplyEffectToParty(CGameEffect* pEffect)
 
 // 0x799E60
 void CGameAIBase::AutoPause(DWORD type)
+{
+}
+
+// 0x799E60
+void CGameAIBase::UpdateTarget(CGameObject* pTarget)
 {
 }
 

@@ -1,6 +1,7 @@
 #include "CGameSprite.h"
 
 #include "CAIScript.h"
+#include "CAIUtil.h"
 #include "CBaldurChitin.h"
 #include "CBaldurEngine.h"
 #include "CBlood.h"
@@ -9,6 +10,7 @@
 #include "CGameButtonList.h"
 #include "CGameContainer.h"
 #include "CGameDoor.h"
+#include "CGameTimer.h"
 #include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CItem.h"
@@ -10738,6 +10740,18 @@ STRREF CGameSprite::GetNameRef()
     return strName;
 }
 
+// 0x727B80
+BOOL CGameSprite::IsVisibleToCaller(BOOL bCallerCanSeeInvisible)
+{
+    if (!bCallerCanSeeInvisible
+        && (m_derivedStats.m_generalState & STATE_INVISIBLE) != 0
+        && (m_baseStats.field_2FC & 0x1) == 0) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 // 0x728270
 void CGameSprite::PlaySound(const CResRef& res)
 {
@@ -10971,7 +10985,7 @@ SHORT CGameSprite::ExecuteAction()
             if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
                 CAIObjectType type(CAIObjectType::ANYONE);
                 type.m_nEnemyAlly = m_typeAI.GetEnemyOf().m_nEnemyAlly;
-                pObject = GetTargetShareAIType(type, CGameObject::TYPE_SPRITE);
+                pObject = GetTargetShareType(type, CGameObject::TYPE_SPRITE);
             }
         }
 
@@ -11295,7 +11309,7 @@ SHORT CGameSprite::ExecuteAction()
         {
             CAIObjectType type(CAIObjectType::ANYONE);
             type.m_nEnemyAlly = m_typeAI.GetEnemyOf().m_nEnemyAlly;
-            pObject = GetTargetShareAIType(type, CGameObject::TYPE_SPRITE);
+            pObject = GetTargetShareType(type, CGameObject::TYPE_SPRITE);
             bShare = TRUE;
             actionReturn = GroupAttack(static_cast<CGameSprite*>(pObject));
         }
@@ -12011,7 +12025,7 @@ SHORT CGameSprite::ExecuteAction()
                 if (bValid
                     && nSpellId != 0
                     && ((m_curAction.m_specificID & 0x2) != 0
-                        || IsSpellTargetValid(pObject, nSpellId, m_curAction.m_specificID))) {
+                        || IsSpellTargetValid(static_cast<CGameSprite*>(pObject), nSpellId, m_curAction.m_specificID))) {
                     field_588 = nSpellId;
                     if (pObject != NULL) {
                         field_3BA.Set(pObject->GetAIType());
@@ -13359,6 +13373,479 @@ void CGameSprite::CheckModal()
     // TODO: Incomplete.
 }
 
+// 0x731B30
+BOOL CGameSprite::EvaluateStatusTrigger(const CAITrigger& trigger)
+{
+    CAITrigger statusTrigger(trigger);
+    CString sSpell;
+    BOOL bResult = FALSE;
+    CGameObject* pObject;
+    CGameSprite* pSprite;
+    CItem* pItem;
+    ITEM_ABILITY* pAbility;
+
+    switch (statusTrigger.m_triggerID) {
+    case CAITRIGGER_ALIGNMENT:
+        statusTrigger.m_triggerCause.Decode(this);
+        if (statusTrigger.m_specificID == 0x01) {
+            bResult = (statusTrigger.m_triggerCause.m_nAlignment & 0x0F) == 0x01;
+        } else if (statusTrigger.m_specificID == 0x02) {
+            bResult = (statusTrigger.m_triggerCause.m_nAlignment & 0x0F) == 0x02;
+        } else if (statusTrigger.m_specificID == 0x03) {
+            bResult = (statusTrigger.m_triggerCause.m_nAlignment & 0x0F) == 0x03;
+        } else if (statusTrigger.m_specificID == 0x10) {
+            bResult = (statusTrigger.m_triggerCause.m_nAlignment & 0xF0) == 0x10;
+        } else if (statusTrigger.m_specificID == 0x20) {
+            bResult = (statusTrigger.m_triggerCause.m_nAlignment & 0xF0) == 0x20;
+        } else if (statusTrigger.m_specificID == 0x30) {
+            bResult = (statusTrigger.m_triggerCause.m_nAlignment & 0xF0) == 0x30;
+        } else {
+            bResult = statusTrigger.m_triggerCause.m_nAlignment == statusTrigger.m_specificID;
+        }
+        break;
+    case CAITRIGGER_HAVESPELL:
+        if (statusTrigger.m_specificID == 0 && field_588 == 0) {
+            bResult = FALSE;
+            break;
+        }
+
+        DecodeSpell(statusTrigger.m_specificID, sSpell);
+        if (strcmp(sSpell, "") != 0) {
+            if (sub_725330(CResRef(sSpell), 0xFFF, 9, TRUE)) {
+                bResult = TRUE;
+                break;
+            }
+        }
+
+        bResult = FALSE;
+        break;
+    case CAITRIGGER_HAVEANYSPELLS: {
+        BOOLEAN bHaveSpells = FALSE;
+        UINT nLevel;
+
+        for (nLevel = 0; nLevel < GetSpells(CAIOBJECTTYPE_C_BARD)->m_nHighestLevel && !bHaveSpells; nLevel++) {
+            bHaveSpells = GetSpellsAtLevel(CAIOBJECTTYPE_C_BARD, nLevel)->field_18 > 0;
+        }
+
+        for (nLevel = 0; nLevel < GetSpells(CAIOBJECTTYPE_C_SORCERER)->m_nHighestLevel && !bHaveSpells; nLevel++) {
+            bHaveSpells = GetSpellsAtLevel(CAIOBJECTTYPE_C_SORCERER, nLevel)->field_18 > 0;
+        }
+
+        for (UINT nClassIndex = 0; nClassIndex < CSPELLLIST_NUM_CLASSES && !bHaveSpells; nClassIndex++) {
+            // __FILE__: .\Include\ObjCreature.h
+            // __LINE__: 1741
+            UTIL_ASSERT(nClassIndex <= CSPELLLIST_NUM_CLASSES);
+
+            for (nLevel = 0; nLevel < m_spells.Get(nClassIndex)->m_nHighestLevel && !bHaveSpells; nLevel++) {
+                // NOTE: Uninline.
+                bHaveSpells = m_spells.GetSpellsAtLevel(nClassIndex, nLevel)->field_18 > 0;
+            }
+        }
+
+        for (nLevel = 0; nLevel < m_domainSpells.m_nHighestLevel && !bHaveSpells; nLevel++) {
+            // __FILE__: .\Include\FileFormat.h
+            // __LINE__: 2521
+            UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+            bHaveSpells = m_domainSpells.m_lists[nLevel].field_18 > 0;
+        }
+
+        if (!bHaveSpells) {
+            bHaveSpells = m_innateSpells.field_18 > 0;
+        }
+
+        if (bHaveSpells == TRUE) {
+            return TRUE;
+        }
+        break;
+    }
+    case CAITRIGGER_NUMTIMESTALKEDTO:
+        bResult = m_nNumberOfTimesTalkedTo == statusTrigger.m_specificID;
+        break;
+    case CAITRIGGER_NUMTIMESTALKEDTOGT:
+        bResult = m_nNumberOfTimesTalkedTo > statusTrigger.m_specificID;
+        break;
+    case CAITRIGGER_NUMTIMESTALKEDTOLT:
+        bResult = m_nNumberOfTimesTalkedTo < statusTrigger.m_specificID;
+        break;
+    case CAITRIGGER_HAVEUSABLEWEAPONEQUIPPED:
+        pItem = m_equipment.m_items[m_equipment.m_selectedWeapon];
+        if (pItem == NULL) {
+            return FALSE;
+        }
+
+        pItem->Demand();
+
+        pAbility = pItem->GetAbility(m_equipment.m_selectedWeaponAbility);
+        if (pAbility == NULL) {
+            pItem->Release();
+            return FALSE;
+        }
+
+        if ((pAbility->type & 0xFF) == 4) {
+            pItem->Release();
+            return FALSE;
+        }
+
+        if (pAbility->usageFlags == 3
+            && pItem->GetUsageCount(m_equipment.m_selectedWeaponAbility) == 0
+            && pAbility->maxUsageCount > 0) {
+            pItem->Release();
+            return FALSE;
+        }
+
+        pItem->Release();
+        return TRUE;
+    case CAITRIGGER_NUMTIMESINTERACTED:
+        if (statusTrigger.m_specificID < 24) {
+            bResult = m_nNumberOfTimesInteractedWith[statusTrigger.m_specificID] == statusTrigger.m_specific2;
+        } else {
+            bResult = FALSE;
+        }
+        break;
+    case CAITRIGGER_NUMTIMESINTERACTEDGT:
+        if (statusTrigger.m_specificID < 24) {
+            bResult = m_nNumberOfTimesInteractedWith[statusTrigger.m_specificID] > statusTrigger.m_specific2;
+        } else {
+            bResult = FALSE;
+        }
+        break;
+    case CAITRIGGER_NUMTIMESINTERACTEDLT:
+        if (statusTrigger.m_specificID < 24) {
+            bResult = m_nNumberOfTimesInteractedWith[statusTrigger.m_specificID] < statusTrigger.m_specific2;
+        } else {
+            bResult = FALSE;
+        }
+        break;
+    case CAITRIGGER_INTERACTINGWITH:
+        m_interactingWith.Decode(this);
+        bResult = m_interactingWith.OfType(statusTrigger.m_triggerCause, FALSE, FALSE);
+        break;
+    case CAITRIGGER_INWEAPONRANGE: {
+        pItem = m_equipment.m_items[m_equipment.m_selectedWeapon];
+        if (pItem == NULL) {
+            return FALSE;
+        }
+
+        pItem->Demand();
+
+        pAbility = pItem->GetAbility(m_equipment.m_selectedWeaponAbility);
+        if (pAbility == NULL) {
+            pItem->Release();
+            return FALSE;
+        }
+
+        if ((pAbility->type & 0xFF) == 4) {
+            pItem->Release();
+            return FALSE;
+        }
+
+        if (pAbility->usageFlags == 3
+            && pItem->GetUsageCount(m_equipment.m_selectedWeaponAbility) == 0
+            && pAbility->maxUsageCount > 0) {
+            pItem->Release();
+            return FALSE;
+        }
+
+        statusTrigger.m_triggerCause.Decode(this);
+        pSprite = static_cast<CGameSprite*>(GetTargetShareType(statusTrigger.m_triggerCause, CGameObject::TYPE_SPRITE));
+        if (pSprite == NULL) {
+            pItem->Release();
+            return FALSE;
+        }
+
+        CItem* pLauncher = NULL;
+        ITEM_ABILITY* pLauncherAbility = NULL;
+        LONG nDistanceSquared;
+
+        if ((pAbility->type & 0xFF) == 2) {
+            const CPoint& ptTargetPos = pSprite->GetPos();
+            CPoint ptTarget(ptTargetPos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                ptTargetPos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+            const CPoint& ptSelfPos = GetPos();
+            CPoint ptSelf(ptSelfPos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                ptSelfPos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+            nDistanceSquared = (ptSelf.x - ptTarget.x) * (ptSelf.x - ptTarget.x)
+                + (ptSelf.y - ptTarget.y) * (ptSelf.y - ptTarget.y);
+
+            SHORT launcherSlot;
+            pLauncher = GetLauncher(pAbility, launcherSlot);
+            if (pLauncher != NULL) {
+                pLauncher->Demand();
+                pLauncherAbility = pLauncher->GetAbility(0);
+            } else {
+                pLauncherAbility = NULL;
+            }
+        } else {
+            const CPoint& ptTargetPos = pSprite->GetPos();
+            CPoint ptTarget(ptTargetPos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                ptTargetPos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+            const CPoint& ptSelfPos = GetPos();
+            CPoint ptSelf(ptSelfPos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                ptSelfPos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+            LONG nSquares = CAIUtil::CountSquares(ptSelf, ptTarget);
+            nDistanceSquared = nSquares * nSquares;
+        }
+
+        SHORT nRange = pAbility->range + 1;
+        if (pLauncherAbility != NULL) {
+            nRange = max(pLauncherAbility->range + 1, pAbility->range + 1);
+        }
+
+        if (pLauncher != NULL) {
+            pLauncher->Release();
+        }
+
+        BYTE nPersonalSpace = m_animation.GetPersonalSpace();
+        BYTE nTargetPersonalSpace = pSprite->m_animation.GetPersonalSpace();
+        BYTE nSpace = ((nTargetPersonalSpace - 1) >> 1) + ((nPersonalSpace - 1) >> 1) - 1;
+
+        if (nDistanceSquared <= (nRange + nSpace) * (nRange + nSpace)
+            && m_pArea->CheckLOS(pSprite->GetPos(),
+                GetPos(),
+                m_visibleTerrainTable,
+                static_cast<BOOLEAN>(pSprite->Orderable(FALSE)))) {
+            bResult = TRUE;
+        } else {
+            bResult = FALSE;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pSprite->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        pItem->Release();
+        break;
+    }
+    case CAITRIGGER_UNSELECTABLEVARIABLE:
+        bResult = m_nUnselectableCounter == statusTrigger.m_specificID;
+        break;
+    case CAITRIGGER_UNSELECTABLEVARIABLEGT:
+        bResult = m_nUnselectableCounter > statusTrigger.m_specificID;
+        break;
+    case CAITRIGGER_UNSELECTABLEVARIABLELT:
+        bResult = m_nUnselectableCounter < statusTrigger.m_specificID;
+        break;
+    case CAITRIGGER_TIMERACTIVE: {
+        POSITION pos = m_timers.GetHeadPosition();
+        while (pos != NULL) {
+            CGameTimer* pTimer = m_timers.GetNext(pos);
+            if (pTimer != NULL && pTimer->m_id == statusTrigger.m_specificID) {
+                bResult = TRUE;
+            }
+        }
+        break;
+    }
+    case CAITRIGGER_CLASSEX: {
+        statusTrigger.m_triggerCause.Decode(this);
+
+        DWORD dwClassMask = statusTrigger.m_triggerCause.m_nClassMask;
+        LONG nClass = statusTrigger.m_specificID;
+        if (((dwClassMask & CLASSMASK_BARBARIAN) != 0 && (nClass == 1 || nClass == 205))
+            || ((dwClassMask & CLASSMASK_BARD) != 0 && (nClass == 2 || nClass == 202))
+            || ((dwClassMask & CLASSMASK_CLERIC) != 0 && (nClass == 3 || nClass == 203))
+            || ((dwClassMask & CLASSMASK_DRUID) != 0 && (nClass == 4 || nClass == 203 || nClass == 204))
+            || ((dwClassMask & CLASSMASK_FIGHTER) != 0 && (nClass == 5 || nClass == 205))
+            || ((dwClassMask & CLASSMASK_MONK) != 0 && nClass == 6)
+            || ((dwClassMask & CLASSMASK_PALADIN) != 0 && (nClass == 7 || nClass == 205 || nClass == 206))
+            || ((dwClassMask & CLASSMASK_RANGER) != 0 && (nClass == 8 || nClass == 205 || nClass == 207))
+            || ((dwClassMask & CLASSMASK_ROGUE) != 0 && (nClass == 9 || nClass == 208))
+            || ((dwClassMask & CLASSMASK_SORCERER) != 0 && (nClass == 10 || nClass == 209))
+            || ((dwClassMask & CLASSMASK_WIZARD) != 0 && (nClass == 11 || nClass == 209))) {
+            bResult = TRUE;
+        }
+        break;
+    }
+    case CAITRIGGER_NEARSAVEDLOCATION:
+        if (static_cast<WORD>(m_baseStats.field_2E4) > 0 && static_cast<WORD>(m_baseStats.field_2E6) > 0) {
+            LONG dx = (GetPos().x - static_cast<WORD>(m_baseStats.field_2E4)) / CPathSearch::GRID_SQUARE_SIZEX;
+            LONG dy = (GetPos().y - static_cast<WORD>(m_baseStats.field_2E6)) / CPathSearch::GRID_SQUARE_SIZEY;
+            if (dx * dx + dy * dy <= statusTrigger.m_specificID * statusTrigger.m_specificID) {
+                bResult = TRUE;
+            }
+        }
+        break;
+    case CAITRIGGER_INTERNAL:
+        statusTrigger.m_triggerCause.Decode(this);
+
+        // NOTE: The target is never released (as in the original).
+        pObject = GetTargetShareType(statusTrigger.m_triggerCause, CGameObject::TYPE_SPRITE);
+        if (pObject == NULL) {
+            bResult = FALSE;
+        } else if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE
+            && statusTrigger.m_specificID >= 0
+            && statusTrigger.m_specificID < 5) {
+            bResult = static_cast<CGameSprite*>(pObject)->m_baseStats.field_298[statusTrigger.m_specificID] == statusTrigger.m_specific2;
+        }
+        break;
+    case CAITRIGGER_INTERNALGT:
+        statusTrigger.m_triggerCause.Decode(this);
+
+        // NOTE: The target is never released (as in the original).
+        pObject = GetTargetShareType(statusTrigger.m_triggerCause, CGameObject::TYPE_SPRITE);
+        if (pObject == NULL) {
+            bResult = FALSE;
+        } else if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE
+            && statusTrigger.m_specificID >= 0
+            && statusTrigger.m_specificID < 5) {
+            bResult = static_cast<CGameSprite*>(pObject)->m_baseStats.field_298[statusTrigger.m_specificID] > statusTrigger.m_specific2;
+        }
+        break;
+    case CAITRIGGER_INTERNALLT:
+        statusTrigger.m_triggerCause.Decode(this);
+
+        // NOTE: The target is never released (as in the original).
+        pObject = GetTargetShareType(statusTrigger.m_triggerCause, CGameObject::TYPE_SPRITE);
+        if (pObject == NULL) {
+            bResult = FALSE;
+        } else if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE
+            && statusTrigger.m_specificID >= 0
+            && statusTrigger.m_specificID < 5) {
+            bResult = static_cast<CGameSprite*>(pObject)->m_baseStats.field_298[statusTrigger.m_specificID] < statusTrigger.m_specific2;
+        }
+        break;
+    case CAITRIGGER_SCHOOL:
+        statusTrigger.m_triggerCause.Decode(this);
+
+        // NOTE: The target is never released (as in the original).
+        pSprite = static_cast<CGameSprite*>(GetTargetShareType(statusTrigger.m_triggerCause, CGameObject::TYPE_SPRITE));
+        if (pSprite == NULL) {
+            bResult = FALSE;
+            break;
+        }
+
+        bResult = (pSprite->m_baseStats.m_specialization & 0x7FC0) == statusTrigger.m_specificID;
+        break;
+    case CAITRIGGER_ISWEAPONRANGED:
+        statusTrigger.m_triggerCause.Decode(this);
+
+        // NOTE: The target is never released (as in the original).
+        pSprite = static_cast<CGameSprite*>(GetTargetShareType(statusTrigger.m_triggerCause, CGameObject::TYPE_SPRITE));
+        if (pSprite != NULL) {
+            // NOTE: Indexes the target's equipment with the caller's selected
+            // weapon slot (as in the original).
+            pItem = pSprite->m_equipment.m_items[m_equipment.m_selectedWeapon];
+            if (pItem == NULL) {
+                bResult = FALSE;
+                break;
+            }
+
+            pItem->Demand();
+            pAbility = pItem->GetAbility(pSprite->m_equipment.m_selectedWeaponAbility);
+            pItem->Release();
+
+            if (pAbility == NULL) {
+                bResult = FALSE;
+                break;
+            }
+
+            if ((pAbility->type & 0xFF) == 4 || (pAbility->type & 0xFF) == 2) {
+                bResult = TRUE;
+            }
+        }
+        break;
+    case CAITRIGGER_MODALSTATE:
+        statusTrigger.m_triggerCause.Decode(this);
+
+        // NOTE: The target is never released (as in the original).
+        pSprite = static_cast<CGameSprite*>(GetTargetShareType(statusTrigger.m_triggerCause, CGameObject::TYPE_SPRITE));
+        if (pSprite == NULL) {
+            bResult = FALSE;
+            break;
+        }
+
+        bResult = pSprite->m_nModalState == statusTrigger.m_specificID;
+        break;
+    case CAITRIGGER_ISMARKEDSPELL:
+        bResult = statusTrigger.m_specificID == field_588;
+        break;
+    case CAITRIGGER_SETMARKEDSPELL:
+        if (statusTrigger.m_specificID == 0) {
+            field_588 = 0;
+            bResult = TRUE;
+            break;
+        }
+
+        if (field_588 == 0) {
+            DecodeSpell(statusTrigger.m_specificID, sSpell);
+            if (strcmp(sSpell, "") != 0) {
+                if (sub_725330(CResRef(sSpell), 0xFFF, 9, TRUE)) {
+                    field_588 = statusTrigger.m_specificID;
+                }
+            }
+        }
+
+        bResult = TRUE;
+        break;
+    case CAITRIGGER_FORCEMARKEDSPELL:
+        if (field_588 != statusTrigger.m_specificID) {
+            field_588 = statusTrigger.m_specificID;
+        }
+        bResult = TRUE;
+        break;
+    case CAITRIGGER_ISSPELLTARGETVALID:
+        statusTrigger.m_triggerCause.Decode(this);
+
+        // NOTE: The target is never released (as in the original).
+        pSprite = static_cast<CGameSprite*>(GetTargetShareType(statusTrigger.m_triggerCause, CGameObject::TYPE_SPRITE));
+        if (pSprite != NULL
+            && CanTarget(pSprite, statusTrigger.m_specific2)
+            && IsSpellTargetValid(pSprite, statusTrigger.m_specificID, statusTrigger.m_specific2)) {
+            bResult = TRUE;
+        } else {
+            bResult = FALSE;
+        }
+        break;
+    case CAITRIGGER_ISFACINGOBJECT:
+        statusTrigger.m_triggerCause.Decode(this);
+
+        // NOTE: The target is never released (as in the original).
+        pObject = GetTargetShareType(statusTrigger.m_triggerCause, CGameObject::TYPE_SPRITE);
+        if (pObject != NULL) {
+            SHORT nDirection = m_nDirection;
+            bResult = GetDirection(pObject->GetPos()) == nDirection;
+        }
+        break;
+    case CAITRIGGER_OUTOFAMMO:
+        pItem = m_equipment.m_items[m_equipment.m_selectedWeapon];
+        if (pItem == NULL) {
+            return FALSE;
+        }
+
+        pItem->Demand();
+
+        pAbility = pItem->GetAbility(m_equipment.m_selectedWeaponAbility);
+        if (pAbility == NULL) {
+            pItem->Release();
+            return FALSE;
+        }
+
+        if ((pAbility->type & 0xFF) != 2) {
+            pItem->Release();
+            return FALSE;
+        }
+
+        if ((pAbility->usageFlags == 3 || pAbility->usageFlags == 1)
+            && pItem->GetUsageCount(m_equipment.m_selectedWeaponAbility) == 0
+            && pAbility->maxUsageCount > 0) {
+            pItem->Release();
+            return TRUE;
+        }
+
+        pItem->Release();
+        return FALSE;
+    default:
+        bResult = CGameAIBase::EvaluateStatusTrigger(trigger);
+        break;
+    }
+
+    return bResult;
+}
+
 // 0x733290
 void CGameSprite::ClearStoredPaths()
 {
@@ -13393,6 +13880,57 @@ CGameObject* CGameSprite::sub_733340()
     // TODO: Incomplete.
 
     return NULL;
+}
+
+// 0x733660
+void CGameSprite::UpdateTarget(CGameObject* pTarget)
+{
+    if (pTarget != NULL && m_targetId == pTarget->GetId()) {
+        return;
+    }
+
+    if (m_targetId != CGameObjectArray::INVALID_INDEX) {
+        CGameObject* pObject;
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            return;
+        }
+
+        if (pObject != NULL
+            && pObject->GetObjectType() == CGameObject::TYPE_SPRITE
+            && m_bSelected
+            && Orderable(FALSE)) {
+            static_cast<CGameSprite*>(pObject)->m_marker.SetType(CMarker::ELLIPSE);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    if (pTarget != NULL) {
+        if (pTarget->GetObjectType() == CGameObject::TYPE_SPRITE
+            && m_bSelected
+            && Orderable(FALSE)) {
+            static_cast<CGameSprite*>(pTarget)->m_marker.SetType(CMarker::RECTICLE);
+
+            if (m_actionCount == 0
+                && m_userCommandPause > 5 * CTimerWorld::TIMESCALE_MSEC_PER_SEC - 2) {
+                static_cast<CGameSprite*>(pTarget)->m_marker.m_nRecticleForceRenderTarget = CTimerWorld::TIMESCALE_MSEC_PER_SEC;
+            }
+        }
+
+        m_targetId = pTarget->GetId();
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
 }
 
 // 0x7337D0
@@ -17992,16 +18530,16 @@ INT CGameSprite::GetMulticlassingPenalty()
 }
 
 // 0x764810
-BOOL CGameSprite::CanTarget(CGameSprite* pTarget, LONG flags)
+BOOL CGameSprite::CanTarget(CGameSprite* pTarget, DWORD dwFlags)
 {
     if ((m_derivedStats.m_generalState & STATE_DEAD) == 0
         && pTarget != NULL
         && (pTarget->m_derivedStats.m_generalState & STATE_DEAD) == 0
         && (pTarget->m_baseStats.m_flags & 0x20000) == 0
-        && !m_derivedStats.m_spellStates.test(SPLSTATE_HELD)
+        && !m_derivedStats.m_spellStates[SPLSTATE_HELD]
         && (m_derivedStats.m_generalState & STATE_HELPLESS) == 0
         && pTarget->IsVisibleToCaller(GetCanSeeInvisible())
-        && !pTarget->m_derivedStats.m_spellStates.test(SPLSTATE_SANCTUARY)) {
+        && !pTarget->m_derivedStats.m_spellStates[SPLSTATE_SANCTUARY]) {
         return TRUE;
     }
 
@@ -18009,7 +18547,7 @@ BOOL CGameSprite::CanTarget(CGameSprite* pTarget, LONG flags)
 }
 
 // 0x764880
-BOOL CGameSprite::IsSpellTargetValid(CGameObject* pTarget, LONG spellId, LONG flags)
+BOOL CGameSprite::IsSpellTargetValid(CGameSprite* pTarget, INT nSpellId, DWORD dwFlags)
 {
     // TODO: Incomplete.
 
@@ -19341,18 +19879,6 @@ INT CGameSprite::sub_726800()
 void CGameSprite::sub_726810(BYTE nWeaponSet)
 {
     // TODO: Incomplete.
-}
-
-// 0x727B80
-BOOL CGameSprite::IsVisibleToCaller(BOOL bSeeInvisible)
-{
-    if (!bSeeInvisible
-        && (m_derivedStats.m_generalState & STATE_INVISIBLE) != 0
-        && (m_baseStats.field_2FC & 0x1) == 0) {
-        return FALSE;
-    }
-
-    return TRUE;
 }
 
 // 0x58FEE0

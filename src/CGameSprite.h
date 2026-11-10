@@ -459,6 +459,8 @@ public:
     /* 0048 */ void RemoveFromArea() override;
     /* 004C */ void Render(CGameArea* pArea, CVidMode* pVidMode, INT nSurface) override;
     /* 0058 */ void SetCursor(LONG nToolTip) override;
+    /* 0064 */ BOOL EvaluateStatusTrigger(const CAITrigger& trigger) override;
+    /* 0070 */ void UpdateTarget(CGameObject* pTarget) override;
     /* 007C */ void ClearAI(BOOLEAN bSetSequence) override;
     /* 0084 */ SHORT ExecuteAction() override;
     /* 008C */ void ProcessAI() override;
@@ -482,7 +484,6 @@ public:
     void AIUpdateFly();
     void ChangeDirection();
     void CheckIfVisible();
-    BOOL IsVisibleToCaller(BOOL bSeeInvisible);
     void DropPath();
     void DropSearchRequest();
     BOOL MoveToBack();
@@ -591,6 +592,9 @@ public:
     STRREF GetNameRef();
     void PlaySound(const CResRef& res);
     BOOL Orderable(BOOL bIgnoreControl);
+    BOOL IsVisibleToCaller(BOOL bCallerCanSeeInvisible);
+    BOOL CanTarget(CGameSprite* pTarget, DWORD dwFlags);
+    BOOL IsSpellTargetValid(CGameSprite* pTarget, INT nSpellId, DWORD dwFlags);
     BOOL Animate();
     DWORD GetSpecialization();
     void ResolveInstants(BOOL dropNonInstants);
@@ -649,8 +653,6 @@ public:
     SHORT ChangeAnimation();
     SHORT ReturnToSavedLocation();
     SHORT RunAwayFromNoLeaveArea(CGameSprite* pTarget);
-    BOOL CanTarget(CGameSprite* pTarget, LONG flags);
-    BOOL IsSpellTargetValid(CGameObject* pTarget, LONG spellId, LONG flags);
     BOOL ProcessEffectList();
     BOOL HandlePersistantEffects(LONG deltaT);
     void ClearStoredPaths();
