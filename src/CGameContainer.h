@@ -40,6 +40,7 @@ public:
     void SetDrawPoly(SHORT time);
     SHORT FindItemSlot(const CResRef& res);
     SHORT CountItem(const CResRef& res);
+    SHORT GetTotalItemCount(CString sExcludeResRef);
 
     void SetScriptRes(CString scriptRes);
     SHORT GetNumItems();

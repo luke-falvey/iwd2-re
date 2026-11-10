@@ -41,6 +41,7 @@ public:
     CResRef GetUsedUpItemId();
     STRREF GetGenericName();
     STRREF GetIdentifiedName();
+    DWORD GetFlags();
     DWORD GetFlagsFile();
     DWORD GetNotUsableBy();
     DWORD GetNotUsableBy2();

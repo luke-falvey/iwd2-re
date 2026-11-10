@@ -14,6 +14,7 @@ public:
     CString GetName();
     void SetName(CString sName);
     int GetIntValue();
+    void SetIntValue(LONG nValue);
 };
 
 class CVariableHashBase {

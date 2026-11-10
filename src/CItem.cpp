@@ -485,6 +485,12 @@ STRREF CItem::GetIdentifiedName()
     return strName;
 }
 
+// 0x452F30
+DWORD CItem::GetFlags()
+{
+    return m_flags;
+}
+
 // 0x4E9BE0
 DWORD CItem::GetFlagsFile()
 {

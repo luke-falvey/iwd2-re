@@ -21,6 +21,7 @@ public:
     void OnDoorStatusUpdate(BOOLEAN bDoorOpened, DWORD dwFlags, WORD nTrapActivated, WORD nTrapDetected);
     void Marshal(CAreaFileDoorObject** pDoorObject);
     void SetDrawPoly(SHORT time);
+    const CPoint& sub_48B2C0(const CPoint& pt);
     DWORD GetFlags();
     void SetFlags(DWORD dwFlags);
     BOOL sub_45B700();
