@@ -584,6 +584,12 @@ void CGameDoor::SetCursor(LONG nToolTip)
     }
 }
 
+// 0x489680
+void CGameDoor::sub_489680(const CAIObjectType& type, BOOL a2)
+{
+    // TODO: Incomplete.
+}
+
 // 0x48AC80
 void CGameDoor::OnDoorStatusUpdate(BOOLEAN bDoorOpened, DWORD dwFlags, WORD nTrapActivated, WORD nTrapDetected)
 {

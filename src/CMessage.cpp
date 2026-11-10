@@ -1,9 +1,11 @@
 #include "CMessage.h"
 
+#include "CAIScript.h"
 #include "CBaldurChitin.h"
 #include "CGameAIBase.h"
 #include "CGameArea.h"
 #include "CGameContainer.h"
+#include "CGameDialog.h"
 #include "CGameDoor.h"
 #include "CGameEffect.h"
 #include "CGameSound.h"
@@ -18,6 +20,7 @@
 #include "CScreenChapter.h"
 #include "CScreenConnection.h"
 #include "CScreenCreateChar.h"
+#include "CScreenInventory.h"
 #include "CScreenLoad.h"
 #include "CScreenMultiPlayer.h"
 #include "CScreenSinglePlayer.h"
@@ -26,6 +29,7 @@
 #include "CStore.h"
 #include "CUIPanel.h"
 #include "CUtil.h"
+#include "Icewind586B70.h"
 
 // NOTE: Might be static in `CMessage`.
 //
@@ -80,6 +84,9 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ADD_ACTION = 0;
 // 0x84CED8
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ADD_EFFECT = 1;
 
+// 0x84CED9
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_2 = 2;
+
 // 0x84CEDA
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ANIMATION_CHANGE = 3;
 
@@ -125,6 +132,9 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXT = 16;
 // 0x84CEE8
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXTREF = 17;
 
+// 0x84CEE9
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_18 = 18;
+
 // 0x84CEEA
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_DOOR_STATUS = 19;
 
@@ -133,6 +143,9 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_DROP_PATH = 20;
 
 // 0x84CEEC
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ENTER_DIALOG = 21;
+
+// 0x84CEED
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ENTER_DIALOG_MODE = 22;
 
 // 0x84CEEE
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ENTER_STORE_MODE = 23;
@@ -149,8 +162,14 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_FIRE_PROJECTILE = 26;
 // 0x84CEF2
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_INSERT_ACTION = 27;
 
+// 0x84CEF3
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_INSERT_RESPONSE = 28;
+
 // 0x84CEF4
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_LEAVE_PARTY = 29;
+
+// 0x84CEF5
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_LOAD_DIALOG = 30;
 
 // 0x84CEF6
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_PARTY_GOLD = 31;
@@ -160,6 +179,9 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_PLAY_SOUND = 32;
 
 // 0x84CEF8
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_PLAY_SOUND_REF = 33;
+
+// 0x84CEF9
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_34 = 34;
 
 // 0x84CEFA
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_REMOVE_REPLIES = 35;
@@ -206,8 +228,14 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_PATH = 49;
 // 0x84CF09
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_SEQUENCE = 50;
 
+// 0x84CF0A
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_51 = 51;
+
 // 0x84CF0B
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_TRIGGER = 52;
+
+// 0x84CF0C
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_53 = 53;
 
 // 0x84CF06
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_LAST_OBJECT = 47;
@@ -299,11 +327,26 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_FAMILIAR_REMOVE_RESREF = 81;
 // 0x84CF29
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_STOP_ESCAPE_AREA = 82;
 
+// 0x84CF2A
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_83 = 83;
+
+// 0x84CF2B
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_84 = 84;
+
 // 0x84CF2C
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_TIME_STOP = 85;
 
+// 0x84CF2D
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_86 = 86;
+
 // 0x84CF2E
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_STORE_RELEASE = 87;
+
+// 0x84CF2F
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_88 = 88;
+
+// 0x84CF30
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_89 = 89;
 
 // 0x84CF31
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_90 = 90;
@@ -320,6 +363,18 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_PROTAGONIST = 93;
 // 0x84CF35
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_START_COMBAT_MUSIC = 94;
 
+// 0x84CF36
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_95 = 95;
+
+// 0x84CF37
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_96 = 96;
+
+// 0x84CF38
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_SCRIPT = 97;
+
+// 0x84CF39
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_98 = 98;
+
 // 0x84CF3A
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SCREENSHAKE = 99;
 
@@ -335,11 +390,20 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_WEAPON_IMMUNITIES_UPDATE = 102;
 // 0x84CF3E
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_103 = 103;
 
+// 0x84CF3F
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_PROJECTILE_IMMUNITIES_UPDATE = 104;
+
+// 0x84CF40
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_105 = 105;
+
 // 0x84CF41
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_TOGGLE_INTERFACE = 106;
 
 // 0x84CF42
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_107 = 107;
+
+// 0x84CF43
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_108 = 108;
 
 // 0x84CF44
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_AREA_TYPE = 109;
@@ -347,11 +411,26 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_AREA_TYPE = 109;
 // 0x84CF45
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_AREA_REST_ENCOUNTER = 110;
 
+// 0x84CF46
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_111 = 111;
+
+// 0x84CF47
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_112 = 112;
+
+// 0x84CF48
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_PICKED_DIALOG_RESPONSE = 113;
+
 // 0x84CF49
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_AREA_EXPLORED = 114;
 
+// 0x84CF4A
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_115 = 115;
+
 // 0x84CF4B
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_CHANGE_STAT = 116;
+
+// 0x84CF4C
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_117 = 117;
 
 // 0x84CF4F
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_120 = 120;
@@ -673,8 +752,32 @@ BOOLEAN CBaldurMessage::OnResourceDemanded(INT nMsgFrom, BYTE* pByteMessage, DWO
     return FALSE;
 }
 
+// 0x42A3F0
+BOOLEAN CBaldurMessage::sub_42A3F0(BYTE* pMessage, DWORD dwSize, BOOLEAN a3)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x42AA10
 BOOLEAN CBaldurMessage::ResourceSuggestLoad(const CString& sResName, UINT nType, DWORD dwFlags)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x42ABA0
+BOOLEAN CBaldurMessage::sub_42ABA0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x42ADF0
+BOOLEAN CBaldurMessage::sub_42ADF0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
     // TODO: Incomplete.
 
@@ -2003,6 +2106,14 @@ BOOLEAN CBaldurMessage::OnUpdateDemandCharacterSlot(INT nMsgFrom, BYTE* pMessage
     return FALSE;
 }
 
+// 0x42E630
+BOOLEAN CBaldurMessage::sub_42E630(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x42F100
 BOOLEAN CBaldurMessage::DemandCharacterSlot(SHORT nCharacterSlot, BOOLEAN bDemandFromHost, SHORT nPlayerSlot)
 {
@@ -2270,8 +2381,24 @@ BOOL CBaldurMessage::ObjectAdd(LONG localObjectID, BYTE nObjectType, BYTE* pObje
     return TRUE;
 }
 
+// 0x42FFD0
+BOOLEAN CBaldurMessage::sub_42FFD0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x430720
 BOOL CBaldurMessage::ObjectControlSuggestion(PLAYER_ID playerToSuggestID, LONG localObjectID)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x430910
+BOOLEAN CBaldurMessage::sub_430910(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
     // TODO: Incomplete.
 
@@ -2286,6 +2413,14 @@ BOOL CBaldurMessage::ObjectControlRequest(LONG localObjectID)
     return FALSE;
 }
 
+// 0x430BE0
+BOOLEAN CBaldurMessage::sub_430BE0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x430C50
 BOOL CBaldurMessage::ObjectControl()
 {
@@ -2294,8 +2429,56 @@ BOOL CBaldurMessage::ObjectControl()
     return FALSE;
 }
 
+// 0x430D40
+BOOLEAN CBaldurMessage::sub_430D40(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x431020
+BOOLEAN CBaldurMessage::sub_431020(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x4313E0
+BOOLEAN CBaldurMessage::sub_4313E0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x4319C0
 BOOLEAN CBaldurMessage::OnSwapItemRequest(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x4324E0
+BOOLEAN CBaldurMessage::sub_4324E0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x432A10
+BOOLEAN CBaldurMessage::sub_432A10(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x432BA0
+BOOLEAN CBaldurMessage::sub_432BA0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
     // TODO: Incomplete.
 
@@ -3192,6 +3375,14 @@ BOOLEAN CBaldurMessage::OnPauseAnnounceStatus(INT nMsgFrom, BYTE* pMessage, DWOR
     return TRUE;
 }
 
+// 0x434D80
+BOOLEAN CBaldurMessage::sub_434D80(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x434EB0
 BOOLEAN CBaldurMessage::ChapterAnnounceStatus(BYTE nChapter, CResRef cResRef)
 {
@@ -3200,8 +3391,32 @@ BOOLEAN CBaldurMessage::ChapterAnnounceStatus(BYTE nChapter, CResRef cResRef)
     return FALSE;
 }
 
+// 0x435040
+BOOLEAN CBaldurMessage::sub_435040(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x4352A0
+BOOLEAN CBaldurMessage::sub_4352A0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x435360
 BOOLEAN CBaldurMessage::SendMapWorldCancelRequestToServer()
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x435470
+BOOLEAN CBaldurMessage::sub_435470(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
     // TODO: Incomplete.
 
@@ -3218,6 +3433,30 @@ BOOLEAN CBaldurMessage::SendMapWorldAnnounceStatus(BOOLEAN bActive, PLAYER_ID id
 
 // FIXME: `sAreaResRef` should be reference.
 //
+// 0x4355F0
+BOOLEAN CBaldurMessage::sub_4355F0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x4358B0
+BOOLEAN CBaldurMessage::sub_4358B0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x435E00
+BOOLEAN CBaldurMessage::sub_435E00(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x436050
 BOOLEAN CBaldurMessage::SendMapWorldRevealArea(CString sAreaResRef)
 {
@@ -3228,6 +3467,30 @@ BOOLEAN CBaldurMessage::SendMapWorldRevealArea(CString sAreaResRef)
 
 // FIXME: `cResMovie` should be reference.
 //
+// 0x4361D0
+BOOLEAN CBaldurMessage::sub_4361D0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x436440
+BOOLEAN CBaldurMessage::sub_436440(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x436610
+BOOLEAN CBaldurMessage::sub_436610(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x436690
 BOOLEAN CBaldurMessage::SendMovieRequestToServer(CResRef cResMovie)
 {
@@ -3238,8 +3501,42 @@ BOOLEAN CBaldurMessage::SendMovieRequestToServer(CResRef cResMovie)
 
 // FIXME: `cResMovie` should be reference.
 //
+// 0x436860
+BOOLEAN CBaldurMessage::sub_436860(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x4369E0
 BOOLEAN CBaldurMessage::MovieAnnounceStatus(CResRef cResMovie)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x436B60
+BOOLEAN CBaldurMessage::sub_436B60(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x436D10
+BOOLEAN CBaldurMessage::sub_436D10(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    if (g_pChitin->cNetwork.GetSessionOpen() && g_pChitin->cNetwork.GetSessionHosting()) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+// 0x436D40
+BOOLEAN CBaldurMessage::sub_436D40(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
     // TODO: Incomplete.
 
@@ -3254,10 +3551,26 @@ BOOLEAN CBaldurMessage::SendReformPartyAnnounceStatus()
     return FALSE;
 }
 
+// 0x436EF0
+BOOLEAN CBaldurMessage::sub_436EF0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x436F50
 void CBaldurMessage::WeatherBroadcast(WORD wWeatherFlags)
 {
     // TODO: Incomplete.
+}
+
+// 0x437050
+BOOLEAN CBaldurMessage::sub_437050(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
 }
 
 // 0x4370B0
@@ -3266,14 +3579,43 @@ void CBaldurMessage::TimeSynchBroadcast(ULONG nGameTime, BOOLEAN bCompressTime)
     // TODO: Incomplete.
 }
 
+// 0x4371B0
+BOOLEAN CBaldurMessage::sub_4371B0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x437240
 void CBaldurMessage::TimeChangeToServer(DWORD deltaTime)
 {
     // TODO: Incomplete.
 }
 
+// 0x437390
+BOOLEAN CBaldurMessage::OnTimeChangeToServer(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    if (!g_pChitin->cNetwork.GetSessionOpen() || !g_pChitin->cNetwork.GetSessionHosting()) {
+        return FALSE;
+    }
+
+    ULONG deltaTime = *reinterpret_cast<ULONG*>(pMessage + CNetwork::SPEC_MSG_HEADER_LENGTH);
+    g_pBaldurChitin->GetObjectGame()->m_worldTime.AdvanceCurrentTime(deltaTime);
+
+    return TRUE;
+}
+
 // 0x437950
 BOOLEAN CBaldurMessage::OnLeaveAreaLuaRequestToServer(INT nMsgFrom, BYTE* pByteMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x438560
+BOOLEAN CBaldurMessage::sub_438560(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
     // TODO: Incomplete.
 
@@ -3288,12 +3630,54 @@ BOOLEAN CBaldurMessage::OnLeaveAreaNameRequestToServer(INT nMsgFrom, BYTE* pByte
     return FALSE;
 }
 
+// 0x437D20
+BOOLEAN CBaldurMessage::OnLeaveAreaLuaReplyFromServer(BYTE* pByteMessage, DWORD dwSize)
+{
+    if (!g_pChitin->cNetwork.GetSessionOpen() || g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
+        return FALSE;
+    }
+
+    m_nLeaveAreaLuaReplyValue = pByteMessage[CNetwork::SPEC_MSG_HEADER_LENGTH];
+    m_bLeaveAreaLuaReplyReturned = TRUE;
+
+    return TRUE;
+}
+
+// 0x437FD0
+BOOLEAN CBaldurMessage::sub_437FD0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x4381A0
 void CBaldurMessage::CleanLeaveAreaLuaRequest()
 {
     m_bLeaveAreaLuaRequestPending = FALSE;
     m_nLeaveAreaLuaReplyValue = 0;
     m_bLeaveAreaLuaReplyReturned = FALSE;
+}
+
+// 0x438F40
+BOOLEAN CBaldurMessage::OnLeaveAreaNameReplyFromServer(BYTE* pByteMessage, DWORD dwSize)
+{
+    if (!g_pChitin->cNetwork.GetSessionOpen() || g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
+        return FALSE;
+    }
+
+    m_nLeaveAreaNameReplyValue = pByteMessage[CNetwork::SPEC_MSG_HEADER_LENGTH];
+    m_bLeaveAreaNameReplyReturned = TRUE;
+
+    return TRUE;
+}
+
+// 0x439250
+BOOLEAN CBaldurMessage::sub_439250(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
 }
 
 // 0x4393E0
@@ -3860,6 +4244,22 @@ BOOLEAN CBaldurMessage::OnAnnounceJournalEntryChange(INT nMsgFrom, BYTE* pByteMe
     return TRUE;
 }
 
+// 0x43A470
+BOOLEAN CBaldurMessage::sub_43A470(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x43A7C0
+BOOLEAN CBaldurMessage::sub_43A7C0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x43A910
 BOOLEAN CBaldurMessage::SendBiographyToServer(BYTE nFixedPartyId, CString szBio)
 {
@@ -4032,10 +4432,34 @@ void CBaldurMessage::SetDeleteAreaString(CString sAreaString)
     m_sDeleteAreaString = sAreaString;
 }
 
+// 0x43B080
+BOOLEAN CBaldurMessage::sub_43B080(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x43B380
+BOOLEAN CBaldurMessage::sub_43B380(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x43B4C0
 CString CBaldurMessage::GetDeleteAreaString()
 {
     return m_sDeleteAreaString;
+}
+
+// 0x43B680
+BOOLEAN CBaldurMessage::sub_43B680(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
 }
 
 // 0x43B780
@@ -4864,6 +5288,22 @@ BOOLEAN CBaldurMessage::sub_43D8D0(LONG nCharacterId)
     return FALSE;
 }
 
+// 0x43DC40
+BOOLEAN CBaldurMessage::sub_43DC40(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x43DE50
+BOOLEAN CBaldurMessage::sub_43DE50(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x43DF40
 BOOLEAN CBaldurMessage::OnMovieEndCredits(INT nMsgFrom, BYTE* pByteMessage, DWORD dwSize)
 {
@@ -4930,7 +5370,7 @@ BOOLEAN CBaldurMessage::GetDialogRequestPending()
     return m_bDialogRequestPending;
 }
 
-// 0x4F4F50
+// 0x4F4F60
 BOOLEAN CBaldurMessage::GetDialogReplyReturned()
 {
     return m_bDialogReplyReturned;
@@ -5024,7 +5464,2270 @@ CMessageHandler::~CMessageHandler()
 // 0x4EE020
 void CMessageHandler::AsynchronousUpdate()
 {
-    // TODO: Incomplete.
+    INT nMsgFrom;
+    INT nMsgTo;
+    DWORD dwSize;
+    BYTE* pData;
+
+    if (g_pBaldurChitin->cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL
+        || !g_pBaldurChitin->GetObjectGame()->field_4BD4) {
+        while (m_messageList.GetCount() != 0) {
+            CMessage* message = m_messageList.RemoveHead();
+            message->Run();
+            delete message;
+        }
+    }
+
+    while (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE
+        && g_pChitin->cNetwork.PeekMessage_() == TRUE) {
+        pData = g_pChitin->cNetwork.FetchMessage(nMsgFrom, nMsgTo, dwSize);
+
+        if (pData[CNetwork::SPEC_MSG_FLAG] != CNetwork::SPEC_MSG_FLAG_ENABLED) {
+            g_pBaldurChitin->GetBaldurMessage()->OnChatMessage(nMsgFrom, pData, dwSize);
+        } else if (g_pBaldurChitin->GetObjectGame()->m_multiplayerSettings.GetPlayerReady(g_pChitin->cNetwork.m_idLocalPlayer) == TRUE) {
+            // NOTE: The original switches on literal values (both switches
+            // are compiled into jump tables). The comments name the matching
+            // `CBaldurMessage` constants.
+            switch (pData[CNetwork::SPEC_MSG_TYPE]) {
+            case 'A':
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'a':
+                    g_pBaldurChitin->m_cBaldurMessage.sub_43A7C0(nMsgFrom, pData, dwSize);
+                    break;
+                case 'n':
+                    g_pBaldurChitin->m_cBaldurMessage.sub_43A470(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'B': // MSG_TYPE_PROGRESSBAR
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'S': // MSG_SUBTYPE_PROGRESSBAR_STATUS
+                    g_pBaldurChitin->GetBaldurMessage()->OnProgressBarStatus(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'C': { // MSG_TYPE_CMESSAGE
+                BOOL bLocal = g_pBaldurChitin->cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL
+                    || !g_pBaldurChitin->GetObjectGame()->field_4BD4;
+
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 0: // MSG_SUBTYPE_CMESSAGE_ADD_ACTION
+                    if (bLocal) {
+                        CMessageAddAction message(CAIAction(), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageAddAction* message = new CMessageAddAction(CAIAction(), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 1: // MSG_SUBTYPE_CMESSAGE_ADD_EFFECT
+                    if (bLocal) {
+                        CMessageAddEffect message(NULL, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageAddEffect* message = new CMessageAddEffect(NULL, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 2: // MSG_SUBTYPE_CMESSAGE_2
+                    if (bLocal) {
+                        CMessage2 message(CItem(), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage2* message = new CMessage2(CItem(), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 3: // MSG_SUBTYPE_CMESSAGE_ANIMATION_CHANGE
+                    if (bLocal) {
+                        CMessageAnimationChange message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageAnimationChange* message = new CMessageAnimationChange(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 4: // MSG_SUBTYPE_CMESSAGE_CHANGE_DIRECTION
+                    if (bLocal) {
+                        CMessageChangeDirection message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageChangeDirection* message = new CMessageChangeDirection(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 5: // MSG_SUBTYPE_CMESSAGE_CLEAR_ACTIONS
+                    if (bLocal) {
+                        CMessageClearActions message(0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageClearActions* message = new CMessageClearActions(0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 6: // MSG_SUBTYPE_CMESSAGE_CLEAR_DIALOG_ACTIONS
+                    if (bLocal) {
+                        CMessageClearDialogActions message(0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageClearDialogActions* message = new CMessageClearDialogActions(0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 7: // MSG_SUBTYPE_CMESSAGE_CLEAR_GROUP_SLOT
+                    if (bLocal) {
+                        CMessageClearGroupSlot message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageClearGroupSlot* message = new CMessageClearGroupSlot(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 8: // MSG_SUBTYPE_CMESSAGE_CLEAR_TRIGGERS
+                    if (bLocal) {
+                        CMessageClearTriggers message(0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageClearTriggers* message = new CMessageClearTriggers(0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 9: // MSG_SUBTYPE_CMESSAGE_COLOR_CHANGE
+                    if (bLocal) {
+                        CMessageColorChange message(NULL, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageColorChange* message = new CMessageColorChange(NULL, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 10: // MSG_SUBTYPE_CMESSAGE_COLOR_RESET
+                    if (bLocal) {
+                        CMessageColorReset message(0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageColorReset* message = new CMessageColorReset(0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 11: // MSG_SUBTYPE_CMESSAGE_COLOR_UPDATE
+                    if (bLocal) {
+                        CMessageColorUpdate message(NULL, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageColorUpdate* message = new CMessageColorUpdate(NULL, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 12: // MSG_SUBTYPE_CMESSAGE_CONTAINER_ADD_ITEM
+                    if (bLocal) {
+                        CMessageContainerAddItem message(CItem(), 0, FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageContainerAddItem* message = new CMessageContainerAddItem(CItem(), 0, FALSE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 13: // MSG_SUBTYPE_CMESSAGE_CONTAINER_ITEMS
+                    if (bLocal) {
+                        CMessageContainerItems message(NULL, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageContainerItems* message = new CMessageContainerItems(NULL, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 14: // MSG_SUBTYPE_CMESSAGE_CONTAINER_STATUS
+                    if (bLocal) {
+                        CMessageContainerStatus message(0, 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageContainerStatus* message = new CMessageContainerStatus(0, 0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 15: // MSG_SUBTYPE_CMESSAGE_CUT_SCENE_MODE_STATUS
+                    if (bLocal) {
+                        CMessageCutSceneModeStatus message(FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageCutSceneModeStatus* message = new CMessageCutSceneModeStatus(FALSE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 16: // MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXT
+                    if (bLocal) {
+                        CMessageDisplayText message(CString(""), CString(""), 0, 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageDisplayText* message = new CMessageDisplayText(CString(""), CString(""), 0, 0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 17: // MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXTREF
+                    if (bLocal) {
+                        CMessageDisplayTextRef message(-1, -1, 0, 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageDisplayTextRef* message = new CMessageDisplayTextRef(-1, -1, 0, 0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 18: // MSG_SUBTYPE_CMESSAGE_18
+                    if (bLocal) {
+                        CMessage18 message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage18* message = new CMessage18(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 19: // MSG_SUBTYPE_CMESSAGE_DOOR_STATUS
+                    if (bLocal) {
+                        CMessageDoorStatus message(NULL, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageDoorStatus* message = new CMessageDoorStatus(NULL, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 20: // MSG_SUBTYPE_CMESSAGE_DROP_PATH
+                    if (bLocal) {
+                        CMessageDropPath message(0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageDropPath* message = new CMessageDropPath(0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 21: // MSG_SUBTYPE_CMESSAGE_ENTER_DIALOG
+                    if (bLocal) {
+                        CMessageEnterDialog message(0, FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageEnterDialog* message = new CMessageEnterDialog(0, FALSE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 22: // MSG_SUBTYPE_CMESSAGE_ENTER_DIALOG_MODE
+                    if (bLocal) {
+                        CMessageEnterDialogMode message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageEnterDialogMode* message = new CMessageEnterDialogMode(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 23: // MSG_SUBTYPE_CMESSAGE_ENTER_STORE_MODE
+                    if (bLocal) {
+                        CMessageEnterStoreMode message(CAIObjectType(), CAIObjectType(), CResRef(""), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageEnterStoreMode* message = new CMessageEnterStoreMode(CAIObjectType(), CAIObjectType(), CResRef(""), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 24: // MSG_SUBTYPE_CMESSAGE_EXIT_DIALOG_MODE
+                    if (bLocal) {
+                        CMessageExitDialogMode message(FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageExitDialogMode* message = new CMessageExitDialogMode(FALSE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 25: // MSG_SUBTYPE_CMESSAGE_EXIT_STORE_MODE
+                    if (bLocal) {
+                        CMessageExitStoreMode message(0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageExitStoreMode* message = new CMessageExitStoreMode(0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 26: // MSG_SUBTYPE_CMESSAGE_FIRE_PROJECTILE
+                    if (bLocal) {
+                        CMessageFireProjectile message(0, 0, CPoint(0, 0), 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageFireProjectile* message = new CMessageFireProjectile(0, 0, CPoint(0, 0), 0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 27: // MSG_SUBTYPE_CMESSAGE_INSERT_ACTION
+                    if (bLocal) {
+                        CMessageInsertAction message(CAIAction(), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageInsertAction* message = new CMessageInsertAction(CAIAction(), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 28: // MSG_SUBTYPE_CMESSAGE_INSERT_RESPONSE
+                    if (bLocal) {
+                        CMessageInsertResponse message(CAIResponse(), 0, 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageInsertResponse* message = new CMessageInsertResponse(CAIResponse(), 0, 0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 29: // MSG_SUBTYPE_CMESSAGE_LEAVE_PARTY
+                    if (bLocal) {
+                        CMessageLeaveParty message(0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageLeaveParty* message = new CMessageLeaveParty(0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 30: // MSG_SUBTYPE_CMESSAGE_LOAD_DIALOG
+                    if (bLocal) {
+                        CMessageLoadDialog message(CString(""), 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageLoadDialog* message = new CMessageLoadDialog(CString(""), 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 31: // MSG_SUBTYPE_CMESSAGE_PARTY_GOLD
+                    if (bLocal) {
+                        CMessagePartyGold message(FALSE, FALSE, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessagePartyGold* message = new CMessagePartyGold(FALSE, FALSE, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 32: // MSG_SUBTYPE_CMESSAGE_PLAY_SOUND
+                    if (bLocal) {
+                        CMessagePlaySound message(0, FALSE, FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessagePlaySound* message = new CMessagePlaySound(0, FALSE, FALSE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 33: // MSG_SUBTYPE_CMESSAGE_PLAY_SOUND_REF
+                    if (bLocal) {
+                        CMessagePlaySoundRef message(CResRef(""), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessagePlaySoundRef* message = new CMessagePlaySoundRef(CResRef(""), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 34: // MSG_SUBTYPE_CMESSAGE_34
+                    if (bLocal) {
+                        CMessage34 message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage34* message = new CMessage34(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 35: // MSG_SUBTYPE_CMESSAGE_REMOVE_REPLIES
+                    if (bLocal) {
+                        CMessageRemoveReplies message(0, 0, 0, CString(""), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageRemoveReplies* message = new CMessageRemoveReplies(0, 0, 0, CString(""), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 36: // MSG_SUBTYPE_CMESSAGE_REPUTATION_CHANGE
+                    if (bLocal) {
+                        CMessageReputationChange message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageReputationChange* message = new CMessageReputationChange(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 37: // MSG_SUBTYPE_CMESSAGE_SET_ACTIVE
+                    if (bLocal) {
+                        CMessageSetActive message(FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetActive* message = new CMessageSetActive(FALSE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 38: // MSG_SUBTYPE_CMESSAGE_SET_AISPEED
+                    if (bLocal) {
+                        CMessageSetAISpeed message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetAISpeed* message = new CMessageSetAISpeed(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 39: // MSG_SUBTYPE_CMESSAGE_SET_COMMAND_PAUSE
+                    if (bLocal) {
+                        CMessageSetCommandPause message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetCommandPause* message = new CMessageSetCommandPause(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 40: // MSG_SUBTYPE_CMESSAGE_SET_DIALOG_WAIT
+                    if (bLocal) {
+                        CMessageSetDialogWait message(0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetDialogWait* message = new CMessageSetDialogWait(0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 41: // MSG_SUBTYPE_CMESSAGE_SET_DIRECTION
+                    if (bLocal) {
+                        CMessageSetDirection message(CPoint(0, 0), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetDirection* message = new CMessageSetDirection(CPoint(0, 0), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 42: // MSG_SUBTYPE_CMESSAGE_SET_DRAW_POLY
+                    if (bLocal) {
+                        CMessageSetDrawPoly message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetDrawPoly* message = new CMessageSetDrawPoly(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 43: // MSG_SUBTYPE_CMESSAGE_SET_FORCE_ACTION_PICK
+                    if (bLocal) {
+                        CMessageSetForceActionPick message(FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetForceActionPick* message = new CMessageSetForceActionPick(FALSE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 44: // MSG_SUBTYPE_CMESSAGE_SET_HAPPINESS
+                    if (bLocal) {
+                        CMessageSetHappiness message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetHappiness* message = new CMessageSetHappiness(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 45: // MSG_SUBTYPE_CMESSAGE_SET_IN_CUT_SCENE
+                    if (bLocal) {
+                        CMessageSetInCutScene message(FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetInCutScene* message = new CMessageSetInCutScene(FALSE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 46: // MSG_SUBTYPE_CMESSAGE_SET_LAST_ATTACKER
+                    if (bLocal) {
+                        CMessageSetLastAttacker message(CAIObjectType(), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetLastAttacker* message = new CMessageSetLastAttacker(CAIObjectType(), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 47: // MSG_SUBTYPE_CMESSAGE_SET_LAST_OBJECT
+                    if (bLocal) {
+                        CMessageSetLastObject message(CAIObjectType(), 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetLastObject* message = new CMessageSetLastObject(CAIObjectType(), 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 48: // MSG_SUBTYPE_CMESSAGE_SET_NUM_TIMES_TALKED_TO
+                    if (bLocal) {
+                        CMessageSetNumTimesTalkedTo message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetNumTimesTalkedTo* message = new CMessageSetNumTimesTalkedTo(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 49: // MSG_SUBTYPE_CMESSAGE_SET_PATH
+                    if (bLocal) {
+                        CMessageSetPath message(0, NULL, 0, 0, CPoint(0, 0), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetPath* message = new CMessageSetPath(0, NULL, 0, 0, CPoint(0, 0), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 50: // MSG_SUBTYPE_CMESSAGE_SET_SEQUENCE
+                    if (bLocal) {
+                        CMessageSetSequence message(CGameSprite::SEQ_READY, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetSequence* message = new CMessageSetSequence(CGameSprite::SEQ_READY, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 51: // MSG_SUBTYPE_CMESSAGE_51
+                    if (bLocal) {
+                        CMessage51 message(0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage51* message = new CMessage51(0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 52: // MSG_SUBTYPE_CMESSAGE_SET_TRIGGER
+                    if (bLocal) {
+                        CMessageSetTrigger message(CAITrigger(CAITrigger::NO_TRIGGER, 0), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetTrigger* message = new CMessageSetTrigger(CAITrigger(CAITrigger::NO_TRIGGER, 0), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 53: // MSG_SUBTYPE_CMESSAGE_53
+                    if (bLocal) {
+                        CMessage53 message(CString(""), CString(""), 0, 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage53* message = new CMessage53(CString(""), CString(""), 0, 0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 54: // MSG_SUBTYPE_CMESSAGE_SPRITE_DEATH
+                    if (bLocal) {
+                        CMessageSpriteDeath message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSpriteDeath* message = new CMessageSpriteDeath(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 55: // MSG_SUBTYPE_CMESSAGE_SPRITE_EQUIPMENT
+                    if (bLocal) {
+                        // NOTE: Static, probably because of its size.
+                        static CMessageSpriteEquipment message(NULL, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSpriteEquipment* message = new CMessageSpriteEquipment(NULL, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 56: // MSG_SUBTYPE_CMESSAGE_SPRITE_PETRIFY
+                    if (bLocal) {
+                        CMessageSpritePetrify message(FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSpritePetrify* message = new CMessageSpritePetrify(FALSE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 57: // MSG_SUBTYPE_CMESSAGE_SPRITE_UPDATE
+                    if (bLocal) {
+                        CMessageSpriteUpdate message(NULL, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSpriteUpdate* message = new CMessageSpriteUpdate(NULL, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 58: // MSG_SUBTYPE_CMESSAGE_START_FOLLOW
+                    if (bLocal) {
+                        CMessageStartFollow message(0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageStartFollow* message = new CMessageStartFollow(0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 59: // MSG_SUBTYPE_CMESSAGE_START_SCROLL
+                    if (bLocal) {
+                        CMessageStartScroll message(NULL, CPoint(0, 0), CPoint(0, 0), 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageStartScroll* message = new CMessageStartScroll(NULL, CPoint(0, 0), CPoint(0, 0), 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 60: // MSG_SUBTYPE_CMESSAGE_STOP_ACTIONS
+                    if (bLocal) {
+                        CMessageStopActions message(0, 0, NULL);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageStopActions* message = new CMessageStopActions(0, 0, NULL);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 61: // MSG_SUBTYPE_CMESSAGE_STOP_FOLLOW
+                    if (bLocal) {
+                        CMessageStopFollow message(0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageStopFollow* message = new CMessageStopFollow(0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 62: // MSG_SUBTYPE_CMESSAGE_TRIGGER_STATUS
+                    if (bLocal) {
+                        CMessageTriggerStatus message(0, 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageTriggerStatus* message = new CMessageTriggerStatus(0, 0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 63: // MSG_SUBTYPE_CMESSAGE_UNLOCK
+                    if (bLocal) {
+                        CMessageUnlock message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageUnlock* message = new CMessageUnlock(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 64: // MSG_SUBTYPE_CMESSAGE_UPDATE_REACTION
+                    if (bLocal) {
+                        CMessageUpdateReaction message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageUpdateReaction* message = new CMessageUpdateReaction(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 65: // MSG_SUBTYPE_CMESSAGE_VERBAL_CONSTANT
+                    if (bLocal) {
+                        CMessageVerbalConstant message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageVerbalConstant* message = new CMessageVerbalConstant(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 66: // MSG_SUBTYPE_CMESSAGE_VISIBILITY_MAP_MOVE
+                    if (bLocal) {
+                        CMessageVisibilityMapMove message(FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageVisibilityMapMove* message = new CMessageVisibilityMapMove(FALSE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 67: // MSG_SUBTYPE_CMESSAGE_VISUAL_EFFECT
+                    if (bLocal) {
+                        CMessageVisualEffect message(0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageVisualEffect* message = new CMessageVisualEffect(0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 68: // MSG_SUBTYPE_CMESSAGE_SET_DIALOG_RESREF
+                    if (bLocal) {
+                        CMessageSetDialogResRef message(CResRef(""), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetDialogResRef* message = new CMessageSetDialogResRef(CResRef(""), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 69: // MSG_SUBTYPE_CMESSAGE_ESCAPE_AREA
+                    if (bLocal) {
+                        CMessageEscapeArea message(0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageEscapeArea* message = new CMessageEscapeArea(0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 70: // MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXTREF_SEND
+                    if (bLocal) {
+                        CMessageDisplayTextRefSend message(-1, -1, 0, 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageDisplayTextRefSend* message = new CMessageDisplayTextRefSend(-1, -1, 0, 0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 71: // MSG_SUBTYPE_CMESSAGE_SET_CURRENT_ACTION_ID
+                    if (bLocal) {
+                        CMessageSetCurrentActionId message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetCurrentActionId* message = new CMessageSetCurrentActionId(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 72: // MSG_SUBTYPE_CMESSAGE_MOVE_GLOBAL
+                    if (bLocal) {
+                        CMessageMoveGlobal message(CString(""), CPoint(0, 0), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageMoveGlobal* message = new CMessageMoveGlobal(CString(""), CPoint(0, 0), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 73: // MSG_SUBTYPE_CMESSAGE_FADE_COLOR
+                    if (bLocal) {
+                        CMessageFadeColor message(TRUE, 0, 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageFadeColor* message = new CMessageFadeColor(TRUE, 0, 0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 74: // MSG_SUBTYPE_CMESSAGE_START_TEXT_SCREEN
+                    if (bLocal) {
+                        CMessageStartTextScreen message(CResRef(""), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageStartTextScreen* message = new CMessageStartTextScreen(CResRef(""), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 75: // MSG_SUBTYPE_CMESSAGE_SPAWNPT_ACTIVATE
+                    if (bLocal) {
+                        CMessageSpawnPtActivate message(TRUE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSpawnPtActivate* message = new CMessageSpawnPtActivate(TRUE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 76: // MSG_SUBTYPE_CMESSAGE_SPAWNPT_SPAWN
+                    if (bLocal) {
+                        CMessageSpawnPtSpawn message(CPoint(0, 0), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSpawnPtSpawn* message = new CMessageSpawnPtSpawn(CPoint(0, 0), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 77: // MSG_SUBTYPE_CMESSAGE_STATIC_START
+                    if (bLocal) {
+                        CMessageStaticStart message(TRUE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageStaticStart* message = new CMessageStaticStart(TRUE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 78: // MSG_SUBTYPE_CMESSAGE_STORE_ADD_ITEM
+                    if (bLocal) {
+                        CMessageStoreAddItem message(CResRef(""), CCreatureFileItem(), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageStoreAddItem* message = new CMessageStoreAddItem(CResRef(""), CCreatureFileItem(), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 79: // MSG_SUBTYPE_CMESSAGE_STORE_REMOVE_ITEM
+                    if (bLocal) {
+                        CMessageStoreRemoveItem message(CResRef(""), CResRef(""), 0, 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageStoreRemoveItem* message = new CMessageStoreRemoveItem(CResRef(""), CResRef(""), 0, 0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 80: // MSG_SUBTYPE_CMESSAGE_FAMILIAR_ADD
+                    if (bLocal) {
+                        CMessageFamiliarAdd message(TRUE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageFamiliarAdd* message = new CMessageFamiliarAdd(TRUE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 81: // MSG_SUBTYPE_CMESSAGE_FAMILIAR_REMOVE_RESREF
+                    if (bLocal) {
+                        CMessageFamiliarRemoveResRef message(CResRef(), 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageFamiliarRemoveResRef* message = new CMessageFamiliarRemoveResRef(CResRef(), 0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 82: // MSG_SUBTYPE_CMESSAGE_STOP_ESCAPE_AREA
+                    if (bLocal) {
+                        CMessageStopEscapeArea message(0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageStopEscapeArea* message = new CMessageStopEscapeArea(0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 83: // MSG_SUBTYPE_CMESSAGE_83
+                    if (bLocal) {
+                        CMessage83 message(CResRef(""), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage83* message = new CMessage83(CResRef(""), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 84: // MSG_SUBTYPE_CMESSAGE_84
+                    if (bLocal) {
+                        CMessage84 message(CResRef(), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage84* message = new CMessage84(CResRef(), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 85: // MSG_SUBTYPE_CMESSAGE_SET_TIME_STOP
+                    if (bLocal) {
+                        CMessageSetTimeStop message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetTimeStop* message = new CMessageSetTimeStop(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 86: // MSG_SUBTYPE_CMESSAGE_86
+                    if (bLocal) {
+                        CMessage86 message(CResRef(), CString(""), CPoint(0, 0), CPoint(0, 0), 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage86* message = new CMessage86(CResRef(), CString(""), CPoint(0, 0), CPoint(0, 0), 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 87: // MSG_SUBTYPE_CMESSAGE_STORE_RELEASE
+                    if (bLocal) {
+                        CMessageStoreRelease message(CResRef(""), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageStoreRelease* message = new CMessageStoreRelease(CResRef(""), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 88: // MSG_SUBTYPE_CMESSAGE_88
+                    if (bLocal) {
+                        CMessage88 message(0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage88* message = new CMessage88(0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 89: // MSG_SUBTYPE_CMESSAGE_89
+                    if (bLocal) {
+                        CMessage89 message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage89* message = new CMessage89(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 90: // MSG_SUBTYPE_CMESSAGE_90
+                    if (bLocal) {
+                        CMessage90 message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage90* message = new CMessage90(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 91: // MSG_SUBTYPE_CMESSAGE_FLOAT_TEXT
+                    if (bLocal) {
+                        CMessageFloatText message(0, 0, 0, FALSE);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageFloatText* message = new CMessageFloatText(0, 0, 0, FALSE);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 92: // MSG_SUBTYPE_CMESSAGE_92
+                    if (bLocal) {
+                        CMessage92 message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage92* message = new CMessage92(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 93: // MSG_SUBTYPE_CMESSAGE_SET_PROTAGONIST
+                    if (bLocal) {
+                        CMessageSetProtagonist message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetProtagonist* message = new CMessageSetProtagonist(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 94: // MSG_SUBTYPE_CMESSAGE_START_COMBAT_MUSIC
+                    if (bLocal) {
+                        CMessageStartCombatMusic message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageStartCombatMusic* message = new CMessageStartCombatMusic(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 95: // MSG_SUBTYPE_CMESSAGE_95
+                    if (bLocal) {
+                        CMessage95 message(0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage95* message = new CMessage95(0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 96: // MSG_SUBTYPE_CMESSAGE_96
+                    if (bLocal) {
+                        CMessage96 message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage96* message = new CMessage96(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 97: { // MSG_SUBTYPE_CMESSAGE_SET_SCRIPT
+                    RESREF scriptRes = "";
+                    if (bLocal) {
+                        CMessageSetScript message(0, 0, 0, scriptRes);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetScript* message = new CMessageSetScript(0, 0, 0, scriptRes);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                }
+                case 98: // MSG_SUBTYPE_CMESSAGE_98
+                    if (bLocal) {
+                        CMessage98 message(0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage98* message = new CMessage98(0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 99: // MSG_SUBTYPE_CMESSAGE_SCREENSHAKE
+                    if (bLocal) {
+                        CMessageScreenShake message(0, 0, 0, TRUE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageScreenShake* message = new CMessageScreenShake(0, 0, 0, TRUE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 100: // MSG_SUBTYPE_CMESSAGE_STORE_DEMAND
+                    if (bLocal) {
+                        CMessageStoreDemand message(CResRef(""), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageStoreDemand* message = new CMessageStoreDemand(CResRef(""), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 101: // MSG_SUBTYPE_CMESSAGE_101
+                    if (bLocal) {
+                        CMessage101 message(FALSE, 0, 0, FALSE);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage101* message = new CMessage101(FALSE, 0, 0, FALSE);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 102: // MSG_SUBTYPE_CMESSAGE_WEAPON_IMMUNITIES_UPDATE
+                    if (bLocal) {
+                        CMessageWeaponImmumityUpdate message(NULL, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageWeaponImmumityUpdate* message = new CMessageWeaponImmumityUpdate(NULL, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 103: // MSG_SUBTYPE_CMESSAGE_103
+                    if (bLocal) {
+                        CMessage103 message(FALSE, 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage103* message = new CMessage103(FALSE, 0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 104: // MSG_SUBTYPE_CMESSAGE_PROJECTILE_IMMUNITIES_UPDATE
+                    if (bLocal) {
+                        CMessageProjectileImmunityUpdate message(NULL, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageProjectileImmunityUpdate* message = new CMessageProjectileImmunityUpdate(NULL, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 105: // MSG_SUBTYPE_CMESSAGE_105
+                    if (bLocal) {
+                        CMessage105 message(std::list<CMessageAddEffect*>(), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage105* message = new CMessage105(std::list<CMessageAddEffect*>(), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 106: // MSG_SUBTYPE_CMESSAGE_TOGGLE_INTERFACE
+                    if (bLocal) {
+                        CMessageToggleInterface message(FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageToggleInterface* message = new CMessageToggleInterface(FALSE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 107: // MSG_SUBTYPE_CMESSAGE_107
+                    if (bLocal) {
+                        CMessage107 message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage107* message = new CMessage107(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 108: // MSG_SUBTYPE_CMESSAGE_108
+                    // NOTE: Only handled in local games. A message that can't
+                    // be unmarshalled yet is queued for later.
+                    if (bLocal) {
+                        CMessage108 message(CResRef(""), 0, 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        } else {
+                            CMessage108* pMessage = new CMessage108(CResRef(""), 0, 0, 0, 0, 0);
+                            if (pMessage->UnmarshalMessage(pData, dwSize)) {
+                                m_messageList.AddTail(pMessage);
+                            } else {
+                                delete pMessage;
+                            }
+                        }
+                    }
+                    break;
+                case 109: // MSG_SUBTYPE_CMESSAGE_SET_AREA_TYPE
+                    if (bLocal) {
+                        CMessageSetAreaType message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        } else {
+                            CMessageSetAreaType* pMessage = new CMessageSetAreaType(0, 0, 0);
+                            if (pMessage->UnmarshalMessage(pData, dwSize)) {
+                                m_messageList.AddTail(pMessage);
+                            } else {
+                                delete pMessage;
+                            }
+                        }
+                    }
+                    break;
+                case 110: // MSG_SUBTYPE_CMESSAGE_SET_AREA_REST_ENCOUNTER
+                    if (bLocal) {
+                        CMessageSetAreaRestEncounter message(0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        } else {
+                            CMessageSetAreaRestEncounter* pMessage = new CMessageSetAreaRestEncounter(0, 0, 0, 0);
+                            if (pMessage->UnmarshalMessage(pData, dwSize)) {
+                                m_messageList.AddTail(pMessage);
+                            } else {
+                                delete pMessage;
+                            }
+                        }
+                    }
+                    break;
+                case 111: // MSG_SUBTYPE_CMESSAGE_111
+                    if (bLocal) {
+                        CMessage111 message(0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage111* message = new CMessage111(0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 112: // MSG_SUBTYPE_CMESSAGE_112
+                    if (bLocal) {
+                        CMessage112 message(CResRef(""), 0, CPoint(0, 0), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage112* message = new CMessage112(CResRef(""), 0, CPoint(0, 0), 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 113: // MSG_SUBTYPE_CMESSAGE_PICKED_DIALOG_RESPONSE
+                    if (bLocal) {
+                        CMessagePickedDialogResponse message(0, 0, 0, CString(""), 0, CString(""), 0, 0, 0, FALSE, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessagePickedDialogResponse* message = new CMessagePickedDialogResponse(0, 0, 0, CString(""), 0, CString(""), 0, 0, 0, FALSE, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 114: // MSG_SUBTYPE_CMESSAGE_SET_AREA_EXPLORED
+                    if (bLocal) {
+                        CMessageSetAreaExplored message(FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageSetAreaExplored* message = new CMessageSetAreaExplored(FALSE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 115: // MSG_SUBTYPE_CMESSAGE_115
+                    if (bLocal) {
+                        CMessage115 message(0, 0, CPoint(0, 0), 0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage115* message = new CMessage115(0, 0, CPoint(0, 0), 0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 116: // MSG_SUBTYPE_CMESSAGE_CHANGE_STAT
+                    if (bLocal) {
+                        CMessageChangeStat message(0, 0, FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        } else {
+                            CMessageChangeStat* pMessage = new CMessageChangeStat(0, 0, FALSE, 0, 0);
+                            if (pMessage->UnmarshalMessage(pData, dwSize)) {
+                                m_messageList.AddTail(pMessage);
+                            } else {
+                                delete pMessage;
+                            }
+                        }
+                    }
+                    break;
+                case 117: // MSG_SUBTYPE_CMESSAGE_117
+                    if (bLocal) {
+                        CMessage117 message(CResRef(), CResRef(), 0, CPoint(0, 0), 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        } else {
+                            CMessage117* pMessage = new CMessage117(CResRef(), CResRef(), 0, CPoint(0, 0), 0, 0);
+                            if (pMessage->UnmarshalMessage(pData, dwSize)) {
+                                m_messageList.AddTail(pMessage);
+                            } else {
+                                delete pMessage;
+                            }
+                        }
+                    }
+                    break;
+                case 118: // received as 118, but reports MSG_SUBTYPE_CMESSAGE_PROJECTILE_IMMUNITIES_UPDATE
+                    if (bLocal) {
+                        CMessage118 message(NULL, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage118* message = new CMessage118(NULL, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 120: // MSG_SUBTYPE_CMESSAGE_120
+                    if (bLocal) {
+                        CMessage120 message(0, FALSE, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessage120* message = new CMessage120(0, FALSE, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                case 121: // MSG_SUBTYPE_CMESSAGE_END_GAME
+                    if (bLocal) {
+                        CMessageEndGame message(0, 0, 0, 0);
+                        if (message.UnmarshalMessage(pData, dwSize)) {
+                            message.Run();
+                        }
+                    } else {
+                        CMessageEndGame* message = new CMessageEndGame(0, 0, 0, 0);
+                        if (message->UnmarshalMessage(pData, dwSize)) {
+                            m_messageList.AddTail(message);
+                        } else {
+                            delete message;
+                        }
+                    }
+                    break;
+                }
+                break;
+            }
+            case 'D': // MSG_TYPE_DIALOG
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'C': // MSG_SUBTYPE_DIALOG_CANCEL_REQUEST
+                    g_pBaldurChitin->GetBaldurMessage()->OnCancelDialogRequestToServer(nMsgFrom, pData, dwSize);
+                    break;
+                case 'K': // MSG_SUBTYPE_DIALOG_KILL_OR_USE
+                    g_pBaldurChitin->GetBaldurMessage()->OnDialogRequestKillOrUse(nMsgFrom, pData, dwSize);
+                    break;
+                case 'R': // MSG_SUBTYPE_DIALOG_PERMIT_REQUEST
+                    g_pBaldurChitin->GetBaldurMessage()->OnDialogRequestToServer(nMsgFrom, pData, dwSize);
+                    break;
+                case 'r': // MSG_SUBTYPE_DIALOG_PERMIT_REPLY
+                    g_pBaldurChitin->GetBaldurMessage()->OnDialogReplyFromServer(pData, dwSize);
+                    break;
+                }
+                break;
+            case 'I': // MSG_TYPE_SWAPITEM
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'R': // MSG_SUBTYPE_SWAPITEM_REQUEST
+                    g_pBaldurChitin->GetBaldurMessage()->OnSwapItemRequest(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'J':
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'a':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_435040(nMsgFrom, pData, dwSize);
+                    break;
+                case 'r':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_434D80(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'K': // MSG_TYPE_KICK_PLAYER
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'H': // MSG_SUBTYPE_KICK_PLAYER_HOOFED_OUT
+                    g_pBaldurChitin->GetBaldurMessage()->OnKickPlayerHoofedOut(nMsgFrom);
+                    break;
+                case 'R': // MSG_SUBTYPE_KICK_PLAYER_REQUEST
+                    g_pBaldurChitin->GetBaldurMessage()->OnKickPlayerRequest(nMsgFrom, pData, dwSize);
+                    break;
+                case 'S': // MSG_SUBTYPE_KICK_PLAYER_SERVER_SUPPORT
+                    g_pBaldurChitin->GetBaldurMessage()->OnKickPlayerServerSupport(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'M': // MSG_TYPE_MPSETTINGS
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case '6': // MSG_SUBTYPE_MPSETTINGS_GORE_LEVEL
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsGoreRequirement(nMsgFrom, pData, dwSize);
+                    break;
+                case '9': // MSG_SUBTYPE_MPSETTINGS_RESTRICT_STORE
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsRestrictStoreOptionSet(nMsgFrom, pData, dwSize);
+                    break;
+                case 'D': // MSG_SUBTYPE_MPSETTINGS_FULLDEMAND
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsFullDemanded(nMsgFrom);
+                    break;
+                case 'L': // MSG_SUBTYPE_MPSETTINGS_LOCK_REQUEST
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsArbitrationLockRequest(nMsgFrom, pData, dwSize);
+                    break;
+                case 'N': // MSG_SUBTYPE_MPSETTINGS_NIGHTMAREMODE
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsNightmareMode(nMsgFrom, pData, dwSize);
+                    break;
+                case 'S': // MSG_SUBTYPE_MPSETTINGS_FULLSET
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsFullSet(nMsgFrom, pData, dwSize);
+                    break;
+                case 'a': // MSG_SUBTYPE_MPSETTINGS_LOCK_ALLOW_INPUT
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsArbitrationLockAllowInput(nMsgFrom, pData, dwSize);
+                    break;
+                case 'c': // MSG_SUBTYPE_MPSETTINGS_CHAR_CONTROL
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsCharacterControlSet(nMsgFrom, pData, dwSize);
+                    break;
+                case 'i': // MSG_SUBTYPE_MPSETTINGS_IMPORTING
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsImportingOptionSet(nMsgFrom, pData, dwSize);
+                    break;
+                case 'j': // MSG_SUBTYPE_MPSETTINGS_LISTEN_JOIN
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsJoinRequestOptionSet(nMsgFrom, pData, dwSize);
+                    break;
+                case 'l': // MSG_SUBTYPE_MPSETTINGS_LOCK_STATUS
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsArbitrationLockStatus(nMsgFrom, pData, dwSize);
+                    break;
+                case 'n': // MSG_SUBTYPE_MPSETTINGS_DEMAND_NIGHTMAREMODE
+                    g_pBaldurChitin->m_cBaldurMessage.OnDemandSettingsNightmareMode(nMsgFrom);
+                    break;
+                case 'p': // MSG_SUBTYPE_MPSETTINGS_PERMISSION
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsPermissionSet(nMsgFrom, pData, dwSize);
+                    break;
+                case 'r': // MSG_SUBTYPE_MPSETTINGS_CHAR_READY
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsCharacterReadySet(nMsgFrom, pData, dwSize);
+                    break;
+                case 's': // MSG_SUBTYPE_MPSETTINGS_SLOT_STATUS
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsCharacterSlotStatus(nMsgFrom, pData, dwSize);
+                    break;
+                case 'y': // MSG_SUBTYPE_MPSETTINGS_PLAYER_READY
+                    g_pBaldurChitin->m_cBaldurMessage.OnSettingsPlayerReadySet(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'N':
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'A':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_436B60(nMsgFrom, pData, dwSize);
+                    break;
+                case 'E':
+                    g_pBaldurChitin->GetBaldurMessage()->OnMovieEndCredits(nMsgFrom, pData, dwSize);
+                    break;
+                case 'R':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_436860(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'O': // MSG_TYPE_OBJECT
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'A': // MSG_SUBTYPE_OBJECT_ADD
+                    g_pBaldurChitin->GetBaldurMessage()->sub_42FFD0(nMsgFrom, pData, dwSize);
+                    break;
+                case 'C':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_430D40(nMsgFrom, pData, dwSize);
+                    break;
+                case 'D':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_4313E0(nMsgFrom, pData, dwSize);
+                    break;
+                case 'c':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_430BE0(nMsgFrom, pData, dwSize);
+                    break;
+                case 'd':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_431020(nMsgFrom, pData, dwSize);
+                    break;
+                case 's':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_430910(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'P': // MSG_TYPE_PLAYERCHAR
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'D': // MSG_SUBTYPE_PLAYERCHAR_DEMAND_SLOT
+                    g_pBaldurChitin->GetBaldurMessage()->OnDemandCharacterSlot(nMsgFrom, pData, dwSize);
+                    break;
+                case 'F': // MSG_SUBTYPE_PLAYERCHAR_70
+                    g_pBaldurChitin->GetBaldurMessage()->sub_43DC40(nMsgFrom, pData, dwSize);
+                    break;
+                case 'U': // MSG_SUBTYPE_PLAYERCHAR_UPDATE_DEMAND
+                    g_pBaldurChitin->GetBaldurMessage()->OnUpdateDemandCharacterSlot(nMsgFrom, pData, dwSize);
+                    break;
+                case 'd': // MSG_SUBTYPE_PLAYERCHAR_DEMAND_REPLY
+                    g_pBaldurChitin->GetBaldurMessage()->OnDemandCharacterSlotReply(nMsgFrom, pData, dwSize);
+                    break;
+                case 'f': // MSG_SUBTYPE_PLAYERCHAR_102
+                    g_pBaldurChitin->GetBaldurMessage()->sub_43DE50(nMsgFrom, pData, dwSize);
+                    break;
+                case 'u': // MSG_SUBTYPE_PLAYERCHAR_UPDATE_REPLY
+                    g_pBaldurChitin->GetBaldurMessage()->sub_42E630(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'Q': // MSG_TYPE_PAUSING
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'A': // MSG_SUBTYPE_PAUSING_ANNOUNCE
+                    g_pBaldurChitin->GetBaldurMessage()->OnPauseAnnounceStatus(nMsgFrom, pData, dwSize);
+                    break;
+                case 'R': // MSG_SUBTYPE_PAUSING_PERMIT_REQUEST
+                    g_pBaldurChitin->GetBaldurMessage()->OnPauseRequestToServer(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'R': // MSG_TYPE_RESOURCE
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'C':
+                    g_pBaldurChitin->m_cBaldurMessage.sub_42ADF0(nMsgFrom, pData, dwSize);
+                    break;
+                case 'D': // MSG_SUBTYPE_RESOURCE_DEMAND
+                    g_pBaldurChitin->m_cBaldurMessage.OnResourceDemanded(nMsgFrom, pData, dwSize);
+                    break;
+                case 'R':
+                    g_pBaldurChitin->m_cBaldurMessage.sub_42A3F0(pData, dwSize, TRUE);
+                    break;
+                case 'S':
+                    g_pBaldurChitin->m_cBaldurMessage.sub_42ABA0(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'S': // MSG_TYPE_SIGNAL
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'R': // MSG_SUBTYPE_SIGNAL_REQUEST
+                    g_pBaldurChitin->GetBaldurMessage()->OnRequestClientSignal(nMsgFrom, pData, dwSize);
+                    break;
+                case 'S': // MSG_SUBTYPE_SIGNAL
+                    g_pBaldurChitin->GetBaldurMessage()->OnSignal(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'T':
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'c':
+                    g_pBaldurChitin->GetBaldurMessage()->OnTimeChangeToServer(nMsgFrom, pData, dwSize);
+                    break;
+                case 't':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_4371B0(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'V': // MSG_TYPE_VERSION
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 's': // MSG_SUBTYPE_VERSION_SERVER
+                    g_pBaldurChitin->m_cBaldurMessage.OnVersionServer(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'W':
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'w':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_437050(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'X': // MSG_TYPE_LEAVEAREALUA
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'A':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_437FD0(nMsgFrom, pData, dwSize);
+                    break;
+                case 'P':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_438560(nMsgFrom, pData, dwSize);
+                    break;
+                case 'R': // MSG_SUBTYPE_LEAVEAREALUA_PERMIT_REQUEST
+                    g_pBaldurChitin->GetBaldurMessage()->OnLeaveAreaLuaRequestToServer(nMsgFrom, pData, dwSize);
+                    break;
+                case 'r':
+                    g_pBaldurChitin->GetBaldurMessage()->OnLeaveAreaLuaReplyFromServer(pData, dwSize);
+                    break;
+                }
+                break;
+            case 'Y':
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'y':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_436D10(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'b': // MSG_TYPE_BIOGRAPHY
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'C': // MSG_SUBTYPE_BIOGRAPHY_CHANGE_ANNOUNCE
+                    g_pBaldurChitin->m_cBaldurMessage.OnAnnounceBiography(nMsgFrom, pData, dwSize);
+                    break;
+                case 'c': // MSG_SUBTYPE_BIOGRAPHY_CHANGE
+                    g_pBaldurChitin->m_cBaldurMessage.OnSendBiography(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'j': // MSG_TYPE_JOURNAL
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'A': // MSG_SUBTYPE_JOURNAL_ANNOUNCE
+                    g_pBaldurChitin->m_cBaldurMessage.OnAnnounceJournalEntry(nMsgFrom, pData, dwSize);
+                    break;
+                case 'C': // MSG_SUBTYPE_JOURNAL_ANNOUNCE_CHANGE
+                    g_pBaldurChitin->m_cBaldurMessage.OnAnnounceJournalEntryChange(nMsgFrom, pData, dwSize);
+                    break;
+                case 'E': // MSG_SUBTYPE_JOURNAL_ADD_ENTRY
+                    g_pBaldurChitin->m_cBaldurMessage.OnSendJournalEntry(nMsgFrom, pData, dwSize);
+                    break;
+                case 'U': // MSG_SUBTYPE_JOURNAL_ANNOUNCE_USER_ENTRY
+                    g_pBaldurChitin->m_cBaldurMessage.OnAnnounceJournalUserEntry(nMsgFrom, pData, dwSize);
+                    break;
+                case 'c': // MSG_SUBTYPE_JOURNAL_CHANGE_ENTRY
+                    g_pBaldurChitin->m_cBaldurMessage.OnSendEntryJournalChange(nMsgFrom, pData, dwSize);
+                    break;
+                case 'u': // MSG_SUBTYPE_JOURNAL_ADD_USER_ENTRY
+                    g_pBaldurChitin->m_cBaldurMessage.OnSendJournalUserEntry(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'k':
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'd':
+                    g_pBaldurChitin->m_cBaldurMessage.sub_43B680(nMsgFrom, pData, dwSize);
+                    break;
+                case 'r':
+                    g_pBaldurChitin->m_cBaldurMessage.sub_43B380(nMsgFrom, pData, dwSize);
+                    break;
+                case 's':
+                    g_pBaldurChitin->m_cBaldurMessage.sub_43B080(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'm':
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'Q':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_4358B0(nMsgFrom, pData, dwSize);
+                    break;
+                case 'R':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_4361D0(nMsgFrom, pData, dwSize);
+                    break;
+                case 'a':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_435E00(nMsgFrom, pData, dwSize);
+                    break;
+                case 'c':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_435470(nMsgFrom, pData, dwSize);
+                    break;
+                case 'r':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_4352A0(nMsgFrom, pData, dwSize);
+                    break;
+                case 's':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_4355F0(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'p':
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'A':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_432A10(nMsgFrom, pData, dwSize);
+                    break;
+                case 'P':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_432BA0(nMsgFrom, pData, dwSize);
+                    break;
+                case 'R':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_4324E0(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'q':
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'r':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_436D40(nMsgFrom, pData, dwSize);
+                    break;
+                case 's':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_436EF0(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'r':
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'A':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_436610(nMsgFrom, pData, dwSize);
+                    break;
+                case 'R':
+                    g_pBaldurChitin->GetBaldurMessage()->sub_436440(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 's': // MSG_TYPE_MPSYNCH
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'P': // MSG_SUBTYPE_MPSYNCH_REPLY
+                    g_pBaldurChitin->m_cBaldurMessage.OnMultiplayerSynchReply(nMsgFrom, pData, dwSize);
+                    break;
+                case 'R': // MSG_SUBTYPE_MPSYNCH_REQUEST
+                    g_pBaldurChitin->m_cBaldurMessage.OnMultiplayerSynchRequest(nMsgFrom, pData, dwSize);
+                    break;
+                }
+                break;
+            case 'x': // MSG_TYPE_LEAVEAREANAME
+                switch (pData[CNetwork::SPEC_MSG_SUBTYPE]) {
+                case 'A':
+                    g_pBaldurChitin->m_cBaldurMessage.sub_439250(nMsgFrom, pData, dwSize);
+                    break;
+                case 'R': // MSG_SUBTYPE_LEAVEAREANAME_PERMIT_REQUEST
+                    g_pBaldurChitin->m_cBaldurMessage.OnLeaveAreaNameRequestToServer(nMsgFrom, pData, dwSize);
+                    break;
+                case 'r':
+                    g_pBaldurChitin->m_cBaldurMessage.OnLeaveAreaNameReplyFromServer(pData, dwSize);
+                    break;
+                }
+                break;
+            }
+        } else {
+            if (pData[CNetwork::SPEC_MSG_TYPE] == CBaldurMessage::MSG_TYPE_MPSETTINGS
+                && pData[CNetwork::SPEC_MSG_SUBTYPE] == CBaldurMessage::MSG_SUBTYPE_MPSETTINGS_FULLSET) {
+                g_pBaldurChitin->m_cBaldurMessage.OnSettingsFullSet(nMsgFrom, pData, dwSize);
+            }
+
+            if (pData[CNetwork::SPEC_MSG_TYPE] == CBaldurMessage::MSG_TYPE_VERSION
+                && pData[CNetwork::SPEC_MSG_SUBTYPE] == CBaldurMessage::MSG_SUBTYPE_VERSION_SERVER) {
+                g_pBaldurChitin->m_cBaldurMessage.OnVersionServer(nMsgFrom, pData, dwSize);
+            }
+
+            if (pData[CNetwork::SPEC_MSG_TYPE] == CBaldurMessage::MSG_TYPE_PLAYERCHAR
+                && pData[CNetwork::SPEC_MSG_SUBTYPE] == CBaldurMessage::MSG_SUBTYPE_PLAYERCHAR_DEMAND_REPLY) {
+                g_pBaldurChitin->m_cBaldurMessage.OnDemandCharacterSlotReply(nMsgFrom, pData, dwSize);
+            }
+        }
+
+        delete pData;
+    }
+
+    if (g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
+        g_pBaldurChitin->GetBaldurMessage()->PurgeDroppedPlayers();
+        g_pBaldurChitin->GetBaldurMessage()->ObjectControl();
+    }
+
+    if (g_pBaldurChitin->GetBaldurMessage()->GetDialogRequestPending() == TRUE
+        && g_pBaldurChitin->GetBaldurMessage()->GetDialogReplyReturned() == TRUE) {
+        g_pBaldurChitin->m_cBaldurMessage.SetDialogReplyUpdates(g_pBaldurChitin->m_cBaldurMessage.GetDialogReplyUpdates() - 1);
+        if (g_pBaldurChitin->m_cBaldurMessage.GetDialogReplyUpdates() < 0) {
+            g_pBaldurChitin->m_cBaldurMessage.CancelDialogRequestToServer();
+        }
+    }
 }
 
 // 0x4F7110
@@ -5227,6 +7930,137 @@ BYTE CMessageAddAction::GetMsgSubType()
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ADD_ACTION;
 }
 
+// 0x4F80B0
+BOOL CMessageAddAction::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // FIXME: Unused.
+    CString v1;
+
+    CAIObjectType type;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 4635
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    m_action.m_actionID = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    for (BYTE nObject = 0; nObject < 3; nObject++) {
+        SHORT nNameLength = *reinterpret_cast<SHORT*>(pData + cnt);
+        cnt += sizeof(SHORT);
+
+        type.m_sName = CString(reinterpret_cast<char*>(pData + cnt), nNameLength);
+        cnt += nNameLength;
+
+        type.m_nEnemyAlly = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nGeneral = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nRace = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nSubRace = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nClass = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nSpecific = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nGender = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nAlignment = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nAvClass = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nClassMask = *reinterpret_cast<int*>(pData + cnt);
+        cnt += sizeof(int);
+
+        remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+        cnt += sizeof(PLAYER_ID);
+
+        remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+        cnt += sizeof(LONG);
+
+        if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+            type.m_nInstance = localObjectID;
+        } else if (remoteObjectID == CGameObjectArray::INVALID_INDEX && remotePlayerID == 0) {
+            type.m_nInstance = CGameObjectArray::INVALID_INDEX;
+        } else {
+            return FALSE;
+        }
+
+        type.SetSpecialCase(pData + cnt);
+        cnt += 5;
+
+        switch (nObject) {
+        case 0:
+            m_action.m_actorID.Set(type);
+            break;
+        case 1:
+            m_action.m_acteeID.Set(type);
+            break;
+        case 2:
+            m_action.m_acteeID2.Set(type);
+            break;
+        }
+    }
+
+    m_action.m_specificID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_action.m_specificID2 = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_action.m_specificID3 = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    SHORT nString1Length = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_action.SetString1(CString(reinterpret_cast<char*>(pData + cnt), nString1Length));
+    cnt += nString1Length;
+
+    SHORT nString2Length = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_action.SetString2(CString(reinterpret_cast<char*>(pData + cnt), nString2Length));
+    cnt += nString2Length;
+
+    m_action.m_dest.x = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_action.m_dest.y = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 4799
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
 // 0x4F83C0
 void CMessageAddAction::Run()
 {
@@ -5261,7 +8095,7 @@ CMessageAnimationChange::CMessageAnimationChange(WORD animationId, LONG caller, 
     m_animationId = animationId;
 }
 
-// 0x4641A0
+// 0x40A100
 CMessageAnimationChange::~CMessageAnimationChange()
 {
 }
@@ -5449,6 +8283,14 @@ BYTE CMessageAddEffect::GetMsgType()
 BYTE CMessageAddEffect::GetMsgSubType()
 {
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ADD_EFFECT;
+}
+
+// 0x4F8880
+BOOL CMessageAddEffect::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
 }
 
 // 0x4F8CA0
@@ -6376,6 +9218,66 @@ BYTE CMessageContainerAddItem::GetMsgSubType()
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_CONTAINER_ADD_ITEM;
 }
 
+// 0x4FB060
+BOOL CMessageContainerAddItem::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 7440
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    m_slotNum = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_bCompressContainer = *reinterpret_cast<BOOLEAN*>(pData + cnt);
+    cnt += sizeof(BOOLEAN);
+
+    BYTE nResRefLength = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    CHAR szResRef[RESREF_SIZE + 1] = { 0 };
+    memcpy(szResRef, pData + cnt, nResRefLength);
+    cnt += nResRefLength;
+
+    WORD wUseCount1 = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    WORD wUseCount2 = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    WORD wUseCount3 = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    WORD wWear = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    DWORD dwFlags = *reinterpret_cast<DWORD*>(pData + cnt);
+    cnt += sizeof(DWORD);
+
+    // NOTE: Inlined `CItem::operator=`.
+    m_item = CItem(CResRef(szResRef), wUseCount1, wUseCount2, wUseCount3, wWear, dwFlags);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 7502
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
 // 0x4FB230
 void CMessageContainerAddItem::Run()
 {
@@ -6464,6 +9366,80 @@ BYTE CMessageContainerItems::GetMsgType()
 BYTE CMessageContainerItems::GetMsgSubType()
 {
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_CONTAINER_ITEMS;
+}
+
+// 0x4FB800
+BOOL CMessageContainerItems::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 7862
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    m_nItems = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    SHORT nItemsSent = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_pItems = new CItem*[m_nItems];
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 7894
+    UTIL_ASSERT(m_pItems != NULL);
+
+    for (SHORT nSlot = 0; nSlot < static_cast<WORD>(m_nItems); nSlot++) {
+        m_pItems[nSlot] = NULL;
+    }
+
+    for (SHORT nItem = 0; nItem < nItemsSent; nItem++) {
+        SHORT nSlot = *reinterpret_cast<SHORT*>(pData + cnt);
+        cnt += sizeof(SHORT);
+
+        BYTE nResRefLength = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        CHAR szResRef[RESREF_SIZE + 1] = { 0 };
+        memcpy(szResRef, pData + cnt, nResRefLength);
+        cnt += nResRefLength;
+
+        WORD wUseCount1 = *reinterpret_cast<WORD*>(pData + cnt);
+        cnt += sizeof(WORD);
+
+        WORD wUseCount2 = *reinterpret_cast<WORD*>(pData + cnt);
+        cnt += sizeof(WORD);
+
+        WORD wUseCount3 = *reinterpret_cast<WORD*>(pData + cnt);
+        cnt += sizeof(WORD);
+
+        WORD wWear = *reinterpret_cast<WORD*>(pData + cnt);
+        cnt += sizeof(WORD);
+
+        DWORD dwFlags = *reinterpret_cast<DWORD*>(pData + cnt);
+        cnt += sizeof(DWORD);
+
+        m_pItems[nSlot] = new CItem(CResRef(szResRef), wUseCount1, wUseCount2, wUseCount3, wWear, dwFlags);
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 7951
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
 }
 
 // 0x4FBA30
@@ -7022,7 +9998,60 @@ BYTE CMessageDisplayText::GetMsgType()
 // 0x43E060
 BYTE CMessageDisplayText::GetMsgSubType()
 {
-    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_CUT_SCENE_MODE_STATUS;
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXT;
+}
+
+// 0x4FC390
+BOOL CMessageDisplayText::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 8563
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    SHORT nNameLength = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_name = CString(reinterpret_cast<char*>(pData + cnt), nNameLength);
+    cnt += nNameLength;
+
+    SHORT nTextLength = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_text = CString(reinterpret_cast<char*>(pData + cnt), nTextLength);
+    cnt += nTextLength;
+
+    m_nameColor = *reinterpret_cast<COLORREF*>(pData + cnt);
+    cnt += sizeof(COLORREF);
+
+    m_textColor = *reinterpret_cast<COLORREF*>(pData + cnt);
+    cnt += sizeof(COLORREF);
+
+    m_marker = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_moveToTop = *reinterpret_cast<BOOLEAN*>(pData + cnt);
+    cnt += sizeof(BOOLEAN);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 8615
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
 }
 
 // 0x4FC4F0
@@ -7737,6 +10766,114 @@ BYTE CMessageEnterStoreMode::GetMsgSubType()
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ENTER_STORE_MODE;
 }
 
+// 0x4FF170
+BOOL CMessageEnterStoreMode::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // FIXME: Unused.
+    CString v1;
+
+    CAIObjectType type;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 10875
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    BYTE nResRefLength = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    CHAR szResRef[RESREF_SIZE + 1] = { 0 };
+    memcpy(szResRef, pData + cnt, nResRefLength);
+    cnt += nResRefLength;
+
+    CString sTempString(szResRef, nResRefLength);
+    m_cResStore = sTempString;
+
+    for (BYTE nObject = 0; nObject < 2; nObject++) {
+        SHORT nNameLength = *reinterpret_cast<SHORT*>(pData + cnt);
+        cnt += sizeof(SHORT);
+
+        type.m_sName = CString(reinterpret_cast<char*>(pData + cnt), nNameLength);
+        cnt += nNameLength;
+
+        type.m_nEnemyAlly = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nGeneral = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nRace = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nSubRace = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nClass = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nSpecific = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nGender = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nAlignment = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nAvClass = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nClassMask = *reinterpret_cast<int*>(pData + cnt);
+        cnt += sizeof(int);
+
+        remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+        cnt += sizeof(PLAYER_ID);
+
+        remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+        cnt += sizeof(LONG);
+
+        if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+            type.m_nInstance = localObjectID;
+        } else if (remoteObjectID == CGameObjectArray::INVALID_INDEX && remotePlayerID == 0) {
+            type.m_nInstance = CGameObjectArray::INVALID_INDEX;
+        } else {
+            return FALSE;
+        }
+
+        type.SetSpecialCase(pData + cnt);
+        cnt += 5;
+
+        switch (nObject) {
+        case 0:
+            m_cAIProprietor.Set(type);
+            break;
+        case 1:
+            m_cAICustomer.Set(type);
+            break;
+        }
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 11006
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
 // 0x4FF480
 void CMessageEnterStoreMode::Run()
 {
@@ -8018,6 +11155,137 @@ BYTE CMessageInsertAction::GetMsgType()
 BYTE CMessageInsertAction::GetMsgSubType()
 {
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_INSERT_ACTION;
+}
+
+// 0x501420
+BOOL CMessageInsertAction::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // FIXME: Unused.
+    CString v1;
+
+    CAIObjectType type;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 13176
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    m_action.m_actionID = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    for (BYTE nObject = 0; nObject < 3; nObject++) {
+        SHORT nNameLength = *reinterpret_cast<SHORT*>(pData + cnt);
+        cnt += sizeof(SHORT);
+
+        type.m_sName = CString(reinterpret_cast<char*>(pData + cnt), nNameLength);
+        cnt += nNameLength;
+
+        type.m_nEnemyAlly = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nGeneral = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nRace = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nSubRace = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nClass = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nSpecific = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nGender = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nAlignment = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nAvClass = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        type.m_nClassMask = *reinterpret_cast<int*>(pData + cnt);
+        cnt += sizeof(int);
+
+        remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+        cnt += sizeof(PLAYER_ID);
+
+        remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+        cnt += sizeof(LONG);
+
+        if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+            type.m_nInstance = localObjectID;
+        } else if (remoteObjectID == CGameObjectArray::INVALID_INDEX && remotePlayerID == 0) {
+            type.m_nInstance = CGameObjectArray::INVALID_INDEX;
+        } else {
+            return FALSE;
+        }
+
+        type.SetSpecialCase(pData + cnt);
+        cnt += 5;
+
+        switch (nObject) {
+        case 0:
+            m_action.m_actorID.Set(type);
+            break;
+        case 1:
+            m_action.m_acteeID.Set(type);
+            break;
+        case 2:
+            m_action.m_acteeID2.Set(type);
+            break;
+        }
+    }
+
+    m_action.m_specificID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_action.m_specificID2 = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_action.m_specificID3 = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    SHORT nString1Length = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_action.SetString1(CString(reinterpret_cast<char*>(pData + cnt), nString1Length));
+    cnt += nString1Length;
+
+    SHORT nString2Length = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_action.SetString2(CString(reinterpret_cast<char*>(pData + cnt), nString2Length));
+    cnt += nString2Length;
+
+    m_action.m_dest.x = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_action.m_dest.y = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 13340
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
 }
 
 // 0x501730
@@ -9456,6 +12724,54 @@ BYTE CMessageSetDialogWait::GetMsgSubType()
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_DIALOG_WAIT;
 }
 
+// 0x5061D0
+BOOL CMessageSetDialogWait::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 17207
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    m_wait = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_waitTarget = localObjectID;
+    } else {
+        if (remoteObjectID != CGameObjectArray::INVALID_INDEX || remotePlayerID != 0) {
+            return FALSE;
+        }
+
+        m_waitTarget = CGameObjectArray::INVALID_INDEX;
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 17254
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
 // 0x5062C0
 void CMessageSetDialogWait::Run()
 {
@@ -10205,6 +13521,91 @@ BYTE CMessageSetLastAttacker::GetMsgSubType()
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_LAST_ATTACKER;
 }
 
+// 0x5073C0
+BOOL CMessageSetLastAttacker::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // FIXME: Unused.
+    CString v1;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 18368
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    SHORT nNameLength = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_lAttacker.m_sName = CString(reinterpret_cast<char*>(pData + cnt), nNameLength);
+    cnt += nNameLength;
+
+    m_lAttacker.m_nEnemyAlly = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nGeneral = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nRace = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nSubRace = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nClass = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nSpecific = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nGender = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nAlignment = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nAvClass = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nClassMask = *reinterpret_cast<int*>(pData + cnt);
+    cnt += sizeof(int);
+
+    remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_lAttacker.m_nInstance = localObjectID;
+    } else if (remoteObjectID == CGameObjectArray::INVALID_INDEX && remotePlayerID == 0) {
+        m_lAttacker.m_nInstance = CGameObjectArray::INVALID_INDEX;
+    } else {
+        return FALSE;
+    }
+
+    m_lAttacker.SetSpecialCase(pData + cnt);
+    cnt += 5;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 18473
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
 // 0x5075A0
 void CMessageSetLastAttacker::Run()
 {
@@ -10260,6 +13661,95 @@ BYTE CMessageSetLastObject::GetMsgType()
 BYTE CMessageSetLastObject::GetMsgSubType()
 {
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_LAST_OBJECT;
+}
+
+// 0x5079B0
+BOOL CMessageSetLastObject::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // FIXME: Unused.
+    CString v1;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 18724
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    SHORT nNameLength = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_lAttacker.m_sName = CString(reinterpret_cast<char*>(pData + cnt), nNameLength);
+    cnt += nNameLength;
+
+    m_lAttacker.m_nEnemyAlly = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nGeneral = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nRace = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nSubRace = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nClass = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nSpecific = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nGender = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nAlignment = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nAvClass = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_lAttacker.m_nClassMask = *reinterpret_cast<int*>(pData + cnt);
+    cnt += sizeof(int);
+
+    m_type = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_lAttacker.m_nInstance = localObjectID;
+    } else if (remoteObjectID == CGameObjectArray::INVALID_INDEX && remotePlayerID == 0) {
+        m_lAttacker.m_nInstance = CGameObjectArray::INVALID_INDEX;
+    } else {
+        m_lAttacker.m_nInstance = CGameObjectArray::INVALID_INDEX;
+        return FALSE;
+    }
+
+    m_lAttacker.SetSpecialCase(pData + cnt);
+    cnt += 5;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 18835
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
 }
 
 // 0x507BA0
@@ -10519,6 +14009,125 @@ BYTE CMessageSetPath::GetMsgSubType()
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_PATH;
 }
 
+// 0x508320
+BOOL CMessageSetPath::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 19274
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    BYTE nAreaStringLength = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    CHAR szAreaString[RESREF_SIZE + 1] = { 0 };
+    memcpy(szAreaString, pData + cnt, nAreaStringLength);
+    cnt += nAreaStringLength;
+
+    CString sTempString(szAreaString, nAreaStringLength);
+    m_sAreaString = sTempString;
+
+    m_position = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_nPath = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_currPath = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_currDest.x = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_currDest.y = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (m_nPath > 0) {
+        m_pPath = new LONG[m_nPath];
+        memcpy(m_pPath, pData + cnt, sizeof(LONG) * m_nPath);
+        cnt += sizeof(LONG) * m_nPath;
+    } else {
+        m_pPath = NULL;
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 19333
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
+// 0x5084C0
+void CMessageSetPath::Run()
+{
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (pSprite->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            if (pSprite->m_pArea == NULL) {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return;
+            }
+
+            if (g_pBaldurChitin->GetObjectGame()->GetArea(m_sAreaString) != pSprite->m_pArea) {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return;
+            }
+
+            LONG x = m_position % CPathSearch::GRID_ACTUALX;
+            LONG y = CPathSearch::GRID_ACTUALY - m_position / CPathSearch::GRID_ACTUALX - 1;
+
+            CPoint pos = pSprite->GetPos();
+            if (pos.x / CPathSearch::GRID_SQUARE_SIZEX != x
+                || pos.y / CPathSearch::GRID_SQUARE_SIZEY != y) {
+                if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    return;
+                }
+
+                pSprite->JumpToPoint(CPoint(x * CPathSearch::GRID_SQUARE_SIZEX, y * CPathSearch::GRID_SQUARE_SIZEY), FALSE);
+            }
+
+            pSprite->SetPath(m_pPath, m_nPath);
+            pSprite->m_currPath = m_currPath;
+            pSprite->InitializeWalkingSound();
+            m_pPath = NULL;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x453530
@@ -10700,6 +14309,122 @@ BYTE CMessageSetTrigger::GetMsgType()
 BYTE CMessageSetTrigger::GetMsgSubType()
 {
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_TRIGGER;
+}
+
+// 0x50A090
+BOOL CMessageSetTrigger::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // FIXME: Unused.
+    CString v1;
+
+    CAIObjectType type;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 20928
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    m_trigger.m_triggerID = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_trigger.m_specificID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    SHORT nNameLength = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    type.m_sName = CString(reinterpret_cast<char*>(pData + cnt), nNameLength);
+    cnt += nNameLength;
+
+    type.m_nEnemyAlly = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    type.m_nGeneral = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    type.m_nRace = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    type.m_nSubRace = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    type.m_nClass = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    type.m_nSpecific = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    type.m_nGender = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    type.m_nAlignment = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    type.m_nAvClass = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    type.m_nClassMask = *reinterpret_cast<int*>(pData + cnt);
+    cnt += sizeof(int);
+
+    remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        type.m_nInstance = localObjectID;
+    } else if (remoteObjectID == CGameObjectArray::INVALID_INDEX && remotePlayerID == 0) {
+        type.m_nInstance = CGameObjectArray::INVALID_INDEX;
+    } else {
+        return FALSE;
+    }
+
+    type.SetSpecialCase(pData + cnt);
+    cnt += 5;
+
+    m_trigger.m_triggerCause.Set(type);
+
+    m_trigger.m_flags = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_trigger.m_specific2 = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_trigger.m_specific3 = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    SHORT nString1Length = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_trigger.m_string1 = CString(reinterpret_cast<char*>(pData + cnt), nString1Length);
+    cnt += nString1Length;
+
+    SHORT nString2Length = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_trigger.m_string2 = CString(reinterpret_cast<char*>(pData + cnt), nString2Length);
+    cnt += nString2Length;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 21068
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
 }
 
 // 0x50A360
@@ -10904,6 +14629,184 @@ BYTE CMessageSpriteEquipment::GetMsgType()
 BYTE CMessageSpriteEquipment::GetMsgSubType()
 {
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SPRITE_EQUIPMENT;
+}
+
+// 0x50B9A0
+BOOL CMessageSpriteEquipment::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 22271
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    SHORT nItems = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    BYTE nSelectedWeapon = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    WORD nSelectedWeaponAbility = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    BYTE nWeaponSet = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    memset(m_equipment.m_items, 0, sizeof(m_equipment.m_items));
+
+    m_equipment.m_selectedWeapon = nSelectedWeapon;
+    m_equipment.m_selectedWeaponAbility = nSelectedWeaponAbility;
+    m_nWeaponSet = nWeaponSet;
+
+    for (SHORT nItem = 0; nItem < nItems; nItem++) {
+        SHORT nSlot = *reinterpret_cast<SHORT*>(pData + cnt);
+        cnt += sizeof(SHORT);
+
+        BYTE nResRefLength = *reinterpret_cast<BYTE*>(pData + cnt);
+        cnt += sizeof(BYTE);
+
+        CHAR szResRef[RESREF_SIZE + 1] = { 0 };
+        memcpy(szResRef, pData + cnt, nResRefLength);
+        cnt += nResRefLength;
+
+        WORD wUseCount1 = *reinterpret_cast<WORD*>(pData + cnt);
+        cnt += sizeof(WORD);
+
+        WORD wUseCount2 = *reinterpret_cast<WORD*>(pData + cnt);
+        cnt += sizeof(WORD);
+
+        WORD wUseCount3 = *reinterpret_cast<WORD*>(pData + cnt);
+        cnt += sizeof(WORD);
+
+        WORD wWear = *reinterpret_cast<WORD*>(pData + cnt);
+        cnt += sizeof(WORD);
+
+        DWORD dwFlags = *reinterpret_cast<DWORD*>(pData + cnt);
+        cnt += sizeof(DWORD);
+
+        m_equipment.m_items[static_cast<WORD>(nSlot)] = new CItem(CResRef(szResRef), wUseCount1, wUseCount2, wUseCount3, wWear, dwFlags);
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 22369
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
+// 0x50BBC0
+void CMessageSpriteEquipment::Run()
+{
+    CGameSprite* pSprite;
+    CItem* pLauncher = NULL;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        for (int index = 0; index < 51; index++) {
+            if (m_equipment.m_items[index] != NULL) {
+                delete m_equipment.m_items[index];
+                m_equipment.m_items[index] = NULL;
+            }
+        }
+        return;
+    }
+
+    CItem* pWeapon = pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon];
+    if (pWeapon == NULL) {
+        pSprite->SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 0, 0);
+    } else {
+        pWeapon->Demand();
+
+        ITEM_ABILITY* pAbility = pWeapon->GetAbility(pSprite->m_equipment.m_selectedWeaponAbility);
+        if (pAbility != NULL) {
+            SHORT launcherSlot;
+            pLauncher = pSprite->GetLauncher(pAbility, launcherSlot);
+        } else {
+            pLauncher = NULL;
+        }
+
+        pWeapon->Release();
+    }
+
+    for (SHORT nSlot = 0; nSlot < 51; nSlot++) {
+        CItem* pNewItem = m_equipment.m_items[nSlot];
+        CItem* pOldItem = pSprite->m_equipment.m_items[nSlot];
+
+        BOOL bSame;
+        if (pNewItem == NULL) {
+            bSame = pOldItem == NULL;
+        } else {
+            bSame = pOldItem != NULL
+                && pNewItem->m_useCount1 == pOldItem->m_useCount1
+                && pNewItem->m_useCount2 == pOldItem->m_useCount2
+                && pNewItem->m_useCount3 == pOldItem->m_useCount3
+                && pNewItem->m_wear == pOldItem->m_wear
+                && pNewItem->m_flags == pOldItem->m_flags
+                && pNewItem->cResRef == pOldItem->cResRef;
+        }
+
+        if (bSame) {
+            // NOTE: The incoming copy is disposed but not cleared from
+            // `m_equipment` (the destructor just zeroes it).
+            if (m_equipment.m_items[nSlot] != NULL) {
+                g_pBaldurChitin->GetObjectGame()->AddDisposableItem(m_equipment.m_items[nSlot]);
+            }
+        } else {
+            if (pSprite->m_equipment.m_items[nSlot] != NULL) {
+                if (nSlot < 10
+                    || (((nSlot >= 11 && nSlot < 15) || nSlot >= 43)
+                        && (pSprite->m_equipment.m_selectedWeapon == nSlot
+                            || pLauncher == pSprite->m_equipment.m_items[nSlot]))) {
+                    pSprite->Unequip(nSlot);
+                }
+
+                g_pBaldurChitin->GetObjectGame()->AddDisposableItem(pSprite->m_equipment.m_items[nSlot]);
+            }
+
+            pSprite->m_equipment.m_items[nSlot] = m_equipment.m_items[nSlot];
+            m_equipment.m_items[nSlot] = NULL;
+
+            if (nSlot < 10) {
+                pSprite->Equip(nSlot);
+            }
+
+            if (pSprite->m_equipment.m_items[nSlot] != NULL
+                && nSlot == pSprite->m_equipment.m_selectedWeapon) {
+                pSprite->SelectWeaponAbility(static_cast<BYTE>(nSlot),
+                    static_cast<BYTE>(pSprite->m_equipment.m_selectedWeaponAbility),
+                    0,
+                    1);
+            }
+        }
+    }
+
+    pSprite->sub_726810(m_nWeaponSet);
+
+    static_cast<CBaldurEngine*>(g_pBaldurChitin->pActiveEngine)->UpdatePersonalItemStatus(m_targetId);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // -----------------------------------------------------------------------------
@@ -11158,6 +15061,20 @@ BYTE CMessageSpriteUpdate::GetMsgType()
 BYTE CMessageSpriteUpdate::GetMsgSubType()
 {
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SPRITE_UPDATE;
+}
+
+// 0x50D290
+BOOL CMessageSpriteUpdate::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x50D6F0
+void CMessageSpriteUpdate::Run()
+{
+    // TODO: Incomplete.
 }
 
 // -----------------------------------------------------------------------------
@@ -12654,6 +16571,48 @@ BYTE CMessageSetDialogResRef::GetMsgSubType()
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_DIALOG_RESREF;
 }
 
+// 0x505DC0
+BOOL CMessageSetDialogResRef::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // FIXME: Unused.
+    CString v1;
+    CAIObjectType v2;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 16996
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    BYTE nResRefLength = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    CHAR szResRef[RESREF_SIZE + 1] = { 0 };
+    memcpy(szResRef, pData + cnt, nResRefLength);
+    cnt += nResRefLength;
+
+    m_cResRefDialog = CString(szResRef, nResRefLength);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 17030
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
 // 0x505F50
 void CMessageSetDialogResRef::Run()
 {
@@ -13291,6 +17250,48 @@ BYTE CMessageStartTextScreen::GetMsgType()
 BYTE CMessageStartTextScreen::GetMsgSubType()
 {
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_START_TEXT_SCREEN;
+}
+
+// 0x508BA0
+BOOL CMessageStartTextScreen::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // FIXME: Unused.
+    CString v1;
+    CAIObjectType v2;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 19777
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    BYTE nResRefLength = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    CHAR szResRef[RESREF_SIZE + 1] = { 0 };
+    memcpy(szResRef, pData + cnt, nResRefLength);
+    cnt += nResRefLength;
+
+    m_screen = CString(szResRef, nResRefLength);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 19811
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
 }
 
 // 0x508D30
@@ -14870,6 +18871,75 @@ BYTE CMessageFireProjectile::GetMsgSubType()
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_FIRE_PROJECTILE;
 }
 
+// 0x5006C0
+BOOL CMessageFireProjectile::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 12380
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    m_projectileType = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        if (remoteObjectID != CGameObjectArray::INVALID_INDEX || remotePlayerID != 0) {
+            return FALSE;
+        }
+
+        localObjectID = CGameObjectArray::INVALID_INDEX;
+    }
+
+    m_projectileTargetId = localObjectID;
+
+    m_projectileTarget.x = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_projectileTarget.y = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_height = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    field_20 = *reinterpret_cast<int*>(pData + cnt);
+    cnt += sizeof(int);
+
+    field_1E = *reinterpret_cast<unsigned char*>(pData + cnt);
+    cnt += sizeof(unsigned char);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 12447
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
+// 0x5007F0
+void CMessageFireProjectile::Run()
+{
+    // TODO: Incomplete.
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4F56B0
@@ -16088,7 +20158,7 @@ BOOL CMessage120::UnmarshalMessage(BYTE* pData, DWORD dwSize)
     return TRUE;
 }
 
-// 0x514CB0
+// 0x514F00
 void CMessage120::Run()
 {
     if (g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
@@ -16876,6 +20946,3886 @@ void CMessageChangeStat::Run()
         pSprite->SetAtOffset(m_stat,
             m_value,
             m_modify);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F5130
+CMessage2::CMessage2(const CItem& item, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    m_item = item;
+}
+
+// 0x4641A0
+CMessage2::~CMessage2()
+{
+}
+
+// 0x40A0D0
+SHORT CMessage2::GetCommType()
+{
+    return SEND;
+}
+
+// 0x40A0E0
+BYTE CMessage2::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x464170
+BYTE CMessage2::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_2;
+}
+
+// 0x4F8D60
+void CMessage2::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    CResRef resRef;
+    CString sResRef;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 5464
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+        LONG remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        resRef = m_item.GetResRef();
+        resRef.CopyToString(sResRef);
+        BYTE stringLen = static_cast<BYTE>(sResRef.GetLength());
+
+        *dwSize = sizeof(PLAYER_ID)
+            + sizeof(LONG)
+            + sizeof(BYTE)
+            + stringLen
+            + sizeof(WORD)
+            + sizeof(WORD)
+            + sizeof(WORD)
+            + sizeof(WORD)
+            + sizeof(DWORD);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 5492
+        UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+        DWORD cnt = 0;
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<BYTE*>(*pData + cnt) = stringLen;
+        cnt += sizeof(BYTE);
+
+        memcpy(*pData + cnt, sResRef.GetBuffer(sResRef.GetLength()), sResRef.GetLength());
+        cnt += sResRef.GetLength();
+
+        *reinterpret_cast<WORD*>(*pData + cnt) = m_item.GetUsageCount(0);
+        cnt += sizeof(WORD);
+
+        *reinterpret_cast<WORD*>(*pData + cnt) = m_item.GetUsageCount(1);
+        cnt += sizeof(WORD);
+
+        *reinterpret_cast<WORD*>(*pData + cnt) = m_item.GetUsageCount(2);
+        cnt += sizeof(WORD);
+
+        *reinterpret_cast<WORD*>(*pData + cnt) = m_item.m_wear;
+        cnt += sizeof(WORD);
+
+        *reinterpret_cast<DWORD*>(*pData + cnt) = m_item.m_flags;
+        cnt += sizeof(DWORD);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 5547
+        UTIL_ASSERT(cnt == *dwSize);
+    } else {
+        *dwSize = 0;
+    }
+}
+
+// 0x4F8FA0
+BOOL CMessage2::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 5584
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    BYTE stringLen = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    char szResRef[RESREF_SIZE + 1] = { 0 };
+    memcpy(szResRef, pData + cnt, stringLen);
+    cnt += stringLen;
+
+    WORD useCount1 = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    WORD useCount2 = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    WORD useCount3 = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    WORD wear = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    DWORD flags = *reinterpret_cast<DWORD*>(pData + cnt);
+    cnt += sizeof(DWORD);
+
+    m_item = CItem(CResRef(szResRef), useCount1, useCount2, useCount3, wear, flags);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 5642
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
+// 0x4F9150
+void CMessage2::Run()
+{
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (pSprite->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            BOOLEAN bPlaced = FALSE;
+            for (INT nSlot = 0; nSlot < CScreenInventory::PERSONAL_INVENTORY_SIZE; nSlot++) {
+                if (bPlaced) {
+                    break;
+                }
+
+                // NOTE: Personal inventory starts at slot 18.
+                if (pSprite->m_equipment.m_items[18 + nSlot] == NULL) {
+                    pSprite->m_equipment.m_items[18 + nSlot] = new CItem(m_item);
+                    pSprite->Equip(static_cast<SHORT>(18 + nSlot));
+                    bPlaced = TRUE;
+                }
+            }
+
+            if (bPlaced) {
+                CMessageSpriteEquipment* pMessage = new CMessageSpriteEquipment(pSprite,
+                    pSprite->m_id,
+                    pSprite->m_id);
+                g_pBaldurChitin->m_cMessageHandler.AddMessage(pMessage, FALSE, pMessage->GetCommType());
+            } else {
+                CItem* pItem = new CItem(m_item);
+                pSprite->FeedBack(CGameSprite::FEEDBACK_ITEM_DROPPED_FULL, 0, 0, 0, -1, 0, 0);
+                pSprite->PutItemGround(pItem);
+
+                if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->m_id) != -1) {
+                    g_pBaldurChitin->GetObjectGame()->FeedBack(CInfGame::FEEDBACK_INVENTORYFULL_ITEMDROPPED, 0, TRUE);
+                }
+            }
+
+            g_pBaldurChitin->GetActiveEngine()->UpdatePersonalItemStatus(m_targetId);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F53E0
+CMessage18::CMessage18(BYTE a1, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    field_C = a1;
+}
+
+// 0x40A0D0
+SHORT CMessage18::GetCommType()
+{
+    return SEND;
+}
+
+// 0x40A0E0
+BYTE CMessage18::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x466470
+BYTE CMessage18::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_18;
+}
+
+// 0x4FCF00
+void CMessage18::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    PLAYER_ID remoteSourcePlayerID = 0;
+    LONG remoteSourceObjectID;
+    PLAYER_ID remoteTargetPlayerID;
+    LONG remoteTargetObjectID;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 9194
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        remoteTargetPlayerID = pObject->m_remotePlayerID;
+        remoteTargetObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    } else {
+        remoteTargetPlayerID = 0;
+        remoteTargetObjectID = CGameObjectArray::INVALID_INDEX;
+    }
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        remoteSourcePlayerID = pObject->m_remotePlayerID;
+        remoteSourceObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    } else {
+        remoteSourceObjectID = CGameObjectArray::INVALID_INDEX;
+    }
+
+    *dwSize = sizeof(PLAYER_ID)
+        + sizeof(LONG)
+        + sizeof(PLAYER_ID)
+        + sizeof(LONG)
+        + sizeof(BYTE);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 9235
+    UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remoteTargetPlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = remoteTargetObjectID;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remoteSourcePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = remoteSourceObjectID;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<BYTE*>(*pData + cnt) = field_C;
+    cnt += sizeof(BYTE);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 9265
+    UTIL_ASSERT(cnt == *dwSize);
+}
+
+// 0x4FD0E0
+BOOL CMessage18::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 9293
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remoteTargetPlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteTargetObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remoteTargetPlayerID, remoteTargetObjectID, localObjectID) != TRUE) {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    PLAYER_ID remoteSourcePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteSourceObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remoteSourcePlayerID, remoteSourceObjectID, localObjectID) == TRUE) {
+        m_sourceId = localObjectID;
+    } else {
+        m_sourceId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    field_C = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 9339
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
+// 0x4FD1D0
+void CMessage18::Run()
+{
+    CAIObjectType type;
+    CGameDoor* pDoor;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pDoor),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (static_cast<BYTE>(pDoor->m_dwFlags & 0x1) != field_C) {
+            CGameObject* pObject;
+
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pObject,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                type.Set(pObject->GetAIType());
+                pDoor->sub_489680(type, FALSE);
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F54F0
+CMessageEnterDialogMode::CMessageEnterDialogMode(LONG a1, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    field_C = a1;
+}
+
+// 0x4536E0
+SHORT CMessageEnterDialogMode::GetCommType()
+{
+    return BROADCAST_FORCED_OTHERS;
+}
+
+// 0x40A0E0
+BYTE CMessageEnterDialogMode::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4F5510
+BYTE CMessageEnterDialogMode::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ENTER_DIALOG_MODE;
+}
+
+// 0x4FE3D0
+void CMessageEnterDialogMode::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 10335
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        *dwSize = 0;
+        return;
+    }
+
+    PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+    LONG remoteObjectID = pObject->m_remoteObjectID;
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    *dwSize = sizeof(PLAYER_ID)
+        + sizeof(LONG)
+        + sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 10356
+    UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = field_C;
+    cnt += sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 10377
+    UTIL_ASSERT(cnt == *dwSize);
+}
+
+// 0x4FE500
+BOOL CMessageEnterDialogMode::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 10405
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    field_C = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 10429
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
+// 0x4FE5B0
+void CMessageEnterDialogMode::Run()
+{
+    // TODO: Incomplete.
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F59D0
+CMessageInsertResponse::CMessageInsertResponse(const CAIResponse& response, LONG a2, LONG a3, LONG caller, LONG target, LONG a6)
+    : CMessage(caller, target)
+{
+    m_response.Set(response);
+    field_30 = a2;
+    field_34 = a3;
+    field_38 = a6;
+}
+
+// 0x4632B0
+CMessageInsertResponse::~CMessageInsertResponse()
+{
+}
+
+// 0x40A0D0
+SHORT CMessageInsertResponse::GetCommType()
+{
+    return SEND;
+}
+
+// 0x40A0E0
+BYTE CMessageInsertResponse::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x463280
+BYTE CMessageInsertResponse::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_INSERT_RESPONSE;
+}
+
+// 0x5017E0
+void CMessageInsertResponse::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // TODO: Incomplete.
+    *dwSize = 0;
+}
+
+// 0x501FE0
+BOOL CMessageInsertResponse::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x502570
+void CMessageInsertResponse::Run()
+{
+    // TODO: Incomplete.
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F5A90
+CMessageLoadDialog::CMessageLoadDialog(const CString& sDialog, LONG a2, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    m_sDialog = sDialog;
+    field_10 = a2;
+}
+
+// 0x4F5B40
+CMessageLoadDialog::~CMessageLoadDialog()
+{
+}
+
+// 0x43E170
+SHORT CMessageLoadDialog::GetCommType()
+{
+    return BROADCAST_FORCED;
+}
+
+// 0x40A0E0
+BYTE CMessageLoadDialog::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4F5B10
+BYTE CMessageLoadDialog::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_LOAD_DIALOG;
+}
+
+// 0x502B40
+void CMessageLoadDialog::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 14285
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        *dwSize = 0;
+        return;
+    }
+
+    PLAYER_ID remoteTargetPlayerID = pObject->m_remotePlayerID;
+    LONG remoteTargetObjectID = pObject->m_remoteObjectID;
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    *dwSize = sizeof(PLAYER_ID)
+        + sizeof(LONG)
+        + sizeof(SHORT);
+    *dwSize += m_sDialog.GetLength()
+        + sizeof(PLAYER_ID)
+        + sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 14308
+    UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remoteTargetPlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = remoteTargetObjectID;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<SHORT*>(*pData + cnt) = static_cast<SHORT>(m_sDialog.GetLength());
+    cnt += sizeof(SHORT);
+
+    memcpy(*pData + cnt, m_sDialog.GetBuffer(m_sDialog.GetLength()), m_sDialog.GetLength());
+    cnt += m_sDialog.GetLength();
+
+    PLAYER_ID remotePlayerID;
+    LONG remoteObjectID;
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(field_10,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        remotePlayerID = pObject->m_remotePlayerID;
+        remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(field_10,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    } else {
+        remotePlayerID = 0;
+        remoteObjectID = CGameObjectArray::INVALID_INDEX;
+    }
+
+    *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+    cnt += sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 14362
+    UTIL_ASSERT(cnt == *dwSize);
+}
+
+// 0x502D60
+BOOL CMessageLoadDialog::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 14390
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    SHORT nLength = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_sDialog = CString(reinterpret_cast<char*>(pData + cnt), nLength);
+    cnt += nLength;
+
+    remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        field_10 = localObjectID;
+    } else {
+        if (remoteObjectID != CGameObjectArray::INVALID_INDEX || remotePlayerID != 0) {
+            return FALSE;
+        }
+
+        field_10 = CGameObjectArray::INVALID_INDEX;
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 14442
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
+// 0x502EB0
+void CMessageLoadDialog::Run()
+{
+    CGameAIBase* pTarget;
+    CGameAIBase* pOther;
+
+    if (m_targetId == CGameObjectArray::INVALID_INDEX || field_10 == CGameObjectArray::INVALID_INDEX) {
+        return;
+    }
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pTarget),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(field_10,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pOther),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            pTarget->m_lTalkedTo.Set(pOther->GetAIType());
+            pOther->m_lTalkedTo.Set(pTarget->GetAIType());
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(field_10,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            g_pBaldurChitin->GetScreenWorld()->GetInternalLoadedDialog()->sub_482210(CResRef(m_sDialog),
+                m_targetId,
+                field_10);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F5C70
+CMessage34::CMessage34(WORD a1, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    field_C = a1;
+}
+
+// 0x40A0D0
+SHORT CMessage34::GetCommType()
+{
+    return SEND;
+}
+
+// 0x40A0E0
+BYTE CMessage34::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4641F0
+BYTE CMessage34::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_34;
+}
+
+// 0x504070
+void CMessage34::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 15295
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        *dwSize = 0;
+        return;
+    }
+
+    PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+    LONG remoteObjectID = pObject->m_remoteObjectID;
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    *dwSize = sizeof(PLAYER_ID)
+        + sizeof(LONG)
+        + sizeof(WORD);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 15316
+    UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<WORD*>(*pData + cnt) = field_C;
+    cnt += sizeof(WORD);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 15339
+    UTIL_ASSERT(cnt == *dwSize);
+}
+
+// 0x5041A0
+BOOL CMessage34::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 15367
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    field_C = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 15393
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
+// 0x504250
+void CMessage34::Run()
+{
+    // TODO: Incomplete.
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F6170
+CMessage51::CMessage51(LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    m_pSearchRequest = NULL;
+    m_frontList = CSearchRequest::LIST_FRONT;
+}
+
+// 0x453510
+SHORT CMessage51::GetCommType()
+{
+    return BROADCAST;
+}
+
+// 0x40A0E0
+BYTE CMessage51::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4F61A0
+BYTE CMessage51::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_51;
+}
+
+// 0x509100
+void CMessage51::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // TODO: Incomplete.
+    *dwSize = 0;
+}
+
+// 0x509730
+BOOL CMessage51::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x509B80
+void CMessage51::Run()
+{
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (pSprite->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            if (m_pSearchRequest == NULL) {
+                pSprite->SetTarget(m_ptTarget, FALSE);
+            } else {
+                pSprite->SetTarget(m_pSearchRequest, FALSE, m_frontList);
+            }
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x45B890
+CMessage53::CMessage53(const CString& a1, const CString& a2, LONG a3, BYTE a4, LONG caller, LONG target, LONG a7)
+    : CMessage(caller, target)
+{
+    field_C = a2;
+    field_10 = a1;
+    field_14 = a3;
+    field_18 = a4;
+    field_1A = a7;
+}
+
+// 0x453590
+CMessage53::~CMessage53()
+{
+}
+
+// 0x43E170
+SHORT CMessage53::GetCommType()
+{
+    return BROADCAST_FORCED;
+}
+
+// 0x40A0E0
+BYTE CMessage53::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x453560
+BYTE CMessage53::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_53;
+}
+
+// 0x50A4D0
+void CMessage53::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 21153
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        *dwSize = 0;
+        return;
+    }
+
+    PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+    LONG remoteObjectID = pObject->m_remoteObjectID;
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    *dwSize = sizeof(PLAYER_ID)
+        + sizeof(LONG);
+    *dwSize += sizeof(SHORT)
+        + field_10.GetLength();
+    *dwSize += sizeof(SHORT)
+        + field_C.GetLength()
+        + sizeof(LONG)
+        + sizeof(BYTE)
+        + sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 21180
+    UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+    cnt += sizeof(LONG);
+
+    SHORT nLength = static_cast<SHORT>(field_10.GetLength());
+    *reinterpret_cast<SHORT*>(*pData + cnt) = nLength;
+    cnt += sizeof(SHORT);
+
+    memcpy(*pData + cnt, field_10.GetBuffer(nLength), nLength);
+    cnt += nLength;
+
+    nLength = static_cast<SHORT>(field_C.GetLength());
+    *reinterpret_cast<SHORT*>(*pData + cnt) = nLength;
+    cnt += sizeof(SHORT);
+
+    memcpy(*pData + cnt, field_C.GetBuffer(nLength), nLength);
+    cnt += nLength;
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = field_14;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<BYTE*>(*pData + cnt) = field_18;
+    cnt += sizeof(BYTE);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = field_1A;
+    cnt += sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 21226
+    UTIL_ASSERT(cnt == *dwSize);
+}
+
+// 0x50A6C0
+BOOL CMessage53::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 21254
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    SHORT nLength = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    field_10 = CString(reinterpret_cast<char*>(pData + cnt), nLength);
+    cnt += nLength;
+
+    nLength = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    field_C = CString(reinterpret_cast<char*>(pData + cnt), nLength);
+    cnt += nLength;
+
+    field_14 = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    field_18 = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    field_1A = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 21302
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
+// 0x50A820
+void CMessage53::Run()
+{
+    // TODO: Incomplete.
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F68A0
+CMessage83::CMessage83(const CResRef& a1, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    field_C = a1;
+}
+
+// 0x4088A0
+SHORT CMessage83::GetCommType()
+{
+    return BROADCAST_OTHERS;
+}
+
+// 0x40A0E0
+BYTE CMessage83::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4F6890
+BYTE CMessage83::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_83;
+}
+
+// 0x511640
+void CMessage83::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    CString sResRef;
+    PLAYER_ID remotePlayerID;
+    LONG remoteObjectID;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 27628
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        remotePlayerID = pObject->m_remotePlayerID;
+        remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    } else {
+        remotePlayerID = 0;
+        remoteObjectID = CGameObjectArray::INVALID_INDEX;
+    }
+
+    field_C.CopyToString(sResRef);
+    BYTE stringLen = static_cast<BYTE>(sResRef.GetLength());
+
+    *dwSize = sizeof(PLAYER_ID)
+        + sizeof(LONG)
+        + sizeof(BYTE)
+        + sResRef.GetLength();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 27655
+    UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<BYTE*>(*pData + cnt) = stringLen;
+    cnt += sizeof(BYTE);
+
+    memcpy(*pData + cnt, sResRef.GetBuffer(sResRef.GetLength()), sResRef.GetLength());
+    cnt += sResRef.GetLength();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 27682
+    UTIL_ASSERT(cnt == *dwSize);
+}
+
+// 0x5117F0
+BOOL CMessage83::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // FIXME: Unused.
+    CString v1;
+    CAIObjectType v2;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 27719
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    BYTE stringLen = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    char szResRef[RESREF_SIZE + 1] = { 0 };
+    memcpy(szResRef, pData + cnt, stringLen);
+    cnt += stringLen;
+
+    field_C = CString(szResRef, stringLen);
+
+    // NOTE: Missing trailing guard.
+
+    return TRUE;
+}
+
+// 0x511950
+void CMessage83::Run()
+{
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        // NOTE: Does nothing with the object.
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F6920
+CMessage84::CMessage84(const CResRef& resRef, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    field_C = resRef;
+}
+
+// 0x4088A0
+SHORT CMessage84::GetCommType()
+{
+    return BROADCAST_OTHERS;
+}
+
+// 0x40A0E0
+BYTE CMessage84::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4F69A0
+BYTE CMessage84::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_84;
+}
+
+// 0x5119E0
+void CMessage84::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    CString sResRef;
+    PLAYER_ID remotePlayerID = 0;
+    LONG remoteObjectID;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 27829
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        remotePlayerID = pObject->m_remotePlayerID;
+        remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    } else {
+        remoteObjectID = CGameObjectArray::INVALID_INDEX;
+    }
+
+    field_C.CopyToString(sResRef);
+    BYTE stringLen = static_cast<BYTE>(sResRef.GetLength());
+
+    *dwSize = sizeof(PLAYER_ID)
+        + sizeof(LONG)
+        + sizeof(BYTE)
+        + sResRef.GetLength();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 27856
+    UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<BYTE*>(*pData + cnt) = stringLen;
+    cnt += sizeof(BYTE);
+
+    memcpy(*pData + cnt, sResRef.GetBuffer(sResRef.GetLength()), sResRef.GetLength());
+    cnt += sResRef.GetLength();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 27883
+    UTIL_ASSERT(cnt == *dwSize);
+}
+
+// 0x511BA0
+BOOL CMessage84::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // FIXME: Unused.
+    CString v1;
+    CAIObjectType v2;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 27920
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    BYTE stringLen = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    char szResRef[RESREF_SIZE + 1] = { 0 };
+    memcpy(szResRef, pData + cnt, stringLen);
+    cnt += stringLen;
+
+    field_C = CString(szResRef, stringLen);
+
+    // NOTE: Missing trailing guard.
+
+    return TRUE;
+}
+
+// 0x511950
+void CMessage84::Run()
+{
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        // NOTE: Does nothing with the object.
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F69B0
+CMessage86::CMessage86(const CResRef& a1, const CString& a2, const CPoint& a3, CPoint a4, WORD a5, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    field_C = a1;
+    field_14 = a2;
+    field_18 = a3;
+    field_20 = a4;
+    field_28 = a5;
+}
+
+// 0x4F6AA0
+CMessage86::~CMessage86()
+{
+}
+
+// 0x4088A0
+SHORT CMessage86::GetCommType()
+{
+    return BROADCAST_OTHERS;
+}
+
+// 0x40A0E0
+BYTE CMessage86::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4F6A70
+BYTE CMessage86::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_86;
+}
+
+// 0x511D00
+void CMessage86::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    CString sResRef;
+    PLAYER_ID remotePlayerID = 0;
+    LONG remoteObjectID;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 28029
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        remotePlayerID = pObject->m_remotePlayerID;
+        remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    } else {
+        remoteObjectID = CGameObjectArray::INVALID_INDEX;
+    }
+
+    field_C.CopyToString(sResRef);
+    BYTE resRefLen = static_cast<BYTE>(sResRef.GetLength());
+
+    *dwSize = sizeof(PLAYER_ID)
+        + sizeof(LONG)
+        + sizeof(BYTE)
+        + sResRef.GetLength();
+
+    BYTE stringLen = static_cast<BYTE>(field_14.GetLength());
+
+    *dwSize += sizeof(BYTE)
+        + field_14.GetLength()
+        + sizeof(LONG)
+        + sizeof(LONG)
+        + sizeof(LONG)
+        + sizeof(LONG)
+        + sizeof(WORD);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 28063
+    UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<BYTE*>(*pData + cnt) = resRefLen;
+    cnt += sizeof(BYTE);
+
+    memcpy(*pData + cnt, sResRef.GetBuffer(resRefLen), resRefLen);
+    cnt += sResRef.GetLength();
+
+    *reinterpret_cast<BYTE*>(*pData + cnt) = stringLen;
+    cnt += sizeof(BYTE);
+
+    memcpy(*pData + cnt, field_14.GetBuffer(stringLen), stringLen);
+    cnt += field_14.GetLength();
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = field_18.x;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = field_18.y;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = field_20.x;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = field_20.y;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<WORD*>(*pData + cnt) = field_28;
+    cnt += sizeof(WORD);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 28110
+    UTIL_ASSERT(cnt == *dwSize);
+}
+
+// 0x511F40
+BOOL CMessage86::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // FIXME: Unused.
+    CString v1;
+    CAIObjectType v2;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 28147
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    BYTE resRefLen = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    char szBuffer[RESREF_SIZE + 1] = { 0 };
+    memcpy(szBuffer, pData + cnt, resRefLen);
+    cnt += resRefLen;
+
+    field_C = CString(szBuffer, resRefLen);
+
+    BYTE stringLen = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    // FIXME: The original zeroes and copies the string into the same 9-byte
+    // stack buffer used for the resref above, which overflows for strings
+    // longer than 8 characters. Construct directly from the packet instead.
+    field_14 = CString(reinterpret_cast<char*>(pData + cnt), stringLen);
+    cnt += stringLen;
+
+    field_18.x = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    field_18.y = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    field_20.x = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    field_20.y = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    field_28 = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    // NOTE: Missing trailing guard.
+
+    return TRUE;
+}
+
+// 0x799CA0
+void CMessage86::Run()
+{
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F6B20
+CMessage88::CMessage88(LONG a1, LONG a2, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    field_C = a1;
+    field_10 = a2;
+}
+
+// 0x453510
+SHORT CMessage88::GetCommType()
+{
+    return BROADCAST;
+}
+
+// 0x40A0E0
+BYTE CMessage88::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4F6B50
+BYTE CMessage88::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_88;
+}
+
+// 0x512310
+void CMessage88::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 28407
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+        LONG remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        *dwSize = sizeof(PLAYER_ID)
+            + sizeof(LONG)
+            + sizeof(PLAYER_ID)
+            + sizeof(LONG);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 28426
+        UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+        DWORD cnt = 0;
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(field_10,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            remotePlayerID = pObject->m_remotePlayerID;
+            remoteObjectID = pObject->m_remoteObjectID;
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(field_10,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        } else {
+            remotePlayerID = 0;
+            remoteObjectID = CGameObjectArray::INVALID_INDEX;
+        }
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 28466
+        UTIL_ASSERT(cnt == *dwSize);
+    } else {
+        *dwSize = 0;
+    }
+}
+
+// 0x5124D0
+BOOL CMessage88::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 28480
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        field_C = localObjectID;
+    } else {
+        field_C = CGameObjectArray::INVALID_INDEX;
+    }
+
+    remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        field_10 = localObjectID;
+        return TRUE;
+    }
+
+    if (remoteObjectID == CGameObjectArray::INVALID_INDEX && remotePlayerID == 0) {
+        field_10 = CGameObjectArray::INVALID_INDEX;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+// 0x5125A0
+void CMessage88::Run()
+{
+    CGameObject* pObject1;
+    CGameObject* pObject2;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject1,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (!pObject1->InControl() && pObject1->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(field_10,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pObject2,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                if (!pObject2->InControl() && pObject2->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                    Icewind586B70::Instance()->sub_586D60(static_cast<CGameSprite*>(pObject2),
+                        static_cast<CGameSprite*>(pObject1));
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(field_C,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(field_10,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return;
+            }
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F6B60
+CMessage89::CMessage89(LONG a1, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    field_C = a1;
+}
+
+// 0x453510
+SHORT CMessage89::GetCommType()
+{
+    return BROADCAST;
+}
+
+// 0x40A0E0
+BYTE CMessage89::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4AD380
+BYTE CMessage89::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_89;
+}
+
+// 0x512830
+void CMessage89::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 28616
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+        LONG remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        *dwSize = sizeof(PLAYER_ID)
+            + sizeof(LONG);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 28634
+        UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+        DWORD cnt = 0;
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 28654
+        UTIL_ASSERT(cnt == *dwSize);
+    } else {
+        *dwSize = 0;
+    }
+}
+
+// 0x512950
+BOOL CMessage89::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 28668
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        field_C = localObjectID;
+    } else {
+        field_C = CGameObjectArray::INVALID_INDEX;
+    }
+
+    // NOTE: Missing trailing guard.
+
+    return TRUE;
+}
+
+// 0x5129D0
+void CMessage89::Run()
+{
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (!pObject->InControl() && pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            Icewind586B70::Instance()->sub_586DC0(static_cast<CGameSprite*>(pObject));
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F6B80
+CMessage95::CMessage95(LONG a1, LONG a2, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    field_C = a1;
+    field_10 = a2;
+}
+
+// 0x453510
+SHORT CMessage95::GetCommType()
+{
+    return BROADCAST;
+}
+
+// 0x40A0E0
+BYTE CMessage95::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4F6BB0
+BYTE CMessage95::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_95;
+}
+
+// 0x512AC0
+void CMessage95::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 28749
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+        LONG remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        *dwSize = sizeof(PLAYER_ID)
+            + sizeof(LONG)
+            + sizeof(PLAYER_ID)
+            + sizeof(LONG);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 28768
+        UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+        DWORD cnt = 0;
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(field_10,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            remotePlayerID = pObject->m_remotePlayerID;
+            remoteObjectID = pObject->m_remoteObjectID;
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(field_10,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        } else {
+            remotePlayerID = 0;
+            remoteObjectID = CGameObjectArray::INVALID_INDEX;
+        }
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 28808
+        UTIL_ASSERT(cnt == *dwSize);
+    } else {
+        *dwSize = 0;
+    }
+}
+
+// 0x512C80
+BOOL CMessage95::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 28822
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        field_C = localObjectID;
+    } else {
+        field_C = CGameObjectArray::INVALID_INDEX;
+    }
+
+    remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        field_10 = localObjectID;
+        return TRUE;
+    }
+
+    if (remoteObjectID == CGameObjectArray::INVALID_INDEX && remotePlayerID == 0) {
+        field_10 = CGameObjectArray::INVALID_INDEX;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+// 0x512D50
+void CMessage95::Run()
+{
+    CGameObject* pObject1;
+    CGameObject* pObject2;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject1,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (!pObject1->InControl() && pObject1->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(field_10,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pObject2,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                if (!pObject2->InControl() && pObject2->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                    Icewind586B70::Instance()->sub_586F20(static_cast<CGameSprite*>(pObject2),
+                        static_cast<CGameSprite*>(pObject1));
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(field_C,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(field_10,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return;
+            }
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F6BC0
+CMessage96::CMessage96(LONG a1, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    field_C = a1;
+}
+
+// 0x453510
+SHORT CMessage96::GetCommType()
+{
+    return BROADCAST;
+}
+
+// 0x40A0E0
+BYTE CMessage96::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4AD390
+BYTE CMessage96::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_96;
+}
+
+// 0x512FE0
+void CMessage96::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 28957
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+        LONG remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        *dwSize = sizeof(PLAYER_ID)
+            + sizeof(LONG);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 28975
+        UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+        DWORD cnt = 0;
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 28995
+        UTIL_ASSERT(cnt == *dwSize);
+    } else {
+        *dwSize = 0;
+    }
+}
+
+// 0x513100
+BOOL CMessage96::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 29009
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        field_C = localObjectID;
+    } else {
+        field_C = CGameObjectArray::INVALID_INDEX;
+    }
+
+    // NOTE: Missing trailing guard.
+
+    return TRUE;
+}
+
+// 0x513180
+void CMessage96::Run()
+{
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (!pObject->InControl() && pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            Icewind586B70::Instance()->Remove(static_cast<CGameSprite*>(pObject));
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(field_C,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F6C50
+CMessageSetScript::CMessageSetScript(LONG caller, LONG target, INT nLevel, const RESREF scriptRes)
+    : CMessage(caller, target)
+{
+    m_nLevel = nLevel;
+    memcpy(m_scriptRes, scriptRes, RESREF_SIZE);
+}
+
+// 0x4088A0
+SHORT CMessageSetScript::GetCommType()
+{
+    return BROADCAST_OTHERS;
+}
+
+// 0x40A0E0
+BYTE CMessageSetScript::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4F6C80
+BYTE CMessageSetScript::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_SCRIPT;
+}
+
+// 0x513F00
+void CMessageSetScript::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 29748
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+        LONG remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        *dwSize = sizeof(PLAYER_ID)
+            + sizeof(LONG)
+            + sizeof(INT)
+            + RESREF_SIZE;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 29772
+        UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+        DWORD cnt = 0;
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<INT*>(*pData + cnt) = m_nLevel;
+        cnt += sizeof(INT);
+
+        memcpy(*pData + cnt, m_scriptRes, RESREF_SIZE);
+        cnt += RESREF_SIZE;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 29797
+        UTIL_ASSERT(cnt == *dwSize);
+    } else {
+        *dwSize = 0;
+    }
+}
+
+// 0x514040
+BOOL CMessageSetScript::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 29811
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    m_nLevel = *reinterpret_cast<INT*>(pData + cnt);
+    cnt += sizeof(INT);
+
+    memcpy(m_scriptRes, pData + cnt, RESREF_SIZE);
+    cnt += RESREF_SIZE;
+
+    // NOTE: Missing trailing guard.
+
+    return TRUE;
+}
+
+// 0x5140D0
+void CMessageSetScript::Run()
+{
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            CAIScript* pScript = new CAIScript();
+
+            // NOTE: The original calls an out-of-line helper (0x514220) which
+            // assigns `m_cResRef` (also used by `CScreenCharacter`).
+            pScript->m_cResRef = CResRef(m_scriptRes);
+
+            pScript->Read(CResRef(m_scriptRes), TRUE);
+
+            static_cast<CGameSprite*>(pObject)->SetScript(static_cast<SHORT>(m_nLevel), pScript);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F6C90
+CMessage98::CMessage98(LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+}
+
+// 0x4536E0
+SHORT CMessage98::GetCommType()
+{
+    return BROADCAST_FORCED_OTHERS;
+}
+
+// 0x40A0E0
+BYTE CMessage98::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4F6CB0
+BYTE CMessage98::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_98;
+}
+
+// 0x514240
+void CMessage98::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 29890
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+        LONG remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        *dwSize = sizeof(PLAYER_ID)
+            + sizeof(LONG);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 29913
+        UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+        DWORD cnt = 0;
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 29933
+        UTIL_ASSERT(cnt == *dwSize);
+    } else {
+        *dwSize = 0;
+    }
+}
+
+// 0x514360
+BOOL CMessage98::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 29947
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    // NOTE: Missing trailing guard.
+
+    return TRUE;
+}
+
+// 0x5143D0
+void CMessage98::Run()
+{
+    if (g_pBaldurChitin->pActiveEngine == g_pBaldurChitin->m_pEngineChapter) {
+        g_pBaldurChitin->m_pEngineChapter->OnDoneButtonClick();
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x514F60
+CMessageProjectileImmunityUpdate::CMessageProjectileImmunityUpdate(CGameSprite* pSprite, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    if (pSprite != NULL) {
+        m_projectileImmunities = pSprite->GetDerivedStats()->m_cImmunitiesProjectile;
+    }
+}
+
+// 0x4F70C0
+CMessageProjectileImmunityUpdate::~CMessageProjectileImmunityUpdate()
+{
+}
+
+// 0x4088A0
+SHORT CMessageProjectileImmunityUpdate::GetCommType()
+{
+    return BROADCAST_OTHERS;
+}
+
+// 0x40A0E0
+BYTE CMessageProjectileImmunityUpdate::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x516D40
+BYTE CMessageProjectileImmunityUpdate::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_PROJECTILE_IMMUNITIES_UPDATE;
+}
+
+// 0x515010
+void CMessageProjectileImmunityUpdate::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 30714
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+        LONG remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        BYTE* immunities;
+        ULONG immunitySize = m_projectileImmunities.Marshal(&immunities);
+
+        *dwSize = sizeof(PLAYER_ID)
+            + sizeof(LONG)
+            + sizeof(ULONG)
+            + immunitySize;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 30742
+        UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+        DWORD cnt = 0;
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<ULONG*>(*pData + cnt) = immunitySize;
+        cnt += sizeof(ULONG);
+
+        memcpy(*pData + cnt, immunities, immunitySize);
+        cnt += immunitySize;
+
+        if (immunities != NULL) {
+            delete immunities;
+        }
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 30773
+        UTIL_ASSERT(cnt == *dwSize);
+    } else {
+        *dwSize = 0;
+    }
+}
+
+// 0x515180
+BOOL CMessageProjectileImmunityUpdate::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 30788
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    ULONG immunitySize = *reinterpret_cast<ULONG*>(pData + cnt);
+    cnt += sizeof(ULONG);
+
+    m_projectileImmunities.Unmarshal(pData + cnt, immunitySize);
+    cnt += immunitySize;
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    // NOTE: Missing trailing guard.
+
+    return TRUE;
+}
+
+// 0x515210
+void CMessageProjectileImmunityUpdate::Run()
+{
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+            pSprite->GetDerivedStats()->m_cImmunitiesProjectile = m_projectileImmunities;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x5152C0
+CMessage105::CMessage105(const std::list<CMessageAddEffect*>& effects, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    m_effects = effects;
+}
+
+// 0x515430
+CMessage105::~CMessage105()
+{
+    std::list<CMessageAddEffect*>::iterator it = m_effects.begin();
+    while (it != m_effects.end()) {
+        if (*it != NULL) {
+            delete *it;
+            *it = NULL;
+        }
+        it++;
+    }
+}
+
+// 0x40A0D0
+SHORT CMessage105::GetCommType()
+{
+    return SEND;
+}
+
+// 0x40A0E0
+BYTE CMessage105::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x515400
+BYTE CMessage105::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_105;
+}
+
+// 0x5154E0
+void CMessage105::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 30894
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+        LONG remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        // NOTE: Size of every marshalled `CMessageAddEffect`.
+        DWORD dwEffectSize = 89;
+
+        *dwSize = sizeof(PLAYER_ID)
+            + sizeof(LONG)
+            + sizeof(BYTE)
+            + sizeof(DWORD);
+        *dwSize = m_effects.size() * dwEffectSize + *dwSize;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 30941
+        UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+        DWORD cnt = 0;
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<BYTE*>(*pData + cnt) = static_cast<BYTE>(m_effects.size());
+        cnt += sizeof(BYTE);
+
+        *reinterpret_cast<DWORD*>(*pData + cnt) = dwEffectSize;
+        cnt += sizeof(DWORD);
+
+        BYTE* pEffectData = *pData + cnt;
+        std::list<CMessageAddEffect*>::iterator it = m_effects.begin();
+        while (it != m_effects.end()) {
+            DWORD dwMarshalledSize;
+            (*it)->MarshalMessage(&pEffectData, &dwMarshalledSize);
+            pEffectData += dwMarshalledSize;
+            cnt += dwMarshalledSize;
+            it++;
+        }
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 30985
+        UTIL_ASSERT(cnt == *dwSize);
+    } else {
+        *dwSize = 0;
+    }
+}
+
+// 0x515670
+BOOL CMessage105::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 31015
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    BYTE nEffects = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    DWORD dwEffectSize = *reinterpret_cast<DWORD*>(pData + cnt);
+    cnt += sizeof(DWORD);
+
+    BYTE* pEffectData = new BYTE[dwEffectSize + CNetwork::SPEC_MSG_HEADER_LENGTH];
+
+    for (BYTE nEffect = 0; nEffect < nEffects; nEffect++) {
+        memcpy(pEffectData + CNetwork::SPEC_MSG_HEADER_LENGTH, pData + cnt, dwEffectSize);
+        cnt += dwEffectSize;
+
+        CMessageAddEffect* pMessage = new CMessageAddEffect(NULL, 0, 0);
+        pMessage->UnmarshalMessage(pEffectData, dwEffectSize + CNetwork::SPEC_MSG_HEADER_LENGTH);
+        m_effects.push_back(pMessage);
+    }
+
+    delete[] pEffectData;
+
+    // NOTE: Missing trailing guard.
+
+    return TRUE;
+}
+
+// 0x5157F0
+void CMessage105::Run()
+{
+    std::list<CMessageAddEffect*>::iterator it = m_effects.begin();
+    while (it != m_effects.end()) {
+        (*it)->Run();
+        it++;
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F6E50
+CMessage108::CMessage108(CResRef cResStore, DWORD a2, DWORD a3, DWORD a4, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    m_cResStore = cResStore;
+    field_14 = a2;
+    field_18 = a3;
+    field_1C = a4;
+}
+
+// 0x4536E0
+SHORT CMessage108::GetCommType()
+{
+    return BROADCAST_FORCED_OTHERS;
+}
+
+// 0x40A0E0
+BYTE CMessage108::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4F6EE0
+BYTE CMessage108::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_108;
+}
+
+// 0x515BA0
+void CMessage108::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 31382
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    *dwSize = RESREF_SIZE
+        + sizeof(DWORD)
+        + sizeof(DWORD)
+        + sizeof(DWORD);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 31387
+    UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+    DWORD cnt = 0;
+
+    memcpy(*pData + cnt, m_cResStore.GetResRef(), RESREF_SIZE);
+    cnt += RESREF_SIZE;
+
+    *reinterpret_cast<DWORD*>(*pData + cnt) = field_14;
+    cnt += sizeof(DWORD);
+
+    *reinterpret_cast<DWORD*>(*pData + cnt) = field_18;
+    cnt += sizeof(DWORD);
+
+    *reinterpret_cast<DWORD*>(*pData + cnt) = field_1C;
+    cnt += sizeof(DWORD);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 31400
+    UTIL_ASSERT(cnt == *dwSize);
+}
+
+// 0x515C50
+BOOL CMessage108::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 31408
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    m_cResStore = pData + cnt;
+    cnt += RESREF_SIZE;
+
+    field_14 = *reinterpret_cast<DWORD*>(pData + cnt);
+    cnt += sizeof(DWORD);
+
+    field_18 = *reinterpret_cast<DWORD*>(pData + cnt);
+    cnt += sizeof(DWORD);
+
+    field_1C = *reinterpret_cast<DWORD*>(pData + cnt);
+    cnt += sizeof(DWORD);
+
+    // NOTE: Missing trailing guard.
+
+    return TRUE;
+}
+
+// 0x515CC0
+void CMessage108::Run()
+{
+    // TODO: Incomplete.
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x453490
+CMessage111::CMessage111(STRREF strText, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    m_strText = strText;
+}
+
+// 0x43E170
+SHORT CMessage111::GetCommType()
+{
+    return BROADCAST_FORCED;
+}
+
+// 0x40A0E0
+BYTE CMessage111::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4534B0
+BYTE CMessage111::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_111;
+}
+
+// 0x504C40
+void CMessage111::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    *dwSize = sizeof(STRREF);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 15869
+    UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+    // NOTE: Only the low byte is written although the size is a full
+    // `STRREF`.
+    **pData = static_cast<BYTE>(m_strText);
+}
+
+// 0x504C80
+BOOL CMessage111::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    m_strText = *reinterpret_cast<STRREF*>(pData + CNetwork::SPEC_MSG_HEADER_LENGTH);
+
+    return TRUE;
+}
+
+// 0x504CA0
+void CMessage111::Run()
+{
+    // TODO: Incomplete.
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F5BF0
+CMessage112::CMessage112(CResRef cResSound, BYTE nChannel, CPoint ptPos, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    m_cResSound = cResSound;
+    // NOTE: `nChannel` is not stored.
+    m_ptPos = ptPos;
+}
+
+// 0x4536E0
+SHORT CMessage112::GetCommType()
+{
+    return BROADCAST_FORCED_OTHERS;
+}
+
+// 0x40A0E0
+BYTE CMessage112::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x45EDD0
+BYTE CMessage112::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_112;
+}
+
+// 0x503AA0
+void CMessage112::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    CString sResRef;
+
+    // FIXME: Unused.
+    CAIObjectType v1;
+
+    PLAYER_ID remotePlayerID = 0;
+    LONG remoteObjectID;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 15109
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        remotePlayerID = pObject->m_remotePlayerID;
+        remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    } else {
+        remoteObjectID = CGameObjectArray::INVALID_INDEX;
+    }
+
+    m_cResSound.CopyToString(sResRef);
+    BYTE stringLen = static_cast<BYTE>(sResRef.GetLength());
+
+    *dwSize = sizeof(PLAYER_ID)
+        + sizeof(LONG)
+        + sizeof(BYTE)
+        + stringLen
+        + sizeof(BYTE)
+        + sizeof(LONG)
+        + sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 15138
+    UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<BYTE*>(*pData + cnt) = stringLen;
+    cnt += sizeof(BYTE);
+
+    memcpy(*pData + cnt, sResRef.GetBuffer(sResRef.GetLength()), sResRef.GetLength());
+    cnt += sResRef.GetLength();
+
+    *reinterpret_cast<BYTE*>(*pData + cnt) = m_nChannel;
+    cnt += sizeof(BYTE);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = m_ptPos.x;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<LONG*>(*pData + cnt) = m_ptPos.y;
+    cnt += sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 15159
+    UTIL_ASSERT(cnt == *dwSize);
+}
+
+// 0x503CB0
+BOOL CMessage112::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // FIXME: Unused.
+    CString v1;
+    CAIObjectType v2;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 15185
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    BYTE stringLen = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    char szResRef[RESREF_SIZE + 1] = { 0 };
+    memcpy(szResRef, pData + cnt, stringLen);
+    cnt += stringLen;
+
+    m_cResSound = CString(szResRef, stringLen);
+
+    m_nChannel = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_ptPos.x = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_ptPos.y = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 15219
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
+// 0x503E60
+void CMessage112::Run()
+{
+    CSound cSound;
+    cSound.SetResRef(m_cResSound, TRUE, TRUE);
+
+    if (cSound.m_nLooping == 0) {
+        cSound.SetFireForget(TRUE);
+    }
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        cSound.SetChannel(m_nChannel,
+            reinterpret_cast<DWORD>(pObject->GetArea()));
+        cSound.Play(m_ptPos.x,
+            m_ptPos.y,
+            0,
+            FALSE);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    } else {
+        cSound.SetChannel(2,
+            reinterpret_cast<DWORD>(g_pBaldurChitin->GetObjectGame()->GetVisibleArea()));
+        cSound.Play(FALSE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F5400
+CMessagePickedDialogResponse::CMessagePickedDialogResponse(LONG entryIndex, LONG marker, COLORREF nameColor, const CString& name, LONG removeRepliesTarget, const CString& sDialog, LONG a7, LONG a8, DWORD entryNum, BOOLEAN a10, LONG target)
+    : CMessage(target, target)
+{
+    m_entryIndex = entryIndex;
+    m_marker = marker;
+    m_nameColor = nameColor;
+    m_name = name;
+    m_removeRepliesTarget = removeRepliesTarget;
+    m_sDialog = sDialog;
+    field_24 = a7;
+    field_28 = a8;
+    m_entryNum = entryNum;
+    field_30 = a10;
+}
+
+// 0x4844F0
+CMessagePickedDialogResponse::~CMessagePickedDialogResponse()
+{
+}
+
+// 0x40A0D0
+SHORT CMessagePickedDialogResponse::GetCommType()
+{
+    return SEND;
+}
+
+// 0x40A0E0
+BYTE CMessagePickedDialogResponse::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4844C0
+BYTE CMessagePickedDialogResponse::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_PICKED_DIALOG_RESPONSE;
+}
+
+// 0x4FD930
+void CMessagePickedDialogResponse::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // TODO: Incomplete.
+    *dwSize = 0;
+}
+
+// 0x4FDD30
+BOOL CMessagePickedDialogResponse::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 9976
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    SHORT nNameLength = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_name = CString(reinterpret_cast<char*>(pData + cnt), nNameLength);
+    cnt += nNameLength;
+
+    m_entryIndex = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_marker = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_nameColor = *reinterpret_cast<COLORREF*>(pData + cnt);
+    cnt += sizeof(COLORREF);
+
+    remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_removeRepliesTarget = localObjectID;
+    } else if (remoteObjectID == CGameObjectArray::INVALID_INDEX && remotePlayerID == 0) {
+        m_removeRepliesTarget = CGameObjectArray::INVALID_INDEX;
+    }
+
+    SHORT nDialogLength = *reinterpret_cast<SHORT*>(pData + cnt);
+    cnt += sizeof(SHORT);
+
+    m_sDialog = CString(reinterpret_cast<char*>(pData + cnt), nDialogLength);
+    cnt += nDialogLength;
+
+    remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        field_24 = localObjectID;
+    } else if (remoteObjectID == CGameObjectArray::INVALID_INDEX && remotePlayerID == 0) {
+        field_24 = CGameObjectArray::INVALID_INDEX;
+    } else {
+        return FALSE;
+    }
+
+    remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        field_28 = localObjectID;
+    } else {
+        field_28 = CGameObjectArray::INVALID_INDEX;
+    }
+
+    m_entryNum = *reinterpret_cast<DWORD*>(pData + cnt);
+    cnt += sizeof(DWORD);
+
+    field_30 = *reinterpret_cast<BOOLEAN*>(pData + cnt);
+    cnt += sizeof(BOOLEAN);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 10068
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
+// 0x4FDF80
+void CMessagePickedDialogResponse::Run()
+{
+    CMessage* pMessage;
+
+    pMessage = new CMessageRemoveReplies(m_entryIndex,
+        m_marker,
+        m_nameColor,
+        m_name,
+        m_removeRepliesTarget,
+        m_removeRepliesTarget);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE, pMessage->GetCommType());
+
+    pMessage = new CMessageLoadDialog(m_sDialog,
+        field_24,
+        field_28,
+        field_28);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE, pMessage->GetCommType());
+
+    pMessage = new CMessageEnterDialog(m_entryNum,
+        field_30,
+        m_targetId,
+        m_targetId);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE, pMessage->GetCommType());
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x500960
+CMessage115::CMessage115(WORD projectileType, LONG projectileTargetId, const CPoint& projectileTarget, LONG height, LONG caller, LONG target, unsigned char a7)
+    : CMessage(caller, target)
+{
+    m_projectileType = projectileType + 1;
+    m_projectileTargetId = projectileTargetId;
+    m_projectileTarget = projectileTarget;
+    m_height = height;
+    field_1E = a7;
+    field_20 = 0;
+}
+
+// 0x43E170
+SHORT CMessage115::GetCommType()
+{
+    return BROADCAST_FORCED;
+}
+
+// 0x40A0E0
+BYTE CMessage115::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x5009B0
+BYTE CMessage115::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_115;
+}
+
+// 0x5009C0
+void CMessage115::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 12584
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+        LONG remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        *dwSize = sizeof(PLAYER_ID)
+            + sizeof(LONG)
+            + sizeof(WORD)
+            + sizeof(PLAYER_ID)
+            + sizeof(LONG)
+            + sizeof(LONG)
+            + sizeof(LONG)
+            + sizeof(LONG)
+            + sizeof(int)
+            + sizeof(unsigned char);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 12613
+        UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+        DWORD cnt = 0;
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<WORD*>(*pData + cnt) = m_projectileType;
+        cnt += sizeof(WORD);
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_projectileTargetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            remotePlayerID = pObject->m_remotePlayerID;
+            remoteObjectID = pObject->m_remoteObjectID;
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_projectileTargetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        } else {
+            remotePlayerID = 0;
+            remoteObjectID = CGameObjectArray::INVALID_INDEX;
+        }
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = m_projectileTarget.x;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = m_projectileTarget.y;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = m_height;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<int*>(*pData + cnt) = field_20;
+        cnt += sizeof(int);
+
+        *reinterpret_cast<unsigned char*>(*pData + cnt) = field_1E;
+        cnt += sizeof(unsigned char);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 12677
+        UTIL_ASSERT(cnt == *dwSize);
+    } else {
+        *dwSize = 0;
+    }
+}
+
+// 0x500BB0
+BOOL CMessage115::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 12705
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_targetId = localObjectID;
+    } else {
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    m_projectileType = *reinterpret_cast<WORD*>(pData + cnt);
+    cnt += sizeof(WORD);
+
+    remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_projectileTargetId = localObjectID;
+    } else if (remoteObjectID == CGameObjectArray::INVALID_INDEX && remotePlayerID == 0) {
+        m_projectileTargetId = CGameObjectArray::INVALID_INDEX;
+    } else {
+        return FALSE;
+    }
+
+    m_projectileTarget.x = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_projectileTarget.y = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_height = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    field_20 = *reinterpret_cast<int*>(pData + cnt);
+    cnt += sizeof(int);
+
+    field_1E = *reinterpret_cast<unsigned char*>(pData + cnt);
+    cnt += sizeof(unsigned char);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 12771
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
+// 0x500CE0
+void CMessage115::Run()
+{
+    // TODO: Incomplete.
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4F6EF0
+CMessage117::CMessage117(const CResRef& a1, const CResRef& a2, LONG a3, const CPoint& a4, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    field_C = a1;
+    field_14 = a2;
+    field_1C = a3;
+    field_20 = a4;
+}
+
+// 0x4536E0
+SHORT CMessage117::GetCommType()
+{
+    return BROADCAST_FORCED_OTHERS;
+}
+
+// 0x40A0E0
+BYTE CMessage117::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x4F6FA0
+BYTE CMessage117::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_117;
+}
+
+// 0x516910
+void CMessage117::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 32161
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+        LONG remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        *dwSize = sizeof(PLAYER_ID)
+            + sizeof(LONG)
+            + RESREF_SIZE
+            + RESREF_SIZE
+            + sizeof(LONG)
+            + sizeof(LONG)
+            + sizeof(LONG);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 32184
+        UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+        DWORD cnt = 0;
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        memcpy(*pData + cnt, field_C.GetResRef(), RESREF_SIZE);
+        cnt += RESREF_SIZE;
+
+        memcpy(*pData + cnt, field_14.GetResRef(), RESREF_SIZE);
+        cnt += RESREF_SIZE;
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = field_1C;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = field_20.x;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = field_20.y;
+        cnt += sizeof(LONG);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 32203
+        UTIL_ASSERT(cnt == *dwSize);
+    } else {
+        *dwSize = 0;
+    }
+}
+
+// 0x516A80
+BOOL CMessage117::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 32229
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    field_C = pData + cnt;
+    cnt += RESREF_SIZE;
+
+    field_14 = pData + cnt;
+    cnt += RESREF_SIZE;
+
+    field_1C = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    field_20.x = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    field_20.y = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 32260
+    UTIL_ASSERT(cnt == dwSize);
+
+    return TRUE;
+}
+
+// 0x516B70
+void CMessage117::Run()
+{
+    // TODO: Incomplete.
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x516CD0
+CMessage118::CMessage118(CGameSprite* pSprite, LONG caller, LONG target)
+    : CMessage(caller, target)
+{
+    if (pSprite != NULL) {
+        m_cImmunitiesSpellLevel = pSprite->m_derivedStats.m_cImmunitiesSpellLevel;
+    }
+}
+
+// 0x4088A0
+SHORT CMessage118::GetCommType()
+{
+    return BROADCAST_OTHERS;
+}
+
+// 0x40A0E0
+BYTE CMessage118::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x516D40
+BYTE CMessage118::GetMsgSubType()
+{
+    // NOTE: Returns 104 even though this message is received as subtype 118.
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_PROJECTILE_IMMUNITIES_UPDATE;
+}
+
+// 0x516D50
+void CMessage118::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 32328
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+        LONG remoteObjectID = pObject->m_remoteObjectID;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        *dwSize = sizeof(PLAYER_ID)
+            + sizeof(LONG)
+            + sizeof(CImmunitiesSpellLevel);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 32349
+        UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+        DWORD cnt = 0;
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<CImmunitiesSpellLevel*>(*pData + cnt) = m_cImmunitiesSpellLevel;
+        cnt += sizeof(CImmunitiesSpellLevel);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 32363
+        UTIL_ASSERT(cnt == *dwSize);
+    } else {
+        *dwSize = 0;
+    }
+}
+
+// 0x516E90
+BOOL CMessage118::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 32378
+    UTIL_ASSERT(pData != NULL);
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_cImmunitiesSpellLevel = *reinterpret_cast<CImmunitiesSpellLevel*>(pData + cnt);
+    cnt += sizeof(CImmunitiesSpellLevel);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    // NOTE: Missing trailing guard.
+
+    return TRUE;
+}
+
+// 0x516F10
+void CMessage118::Run()
+{
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+            pSprite->m_derivedStats.m_cImmunitiesSpellLevel = m_cImmunitiesSpellLevel;
+        }
 
         g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
             CGameObjectArray::THREAD_ASYNCH,

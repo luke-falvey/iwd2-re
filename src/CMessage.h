@@ -4,9 +4,11 @@
 #include "mfc.h"
 
 #include <bitset>
+#include <list>
 
 #include "BalDataTypes.h"
 #include "CAIAction.h"
+#include "CAIResponse.h"
 #include "CAITrigger.h"
 #include "CChatBuffer.h"
 #include "CColorEffects.h"
@@ -23,6 +25,8 @@ class CGameArea;
 class CGameContainer;
 class CGameDoor;
 class CGameEffect;
+class CGameSprite;
+class CSearchRequest;
 
 class CBaldurMessage {
 public:
@@ -32,6 +36,7 @@ public:
     static const BYTE MSG_TYPE_CMESSAGE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_ADD_ACTION;
     static const BYTE MSG_SUBTYPE_CMESSAGE_ADD_EFFECT;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_2;
     static const BYTE MSG_SUBTYPE_CMESSAGE_ANIMATION_CHANGE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_CHANGE_DIRECTION;
     static const BYTE MSG_SUBTYPE_CMESSAGE_CLEAR_ACTIONS;
@@ -47,18 +52,23 @@ public:
     static const BYTE MSG_SUBTYPE_CMESSAGE_CUT_SCENE_MODE_STATUS;
     static const BYTE MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXT;
     static const BYTE MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXTREF;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_18;
     static const BYTE MSG_SUBTYPE_CMESSAGE_DOOR_STATUS;
     static const BYTE MSG_SUBTYPE_CMESSAGE_DROP_PATH;
     static const BYTE MSG_SUBTYPE_CMESSAGE_ENTER_DIALOG;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_ENTER_DIALOG_MODE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_ENTER_STORE_MODE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_EXIT_DIALOG_MODE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_EXIT_STORE_MODE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_FIRE_PROJECTILE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_INSERT_ACTION;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_INSERT_RESPONSE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_LEAVE_PARTY;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_LOAD_DIALOG;
     static const BYTE MSG_SUBTYPE_CMESSAGE_PARTY_GOLD;
     static const BYTE MSG_SUBTYPE_CMESSAGE_PLAY_SOUND;
     static const BYTE MSG_SUBTYPE_CMESSAGE_PLAY_SOUND_REF;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_34;
     static const BYTE MSG_SUBTYPE_CMESSAGE_REMOVE_REPLIES;
     static const BYTE MSG_SUBTYPE_CMESSAGE_REPUTATION_CHANGE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_ACTIVE;
@@ -75,7 +85,9 @@ public:
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_NUM_TIMES_TALKED_TO;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_PATH;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_SEQUENCE;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_51;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_TRIGGER;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_53;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SPRITE_DEATH;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SPRITE_EQUIPMENT;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SPRITE_PETRIFY;
@@ -105,24 +117,41 @@ public:
     static const BYTE MSG_SUBTYPE_CMESSAGE_FAMILIAR_ADD;
     static const BYTE MSG_SUBTYPE_CMESSAGE_FAMILIAR_REMOVE_RESREF;
     static const BYTE MSG_SUBTYPE_CMESSAGE_STOP_ESCAPE_AREA;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_83;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_84;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_TIME_STOP;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_86;
     static const BYTE MSG_SUBTYPE_CMESSAGE_STORE_RELEASE;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_88;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_89;
     static const BYTE MSG_SUBTYPE_CMESSAGE_90;
     static const BYTE MSG_SUBTYPE_CMESSAGE_FLOAT_TEXT;
     static const BYTE MSG_SUBTYPE_CMESSAGE_92;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_PROTAGONIST;
     static const BYTE MSG_SUBTYPE_CMESSAGE_START_COMBAT_MUSIC;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_95;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_96;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_SET_SCRIPT;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_98;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SCREENSHAKE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_STORE_DEMAND;
     static const BYTE MSG_SUBTYPE_CMESSAGE_WEAPON_IMMUNITIES_UPDATE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_101;
     static const BYTE MSG_SUBTYPE_CMESSAGE_103;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_PROJECTILE_IMMUNITIES_UPDATE;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_105;
     static const BYTE MSG_SUBTYPE_CMESSAGE_TOGGLE_INTERFACE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_107;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_108;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_AREA_TYPE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_AREA_REST_ENCOUNTER;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_111;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_112;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_PICKED_DIALOG_RESPONSE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_AREA_EXPLORED;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_115;
     static const BYTE MSG_SUBTYPE_CMESSAGE_CHANGE_STAT;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_117;
     static const BYTE MSG_SUBTYPE_CMESSAGE_120;
     static const BYTE MSG_SUBTYPE_CMESSAGE_END_GAME;
 
@@ -359,6 +388,49 @@ public:
     BOOLEAN GetDialogReplyReturned();
     INT GetDialogReplyUpdates();
     void SetDialogReplyUpdates(INT bValue);
+    BOOLEAN sub_42A3F0(BYTE* pMessage, DWORD dwSize, BOOLEAN a3);
+    BOOLEAN sub_42ABA0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_42ADF0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_42E630(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_42FFD0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_430910(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_430BE0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_430D40(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_431020(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_4313E0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_4324E0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_432A10(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_432BA0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_434D80(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_435040(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_4352A0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_435470(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_4355F0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_4358B0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_435E00(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_4361D0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_436440(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_436610(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_436860(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_436B60(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_436D10(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_436D40(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_436EF0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_437050(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_4371B0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN OnTimeChangeToServer(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN OnLeaveAreaLuaReplyFromServer(BYTE* pByteMessage, DWORD dwSize);
+    BOOLEAN sub_437FD0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_438560(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN OnLeaveAreaNameReplyFromServer(BYTE* pByteMessage, DWORD dwSize);
+    BOOLEAN sub_439250(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_43A470(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_43A7C0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_43B080(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_43B380(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_43B680(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_43DC40(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_43DE50(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
 
     /* 0000 */ BOOLEAN m_bInOnObjectAdd;
     /* 0001 */ BOOLEAN m_bInOnObjectDelete;
@@ -455,6 +527,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
     /* 000C */ CAIAction m_action;
@@ -467,6 +540,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
     /* 000C */ CGameEffect* m_effect;
@@ -591,6 +665,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
     /* 000C */ CItem m_item;
@@ -605,6 +680,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
     /* 000C */ SHORT m_nItems;
@@ -646,6 +722,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
     /* 000C */ CString m_name;
@@ -722,6 +799,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
     /* 000C */ CAIObjectType m_cAIProprietor;
@@ -760,6 +838,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
     /* 000C */ CAIAction m_action;
@@ -912,6 +991,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
     /* 000C */ LONG m_wait;
@@ -990,6 +1070,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
     /* 000C */ CAIObjectType m_lAttacker;
@@ -1002,6 +1083,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
     /* 000C */ CAIObjectType m_lAttacker;
@@ -1028,6 +1110,8 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
 
     /* 000C */ SHORT m_nPath;
     /* 000E */ LONG* m_pPath;
@@ -1057,6 +1141,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
     /* 000C */ CAITrigger m_trigger;
@@ -1082,6 +1167,8 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
 
     /* 000C */ CGameSpriteEquipment m_equipment;
     /* 00E0 */ BYTE m_nWeaponSet;
@@ -1107,6 +1194,8 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
 
     /* 000C */ LONG* m_pPath;
     /* 0010 */ SHORT m_nPath;
@@ -1302,6 +1391,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
     /* 000C */ CResRef m_cResRefDialog;
@@ -1373,6 +1463,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
     /* 000C */ CResRef m_screen;
@@ -1536,6 +1627,8 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
 
     /* 000C */ WORD m_projectileType;
     /* 000E */ LONG m_projectileTargetId;
@@ -1773,6 +1866,389 @@ public:
     /* 000C */ WORD m_stat;
     /* 000E */ DWORD m_value;
     /* 0012 */ BOOLEAN m_modify;
+};
+
+class CMessage2 : public CMessage {
+public:
+    CMessage2(const CItem& item, LONG caller, LONG target);
+    ~CMessage2() override;
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CItem m_item;
+};
+
+class CMessage18 : public CMessage {
+public:
+    CMessage18(BYTE a1, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ BYTE field_C;
+};
+
+class CMessageEnterDialogMode : public CMessage {
+public:
+    CMessageEnterDialogMode(LONG a1, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ LONG field_C;
+};
+
+class CMessageInsertResponse : public CMessage {
+public:
+    CMessageInsertResponse(const CAIResponse& response, LONG a2, LONG a3, LONG caller, LONG target, LONG a6);
+    ~CMessageInsertResponse() override;
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CAIResponse m_response;
+    /* 0030 */ LONG field_30;
+    /* 0034 */ LONG field_34;
+    /* 0038 */ LONG field_38;
+};
+
+class CMessageLoadDialog : public CMessage {
+public:
+    CMessageLoadDialog(const CString& sDialog, LONG a2, LONG caller, LONG target);
+    ~CMessageLoadDialog() override;
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CString m_sDialog;
+    /* 0010 */ LONG field_10;
+};
+
+class CMessage34 : public CMessage {
+public:
+    CMessage34(WORD a1, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ WORD field_C;
+};
+
+class CMessage51 : public CMessage {
+public:
+    CMessage51(LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CPoint m_ptTarget;
+    /* 0014 */ CSearchRequest* m_pSearchRequest;
+    /* 0018 */ BYTE m_frontList;
+};
+
+class CMessage53 : public CMessage {
+public:
+    CMessage53(const CString& a1, const CString& a2, LONG a3, BYTE a4, LONG caller, LONG target, LONG a7);
+    ~CMessage53() override;
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CString field_C;
+    /* 0010 */ CString field_10;
+    /* 0014 */ LONG field_14;
+    /* 0018 */ BYTE field_18;
+    /* 001A */ LONG field_1A;
+};
+
+class CMessage83 : public CMessage {
+public:
+    CMessage83(const CResRef& a1, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CResRef field_C;
+};
+
+class CMessage84 : public CMessage {
+public:
+    CMessage84(const CResRef& resRef, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CResRef field_C;
+};
+
+class CMessage86 : public CMessage {
+public:
+    CMessage86(const CResRef& a1, const CString& a2, const CPoint& a3, CPoint a4, WORD a5, LONG caller, LONG target);
+    ~CMessage86() override;
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CResRef field_C;
+    /* 0014 */ CString field_14;
+    /* 0018 */ CPoint field_18;
+    /* 0020 */ CPoint field_20;
+    /* 0028 */ WORD field_28;
+};
+
+class CMessage88 : public CMessage {
+public:
+    CMessage88(LONG a1, LONG a2, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ LONG field_C;
+    /* 0010 */ LONG field_10;
+};
+
+class CMessage89 : public CMessage {
+public:
+    CMessage89(LONG a1, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ LONG field_C;
+};
+
+class CMessage95 : public CMessage {
+public:
+    CMessage95(LONG a1, LONG a2, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ LONG field_C;
+    /* 0010 */ LONG field_10;
+};
+
+class CMessage96 : public CMessage {
+public:
+    CMessage96(LONG a1, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ LONG field_C;
+};
+
+class CMessageSetScript : public CMessage {
+public:
+    CMessageSetScript(LONG caller, LONG target, INT nLevel, const RESREF scriptRes);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ INT m_nLevel;
+    /* 0010 */ RESREF m_scriptRes;
+};
+
+class CMessage98 : public CMessage {
+public:
+    CMessage98(LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+};
+
+class CMessageProjectileImmunityUpdate : public CMessage {
+public:
+    CMessageProjectileImmunityUpdate(CGameSprite* pSprite, LONG caller, LONG target);
+    ~CMessageProjectileImmunityUpdate() override;
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CImmunitiesProjectile m_projectileImmunities;
+};
+
+class CMessage105 : public CMessage {
+public:
+    CMessage105(const std::list<CMessageAddEffect*>& effects, LONG caller, LONG target);
+    ~CMessage105() override;
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ std::list<CMessageAddEffect*> m_effects;
+};
+
+class CMessage108 : public CMessage {
+public:
+    CMessage108(CResRef cResStore, DWORD a2, DWORD a3, DWORD a4, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CResRef m_cResStore;
+    /* 0014 */ DWORD field_14;
+    /* 0018 */ DWORD field_18;
+    /* 001C */ DWORD field_1C;
+};
+
+class CMessage111 : public CMessage {
+public:
+    CMessage111(STRREF strText, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ STRREF m_strText;
+};
+
+class CMessage112 : public CMessage {
+public:
+    CMessage112(CResRef cResSound, BYTE nChannel, CPoint ptPos, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CResRef m_cResSound;
+    /* 0014 */ BYTE m_nChannel;
+    /* 0016 */ CPoint m_ptPos;
+};
+
+class CMessagePickedDialogResponse : public CMessage {
+public:
+    CMessagePickedDialogResponse(LONG entryIndex, LONG marker, COLORREF nameColor, const CString& name, LONG removeRepliesTarget, const CString& sDialog, LONG a7, LONG a8, DWORD entryNum, BOOLEAN a10, LONG target);
+    ~CMessagePickedDialogResponse() override;
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CString m_name;
+    /* 0010 */ LONG m_entryIndex;
+    /* 0014 */ LONG m_marker;
+    /* 0018 */ COLORREF m_nameColor;
+    /* 001C */ LONG m_removeRepliesTarget;
+    /* 0020 */ CString m_sDialog;
+    /* 0024 */ LONG field_24;
+    /* 0028 */ LONG field_28;
+    /* 002C */ DWORD m_entryNum;
+    /* 0030 */ BOOLEAN field_30;
+};
+
+class CMessage115 : public CMessage {
+public:
+    CMessage115(WORD projectileType, LONG projectileTargetId, const CPoint& projectileTarget, LONG height, LONG caller, LONG target, unsigned char a7);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ WORD m_projectileType;
+    /* 000E */ LONG m_projectileTargetId;
+    /* 0012 */ CPoint m_projectileTarget;
+    /* 001A */ LONG m_height;
+    /* 001E */ unsigned char field_1E;
+    /* 0020 */ int field_20;
+};
+
+class CMessage117 : public CMessage {
+public:
+    CMessage117(const CResRef& a1, const CResRef& a2, LONG a3, const CPoint& a4, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CResRef field_C;
+    /* 0014 */ CResRef field_14;
+    /* 001C */ LONG field_1C;
+    /* 0020 */ CPoint field_20;
+};
+
+class CMessage118 : public CMessage {
+public:
+    CMessage118(CGameSprite* pSprite, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CImmunitiesSpellLevel m_cImmunitiesSpellLevel;
 };
 
 #endif /* CMESSAGE_H_ */

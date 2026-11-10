@@ -20,6 +20,12 @@ CGameDialogSprite::~CGameDialogSprite()
     ClearMarshal();
 }
 
+// 0x482210
+void CGameDialogSprite::sub_482210(CResRef cResDialog, LONG a2, LONG a3)
+{
+    // TODO: Incomplete.
+}
+
 // 0x483970
 void CGameDialogSprite::ClearMarshal()
 {

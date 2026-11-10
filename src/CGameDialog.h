@@ -22,6 +22,7 @@ public:
     BOOL EnterDialog(DWORD index, CGameSprite* pSprite, int a3);
     void AsynchronousUpdate();
     void UpdateDialogColors();
+    void sub_482210(CResRef cResDialog, LONG a2, LONG a3);
 
     /* 0000 */ CResRef m_file;
     /* 0008 */ CTypedPtrArray<CPtrArray, CGameDialogEntry*> m_dialogEntries;

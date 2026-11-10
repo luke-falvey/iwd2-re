@@ -24,6 +24,7 @@ public:
     DWORD GetFlags();
     void SetFlags(DWORD dwFlags);
     BOOL sub_45B700();
+    void sub_489680(const CAIObjectType& type, BOOL a2);
 
     /* 0598 */ CResRef m_resID;
     /* 05A0 */ CRect m_rOpenBounding;
