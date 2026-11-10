@@ -76,6 +76,7 @@ public:
     void SetCurrentXP(DWORD dwCurrentXP);
     void AddGold(DWORD dwGold);
     void StopContainer();
+    INT GetActivePanelID();
     void CancelPopup();
     void StartCommand();
     void StopCommand();
@@ -239,6 +240,7 @@ public:
     /* 11F0 */ int field_11F0;
     /* 11F4 */ int field_11F4;
     /* 11F8 */ int field_11F8;
+    /* 11FC */ int field_11FC;
     /* 1200 */ LONG m_nBlackOutCountDown;
     /* 1204 */ unsigned char field_1204;
 };

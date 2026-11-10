@@ -6,6 +6,8 @@
 #include "CBaldurChitin.h"
 #include "CBaldurEngine.h"
 #include "CBaldurProjector.h"
+#include "CCharacterFile.h"
+#include "CCreatureFile.h"
 #include "CGameAnimationType.h"
 #include "CGameArea.h"
 #include "CGameContainer.h"
@@ -14,6 +16,8 @@
 #include "CInfCursor.h"
 #include "CItem.h"
 #include "CPathSearch.h"
+#include "CResCache.h"
+#include "CResFile.h"
 #include "CScreenChapter.h"
 #include "CScreenCharacter.h"
 #include "CScreenInventory.h"
@@ -36,6 +40,7 @@
 #include "CUIPanel.h"
 #include "CUtil.h"
 #include "Icewind586B70.h"
+#include "IcewindMisc.h"
 
 #define FIFTY_THREE 53
 
@@ -1383,15 +1388,287 @@ LONG CInfGame::CachingRequirements(const CString& areaName)
 }
 
 // 0x5A0950
-void CInfGame::CacheResFileWithResource(const CString& areaName)
+BOOL CInfGame::CacheResFileWithResource(const CString& areaName)
 {
-    // TODO: Incomplete.
+    CAreaFile cAreaFile;
+
+    for (int index = 1; index < 7; index++) {
+        CResCache::stru_8FB90C[index] = "";
+    }
+
+    CResCache::stru_8FB90C[0] = areaName;
+    CResCache::dword_8FB92C = 1;
+
+    // NOTE: Uninline.
+    cAreaFile.SetResRef(CResRef(areaName), TRUE, TRUE);
+
+    // NOTE: The WED resref is at offset 8 of the ARE file (after signature
+    // and version).
+    BYTE* pData = cAreaFile.GetData();
+    CResFile* pResFile = g_pChitin->cDimm.GetResFilePtr(g_pChitin->cDimm.GetResID(CResRef(pData + 8), 1003));
+    cAreaFile.ReleaseData();
+
+    if (pResFile == NULL) {
+        return FALSE;
+    }
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        if (pResFile->sub_789CE0() == TRUE) {
+            pResFile->UnCache();
+        }
+        return TRUE;
+    }
+
+    CString sResFileName;
+    CString sXLabel;
+    CString sYLabel;
+    CPoint ptLocation;
+
+    pResFile->sub_78A0F0(sResFileName);
+
+    if ((m_ruleTables.m_tAreaLinkageCaching.Find(sResFileName, ptLocation, TRUE)
+            & m_ruleTables.m_tAreaLinkageCaching.Find(sResFileName, sXLabel, sYLabel, TRUE))
+        == TRUE) {
+        // NOTE: Uninline.
+        CString sCount = m_ruleTables.m_tAreaLinkageCaching.GetAt(CPoint(0, ptLocation.y));
+        int nCount = atoi(sCount.GetBuffer(sCount.GetLength()));
+
+        if (nCount != 0) {
+            int index;
+            UINT nResFileID;
+
+            index = 0;
+            nResFileID = g_pChitin->cDimm.GetResFileID(sYLabel);
+            while (index <= nCount) {
+                pResFile = g_pChitin->cDimm.GetResFilePtr(nResFileID);
+                if (pResFile == NULL) {
+                    return FALSE;
+                }
+
+                if (!pResFile->sub_789A20()) {
+                    if (pResFile->sub_789CE0() == TRUE) {
+                        pResFile->UnCache();
+                    }
+                }
+
+                index++;
+
+                // NOTE: Uninline.
+                sResFileName = m_ruleTables.m_tAreaLinkageCaching.GetAt(CPoint(index, ptLocation.y));
+                nResFileID = g_pChitin->cDimm.GetResFileID(sResFileName);
+            }
+
+            index = 0;
+            nResFileID = g_pChitin->cDimm.GetResFileID(sYLabel);
+            while (index <= nCount) {
+                pResFile = g_pChitin->cDimm.GetResFilePtr(nResFileID);
+                if (pResFile == NULL) {
+                    return FALSE;
+                }
+
+                // NOTE: On the first iteration `sResFileName` still holds the
+                // value read past the last column by the first loop.
+                CResCache::stru_8FB90C[CResCache::dword_8FB92C++] = sResFileName;
+
+                if (pResFile->sub_789A20()) {
+                    if (pResFile->sub_789CE0() == TRUE) {
+                        pResFile->UnCache();
+                    }
+                }
+
+                index++;
+
+                // NOTE: Uninline.
+                sResFileName = m_ruleTables.m_tAreaLinkageCaching.GetAt(CPoint(index, ptLocation.y));
+                nResFileID = g_pChitin->cDimm.GetResFileID(sResFileName);
+            }
+
+            return TRUE;
+        }
+    }
+
+    if (pResFile->sub_789CE0() == TRUE) {
+        pResFile->UnCache();
+    }
+
+    return TRUE;
 }
 
 // 0x5A0F50
 LONG CInfGame::ImportCharacter(const CString& sFileName, INT nIndex)
 {
-    // TODO: Incomplete.
+    CCharacterFile cCharacterData;
+    BOOLEAN bTemporaryKey = FALSE;
+    CBiographyFile cBiographyData;
+    STR_RES strRes;
+
+    // NOTE: Uninline.
+    cCharacterData.SetResRef(CResRef(sFileName), TRUE, TRUE);
+
+    if (cCharacterData.GetResRef() == "") {
+        // Not in the resource index yet, add the file from the characters
+        // folder.
+        bTemporaryKey = TRUE;
+        g_pChitin->cDimm.AddTemporaryKey(m_sCharactersDir, CResRef(sFileName), 1018);
+
+        // NOTE: Uninline.
+        cCharacterData.SetResRef(CResRef(sFileName), TRUE, TRUE);
+    }
+
+    BYTE* pData = cCharacterData.GetData();
+    DWORD nExportCharacter = cCharacterData.GetDataSize();
+
+    if (pData != NULL && memcmp(pData, "CHR V2.2", 8) == 0) {
+        EXPORT_CHARACTER_HEADER* pHeader = reinterpret_cast<EXPORT_CHARACTER_HEADER*>(pData);
+
+        nExportCharacter -= sizeof(EXPORT_CHARACTER_HEADER);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 4172
+        UTIL_ASSERT(static_cast<LONG>(nExportCharacter) > 0);
+
+        nExportCharacter -= pHeader->nCreatureSize;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 4175
+        UTIL_ASSERT(static_cast<LONG>(nExportCharacter) >= 0);
+
+        CGameSprite* pSprite = new CGameSprite(pData + pHeader->nCreatureOffset,
+            pHeader->nCreatureSize,
+            0,
+            0,
+            -1,
+            0,
+            0,
+            INT_MAX,
+            CPoint(-1, -1),
+            0);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 4180
+        UTIL_ASSERT(pSprite != NULL);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 4181
+        UTIL_ASSERT(nExportCharacter == 0);
+
+        pSprite->SetResRef(CResRef(sFileName));
+
+        char szName[33] = { 0 };
+        strncpy(szName, pHeader->szName, 32);
+        pSprite->m_sName = CString(szName);
+
+        for (int index = 0; index < 8; index++) {
+            pSprite->InitQuickItemData(pHeader->quickWeaponSlots[index],
+                pHeader->quickWeaponAbilities[index],
+                pHeader->quickWeaponsField_1A4[index],
+                pSprite->m_quickWeapons[index]);
+        }
+
+        for (int index = 0; index < 9; index++) {
+            pSprite->InitQuickSpellData(CResRef(pHeader->quickSpells[index]),
+                1,
+                pSprite->m_quickSpells[index],
+                pHeader->quickSpellsClass[index],
+                pHeader->quickSpellsField_164[index],
+                pHeader->quickSpellsKit[index]);
+        }
+
+        for (int index = 0; index < 3; index++) {
+            pSprite->InitQuickItemData(pHeader->quickItemSlots[index],
+                pHeader->quickItemAbilities[index],
+                0,
+                pSprite->m_quickItems[index]);
+        }
+
+        for (int index = 0; index < 9; index++) {
+            pSprite->InitQuickSpellData(CResRef(pHeader->quickInnates[index]),
+                2,
+                pSprite->m_quickInnates[index],
+                0,
+                0,
+                0);
+        }
+
+        for (int index = 0; index < 9; index++) {
+            pSprite->InitQuickSpellData(CResRef(pHeader->quickSongs[index]),
+                3,
+                pSprite->m_quickSongs[index],
+                0,
+                0,
+                0);
+        }
+
+        for (int index = 0; index < 9; index++) {
+            pSprite->field_3D14[index] = pHeader->field_13E[index];
+        }
+
+        pSprite->m_nLastSpellbookClassIndex = pHeader->nLastSpellbookClassIndex;
+        pSprite->m_nLastSpellbookSpellLevel = pHeader->nLastSpellbookSpellLevel;
+
+        if (bTemporaryKey == TRUE) {
+            g_pChitin->cDimm.RemoveTemporaryKey(m_sCharactersDir, CResRef(sFileName), 1018);
+        }
+
+        // NOTE: Uninline.
+        cBiographyData.SetResRef(CResRef(sFileName), TRUE, TRUE);
+
+        if (cBiographyData.GetResRef() != "") {
+            // Biographies of imported characters go to user talk table
+            // entries, one per party slot.
+            STRREF strBiography = static_cast<BYTE>(nIndex) + 62016;
+            strRes.szText = CString(cBiographyData.GetData());
+            strRes.szText = strRes.szText.Left(cBiographyData.pRes->nSize);
+            g_pBaldurChitin->GetTlkTable().m_override.AddUserEntry(strBiography, strRes);
+            pSprite->m_baseStats.m_biography = strBiography;
+            cBiographyData.pRes->Release();
+        } else {
+            pSprite->m_baseStats.m_biography = -1;
+        }
+
+        BYTE nClass;
+
+        nClass = CAIOBJECTTYPE_C_CLERIC;
+        pSprite->AddKnownDivineSpells(nClass);
+
+        nClass = CAIOBJECTTYPE_C_DRUID;
+        pSprite->AddKnownDivineSpells(nClass);
+
+        nClass = CAIOBJECTTYPE_C_PALADIN;
+        pSprite->AddKnownDivineSpells(nClass);
+
+        nClass = CAIOBJECTTYPE_C_RANGER;
+        pSprite->AddKnownDivineSpells(nClass);
+
+        AddPartyGold(g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetStartingGold(pSprite));
+
+        CString sSoundSet(pHeader->szSoundSet);
+        DWORD nLength = sSoundSet.GetLength();
+        memcpy(pSprite->field_725A, sSoundSet.GetBuffer(nLength), min(nLength, 32));
+        if (nLength < 32) {
+            pSprite->field_725A[nLength] = '\0';
+        }
+
+        CString sPath = g_pBaldurChitin->GetObjectGame()->GetDirSounds() + sSoundSet + '\\';
+        g_pChitin->cDimm.AddToDirectoryList(sPath, TRUE);
+
+        pSprite->m_secondarySounds = CResRef(pHeader->secondarySounds);
+
+        cCharacterData.pRes->dwFlags |= 0x100;
+        cCharacterData.ReleaseData();
+
+        pSprite->m_bGlobal = TRUE;
+        pSprite->sub_726810(pSprite->m_nWeaponSet);
+
+        return pSprite->GetId();
+    }
+
+    cCharacterData.ReleaseData();
+
+    if (bTemporaryKey) {
+        g_pChitin->cDimm.RemoveTemporaryKey(m_sCharactersDir, CResRef(sFileName), 1018);
+        cCharacterData.ReleaseData();
+    }
 
     return 0;
 }
@@ -1737,6 +2014,400 @@ CGameArea* CInfGame::LoadArea(CString areaName, BYTE nTravelScreenImageToUse, BO
     return m_gameAreas[cnt];
 }
 
+// 0x5A3230
+void CInfGame::Marshal(BYTE** pGame, LONG* nGame, BOOLEAN bProgressBarInPlace)
+{
+    CSavedGamePartyCreature partyCreatures[6];
+    CSavedGamePartyCreature* pGlobalCreature = NULL;
+    CVariable* pVariables = NULL;
+    WORD nVariables;
+    SHORT nPCAreaViewed = 0;
+    DWORD dwProgressPerCreature = 0;
+    DWORD dwProgressMisc = 0;
+    CGameSprite* pSprite;
+    SHORT cnt3;
+    SHORT index;
+    DWORD nUnknownSize;
+    POSITION pos;
+    BYTE rc;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 4924
+    UTIL_ASSERT(pGame != NULL && nGame != NULL);
+
+    if (bProgressBarInPlace) {
+        ProgressBarCallback(0, TRUE);
+
+        DWORD nCreatures = m_nCharacters + m_lstGlobalCreatures.GetCount();
+        if (nCreatures != 0) {
+            dwProgressPerCreature = 2187500 / nCreatures;
+            dwProgressMisc = 312500;
+        } else {
+            dwProgressPerCreature = 0;
+            dwProgressMisc = 2500000;
+        }
+    }
+
+    memset(partyCreatures, 0, sizeof(partyCreatures));
+
+    *nGame = sizeof(CSavedGameHeader) + 8;
+    *nGame += m_nCharacters * sizeof(CSavedGamePartyCreature);
+
+    cnt3 = 0;
+    for (index = 0; index < 6; index++) {
+        if (m_characters[index] != -1) {
+            if (bProgressBarInPlace) {
+                ProgressBarCallback(dwProgressPerCreature, FALSE);
+            }
+
+            rc = m_cObjectArray.GetShare(m_characters[index],
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+            if (rc == CGameObjectArray::SUCCESS) {
+                pSprite->Marshal(partyCreatures[cnt3], FALSE);
+                *nGame += partyCreatures[cnt3].m_creatureSize;
+
+                if (pSprite->m_pArea == m_gameAreas[m_visibleArea]) {
+                    nPCAreaViewed = index;
+                }
+
+                m_cObjectArray.ReleaseShare(m_characters[index],
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+
+                cnt3++;
+            } else {
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+                // __LINE__: 4979
+                UTIL_ASSERT(FALSE);
+            }
+        }
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 4990
+    UTIL_ASSERT(cnt3 == m_nCharacters);
+
+    if (m_lstGlobalCreatures.GetCount() > 0) {
+        pGlobalCreature = new CSavedGamePartyCreature[m_lstGlobalCreatures.GetCount()];
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 4995
+        UTIL_ASSERT(pGlobalCreature != NULL);
+
+        memset(pGlobalCreature,
+            0,
+            sizeof(CSavedGamePartyCreature) * m_lstGlobalCreatures.GetCount());
+
+        *nGame += sizeof(CSavedGamePartyCreature) * m_lstGlobalCreatures.GetCount();
+
+        pos = m_lstGlobalCreatures.GetHeadPosition();
+        index = 0;
+        while (pos != NULL) {
+            LONG iSprite = reinterpret_cast<LONG>(m_lstGlobalCreatures.GetNext(pos));
+
+            if (bProgressBarInPlace) {
+                ProgressBarCallback(dwProgressPerCreature, FALSE);
+            }
+
+            rc = m_cObjectArray.GetShare(iSprite,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+            if (rc == CGameObjectArray::SUCCESS) {
+                pSprite->Marshal(pGlobalCreature[index], FALSE);
+                *nGame += pGlobalCreature[index].m_creatureSize;
+
+                m_cObjectArray.ReleaseShare(iSprite,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+
+            index++;
+        }
+    }
+
+    m_variables.Marshal(&pVariables, &nVariables);
+    *nGame += nVariables * sizeof(CVariable);
+
+    *nGame += m_cJournal.CountEntries() * sizeof(CSavedGameJournalEntry)
+        + sizeof(CSavedGameFamiliars);
+
+    for (int alignment = 0; alignment < 9; alignment++) {
+        for (int level = 0; level < 9; level++) {
+            *nGame += m_familiarResRefs[alignment][level].GetCount() * sizeof(RESREF);
+        }
+    }
+
+    if (bProgressBarInPlace) {
+        ProgressBarCallback(dwProgressMisc, FALSE);
+    }
+
+    // NOTE: Inlined.
+    nUnknownSize = sizeof(DWORD);
+    pos = field_4BDC.GetHeadPosition();
+    while (pos != NULL) {
+        CInfGameUnknownEntry* pEntry = reinterpret_cast<CInfGameUnknownEntry*>(field_4BDC.GetNext(pos));
+        nUnknownSize += pEntry->m_sName.GetLength() + sizeof(CSavedGameUnknownEntry);
+    }
+
+    *nGame += nUnknownSize;
+
+    *pGame = new BYTE[*nGame];
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 5063
+    UTIL_ASSERT(*pGame != NULL);
+
+    memset(*pGame, 0, *nGame);
+
+    DWORD cnt = 0;
+
+    memcpy(*pGame + cnt, "GAMEV2.2", 8);
+    cnt += 8;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 5067
+    UTIL_ASSERT(cnt <= (DWORD)*nGame);
+
+    CSavedGameHeader* pHeader = reinterpret_cast<CSavedGameHeader*>(*pGame + cnt);
+    cnt += sizeof(CSavedGameHeader);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 5070
+    UTIL_ASSERT(cnt <= (DWORD)*nGame);
+
+    pHeader->m_worldTime = m_worldTime.m_gameTime / CTimerWorld::TIMESCALE_MSEC_PER_SEC;
+    m_gameSave.m_cResCurrentWorldArea.GetResRef(pHeader->m_currentWorldArea);
+    pHeader->m_currentLink = m_gameSave.m_nCurrentWorldLink;
+    pHeader->m_nPCAreaViewed = nPCAreaViewed;
+
+    pHeader->m_curFormation = 0;
+    for (SHORT nFormation = 4; nFormation >= 0; nFormation--) {
+        pHeader->m_quickFormations[nFormation] = m_gameSave.m_quickFormations[nFormation];
+        if (m_gameSave.m_curFormation == m_gameSave.m_quickFormations[nFormation]) {
+            pHeader->m_curFormation = nFormation;
+        }
+    }
+
+    pHeader->m_nPartyGold = m_gameSave.m_nPartyGold;
+    pHeader->m_wWeatherFlags = g_pBaldurChitin->m_pEngineWorld->m_weather.Marshal();
+
+    if (!m_bPartyAI) {
+        pHeader->m_dwFlags |= 0x1;
+    }
+
+    if (!m_bShowAreaNotes) {
+        pHeader->m_dwFlags |= 0x80;
+    }
+
+    if (g_pBaldurChitin->m_pEngineWorld->field_11F0 == 0) {
+        pHeader->m_dwFlags |= 0x20;
+    }
+
+    if (g_pBaldurChitin->m_pEngineWorld->field_11F4 == 0) {
+        pHeader->m_dwFlags |= 0x40;
+    }
+
+    if (g_pBaldurChitin->m_pEngineWorld->GetManager()->m_bHidden) {
+        pHeader->m_dwFlags |= 0x10;
+    }
+
+    pHeader->m_versionNumber = 3;
+
+    BYTE panels[2];
+    BYTE controls[2];
+    panels[0] = 7;
+    panels[1] = 19;
+    controls[0] = 0;
+    controls[1] = 0;
+
+    for (BYTE nPanel = 0; nPanel < 2; nPanel++) {
+        CUIPanel* pPanel = g_pBaldurChitin->m_pEngineWorld->GetManager()->GetPanel(panels[nPanel]);
+        if (pPanel->m_bActive) {
+            if (pPanel->GetControl(controls[nPanel])->m_bActive) {
+                pHeader->m_dwFlags |= 0x2 | 0x4;
+            }
+            break;
+        }
+    }
+
+    pHeader->m_reputation = m_nReputation;
+
+    if (m_pGameAreaMaster != NULL) {
+        m_pGameAreaMaster->m_resRef.GetResRef(pHeader->m_masterArea);
+    }
+
+    // Party creatures.
+    pHeader->m_partyCreatureTableOffset = cnt;
+    pHeader->m_partyCreatureTableCount = m_nCharacters;
+    cnt += m_nCharacters * sizeof(CSavedGamePartyCreature);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 5136
+    UTIL_ASSERT(cnt <= (DWORD)*nGame);
+
+    cnt3 = 0;
+    for (index = 0; index < 6; index++) {
+        if (m_characters[index] != -1) {
+            if (bProgressBarInPlace) {
+                ProgressBarCallback(dwProgressPerCreature, FALSE);
+            }
+
+            CSavedGamePartyCreature* pPartyCreature = reinterpret_cast<CSavedGamePartyCreature*>(*pGame
+                + pHeader->m_partyCreatureTableOffset
+                + cnt3 * sizeof(CSavedGamePartyCreature));
+            memcpy(pPartyCreature, &(partyCreatures[cnt3]), sizeof(CSavedGamePartyCreature));
+
+            if (partyCreatures[cnt3].m_creatureSize > 0) {
+                memcpy(*pGame + cnt,
+                    reinterpret_cast<BYTE*>(partyCreatures[cnt3].m_creatureOffset),
+                    partyCreatures[cnt3].m_creatureSize);
+                delete reinterpret_cast<BYTE*>(partyCreatures[cnt3].m_creatureOffset);
+
+                pPartyCreature->m_creatureOffset = cnt;
+                cnt += partyCreatures[cnt3].m_creatureSize;
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+                // __LINE__: 5156
+                UTIL_ASSERT(cnt <= (DWORD)*nGame);
+            }
+
+            cnt3++;
+        }
+    }
+
+    // Global creatures.
+    pHeader->m_globalCreatureTableOffset = cnt;
+    pHeader->m_globalCreatureTableCount = m_lstGlobalCreatures.GetCount();
+    cnt += m_lstGlobalCreatures.GetCount() * sizeof(CSavedGamePartyCreature);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 5166
+    UTIL_ASSERT(cnt <= (DWORD)*nGame);
+
+    for (index = 0; index < m_lstGlobalCreatures.GetCount(); index++) {
+        if (bProgressBarInPlace) {
+            ProgressBarCallback(dwProgressPerCreature, FALSE);
+        }
+
+        CSavedGamePartyCreature* pPartyCreature = reinterpret_cast<CSavedGamePartyCreature*>(*pGame
+            + pHeader->m_globalCreatureTableOffset
+            + index * sizeof(CSavedGamePartyCreature));
+        memcpy(pPartyCreature, &(pGlobalCreature[index]), sizeof(CSavedGamePartyCreature));
+
+        if (pGlobalCreature[index].m_creatureSize > 0) {
+            memcpy(*pGame + cnt,
+                reinterpret_cast<BYTE*>(pGlobalCreature[index].m_creatureOffset),
+                pGlobalCreature[index].m_creatureSize);
+            delete reinterpret_cast<BYTE*>(pGlobalCreature[index].m_creatureOffset);
+
+            pPartyCreature->m_creatureOffset = cnt;
+            cnt += pGlobalCreature[index].m_creatureSize;
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+            // __LINE__: 5183
+            UTIL_ASSERT(cnt <= (DWORD)*nGame);
+        }
+    }
+
+    if (pGlobalCreature != NULL) {
+        delete[] pGlobalCreature;
+    }
+
+    // Global variables.
+    if (nVariables > 0) {
+        pHeader->m_globalVariablesOffset = cnt;
+        pHeader->m_globalVariablesCount = nVariables;
+        memcpy(*pGame + cnt, pVariables, nVariables * sizeof(CVariable));
+        delete[] pVariables;
+        cnt += nVariables * sizeof(CVariable);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 5197
+        UTIL_ASSERT(cnt <= (DWORD)*nGame);
+    }
+
+    // Journal.
+    pHeader->m_journalEntriesOffset = cnt;
+    pHeader->m_journalEntriesCount = m_cJournal.CountEntries();
+    m_cJournal.Marshal(reinterpret_cast<CSavedGameJournalEntry*>(*pGame + cnt));
+    cnt += pHeader->m_journalEntriesCount * sizeof(CSavedGameJournalEntry);
+
+    // Familiars.
+    pHeader->m_storedLocationsOffset = m_cOptions.m_nNightmareMode;
+    pHeader->m_familiarsOffset = cnt;
+
+    CSavedGameFamiliars* pFamiliarInfo = reinterpret_cast<CSavedGameFamiliars*>(*pGame + cnt);
+    cnt += sizeof(CSavedGameFamiliars);
+
+    memcpy(pFamiliarInfo->m_defaultFamiliarResRefs, m_defaultFamiliarResRefs, sizeof(m_defaultFamiliarResRefs));
+    pFamiliarInfo->m_familiarResRefsOffset = cnt;
+
+    for (int alignment = 0; alignment < 9; alignment++) {
+        for (int level = 0; level < 9; level++) {
+            pFamiliarInfo->m_familiarResRefsCount[alignment][level] = m_familiarResRefs[alignment][level].GetCount();
+
+            pos = m_familiarResRefs[alignment][level].GetHeadPosition();
+            while (pos != NULL) {
+                CResRef* pResRef = m_familiarResRefs[alignment][level].GetNext(pos);
+                memcpy(*pGame + cnt, pResRef->GetResRef(), sizeof(RESREF));
+                cnt += sizeof(RESREF);
+            }
+        }
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 5225
+    UTIL_ASSERT(cnt <= (DWORD)*nGame);
+
+    // `field_4BDC` entries.
+    BYTE* pData = *pGame + cnt;
+    *reinterpret_cast<DWORD*>(pData) = field_4BDC.GetCount();
+    pData += sizeof(DWORD);
+
+    pos = field_4BDC.GetHeadPosition();
+    while (pos != NULL) {
+        CInfGameUnknownEntry* pEntry = reinterpret_cast<CInfGameUnknownEntry*>(field_4BDC.GetNext(pos));
+        CSavedGameUnknownEntry* pSavedEntry = reinterpret_cast<CSavedGameUnknownEntry*>(pData);
+        DWORD nSize = pEntry->m_sName.GetLength() + sizeof(CSavedGameUnknownEntry) - sizeof(DWORD);
+
+        pSavedEntry->m_nSize = nSize;
+        pSavedEntry->m_nLength = pEntry->m_sName.GetLength();
+        pSavedEntry->field_8 = pEntry->field_4;
+
+        // NOTE: The original writes `field_8` as a zero-extended `DWORD`, then
+        // overwrites its upper three bytes with `field_9`.
+        *reinterpret_cast<DWORD*>(&(pSavedEntry->field_C)) = pEntry->field_8;
+        memcpy(pSavedEntry->field_D, pEntry->field_9, sizeof(pSavedEntry->field_D));
+
+        memcpy(pData + sizeof(CSavedGameUnknownEntry),
+            static_cast<LPCSTR>(pEntry->m_sName),
+            pEntry->m_sName.GetLength());
+
+        pData += nSize + sizeof(DWORD);
+    }
+
+    // NOTE: Inlined.
+    nUnknownSize = sizeof(DWORD);
+    pos = field_4BDC.GetHeadPosition();
+    while (pos != NULL) {
+        CInfGameUnknownEntry* pEntry = reinterpret_cast<CInfGameUnknownEntry*>(field_4BDC.GetNext(pos));
+        nUnknownSize += pEntry->m_sName.GetLength() + sizeof(CSavedGameUnknownEntry);
+    }
+
+    cnt += nUnknownSize;
+
+    if (bProgressBarInPlace) {
+        ProgressBarCallback(dwProgressMisc, FALSE);
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 5238
+    UTIL_ASSERT(cnt == (DWORD)*nGame);
+}
+
 // 0x5AC110
 BOOLEAN CInfGame::CanSaveGame(STRREF& strError, BOOLEAN bInRestGame, BOOLEAN bInStore)
 {
@@ -1843,19 +2514,939 @@ BOOL CInfGame::BackupQuickSave()
 }
 
 // 0x5AC430
-BOOL CInfGame::SaveGame(unsigned char a1, unsigned char a2, unsigned char a3)
+BOOL CInfGame::SaveGame(BOOLEAN bProgressBarRequired, BOOLEAN bProgressBarInPlace, BOOLEAN a3)
 {
-    // TODO: Incomplete.
+    CGameFile cGameFile;
+    CAreaFile cAreaFile; // NOTE: Unused.
+    BOOL bResult = TRUE;
+    DWORD dwSectorsPerCluster;
+    DWORD dwBytesPerSector;
+    DWORD dwNumberOfFreeClusters;
+    DWORD dwTotalNumberOfClusters;
+    ULARGE_INTEGER nFreeBytesAvailable;
+    ULARGE_INTEGER nTotalNumberOfBytes;
+    HMODULE hModule;
+    BOOL bHaveGetDiskFreeSpaceExA;
+    INT cnt;
 
-    return FALSE;
+    for (cnt = 0; cnt < CINFGAME_MAX_AREAS; cnt++) {
+        if (m_gameAreas[cnt] != NULL) {
+            m_gameAreas[cnt]->sub_47A190();
+        }
+    }
+
+    if (m_sSaveGame == "") {
+        return FALSE;
+    }
+
+    if (GetDiskFreeSpaceA(NULL, &dwSectorsPerCluster, &dwBytesPerSector, &dwNumberOfFreeClusters, &dwTotalNumberOfClusters) != TRUE
+        || dwNumberOfFreeClusters * dwSectorsPerCluster < CBaldurChitin::MINIMUM_DRIVE_SECTORS
+        || dwNumberOfFreeClusters * dwSectorsPerCluster < CBaldurChitin::MINIMUM_DRIVE_SPACE / dwBytesPerSector) {
+        hModule = LoadLibraryA("kernel32.dll");
+        if (hModule == NULL) {
+            if (bProgressBarInPlace) {
+                g_pChitin->SetProgressBar(FALSE,
+                    0,
+                    0,
+                    0,
+                    FALSE,
+                    0,
+                    FALSE,
+                    0,
+                    FALSE,
+                    FALSE,
+                    255);
+            }
+
+            g_pBaldurChitin->m_dwCloseConfirmationStrId = 11790;
+            g_pBaldurChitin->m_dwCloseConfirmationFlags = 0x34;
+            PostMessageA(g_pBaldurChitin->cWnd.GetSafeHwnd(), WM_CLOSE, 0, 0);
+
+            return FALSE;
+        }
+
+        bHaveGetDiskFreeSpaceExA = GetProcAddress(hModule, "GetDiskFreeSpaceExA") != NULL;
+        CResCache::pfnGetDiskFreeSpaceExA = reinterpret_cast<GetDiskFreeSpaceExAFunc*>(GetProcAddress(hModule, "GetDiskFreeSpaceExA"));
+
+        if (!bHaveGetDiskFreeSpaceExA
+            || !CResCache::pfnGetDiskFreeSpaceExA(NULL, &nFreeBytesAvailable, &nTotalNumberOfBytes, NULL)
+            || (nFreeBytesAvailable.HighPart == 0 && nFreeBytesAvailable.LowPart < CBaldurChitin::MINIMUM_DRIVE_SPACE)) {
+            if (bProgressBarInPlace) {
+                g_pChitin->SetProgressBar(FALSE,
+                    0,
+                    0,
+                    0,
+                    FALSE,
+                    0,
+                    FALSE,
+                    0,
+                    FALSE,
+                    FALSE,
+                    255);
+            }
+
+            g_pBaldurChitin->m_dwCloseConfirmationStrId = 11790;
+            g_pBaldurChitin->m_dwCloseConfirmationFlags = 0x34;
+            PostMessageA(g_pBaldurChitin->cWnd.GetSafeHwnd(), WM_CLOSE, 0, 0);
+
+            FreeLibrary(hModule);
+
+            return FALSE;
+        }
+
+        FreeLibrary(hModule);
+    }
+
+    if (!bProgressBarInPlace && bProgressBarRequired == TRUE) {
+        sub_59FA00(TRUE);
+
+        g_pChitin->SetProgressBar(TRUE,
+            9890,
+            0,
+            0,
+            FALSE,
+            0,
+            FALSE,
+            0,
+            FALSE,
+            FALSE,
+            255);
+        g_pChitin->cProgressBar.m_nActionProgress = 0;
+        g_pChitin->cProgressBar.m_nActionTarget = 5000000;
+        g_pChitin->cProgressBar.m_bDisableMinibars = TRUE;
+    }
+
+    m_cMoveList.sub_5170F0(g_pBaldurChitin->GetObjectGame()->m_pGameAreaMaster);
+    m_cLimboList.sub_5170F0(g_pBaldurChitin->GetObjectGame()->m_pGameAreaMaster);
+
+    if (bProgressBarInPlace || bProgressBarRequired) {
+        ProgressBarCallback(0, TRUE);
+
+        g_pChitin->cProgressBar.AddActionTarget(2500000);
+
+        if (g_pChitin->cNetwork.GetSessionOpen() == TRUE
+            && !g_pBaldurChitin->m_pEngineMultiPlayer->m_bMultiplayerStartup) {
+            g_pChitin->cProgressBar.AddActionTarget(6000000);
+        }
+
+        for (cnt = 0; cnt < CINFGAME_MAX_AREAS; cnt++) {
+            if (m_gameAreas[cnt] != NULL && (m_gameAreas[cnt]->m_header.m_flags & 0x1) == 0) {
+                g_pChitin->cProgressBar.AddActionTarget(3000000);
+            }
+        }
+    }
+
+    if (g_pChitin->cNetwork.GetSessionOpen() == TRUE
+        && !g_pBaldurChitin->m_pEngineMultiPlayer->m_bMultiplayerStartup) {
+        g_pBaldurChitin->m_pEngineWorld->StartSaveGameMultiplayerHost();
+
+        g_pBaldurChitin->GetBaldurMessage()->UpdateDemandCharacters(TRUE,
+            0,
+            bProgressBarRequired | bProgressBarInPlace);
+        g_pBaldurChitin->GetBaldurMessage()->PurgeDroppedPlayers();
+        g_pBaldurChitin->GetBaldurMessage()->BroadcastUpdateCharacterSlot(TRUE,
+            0,
+            bProgressBarRequired | bProgressBarInPlace);
+        g_pBaldurChitin->GetBaldurMessage()->RequestClientSignal(CBaldurMessage::SIGNAL_END_MAJOR_EVENT);
+    }
+
+    if (a3) {
+        field_366E = TRUE;
+    }
+
+    std::vector<int> ids = Icewind586B70::Instance()->sub_587510();
+    for (std::vector<int>::iterator it = ids.begin(); it != ids.end(); it++) {
+        g_pBaldurChitin->GetBaldurMessage()->sub_43D8D0(*it);
+    }
+    Icewind586B70::Instance()->sub_587190();
+
+    g_pBaldurChitin->GetActiveEngine()->GetManager()->InvalidateRect(NULL);
+    g_pBaldurChitin->m_cCachingStatus.InvalidateScreen();
+
+    if (bProgressBarInPlace) {
+        ProgressBarCallback(312500, FALSE);
+    }
+
+    if (bProgressBarInPlace || bProgressBarRequired) {
+        ProgressBarCallback(312500, FALSE);
+    }
+
+    for (cnt = 0; cnt < 12; cnt++) {
+        if (m_aServerStore[cnt] != NULL) {
+            m_aServerStore[cnt]->Marshal(m_sTempDir);
+        }
+    }
+
+    BOOLEAN bProgressBar = bProgressBarRequired | bProgressBarInPlace;
+
+    BYTE* pGame;
+    LONG nGame;
+    Marshal(&pGame, &nGame, bProgressBar);
+
+    if (pGame != NULL) {
+        // NOTE: Uninline.
+        cGameFile.SetResRef(CResRef("ICEWIND2"), TRUE, TRUE);
+
+        cGameFile.GetRes()->Write(m_sTempDir, pGame, nGame);
+        delete pGame;
+    } else {
+        bResult = FALSE;
+    }
+
+    for (cnt = 0; cnt < CINFGAME_MAX_AREAS; cnt++) {
+        if (m_gameAreas[cnt] != NULL && (m_gameAreas[cnt]->m_header.m_flags & 0x1) == 0) {
+            BYTE* pArea;
+            LONG nArea;
+            m_gameAreas[cnt]->Marshal(&pArea, &nArea, bProgressBar);
+
+            if (pArea != NULL) {
+                CAreaFile cAreaData;
+
+                // NOTE: Uninline.
+                cAreaData.SetResRef(m_gameAreas[cnt]->m_resRef, TRUE, TRUE);
+
+                cAreaData.GetRes()->Write(m_sTempDir, pArea, nArea);
+                delete pArea;
+            } else {
+                bResult = FALSE;
+            }
+        }
+    }
+
+    m_cWorldMap.Marshal(m_sTempDir);
+
+    g_pBaldurChitin->GetTlkTable().m_override.Save();
+    g_pBaldurChitin->GetTlkTable().m_override.CloseFiles();
+
+    if (bResult) {
+        if (!g_pChitin->cDimm.DirectoryCopyFiles(m_sTempDir, m_sTempSaveDir)) {
+            bResult = FALSE;
+        } else if (!g_pChitin->cDimm.CompressDirectory(m_sTempSaveDir, m_sTempSaveDir)) {
+            bResult = FALSE;
+        } else if (!g_pChitin->cDimm.DirectoryRemoveFiles(GetDirSave())
+            || !g_pChitin->cDimm.DirectoryCopyFiles(m_sTempSaveDir, GetDirSave())) {
+            bResult = FALSE;
+        }
+    }
+
+    g_pChitin->cDimm.DirectoryRemoveFiles(m_sTempSaveDir);
+
+    g_pBaldurChitin->GetTlkTable().m_override.Open(CString("temp//default.toh"),
+        CString("temp//default.tot"));
+
+    if (bProgressBarInPlace || bProgressBarRequired) {
+        ProgressBarCallback(312500, FALSE);
+    }
+
+    EnterCriticalSection(&(g_pChitin->field_314));
+    g_pChitin->cDimm.m_cKeyTable.RescanEverything();
+    LeaveCriticalSection(&(g_pChitin->field_314));
+
+    if (bProgressBarInPlace || bProgressBarRequired) {
+        ProgressBarCallback(312500, FALSE);
+    }
+
+    SaveOptions();
+    g_pBaldurChitin->SaveOptions();
+
+    m_nLastSaveTime = m_worldTime.m_gameTime;
+
+    if (g_pChitin->cNetwork.GetSessionOpen() == TRUE
+        && !g_pBaldurChitin->m_pEngineMultiPlayer->m_bMultiplayerStartup) {
+        if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+            g_pChitin->cProgressBar.m_nWaitingReason = 19714;
+            g_pChitin->cProgressBar.m_bWaiting = TRUE;
+        }
+
+        while (g_pBaldurChitin->m_pEngineWorld->m_bHardPaused == TRUE
+            && g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
+            g_pBaldurChitin->m_pEngineWorld->CheckEndOfHardPause();
+            g_pBaldurChitin->GetBaldurMessage()->HandleBlockingMessages();
+
+            g_pChitin->m_bDisplayStale = TRUE;
+
+            if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL) {
+                SynchronousUpdate();
+            } else {
+                SleepEx(60, FALSE);
+            }
+        }
+
+        if (!g_pChitin->cNetwork.GetSessionOpen()) {
+            if (bProgressBarInPlace || bProgressBarRequired) {
+                g_pChitin->SetProgressBar(FALSE,
+                    0,
+                    0,
+                    0,
+                    FALSE,
+                    0,
+                    FALSE,
+                    0,
+                    FALSE,
+                    FALSE,
+                    255);
+            }
+
+            return TRUE;
+        }
+
+        g_pChitin->cProgressBar.m_bWaiting = FALSE;
+        g_pBaldurChitin->m_cCachingStatus.InvalidateScreen();
+    }
+
+    if (bProgressBarInPlace || bProgressBarRequired) {
+        ProgressBarCallback(1250000, FALSE);
+    }
+
+    if (!bProgressBarInPlace && bProgressBarRequired == TRUE) {
+        g_pChitin->cProgressBar.m_nActionProgress += g_pChitin->cProgressBar.m_nActionTarget - g_pChitin->cProgressBar.m_nActionProgress;
+        g_pChitin->cProgressBar.m_bDisableMinibars = TRUE;
+        g_pChitin->m_bDisplayStale = TRUE;
+
+        sub_59FA00(TRUE);
+
+        g_pChitin->SetProgressBar(FALSE,
+            0,
+            0,
+            0,
+            FALSE,
+            0,
+            FALSE,
+            0,
+            FALSE,
+            FALSE,
+            255);
+    }
+
+    if (bResult) {
+        if (GetDiskFreeSpaceA(NULL, &dwSectorsPerCluster, &dwBytesPerSector, &dwNumberOfFreeClusters, &dwTotalNumberOfClusters) != TRUE
+            || dwNumberOfFreeClusters * dwSectorsPerCluster < CBaldurChitin::MINIMUM_DRIVE_SECTORS
+            || dwNumberOfFreeClusters * dwSectorsPerCluster < CBaldurChitin::MINIMUM_DRIVE_SPACE / dwBytesPerSector) {
+            hModule = LoadLibraryA("kernel32.dll");
+            if (hModule == NULL) {
+                g_pBaldurChitin->m_dwCloseConfirmationStrId = 10249;
+                g_pBaldurChitin->m_dwCloseConfirmationFlags = 0x10;
+                PostMessageA(g_pBaldurChitin->cWnd.GetSafeHwnd(), WM_CLOSE, 0, 0);
+
+                return FALSE;
+            }
+
+            bHaveGetDiskFreeSpaceExA = GetProcAddress(hModule, "GetDiskFreeSpaceExA") != NULL;
+            CResCache::pfnGetDiskFreeSpaceExA = reinterpret_cast<GetDiskFreeSpaceExAFunc*>(GetProcAddress(hModule, "GetDiskFreeSpaceExA"));
+
+            if (!bHaveGetDiskFreeSpaceExA
+                || !CResCache::pfnGetDiskFreeSpaceExA(NULL, &nFreeBytesAvailable, &nTotalNumberOfBytes, NULL)
+                || (nFreeBytesAvailable.HighPart == 0 && nFreeBytesAvailable.LowPart < CBaldurChitin::MINIMUM_DRIVE_SPACE)) {
+                g_pBaldurChitin->m_dwCloseConfirmationStrId = 10249;
+                g_pBaldurChitin->m_dwCloseConfirmationFlags = 0x10;
+                PostMessageA(g_pBaldurChitin->cWnd.GetSafeHwnd(), WM_CLOSE, 0, 0);
+
+                FreeLibrary(hModule);
+
+                return FALSE;
+            }
+
+            FreeLibrary(hModule);
+        }
+    } else {
+        g_pBaldurChitin->m_dwCloseConfirmationStrId = 23554;
+        g_pBaldurChitin->m_dwCloseConfirmationFlags = 0x34;
+        PostMessageA(g_pBaldurChitin->cWnd.GetSafeHwnd(), WM_CLOSE, 0, 0);
+    }
+
+    return TRUE;
 }
 
+// Converts "GAMEV2.0" party creature (0x180 bytes) to "GAMEV2.1" format.
+static void sub_5A79E0(BYTE* pCreature20, CSavedGamePartyCreature21* pCreature21);
+
+// Converts "GAMEV2.1" party creature to "GAMEV2.2" format.
+static void sub_5A7BF0(CSavedGamePartyCreature21* pCreature21, CSavedGamePartyCreature* pCreature22);
+
 // 0x5A7E40
-BOOL CInfGame::Unmarshal(BYTE* pGame, LONG nGame, BOOLEAN bProgressBarInPlace)
+void CInfGame::Unmarshal(BYTE* pGame, LONG nGame, BOOLEAN bProgressBarInPlace)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 7006
+    UTIL_ASSERT(pGame != NULL && nGame > 0);
+
+    CBaldurMessage* pMessage = g_pBaldurChitin->GetBaldurMessage();
+    CSavedGamePartyCreature21 creature21;
+    CSavedGamePartyCreature creature22;
+    CSavedGamePartyCreature21* pCreature21 = NULL;
+    CSavedGamePartyCreature* pCreature22 = NULL;
+    CCreatureFile creatureData;
+    CGameSprite* pSprite;
+    BYTE* pData;
+    INT nMsgFrom;
+    DWORD dwSize;
+    DWORD dwProgress;
+    DWORD dwPerCreature;
+
+    INT nVersion = 20;
+    if (memcmp(pGame, "GAMEV2.1", 8) == 0) {
+        nVersion = 21;
+    } else if (memcmp(pGame, "GAMEV2.2", 8) == 0) {
+        nVersion = 22;
+    }
+
+    CString sFileType(reinterpret_cast<char*>(pGame), 4);
+    CString sFileVersion(reinterpret_cast<char*>(pGame + 4), 4);
+
+    DWORD cnt = 8;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 7042
+    UTIL_ASSERT(cnt < (DWORD)nGame);
+
+    CSavedGameHeader* pHeader = reinterpret_cast<CSavedGameHeader*>(pGame + cnt);
+    cnt += sizeof(CSavedGameHeader);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 7045
+    UTIL_ASSERT(cnt < (DWORD)nGame);
+
+    m_worldTime.m_gameTime = CTimerWorld::TIMESCALE_MSEC_PER_SEC * pHeader->m_worldTime;
+    m_worldTime.CheckForTriggerEventPast();
+
+    if (g_pChitin->cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL
+        || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        m_gameSave.m_curFormation = pHeader->m_quickFormations[pHeader->m_curFormation];
+    }
+
+    m_gameSave.m_cResCurrentWorldArea = pHeader->m_currentWorldArea;
+    m_gameSave.m_nCurrentWorldLink = pHeader->m_currentLink;
+
+    if (g_pChitin->cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL
+        || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        for (int index = 0; index < 5; index++) {
+            m_gameSave.m_quickFormations[index] = pHeader->m_quickFormations[index];
+        }
+    }
+
+    m_gameSave.m_nPartyGold = pHeader->m_nPartyGold;
+
+    // NOTE: In IWD2 this header field is the nightmare mode flag.
+    m_cOptions.m_nNightmareMode = pHeader->m_storedLocationsOffset;
+    if (m_cOptions.m_nNightmareMode == 1 && m_cOptions.m_nDifficultyLevel != 5) {
+        m_cOptions.m_nDifficultyLevel = 5;
+
+        if (g_pBaldurChitin->cNetwork.m_bIsHost == TRUE) {
+            m_cOptions.m_nDifficultyMultiplier = 100;
+            m_cOptions.m_nMPDifficultyMultiplier = 100;
+        }
+
+        CString sDifficultyLevel;
+        sDifficultyLevel.Format("%d", m_cOptions.m_nDifficultyLevel);
+        WritePrivateProfileStringA("Game Options",
+            "Difficulty Level",
+            sDifficultyLevel,
+            g_pBaldurChitin->GetIniFileName());
+    }
+
+    m_bShowAreaNotes = (pHeader->m_dwFlags & 0x80) == 0;
+    m_nReputation = static_cast<SHORT>(pHeader->m_reputation);
+
+    if (bProgressBarInPlace) {
+        ProgressBarCallback(0, TRUE);
+
+        DWORD nCreatures = pHeader->m_globalCreatureTableCount + pHeader->m_partyCreatureTableCount;
+
+        if (pHeader->m_partyCreatureTableCount > 1) {
+            g_pChitin->cProgressBar.AddActionTarget(3000000 * pHeader->m_partyCreatureTableCount - 3000000);
+        }
+
+        if (nCreatures > 0) {
+            dwPerCreature = 4375000 / nCreatures;
+            dwProgress = 156250;
+        } else {
+            dwPerCreature = 0;
+            dwProgress = 1250000;
+        }
+
+        ProgressBarCallback(dwProgress, FALSE);
+    }
+
+    if (pHeader->m_masterArea[0] != '\0' && bProgressBarInPlace) {
+        g_pChitin->cProgressBar.AddActionTarget(3000000);
+    }
+
+    g_pBaldurChitin->m_pEngineWorld->m_weather.Unmarshal(pHeader->m_wWeatherFlags);
+
+    // NOTE: The loop counter is never advanced and every iteration reads the
+    // first entry of the party creature table, so this only terminates when
+    // there are no global creatures. Also in "GAMEV2.2" saves `pCreature21` is
+    // never set. IWD2 saves don't have global creatures.
+    for (DWORD nCreature = 0; nCreature < pHeader->m_globalCreatureTableCount;) {
+        if (nVersion == 20) {
+            sub_5A79E0(pGame + pHeader->m_partyCreatureTableOffset, &creature21);
+            pCreature21 = &creature21;
+            cnt += 0x180;
+        } else if (nVersion == 21) {
+            pCreature21 = reinterpret_cast<CSavedGamePartyCreature21*>(pGame + pHeader->m_partyCreatureTableOffset);
+            sub_5A7BF0(pCreature21, &creature22);
+            pCreature22 = &creature22;
+            cnt += sizeof(CSavedGamePartyCreature21);
+        } else {
+            pCreature22 = reinterpret_cast<CSavedGamePartyCreature*>(pGame + pHeader->m_partyCreatureTableOffset);
+            cnt += sizeof(CSavedGamePartyCreature);
+        }
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 7187
+        UTIL_ASSERT(cnt <= (DWORD)nGame);
+
+        if (bProgressBarInPlace) {
+            ProgressBarCallback(dwPerCreature, FALSE);
+
+            if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+                pData = pMessage->PollSpecificMessageType(CBaldurMessage::MSG_TYPE_RESOURCE,
+                    CBaldurMessage::MSG_SUBTYPE_RESOURCE_DEMAND,
+                    nMsgFrom,
+                    dwSize);
+                while (pData != NULL) {
+                    pMessage->OnResourceDemanded(nMsgFrom, pData, dwSize);
+                    delete pData;
+
+                    pData = pMessage->PollSpecificMessageType(CBaldurMessage::MSG_TYPE_RESOURCE,
+                        CBaldurMessage::MSG_SUBTYPE_RESOURCE_DEMAND,
+                        nMsgFrom,
+                        dwSize);
+                }
+
+                g_pChitin->m_bDisplayStale = TRUE;
+                SleepEx(60, FALSE);
+            }
+        }
+
+        if (pCreature21->m_creatureResRef[0] != '\0') {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+            // __LINE__: 7227
+            UTIL_ASSERT(pCreature21->m_creatureSize == 0);
+
+            // NOTE: Uninline.
+            creatureData.SetResRef(CResRef(pCreature21->m_creatureResRef), TRUE, TRUE);
+
+            DWORD nCreatureDataSize = creatureData.GetDataSize();
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+            // __LINE__: 7232
+            UTIL_ASSERT_MSG(nCreatureDataSize,
+                CString("Creature file not found ") + CString(reinterpret_cast<char*>(pCreature21->m_creatureResRef), RESREF_SIZE).GetBuffer(RESREF_SIZE + 1));
+
+            pSprite = new CGameSprite(creatureData.GetData(),
+                nCreatureDataSize,
+                0,
+                0,
+                -1,
+                0,
+                0,
+                INT_MAX,
+                CPoint(-1, -1),
+                0);
+
+            // NOTE: The original passes a `CString` made from the resref.
+            pSprite->SetResRef(CResRef(pCreature21->m_creatureResRef));
+
+            creatureData.ReleaseData();
+        } else {
+            cnt += pCreature21->m_creatureSize;
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+            // __LINE__: 7242
+            UTIL_ASSERT(cnt <= (DWORD)nGame);
+
+            if (pCreature21->m_creatureOffset == 0 || pCreature21->m_creatureSize == 0) {
+                continue;
+            }
+
+            pSprite = new CGameSprite(pGame + pCreature21->m_creatureOffset,
+                pCreature21->m_creatureSize,
+                0,
+                0,
+                -1,
+                0,
+                0,
+                INT_MAX,
+                CPoint(-1, -1),
+                0);
+        }
+
+        if (pSprite == NULL) {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+            // __LINE__: 7253
+            UTIL_ASSERT(FALSE);
+            continue;
+        }
+
+        pSprite->Unmarshal(pCreature22, FALSE, FALSE);
+        pSprite->SetResRef(CResRef(pCreature22->m_creatureResRef));
+
+        m_lstGlobalCreatures.AddTail(reinterpret_cast<int*>(pSprite->m_id));
+
+        if (pSprite->GetAIType().m_nEnemyAlly == CAIObjectType::EA_FAMILIAR) {
+            // NOTE: Uninline.
+            if (GetCharacterPortraitNum(pSprite->m_id) == -1) {
+                if (m_allies.Find(reinterpret_cast<int*>(pSprite->m_id)) == NULL
+                    && m_familiars.Find(reinterpret_cast<int*>(pSprite->m_id)) == NULL) {
+                    m_familiars.AddTail(reinterpret_cast<int*>(pSprite->m_id));
+                }
+            }
+        }
+
+        if (pHeader->m_versionNumber == 0) {
+            if (pSprite->m_baseStats.m_xp >= 89000) {
+                pSprite->m_baseStats.m_xp = 89000;
+            }
+        }
+
+        if (pHeader->m_versionNumber == 1) {
+            if (pSprite->m_baseStats.m_xp >= 160000) {
+                pSprite->m_baseStats.m_xp = 160000;
+            }
+        }
+
+        CVariable cVariable;
+        cVariable.SetName(CString(pSprite->GetScriptName()));
+        cVariable.m_intValue = pSprite->m_id;
+        m_namedCreatures.AddKey(cVariable);
+    }
+
+    if (pHeader->m_masterArea[0] != '\0') {
+        LoadArea(CString(pHeader->m_masterArea), 255, FALSE, bProgressBarInPlace);
+    }
+
+    for (DWORD nCharacter = 0; nCharacter < pHeader->m_partyCreatureTableCount; nCharacter++) {
+        if (nVersion == 20) {
+            sub_5A79E0(pGame + pHeader->m_partyCreatureTableOffset + nCharacter * 0x180, &creature21);
+            sub_5A7BF0(&creature21, &creature22);
+            pCreature22 = &creature22;
+            cnt += 0x180;
+        } else if (nVersion == 21) {
+            sub_5A7BF0(reinterpret_cast<CSavedGamePartyCreature21*>(pGame + pHeader->m_partyCreatureTableOffset) + nCharacter,
+                &creature22);
+            pCreature22 = &creature22;
+            cnt += sizeof(CSavedGamePartyCreature21);
+        } else {
+            pCreature22 = reinterpret_cast<CSavedGamePartyCreature*>(pGame + pHeader->m_partyCreatureTableOffset) + nCharacter;
+            cnt += sizeof(CSavedGamePartyCreature);
+        }
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 7331
+        UTIL_ASSERT(cnt <= (DWORD)nGame);
+
+        if (bProgressBarInPlace) {
+            ProgressBarCallback(dwPerCreature, FALSE);
+
+            if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+                pData = pMessage->PollSpecificMessageType(CBaldurMessage::MSG_TYPE_RESOURCE,
+                    CBaldurMessage::MSG_SUBTYPE_RESOURCE_DEMAND,
+                    nMsgFrom,
+                    dwSize);
+                while (pData != NULL) {
+                    pMessage->OnResourceDemanded(nMsgFrom, pData, dwSize);
+                    delete pData;
+
+                    pData = pMessage->PollSpecificMessageType(CBaldurMessage::MSG_TYPE_RESOURCE,
+                        CBaldurMessage::MSG_SUBTYPE_RESOURCE_DEMAND,
+                        nMsgFrom,
+                        dwSize);
+                }
+
+                g_pChitin->m_bDisplayStale = TRUE;
+                SleepEx(60, FALSE);
+            }
+        }
+
+        m_bPlayerScriptStyle = TRUE;
+
+        if (pCreature22->m_creatureResRef[0] != '\0') {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+            // __LINE__: 7371
+            UTIL_ASSERT(pCreature22->m_creatureSize == 0);
+
+            // NOTE: Uninline.
+            creatureData.SetResRef(CResRef(pCreature22->m_creatureResRef), TRUE, TRUE);
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+            // __LINE__: 7373
+            UTIL_ASSERT_MSG(creatureData.GetDataSize(),
+                CString("Creature file not found ") + CString(reinterpret_cast<char*>(pCreature22->m_creatureResRef), RESREF_SIZE).GetBuffer(RESREF_SIZE + 1));
+
+            BYTE* pCreatureData = creatureData.GetData();
+            pSprite = new CGameSprite(pCreatureData,
+                creatureData.GetDataSize(),
+                0,
+                0,
+                -1,
+                0,
+                0,
+                INT_MAX,
+                CPoint(-1, -1),
+                0);
+
+            // NOTE: The original passes a `CString` made from the resref.
+            pSprite->SetResRef(CResRef(pCreature22->m_creatureResRef));
+
+            creatureData.ReleaseData();
+
+            m_bPlayerScriptStyle = FALSE;
+        } else {
+            cnt += pCreature22->m_creatureSize;
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+            // __LINE__: 7384
+            UTIL_ASSERT(cnt <= (DWORD)nGame);
+
+            pSprite = new CGameSprite(pGame + pCreature22->m_creatureOffset,
+                pCreature22->m_creatureSize,
+                0,
+                0,
+                -1,
+                0,
+                0,
+                INT_MAX,
+                CPoint(-1, -1),
+                0);
+
+            m_bPlayerScriptStyle = FALSE;
+        }
+
+        if (pSprite == NULL) {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+            // __LINE__: 7391
+            UTIL_ASSERT(FALSE);
+            continue;
+        }
+
+        pSprite->SetResRef(CResRef(pCreature22->m_creatureResRef));
+
+        // NOTE: Adds zero.
+        if (bProgressBarInPlace && nCharacter >= 1) {
+            g_pChitin->cProgressBar.AddActionTarget(0);
+        }
+
+        EnablePortrait(static_cast<BYTE>(nCharacter), TRUE);
+
+        pSprite->Unmarshal(pCreature22, TRUE, bProgressBarInPlace);
+
+        if (nCharacter == pHeader->m_nPCAreaViewed && pSprite->m_pArea != NULL) {
+            m_visibleArea = pSprite->m_pArea->m_id;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(pSprite->m_id,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+
+        if (pHeader->m_versionNumber == 0) {
+            if (pSprite->m_baseStats.m_xp >= 89000) {
+                pSprite->m_baseStats.m_xp = 89000;
+            }
+        }
+
+        if (pHeader->m_versionNumber == 1) {
+            if (pSprite->m_baseStats.m_xp >= 160000) {
+                pSprite->m_baseStats.m_xp = 160000;
+            }
+        }
+
+        CVariable cVariable;
+        cVariable.SetName(CString(pSprite->GetScriptName()));
+        cVariable.m_intValue = pSprite->m_id;
+        m_namedCreatures.AddKey(cVariable);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(pSprite->m_id,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    SelectToolbar();
+    SetProtagonist(m_characters[0]);
+
+    if (pHeader->m_versionNumber != 3) {
+        ReputationAdjustment(100, TRUE);
+    }
+
+    if (g_pBaldurChitin->cNetwork.m_bIsHost == TRUE
+        && g_pBaldurChitin->field_4A24 != 0) {
+        CScreenWorld* pWorldScreen = g_pBaldurChitin->m_pEngineWorld;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 7462
+        UTIL_ASSERT(pWorldScreen != NULL);
+
+        CRect rViewSize = pWorldScreen->GetNewViewSize();
+        CUIPanel* pDialogPanel = pWorldScreen->GetManager()->GetPanel(1);
+        CUIPanel* pPanel = pWorldScreen->GetManager()->GetPanel(pWorldScreen->GetPanel_22_0());
+
+        if ((pHeader->m_dwFlags & 0x20) != 0) {
+            pWorldScreen->field_11F0 = FALSE;
+            pWorldScreen->field_11F8 = rViewSize.bottom;
+            pDialogPanel->m_bActive = FALSE;
+
+            rViewSize.bottom = CInfinity::stru_8E79E0.bottom;
+            CInfinity::stru_8E79B8.bottom = rViewSize.bottom;
+            pWorldScreen->SetNewViewSize(rViewSize, FALSE);
+
+            pWorldScreen->GetManager()->InvalidateRect(NULL);
+        } else if ((pHeader->m_dwFlags & 0x40) != 0) {
+            pWorldScreen->field_11FC = rViewSize.bottom;
+            pWorldScreen->field_11F4 = FALSE;
+            pPanel->m_bActive = FALSE;
+            pDialogPanel->m_ptOrigin.x = pDialogPanel->m_ptBaseOrigin.x;
+            pDialogPanel->m_ptOrigin.y = pDialogPanel->m_ptBaseOrigin.y + pPanel->m_size.cy;
+            pDialogPanel->m_bActive = TRUE;
+
+            rViewSize.bottom = CInfinity::stru_8E79C8.bottom;
+            CInfinity::stru_8E79B8.bottom = rViewSize.bottom;
+            pWorldScreen->SetNewViewSize(rViewSize, FALSE);
+
+            pWorldScreen->GetManager()->InvalidateRect(NULL);
+        }
+
+        if ((pHeader->m_dwFlags & 0x10) != 0) {
+            g_pBaldurChitin->m_pEngineWorld->GetManager()->m_bHidden = TRUE;
+            g_pBaldurChitin->m_pEngineWorld->field_11D0 = rViewSize;
+            g_pBaldurChitin->m_pEngineWorld->SetNewViewSize(CInfinity::stru_8E7548, FALSE);
+        }
+    }
+
+    cnt += pHeader->m_partyInventoryTableCount * 20;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 7503
+    UTIL_ASSERT(cnt <= (DWORD)nGame);
+
+    if (bProgressBarInPlace) {
+        ProgressBarCallback(dwProgress, FALSE);
+    }
+
+    field_1B84 = 1;
+
+    CVariable cVariable;
+    for (DWORD nVariable = 0; nVariable < pHeader->m_globalVariablesCount; nVariable++) {
+        if ((nVariable & 0xF) == 0) {
+            g_pChitin->m_bDisplayStale = TRUE;
+            SleepEx(60, FALSE);
+        }
+
+        cVariable = reinterpret_cast<CVariable*>(pGame + pHeader->m_globalVariablesOffset)[nVariable];
+        cnt += sizeof(CVariable);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 7525
+        UTIL_ASSERT(cnt <= (DWORD)nGame);
+
+        m_variables.AddKey(cVariable);
+    }
+
+    field_1B84 = 0;
+
+    if (bProgressBarInPlace) {
+        ProgressBarCallback(dwProgress, FALSE);
+    }
+
+    m_cJournal.ClearAllEntries();
+
+    if (pHeader->m_journalEntriesCount > 0) {
+        m_cJournal.Unmarshal(reinterpret_cast<CSavedGameJournalEntry*>(pGame + pHeader->m_journalEntriesOffset),
+            pHeader->m_journalEntriesCount);
+        cnt += pHeader->m_journalEntriesCount * sizeof(CSavedGameJournalEntry);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 7596
+        UTIL_ASSERT(cnt <= (DWORD)nGame);
+    }
+
+    if (pHeader->m_familiarsOffset != 0) {
+        CSavedGameFamiliars* pFamiliars = reinterpret_cast<CSavedGameFamiliars*>(pGame + pHeader->m_familiarsOffset);
+        memcpy(m_defaultFamiliarResRefs, pFamiliars->m_defaultFamiliarResRefs, sizeof(m_defaultFamiliarResRefs));
+
+        DWORD nFamiliar = 0;
+        for (int nAlignment = 0; nAlignment < 9; nAlignment++) {
+            for (int nLevel = 0; nLevel < 9; nLevel++) {
+                for (DWORD nIndex = 0; nIndex < pFamiliars->m_familiarResRefsCount[nAlignment][nLevel]; nIndex++) {
+                    CResRef* pResRef = new CResRef(pGame + pFamiliars->m_familiarResRefsOffset + nFamiliar * RESREF_SIZE);
+                    m_familiarResRefs[nAlignment][nLevel].AddTail(pResRef);
+                    nFamiliar++;
+                }
+            }
+        }
+
+        cnt += sizeof(CSavedGameFamiliars) + nFamiliar * RESREF_SIZE;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 7615
+        UTIL_ASSERT(cnt <= (DWORD)nGame);
+    }
+
+    if (sFileVersion != "V1.1") {
+        POSITION pos = field_4BDC.GetHeadPosition();
+        while (pos != NULL) {
+            POSITION posOld = pos;
+            CString* node = field_4BDC.GetNext(pos);
+            if (node != NULL) {
+                delete node;
+            }
+            field_4BDC.RemoveAt(posOld);
+        }
+
+        BYTE* pEntries = pGame + cnt;
+        LONG nEntries = *reinterpret_cast<LONG*>(pEntries);
+        pEntries += sizeof(LONG);
+
+        for (; nEntries > 0; nEntries--) {
+            CInfGameUnknownEntry* pEntry = new CInfGameUnknownEntry();
+            if (pEntry != NULL) {
+                CSavedGameUnknownEntry* pSavedEntry = reinterpret_cast<CSavedGameUnknownEntry*>(pEntries);
+                DWORD nSize = pSavedEntry->m_nSize;
+                DWORD nLength = pSavedEntry->m_nLength;
+
+                pEntry->field_4 = pSavedEntry->field_8;
+                pEntry->field_8 = pSavedEntry->field_C;
+                memcpy(pEntry->field_9, pSavedEntry->field_D, sizeof(pEntry->field_9));
+
+                memcpy(pEntry->m_sName.GetBuffer(nLength),
+                    pEntries + sizeof(CSavedGameUnknownEntry),
+                    nLength);
+                pEntry->m_sName.ReleaseBuffer(nLength);
+
+                field_4BDC.AddTail(&(pEntry->m_sName));
+
+                pEntries += nSize + sizeof(DWORD);
+            }
+        }
+
+        DWORD nEntriesSize = sizeof(LONG);
+        pos = field_4BDC.GetHeadPosition();
+        while (pos != NULL) {
+            nEntriesSize += sizeof(CSavedGameUnknownEntry) + field_4BDC.GetNext(pos)->GetLength();
+        }
+
+        cnt += nEntriesSize;
+    }
+
+    if (bProgressBarInPlace) {
+        ProgressBarCallback(dwProgress, FALSE);
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 7634
+    UTIL_ASSERT(cnt == (DWORD)nGame);
+}
+
+// 0x5A79E0
+static void sub_5A79E0(BYTE* pCreature20, CSavedGamePartyCreature21* pCreature21)
 {
     // TODO: Incomplete.
+}
 
-    return FALSE;
+// 0x5A7BF0
+static void sub_5A7BF0(CSavedGamePartyCreature21* pCreature21, CSavedGamePartyCreature* pCreature22)
+{
+    // TODO: Incomplete.
 }
 
 // 0x5A9680
@@ -3216,7 +4807,63 @@ BOOL CInfGame::SelectCharacter(LONG characterId, BOOLEAN bPlaySelectSound)
 // 0x5ADAE0
 void CInfGame::SelectToolbar()
 {
-    // TODO: Incomplete.
+    m_nState = 0;
+    m_cButtonArray.m_nSelectedButton = 100;
+
+    // NOTE: Uninline.
+    switch (m_group.GetCount()) {
+    case 0:
+        m_cButtonArray.SetState(CInfButtonArray::STATE_NONE, 0);
+        break;
+    case 1:
+        if (1) {
+            LONG* pGroupList = m_group.GetGroupList();
+            if (pGroupList == NULL) {
+                m_cButtonArray.SetState(CInfButtonArray::STATE_NONE, 0);
+                delete pGroupList;
+                return;
+            }
+
+            CGameSprite* pSprite;
+
+            BYTE rc;
+            do {
+                rc = m_cObjectArray.GetShare(pGroupList[0],
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                m_cButtonArray.SetState(CInfButtonArray::STATE_NONE, 0);
+                delete pGroupList;
+                return;
+            }
+
+            if (IcewindMisc::IsPC(pSprite) == TRUE) {
+                m_cButtonArray.UpdateCustomizableButtonTypes(pSprite->field_3D14);
+                m_cButtonArray.UpdateSelectedWeaponSet(pSprite->m_nWeaponSet);
+                m_cButtonArray.SetState(CInfButtonArray::byte_85170E, 0);
+            } else {
+                m_cButtonArray.UpdateSelectedWeaponSet(pSprite->m_nWeaponSet);
+                m_cButtonArray.SetState(CInfButtonArray::byte_851701, 0);
+            }
+
+            m_cObjectArray.ReleaseShare(pGroupList[0],
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            delete pGroupList;
+        }
+        break;
+    default:
+        m_cButtonArray.SetState(CInfButtonArray::byte_851701, 0);
+        break;
+    }
+
+    if (g_pBaldurChitin->m_pEngineWorld->GetActivePanelID() == 8) {
+        g_pBaldurChitin->m_pEngineWorld->StopContainer();
+    }
 }
 
 // 0x5ADC90
@@ -4792,7 +6439,191 @@ BYTE CInfGame::GetFrameRate()
 // 0x5BE900
 void CInfGame::SynchronousUpdate()
 {
-    // TODO: Incomplete.
+    if (field_366E) {
+        CResHelper<CResBitmap, 1> cResScreenShot;
+        CResHelper<CResBitmap, 1> cResPortrait;
+        LPBYTE pScreenShotData = NULL;
+        LPBYTE pPortraitData = NULL;
+        CVidBitmap cPortraitBitmap;
+        CString sPortraitResRef;
+
+        if (field_50D8 && !field_50DC) {
+            CString sSource;
+            CString sDestination;
+
+            sSource = GetDirSaveRoot() + "default\\" + "ICEWIND2.BMP";
+            sDestination = GetDirSave() + "ICEWIND2.BMP";
+            CopyFileA(sSource, sDestination, FALSE);
+            DeleteFileA(sSource);
+
+            for (int nPortrait = 0; nPortrait < 6; nPortrait++) {
+                sSource.Format("%sdefault\\%s%d.BMP", (LPCSTR)GetDirSaveRoot(), "PORTRT", nPortrait);
+                sDestination.Format("%s%s%d.BMP", (LPCSTR)GetDirSave(), "PORTRT", nPortrait);
+                CopyFileA(sSource, sDestination, FALSE);
+                DeleteFileA(sSource);
+            }
+
+            field_366E = 0;
+            field_50D8 = FALSE;
+
+            return;
+        }
+
+        CGameArea* pArea = m_gameAreas[m_visibleArea];
+        if (pArea != NULL) {
+            EnterCriticalSection(&(pArea->field_214));
+            pArea->SetListManipulationThreadId(GetCurrentThreadId());
+        }
+
+        EnterCriticalSection(&(m_gameAreas[m_visibleArea]->field_1FC));
+
+        Sleep(100);
+
+        CSingleLock renderLock(&(g_pBaldurChitin->m_pEngineWorld->GetManager()->field_36), FALSE);
+        renderLock.Lock(INFINITE);
+
+        // NOTE: Uninline.
+        BYTE nBrightnessCorrection = g_pBaldurChitin->GetCurrentVideoMode()->m_nBrightnessCorrection;
+        g_pBaldurChitin->GetCurrentVideoMode()->m_nBrightnessCorrection = 0;
+
+        // NOTE: Uninline.
+        BYTE nGammaCorrection = g_pBaldurChitin->GetCurrentVideoMode()->m_nGammaCorrection;
+        g_pBaldurChitin->GetCurrentVideoMode()->m_nGammaCorrection = 0;
+
+        m_gameAreas[m_visibleArea]->m_cInfinity.pVRPool->InvalidateAll();
+
+        // NOTE: Uninline.
+        g_pBaldurChitin->GetCurrentVideoMode()->LoadFogOWarSurfaces(FOGOWAR_RESREF);
+
+        field_366E = 0;
+
+        BOOL bSaved = CCacheStatus::dword_8D0BA8;
+        CCacheStatus::dword_8D0BA8 = FALSE;
+        g_pBaldurChitin->m_pEngineWorld->SaveScreen();
+        CCacheStatus::dword_8D0BA8 = bSaved;
+
+        LONG nScreenShotSize;
+
+        // NOTE: Uninline.
+        g_pBaldurChitin->GetCurrentVideoMode()->PrintSurfaceToBmp(pScreenShotData,
+            0,
+            CInfinity::stru_8E79A8,
+            nScreenShotSize,
+            5);
+
+        CString sDirName;
+        if (!field_50DC && g_pChitin->cNetwork.m_nServiceProvider != CNetwork::SERV_PROV_NULL) {
+            sDirName = GetDirSave();
+        } else if (!g_pChitin->cVideo.m_bIs3dAccelerated) {
+            sDirName = GetDirSaveRoot() + "default\\";
+        } else if (field_50DC) {
+            sDirName = GetDirSave();
+            field_50DC = 0;
+            field_50D8 = FALSE;
+        } else {
+            sDirName = GetDirSaveRoot() + "default\\";
+            field_50D8 = TRUE;
+        }
+
+        if (pScreenShotData != NULL) {
+            // NOTE: Uninline.
+            cResScreenShot.SetResRef(CResRef("ICEWIND2"), TRUE, TRUE);
+
+            cResScreenShot.pRes->Write(sDirName, pScreenShotData, nScreenShotSize);
+            delete pScreenShotData;
+        }
+
+        WORD nPortraitIndex = 0;
+        for (int nCharacter = 0; nCharacter < 6; nCharacter++) {
+            LONG nCharacterId = m_characters[nCharacter];
+            if (nCharacterId != CGameObjectArray::INVALID_INDEX) {
+                CGameSprite* pSprite;
+
+                BYTE rc;
+                do {
+                    rc = m_cObjectArray.GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_1,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    cPortraitBitmap.SetResRef(CResRef(pSprite->m_baseStats.m_portraitSmall), TRUE, TRUE);
+                    cPortraitBitmap.m_bDoubleSize = FALSE;
+
+                    if (cPortraitBitmap.pRes == NULL) {
+                        BOOL bDoubleSize = g_pBaldurChitin->field_4A28;
+                        cPortraitBitmap.SetResRef(CResRef(SILHOUETTE_PORTRAIT_SM), TRUE, TRUE);
+                        cPortraitBitmap.m_bDoubleSize = bDoubleSize;
+                    }
+
+                    if (cPortraitBitmap.GetBitCount(FALSE) != 24
+                        && cPortraitBitmap.GetBitCount(FALSE) != 8) {
+                        BOOL bDoubleSize = g_pBaldurChitin->field_4A28;
+                        cPortraitBitmap.SetResRef(CResRef(SILHOUETTE_PORTRAIT_SM), TRUE, TRUE);
+                        cPortraitBitmap.m_bDoubleSize = bDoubleSize;
+                    }
+
+                    m_cObjectArray.ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_1,
+                        INFINITE);
+
+                    CSize size;
+                    cPortraitBitmap.GetImageDimensions(size, FALSE);
+
+                    CRect rPortrait;
+                    SetRect(&rPortrait, 0, 0, size.cx, size.cy);
+
+                    cPortraitBitmap.RenderDirect(2, 0, 0, rPortrait, 0, FALSE);
+
+                    LONG nPortraitSize;
+
+                    // NOTE: Uninline.
+                    g_pBaldurChitin->GetCurrentVideoMode()->PrintSurfaceToBmp(pPortraitData,
+                        2,
+                        rPortrait,
+                        nPortraitSize,
+                        2);
+
+                    if (pPortraitData != NULL) {
+                        sPortraitResRef.Format("%s%d", "PORTRT", nPortraitIndex);
+
+                        // NOTE: Uninline.
+                        cResPortrait.SetResRef(CResRef(sPortraitResRef), TRUE, TRUE);
+
+                        cResPortrait.pRes->Write(sDirName, pPortraitData, nPortraitSize);
+                        nPortraitIndex++;
+                        delete pPortraitData;
+                    }
+                }
+            }
+        }
+
+        g_pChitin->cDimm.RemoveFromDirectoryList(GetDirSave(), TRUE);
+
+        // NOTE: Uninline.
+        g_pBaldurChitin->GetCurrentVideoMode()->m_nBrightnessCorrection = nBrightnessCorrection;
+
+        // NOTE: Uninline.
+        g_pBaldurChitin->GetCurrentVideoMode()->m_nGammaCorrection = nGammaCorrection;
+
+        m_gameAreas[m_visibleArea]->m_cInfinity.pVRPool->InvalidateAll();
+
+        // NOTE: Uninline.
+        g_pBaldurChitin->GetCurrentVideoMode()->LoadFogOWarSurfaces(FOGOWAR_RESREF);
+
+        renderLock.Unlock();
+
+        LeaveCriticalSection(&(m_gameAreas[m_visibleArea]->field_1FC));
+
+        pArea = m_gameAreas[m_visibleArea];
+        if (pArea != NULL) {
+            pArea->SetListManipulationThreadId(0);
+            LeaveCriticalSection(&(pArea->field_214));
+        }
+    }
+
+    DestroyDisposableItems();
 }
 
 // 0x5C0520
@@ -5392,7 +7223,110 @@ INT CInfGame::GetCharacterSlotFromId(LONG nCharacterId)
 // 0x5BD6B0
 void CInfGame::UpdateCharacterSlots()
 {
-    // TODO: Incomplete.
+    CGameSprite* pSprite;
+    BYTE rc;
+    INT nCharacterSlot;
+    INT nPortraits;
+    INT index;
+
+    m_nCharacters = 0;
+
+    for (nCharacterSlot = 0; nCharacterSlot < CINFGAME_MAXCHARACTERS; nCharacterSlot++) {
+        if (m_characters[nCharacterSlot] != -1
+            && (!g_pChitin->cNetwork.GetSessionOpen()
+                || m_multiplayerSettings.GetCharacterStatus(nCharacterSlot) == CMultiplayerSettings::CHARSTATUS_CHARACTER)) {
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_characters[nCharacterSlot],
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                return;
+            }
+
+            m_characters[m_nCharacters] = m_characters[nCharacterSlot];
+
+            if (g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
+                m_multiplayerSettings.SetCharacterControlledByPlayer(m_nCharacters,
+                    m_multiplayerSettings.GetCharacterControlledByPlayer(nCharacterSlot),
+                    FALSE,
+                    FALSE);
+
+                if (m_multiplayerSettings.GetCharacterStatus(nCharacterSlot) == CMultiplayerSettings::CHARSTATUS_CHARACTER) {
+                    m_multiplayerSettings.SignalCharacterStatus(m_nCharacters,
+                        CMultiplayerSettings::CHARSTATUS_SIGNAL_IMPORTED,
+                        TRUE,
+                        FALSE);
+                } else {
+                    m_multiplayerSettings.SignalCharacterStatus(m_nCharacters,
+                        CMultiplayerSettings::CHARSTATUS_SIGNAL_DELETED,
+                        TRUE,
+                        FALSE);
+                }
+
+                m_multiplayerSettings.SetCharacterReady(m_nCharacters, TRUE, FALSE);
+            }
+
+            pSprite->m_cGameStats.RecordJoinParty();
+            EnablePortrait(static_cast<BYTE>(m_nCharacters), TRUE);
+            UpdatePortraitToolTip(m_nCharacters, pSprite->GetNameRef());
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_characters[nCharacterSlot],
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            m_nCharacters++;
+        }
+    }
+
+    // Keep characters that already have a portrait in their portrait order.
+    nPortraits = 0;
+    for (nCharacterSlot = 0; nCharacterSlot < CINFGAME_MAXCHARACTERS; nCharacterSlot++) {
+        for (index = 0; index < m_nCharacters; index++) {
+            if (m_characters[index] == m_characterPortraits[nCharacterSlot]) {
+                m_characterPortraits[nPortraits] = m_characters[index];
+                nPortraits++;
+                break;
+            }
+        }
+    }
+
+    // Append the rest.
+    index = 0;
+    while (nPortraits < m_nCharacters && index < m_nCharacters) {
+        for (nCharacterSlot = 0; nCharacterSlot < CINFGAME_MAXCHARACTERS; nCharacterSlot++) {
+            if (m_characters[index] == m_characterPortraits[nCharacterSlot]) {
+                break;
+            }
+        }
+
+        if (nCharacterSlot >= CINFGAME_MAXCHARACTERS) {
+            m_characterPortraits[nPortraits] = m_characters[index];
+            nPortraits++;
+        }
+
+        index++;
+    }
+
+    for (nCharacterSlot = m_nCharacters; nCharacterSlot < CINFGAME_MAXCHARACTERS; nCharacterSlot++) {
+        m_characters[nCharacterSlot] = -1;
+        m_characterPortraits[nCharacterSlot] = -1;
+
+        if (g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
+            m_multiplayerSettings.SetCharacterControlledByPlayer(nCharacterSlot, 0, FALSE, FALSE);
+            m_multiplayerSettings.SignalCharacterStatus(nCharacterSlot,
+                CMultiplayerSettings::CHARSTATUS_SIGNAL_DELETED,
+                TRUE,
+                FALSE);
+            m_multiplayerSettings.SetCharacterReady(nCharacterSlot, FALSE, FALSE);
+        }
+    }
+
+    if (g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
+        g_pBaldurChitin->GetBaldurMessage()->SendFullSettingsToClients(CString(""));
+    }
 }
 
 // 0x5BD9D0
@@ -5569,15 +7503,221 @@ void CInfGame::AddPartyGold(LONG dwAddPartyGold)
 // 0x5BF6A0
 void CInfGame::SetupCharacters(BOOLEAN bProgressBarInPlace)
 {
-    // TODO: Incomplete.
+    CNetwork* pNetwork = &(g_pBaldurChitin->cNetwork);
+    CResRef cResArea;
+    CString sArea;
+    CPoint ptView;
+    CPoint ptStart;
+    int nFacing;
+    CGameArea* pArea;
+    CGameSprite* pSprite;
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    pGame->GetRuleTables().GetStartArea(cResArea, ptView);
+    cResArea.CopyToString(sArea);
+
+    if (m_bFromNewGame) {
+        pArea = LoadArea(sArea, -1, TRUE, bProgressBarInPlace);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 17025
+        UTIL_ASSERT(pArea != NULL);
+
+        pArea->GetInfinity()->SetViewPosition(ptView.x - (pArea->GetInfinity()->rViewPort.right - pArea->GetInfinity()->rViewPort.left) / 2,
+            ptView.y - (pArea->GetInfinity()->rViewPort.bottom - pArea->GetInfinity()->rViewPort.top) / 2,
+            TRUE);
+    } else {
+        pArea = LoadArea(m_multiplayerSettings.GetAreaStartName(), -1, FALSE, bProgressBarInPlace);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 17032
+        UTIL_ASSERT(pArea != NULL);
+    }
+
+    for (SHORT nCharacterSlot = 0; nCharacterSlot < CINFGAME_MAXCHARACTERS; nCharacterSlot++) {
+        // NOTE: Inlined.
+        LONG nCharacterId = nCharacterSlot < CINFGAME_MAXCHARACTERS
+            ? m_characters[nCharacterSlot]
+            : CGameObjectArray::INVALID_INDEX;
+
+        if (pNetwork->GetSessionHosting()
+            && m_multiplayerSettings.GetCharacterStatus(nCharacterSlot) != CMultiplayerSettings::CHARSTATUS_CHARACTER) {
+            continue;
+        }
+
+        if (nCharacterId == CGameObjectArray::INVALID_INDEX) {
+            continue;
+        }
+
+        BYTE rc = m_cObjectArray.GetDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            continue;
+        }
+
+        if (nCharacterSlot == 0 && m_nReputation / REPUTATION_MULTIPLIER < 0) {
+            m_nReputation = pGame->GetRuleTables().GetStartingReputation(pSprite->m_startTypeAI.m_nAlignment) * 10;
+            m_nReputation = m_nReputation > 200 ? 200 : m_nReputation;
+            m_nReputation = m_nReputation < 10 ? 10 : m_nReputation;
+        }
+
+        pSprite->GetBaseStats()->m_gold = 0;
+
+        CPoint& pos = pSprite->GetPos();
+        if (pos.x == -1 && pos.y == -1) {
+            if (m_bFromNewGame) {
+                ptStart = pGame->GetRuleTables().GetStartPoint(nCharacterSlot);
+                nFacing = pGame->GetRuleTables().GetStartRotation(nCharacterSlot);
+            } else if (pNetwork->GetSessionOpen()) {
+                CPoint ptAreaStart = m_multiplayerSettings.m_ptAreaStart;
+                BYTE nPersonalSpace = pSprite->GetAnimation()->GetPersonalSpace();
+                CPoint ptSearch = pArea->m_search.GetNearestOpenSquare(CPoint(ptAreaStart.x / CPathSearch::GRID_SQUARE_SIZEX, ptAreaStart.y / CPathSearch::GRID_SQUARE_SIZEY),
+                    pSprite->GetTerrainTable(),
+                    nPersonalSpace,
+                    -1);
+                ptStart.x = ptSearch.x * CPathSearch::GRID_SQUARE_SIZEX;
+                ptStart.y = ptSearch.y * CPathSearch::GRID_SQUARE_SIZEY;
+            } else {
+                ptStart.x = -1;
+                ptStart.y = -1;
+            }
+
+            m_bInLoadGame = TRUE;
+
+            BOOL bThreadPriorityChanged = FALSE;
+            int nOldThreadPriority = GetThreadPriority(g_pChitin->m_hMusicThread);
+            if (GetPrivateProfileIntA("Program Options", "Volume Music", 0, g_pChitin->GetIniFileName())) {
+                bThreadPriorityChanged = SetThreadPriority(g_pChitin->m_hMusicThread, 15);
+            }
+
+            if (pSprite->GetArea() != NULL) {
+                pSprite->RemoveFromArea();
+            }
+
+            if ((pSprite->GetBaseStats()->m_generalState & STATE_DEAD) != 0
+                && pSprite->GetAnimation()->CanLieDown()) {
+                pSprite->AddToArea(pArea,
+                    ptStart,
+                    0,
+                    CGameObject::LIST_BACK);
+            } else {
+                pSprite->AddToArea(pArea,
+                    ptStart,
+                    0,
+                    CGameObject::LIST_FRONT);
+            }
+
+            if (m_bFromNewGame) {
+                pSprite->SetFacing(static_cast<SHORT>(nFacing));
+            }
+
+            m_gameSave.m_cResCurrentWorldArea = pArea->m_resRef;
+            m_gameSave.m_nCurrentWorldLink = -1;
+            m_bInLoadGame = FALSE;
+
+            if (bThreadPriorityChanged == TRUE) {
+                SetThreadPriority(g_pChitin->m_hMusicThread, nOldThreadPriority);
+            }
+        }
+
+        m_cObjectArray.ReleaseDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    if (m_characters[0] != -1) {
+        SetProtagonist(m_characters[0]);
+    }
 }
 
 // 0x5BFC40
 LONG CInfGame::GetProtagonist()
 {
-    // TODO: Incomplete.
+    LONG nProtagonist = 0;
+    LONG nCharacterId;
+    CGameSprite* pSprite;
+    BYTE rc;
+    SHORT nIndex;
 
-    return CGameObjectArray::INVALID_INDEX;
+    if (g_pBaldurChitin->m_pEngineWorld->m_internalLoadedDialog.field_54) {
+        nProtagonist = g_pBaldurChitin->m_pEngineWorld->m_internalLoadedDialog.m_characterIndex;
+    }
+
+    if (nProtagonist == 0) {
+        // NOTE: Loop runs one extra time (`<=`), the last iteration with
+        // `INVALID_INDEX`.
+        for (nIndex = 0; nIndex <= m_nCharacters; nIndex++) {
+            // NOTE: Inlined.
+            nCharacterId = nIndex < m_nCharacters
+                ? m_characterPortraits[nIndex]
+                : CGameObjectArray::INVALID_INDEX;
+
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                if (pSprite->m_bSelected && !IcewindMisc::IsDead(pSprite)) {
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    nProtagonist = nCharacterId;
+                    break;
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+
+        if (nProtagonist == 0) {
+            // NOTE: Loop runs one extra time (`<=`).
+            for (nIndex = 0; nIndex <= m_nCharacters; nIndex++) {
+                // NOTE: Inlined.
+                nCharacterId = nIndex < CINFGAME_MAXCHARACTERS
+                    ? m_characters[nIndex]
+                    : CGameObjectArray::INVALID_INDEX;
+
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    if (!IcewindMisc::IsDead(pSprite)) {
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                        nProtagonist = nCharacterId;
+                        break;
+                    }
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                }
+            }
+
+            if (nProtagonist == 0) {
+                nProtagonist = m_characters[0];
+            }
+        }
+    }
+
+    CMessageSetProtagonist* pMessage = new CMessageSetProtagonist(nProtagonist,
+        nProtagonist,
+        nProtagonist);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+    return nProtagonist;
 }
 
 // 0x5BFE10
