@@ -45,7 +45,10 @@ public:
     WORD m_fogProbability;
     WORD m_lightningProbability;
     WORD m_windSpeed;
-    DWORD field_4C;
+    BYTE field_4C;
+    BYTE field_4D;
+    BYTE field_4E;
+    BYTE field_4F;
     DWORD field_50;
     DWORD field_54;
     DWORD field_58;
@@ -163,6 +166,8 @@ public:
     BOOL CheckWalkable(const CPoint& start, const CPoint& goal, const BYTE* terrainTable, BYTE personalSpace, BOOLEAN bCheckIfExplored);
     LONG GetGroundPile(const CPoint& ptPos);
     LONG GetNearest(LONG startObject, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BOOL ignoreSleeping, BYTE nNearest, BOOL ignoreDead);
+    LONG GetNearestDialogMatch(LONG startObject, CResRef dialog, LONG range);
+    void GetAllInRange(POSITION posVertList, const CPoint& center, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOL lineOfSight, BOOL checkForNonSprites);
     void GetAllInRange(const CPoint& center, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOL lineOfSight, BOOL checkForNonSprites);
     int GetCountInRange(const CPoint& center, SHORT range, const CAIObjectType& type);
     int GetCountInPoly(const CRect& rBounding, const CAIObjectType& type);

@@ -501,6 +501,20 @@ LONG CGameArea::GetNearest(LONG startObject, const CAIObjectType& type, SHORT ra
     return -1;
 }
 
+// 0x46C460
+LONG CGameArea::GetNearestDialogMatch(LONG startObject, CResRef dialog, LONG range)
+{
+    // TODO: Incomplete.
+
+    return CGameObjectArray::INVALID_INDEX;
+}
+
+// 0x46CD20
+void CGameArea::GetAllInRange(POSITION posVertList, const CPoint& center, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOL lineOfSight, BOOL checkForNonSprites)
+{
+    // TODO: Incomplete.
+}
+
 // 0x46D140
 void CGameArea::GetAllInRange(const CPoint& center, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOL lineOfSight, BOOL checkForNonSprites)
 {

@@ -9,19 +9,34 @@
 #include "CGameContainer.h"
 #include "CGameDoor.h"
 #include "CGameEffect.h"
+#include "CGameAnimation.h"
+#include "CGameAnimationType.h"
+#include "CGameObjectArray.h"
+#include "CGameSave.h"
+#include "CGameSound.h"
 #include "CGameSpawning.h"
 #include "CGameSprite.h"
+#include "CGameSpriteEquipment.h"
 #include "CGameStatic.h"
 #include "CGameTiledObject.h"
 #include "CGameTimer.h"
 #include "CGameTrigger.h"
 #include "CInfGame.h"
+#include "CItem.h"
+#include "CMessage.h"
+#include "CPathSearch.h"
 #include "CScreenCharacter.h"
+#include "CScreenInventory.h"
 #include "CScreenWorld.h"
 #include "CSpell.h"
 #include "CTimerWorld.h"
 #include "CUtil.h"
 #include "CVariableHash.h"
+#include "CVidCell.h"
+#include "Icewind586B70.h"
+
+#include <math.h>
+#include <stdlib.h>
 
 // 0x8485C4
 const SHORT CGameAIBase::ACTION_DONE = -1;
@@ -1883,6 +1898,3034 @@ void CGameAIBase::SetLastActionReturn(SHORT returnValue)
     m_nLastActionReturn = returnValue;
 }
 
+// 0x45B2D0
+static CPoint sub_45B2D0(CPoint pt)
+{
+    return CPoint(pt.x / CPathSearch::GRID_SQUARE_SIZEX,
+        pt.y / CPathSearch::GRID_SQUARE_SIZEY);
+}
+
+// 0x45B300
+static LONG sub_45B300(CPoint pt1, CPoint pt2)
+{
+    return (pt1.x - pt2.x) * (pt1.x - pt2.x) + (pt1.y - pt2.y) * (pt1.y - pt2.y);
+}
+
+// 0x453840
+BOOL CGameAIBase::EvaluateStatusTrigger(const CAITrigger& trigger)
+{
+    CAITrigger statusTrigger(trigger);
+    CGameSprite* pSprite = NULL;
+    CGameObject* pObject = NULL;
+    BOOL bResult = FALSE;
+    CString sScope;
+    CString sName;
+    CString sTemp1;
+    CString sTemp2;
+    CTypedPtrList<CPtrList, LONG*> targets(10);
+    BOOL bSpriteNotShared = FALSE;
+
+    switch (statusTrigger.m_triggerID) {
+    case CAITRIGGER_AREARESTDISABLED:
+        if (m_pArea != NULL) {
+            bResult = (m_pArea->m_header.m_flags & 0x2) != 0;
+        }
+        break;
+    case CAITRIGGER_ISSCRIPTNAME:
+        statusTrigger.m_triggerCause.Decode(this);
+        pObject = statusTrigger.m_triggerCause.sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+        if (pObject != NULL) {
+            if (CString(static_cast<CGameAIBase*>(pObject)->m_scriptName, SCRIPTNAME_SIZE).CompareNoCase(statusTrigger.m_string1) == 0) {
+                bResult = TRUE;
+            }
+        }
+        break;
+    case CAITRIGGER_ENTIREPARTYONMAP: {
+        int nCharacters = g_pBaldurChitin->GetObjectGame()->m_nCharacters;
+        if (nCharacters > 0) {
+            bResult = TRUE;
+            for (SHORT nIndex = 0; nIndex < nCharacters && bResult == TRUE; nIndex++) {
+                CGameArea* pArea = m_pArea;
+                CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+                LONG nCharacterId = pGame->GetCharacterId(nIndex);
+
+                // NOTE: Shares into `pSprite`, which is released once more at
+                // the end of the function.
+                pGame->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+                if (pSprite != NULL) {
+                    if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0
+                        && pSprite->m_pArea != pArea) {
+                        bResult = FALSE;
+                    }
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                } else {
+                    bResult = FALSE;
+                }
+            }
+        }
+        break;
+    }
+    case CAITRIGGER_CURRENTAREAIS:
+        statusTrigger.m_triggerCause.Decode(this);
+        pObject = statusTrigger.m_triggerCause.sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+        if (pObject != NULL && pObject->m_pArea != NULL) {
+            CString sArea;
+            pObject->m_pArea->m_resRef.CopyToString(sArea);
+
+            int nPos = sArea.FindOneOf("1234567890");
+            if (nPos >= 0) {
+                if (atoi(static_cast<LPCSTR>(sArea) + nPos) == statusTrigger.m_specificID) {
+                    bResult = TRUE;
+                }
+            }
+        }
+        break;
+    case CAITRIGGER_SUBRACE:
+        statusTrigger.m_triggerCause.Decode(this);
+        if (statusTrigger.m_triggerCause.m_nRace == (statusTrigger.m_specificID >> 16)
+            && statusTrigger.m_triggerCause.m_nSubRace == (statusTrigger.m_specificID & 0xFFFF)) {
+            bResult = TRUE;
+        }
+        break;
+    case CAITRIGGER_KIT:
+        statusTrigger.m_triggerCause.Decode(this);
+        pSprite = static_cast<CGameSprite*>(statusTrigger.m_triggerCause.sub_40CB20(this, CGameObject::TYPE_SPRITE, FALSE));
+        if (pSprite != NULL) {
+            bResult = (pSprite->GetSpecialization() & statusTrigger.m_specificID) == static_cast<DWORD>(statusTrigger.m_specificID);
+        }
+        break;
+    case CAITRIGGER_ALIGNMENT:
+        statusTrigger.m_triggerCause.Decode(this);
+        if (statusTrigger.m_specificID == 0x01
+            || statusTrigger.m_specificID == 0x02
+            || statusTrigger.m_specificID == 0x03
+            || statusTrigger.m_specificID == 0x10
+            || statusTrigger.m_specificID == 0x20
+            || statusTrigger.m_specificID == 0x30) {
+            bResult = (statusTrigger.m_triggerCause.m_nAlignment & static_cast<BYTE>(statusTrigger.m_specificID)) != 0;
+        } else {
+            bResult = statusTrigger.m_triggerCause.m_nAlignment == statusTrigger.m_specificID;
+        }
+        break;
+    case CAITRIGGER_ALLEGIANCE:
+        statusTrigger.m_triggerCause.Decode(this);
+        bResult = statusTrigger.m_triggerCause.m_nEnemyAlly == statusTrigger.m_specificID;
+        break;
+    case CAITRIGGER_CLASS:
+        statusTrigger.m_triggerCause.Decode(this);
+        bResult = statusTrigger.m_triggerCause.IsClassValid(static_cast<BYTE>(statusTrigger.m_specificID));
+        break;
+    case CAITRIGGER_GENDER:
+        statusTrigger.m_triggerCause.Decode(this);
+        bResult = statusTrigger.m_triggerCause.m_nGender == statusTrigger.m_specificID;
+        break;
+    case CAITRIGGER_EXISTS:
+        statusTrigger.m_triggerCause.Decode(this);
+        pObject = statusTrigger.m_triggerCause.sub_40D0F0(this, TRUE);
+        bResult = pObject != NULL;
+        break;
+    case CAITRIGGER_GENERAL:
+        statusTrigger.m_triggerCause.Decode(this);
+        bResult = statusTrigger.m_triggerCause.m_nGeneral == statusTrigger.m_specificID;
+        break;
+    case CAITRIGGER_GLOBAL: {
+        bResult = FALSE;
+        sScope = statusTrigger.m_string1;
+        sScope.MakeUpper();
+        sTemp1 = sScope.Left(6);
+        sTemp2 = sScope.Right(sScope.GetLength() - 6);
+
+        CVariable* pVariable;
+        if (strcmp(sTemp1, "GLOBAL") == 0) {
+            pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sTemp2);
+            if (pVariable != NULL) {
+                bResult = pVariable->m_intValue == statusTrigger.m_specificID;
+            } else {
+                bResult = statusTrigger.m_specificID == 0;
+            }
+        } else if (strcmp(sTemp1, "LOCALS") == 0) {
+            if (GetObjectType() != CGameObject::TYPE_SPRITE) {
+                bResult = FALSE;
+                break;
+            }
+
+            pVariable = static_cast<CGameSprite*>(this)->GetLocalVariables()->FindKey(sTemp2);
+            if (pVariable != NULL) {
+                bResult = pVariable->m_intValue == statusTrigger.m_specificID;
+            } else {
+                bResult = statusTrigger.m_specificID == 0;
+            }
+        } else {
+            if (strcmp(sTemp1, "MYAREA") == 0) {
+                sTemp1 = reinterpret_cast<LPCSTR>(m_pArea->m_header.m_areaName);
+            }
+
+            CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sTemp1);
+            if (pArea != NULL) {
+                pVariable = pArea->GetVariables()->FindKey(sTemp2);
+                if (pVariable != NULL) {
+                    bResult = pVariable->m_intValue == statusTrigger.m_specificID;
+                } else {
+                    bResult = statusTrigger.m_specificID == 0;
+                }
+            }
+        }
+        break;
+    }
+    case CAITRIGGER_GLOBALGT: {
+        bResult = FALSE;
+        sScope = statusTrigger.m_string1;
+        sScope.MakeUpper();
+        sTemp1 = sScope.Left(6);
+        sTemp2 = sScope.Right(sScope.GetLength() - 6);
+
+        CVariable* pVariable;
+        if (strcmp(sTemp1, "GLOBAL") == 0) {
+            pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sTemp2);
+            if (pVariable != NULL) {
+                bResult = pVariable->m_intValue > statusTrigger.m_specificID;
+            } else {
+                bResult = statusTrigger.m_specificID < 0;
+            }
+        } else if (sTemp1.Compare("LOCALS") == 0) {
+            if (GetObjectType() != CGameObject::TYPE_SPRITE) {
+                bResult = FALSE;
+                break;
+            }
+
+            pVariable = static_cast<CGameSprite*>(this)->GetLocalVariables()->FindKey(sTemp2);
+            if (pVariable != NULL) {
+                bResult = pVariable->GetIntValue() > statusTrigger.GetSpecifics();
+            } else {
+                bResult = statusTrigger.GetSpecifics() < 0;
+            }
+        } else {
+            if (sTemp1 == "MYAREA") {
+                sTemp1 = m_pArea->GetHeader()->m_areaName;
+            }
+
+            CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sTemp1);
+            if (pArea != NULL) {
+                pVariable = pArea->GetVariables()->FindKey(sTemp2);
+                if (pVariable != NULL) {
+                    bResult = pVariable->GetIntValue() > statusTrigger.GetSpecifics();
+                } else {
+                    bResult = statusTrigger.GetSpecifics() < 0;
+                }
+            }
+        }
+        break;
+    }
+    case CAITRIGGER_GLOBALLT: {
+        bResult = FALSE;
+        sScope = statusTrigger.GetString1();
+        sScope.MakeUpper();
+        sTemp1 = sScope.Left(6);
+        sTemp2 = sScope.Right(sScope.GetLength() - 6);
+
+        CVariable* pVariable;
+        if (sTemp1 == "GLOBAL") {
+            pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sTemp2);
+            if (pVariable != NULL) {
+                bResult = pVariable->GetIntValue() < statusTrigger.GetSpecifics();
+            } else {
+                bResult = statusTrigger.GetSpecifics() > 0;
+            }
+        } else if (sTemp1 == "LOCALS") {
+            if (GetObjectType() != CGameObject::TYPE_SPRITE) {
+                bResult = FALSE;
+                break;
+            }
+
+            pVariable = static_cast<CGameSprite*>(this)->GetLocalVariables()->FindKey(sTemp2);
+            if (pVariable != NULL) {
+                bResult = pVariable->GetIntValue() < statusTrigger.GetSpecifics();
+            } else {
+                bResult = statusTrigger.GetSpecifics() > 0;
+            }
+        } else {
+            if (sTemp1 == "MYAREA") {
+                sTemp1 = m_pArea->GetHeader()->m_areaName;
+            }
+
+            CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sTemp1);
+            if (pArea != NULL) {
+                pVariable = pArea->GetVariables()->FindKey(sTemp2);
+                if (pVariable != NULL) {
+                    bResult = pVariable->GetIntValue() < statusTrigger.GetSpecifics();
+                } else {
+                    bResult = statusTrigger.GetSpecifics() > 0;
+                }
+            }
+        }
+        break;
+    }
+    case CAITRIGGER_HP:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetBaseStats()->m_hitPoints == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_HPGT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetBaseStats()->m_hitPoints > statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_HPLT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetBaseStats()->m_hitPoints < statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_HPPERCENT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetBaseStats()->m_hitPoints * 100 / pSprite->GetDerivedStats()->m_nMaxHitPoints == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_HPPERCENTLT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetBaseStats()->m_hitPoints * 100 / pSprite->GetDerivedStats()->m_nMaxHitPoints < statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_HPPERCENTGT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetBaseStats()->m_hitPoints * 100 / pSprite->GetDerivedStats()->m_nMaxHitPoints > statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_HPLOST:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetDerivedStats()->m_nMaxHitPoints - pSprite->GetBaseStats()->m_hitPoints == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_HPLOSTGT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetDerivedStats()->m_nMaxHitPoints - pSprite->GetBaseStats()->m_hitPoints > statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_HPLOSTLT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetDerivedStats()->m_nMaxHitPoints - pSprite->GetBaseStats()->m_hitPoints < statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_ISCREATUREAREAFLAG:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite != NULL) {
+            bResult = (statusTrigger.GetSpecifics() & pSprite->GetBaseStats()->m_flags) != 0;
+        } else {
+            bResult = FALSE;
+        }
+        break;
+    case CAITRIGGER_LOS: {
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40D050(this, CGameObject::TYPE_AIBASE, FALSE);
+        if (pObject == NULL) {
+            return FALSE;
+        }
+
+        BOOL bOrderable = FALSE;
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            bOrderable = static_cast<CGameSprite*>(pObject)->Orderable(FALSE);
+        }
+
+        LONG nDistance = sub_45B300(sub_45B2D0(GetPos()), sub_45B2D0(pObject->GetPos()));
+        if (nDistance > (statusTrigger.GetSpecifics() + 1) * (statusTrigger.GetSpecifics() + 1)) {
+            bResult = FALSE;
+            break;
+        }
+
+        if (!m_pArea->CheckLOS(pObject->GetPos(), GetPos(), GetVisibleTerrainTable(), bOrderable)) {
+            bResult = FALSE;
+            break;
+        }
+
+        bResult = TRUE;
+
+        // NOTE: The object type (not the AI type) is used as EA.
+        sub_4530F0(CAIObjectType(pObject->GetObjectType()));
+        break;
+    }
+    case CAITRIGGER_MORALE:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = static_cast<BYTE>(statusTrigger.GetSpecifics()) == pSprite->GetBaseStats()->m_morale;
+        break;
+    case CAITRIGGER_MORALEGT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetBaseStats()->m_morale > static_cast<BYTE>(statusTrigger.GetSpecifics());
+        break;
+    case CAITRIGGER_MORALELT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetBaseStats()->m_morale < static_cast<BYTE>(statusTrigger.GetSpecifics());
+        break;
+    case CAITRIGGER_RACE:
+        statusTrigger.Decode(this);
+        bResult = statusTrigger.GetCause().GetRace() == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_RANGE: {
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+        if (pObject == NULL) {
+            return FALSE;
+        }
+
+        // NOTE: `ptTarget` is passed to `sub_48B2C0` uninitialized.
+        CPoint ptTarget;
+        BYTE nObjectType = pObject->GetObjectType();
+        if (nObjectType == CGameObject::TYPE_DOOR) {
+            ptTarget = static_cast<CGameDoor*>(pObject)->sub_48B2C0(ptTarget);
+        } else if (nObjectType == CGameObject::TYPE_SPRITE) {
+            ptTarget = pObject->GetPos();
+        } else {
+            ptTarget = pObject->GetPos();
+        }
+
+        LONG nDistance = sub_45B300(sub_45B2D0(GetPos()), sub_45B2D0(ptTarget));
+        LONG nRange = (statusTrigger.GetSpecifics() + 1) * (statusTrigger.GetSpecifics() + 1);
+
+        switch (statusTrigger.GetInt1()) {
+        case 1:
+            bResult = nDistance == nRange;
+            break;
+        case 2:
+            bResult = nDistance < nRange;
+            break;
+        case 3:
+            bResult = nDistance > nRange;
+            break;
+        default:
+            bResult = FALSE;
+            break;
+        }
+
+        if (bResult == TRUE) {
+            sub_4530F0(pObject->GetAIType());
+        }
+        break;
+    }
+    case CAITRIGGER_REPUTATION: {
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        LONG nReputation;
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+            nReputation = g_pBaldurChitin->GetObjectGame()->GetReputation();
+        } else {
+            nReputation = pSprite->GetBaseStats()->m_reputation;
+        }
+
+        bResult = nReputation == statusTrigger.GetSpecifics();
+        break;
+    }
+    case CAITRIGGER_REPUTATIONGT: {
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        LONG nReputation;
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+            nReputation = g_pBaldurChitin->GetObjectGame()->GetReputation();
+        } else {
+            nReputation = pSprite->GetBaseStats()->m_reputation;
+        }
+
+        bResult = nReputation > statusTrigger.GetSpecifics();
+        break;
+    }
+    case CAITRIGGER_REPUTATIONLT: {
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        LONG nReputation;
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+            nReputation = g_pBaldurChitin->GetObjectGame()->GetReputation();
+        } else {
+            nReputation = pSprite->GetBaseStats()->m_reputation;
+        }
+
+        bResult = nReputation < statusTrigger.GetSpecifics();
+        break;
+    }
+    case CAITRIGGER_SEE:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+        bResult = CanSeeTarget(pObject, statusTrigger.GetSpecifics());
+        if (bResult == TRUE) {
+            if (!m_lSeen.Equal(pObject->GetAIType())) {
+                if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pObject->GetId()) != -1) {
+                    m_canBeSeen = 4 * (CGameObject::VISIBLE_DELAY + 1);
+                }
+
+                // NOTE: Uninline `CAIObjectType::operator=` (0x45B370).
+                m_lSeen.Set(pObject->GetAIType());
+
+                CMessage* message = new CMessageSetLastObject(pObject->GetAIType(),
+                    CAITRIGGER_SEE,
+                    m_id,
+                    m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            sub_4530F0(pObject->GetAIType());
+        }
+        break;
+    case CAITRIGGER_DETECT:
+        statusTrigger.Decode(this);
+        if (statusTrigger.GetCause().GetInstance() == -1) {
+            LONG nTarget;
+            if (GetVertListType() == CGameObject::LIST_FRONT) {
+                nTarget = m_pArea->GetNearest(m_id,
+                    statusTrigger.GetCause(),
+                    GetVisualRange(),
+                    GetVisibleTerrainTable(),
+                    TRUE,
+                    TRUE,
+                    FALSE,
+                    0,
+                    FALSE);
+            } else {
+                nTarget = m_pArea->sub_46DAE0(m_pos.x,
+                    m_pos.y,
+                    statusTrigger.GetCause(),
+                    GetVisualRange(),
+                    GetVisibleTerrainTable(),
+                    TRUE,
+                    TRUE,
+                    0,
+                    0);
+            }
+
+            if (nTarget == CGameObjectArray::INVALID_INDEX) {
+                break;
+            }
+
+            // NOTE: Sets visibility of the caller, not the target.
+            if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(nTarget) != -1) {
+                m_canBeSeen = 4 * (CGameObject::VISIBLE_DELAY + 1);
+            }
+
+            bResult = TRUE;
+
+            if (m_lSeen.GetInstance() != nTarget) {
+                CAIObjectType type;
+                type.SetInstance(nTarget);
+
+                // NOTE: Uninline `CAIObjectType::operator=` (0x45B370).
+                m_lSeen.Set(type);
+
+                CMessage* message = new CMessageSetLastObject(statusTrigger.GetCause(),
+                    CAITRIGGER_SEE,
+                    m_id,
+                    m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        } else {
+            pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+            if (pObject == NULL) {
+                break;
+            }
+
+            LONG nDistance = sub_45B300(sub_45B2D0(GetPos()), sub_45B2D0(pObject->GetPos()));
+
+            BOOL bOrderable = FALSE;
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                bOrderable = static_cast<CGameSprite*>(pObject)->Orderable(FALSE);
+            }
+
+            if (nDistance <= GetVisualRange() * GetVisualRange()
+                && m_pArea->CheckLOS(pObject->GetPos(), GetPos(), GetVisibleTerrainTable(), bOrderable)) {
+                bResult = TRUE;
+            } else {
+                bResult = FALSE;
+            }
+
+            bResult &= pObject->GetArea() == m_pArea;
+            if (bResult) {
+                if (!m_lSeen.Equal(pObject->GetAIType())) {
+                    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pObject->GetId()) != -1) {
+                        m_canBeSeen = 4 * (CGameObject::VISIBLE_DELAY + 1);
+                    }
+
+                    // NOTE: Uninline `CAIObjectType::operator=` (0x45B370).
+                    m_lSeen.Set(pObject->GetAIType());
+
+                    CMessage* message = new CMessageSetLastObject(pObject->GetAIType(),
+                        CAITRIGGER_SEE,
+                        m_id,
+                        m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            pObject = NULL;
+        }
+        break;
+    case CAITRIGGER_SPECIFICS:
+        statusTrigger.Decode(this);
+        bResult = statusTrigger.GetCause().GetSpecific() == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_TIME:
+        bResult = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->GetCurrentHour() == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_TIMEGT:
+        bResult = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->GetCurrentHour() > statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_TIMELT:
+        bResult = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->GetCurrentHour() < statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_TIMEOFDAY:
+        switch (statusTrigger.GetSpecifics()) {
+        case 0:
+            bResult = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->IsDay();
+            break;
+        case 1:
+            bResult = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->IsDusk();
+            break;
+        case 2:
+            bResult = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->IsNight();
+            break;
+        case 3:
+            bResult = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->IsDawn();
+            break;
+        default:
+            bResult = FALSE;
+            break;
+        }
+        break;
+    case CAITRIGGER_DELAY:
+        bResult = field_54C % statusTrigger.GetSpecifics() <= field_550;
+        break;
+    case CAITRIGGER_4080: {
+        // Not in TRIGGER.IDS. Number of matching creatures in sight not
+        // counting the party size.
+        m_pArea->GetAllInRange(m_pos,
+            statusTrigger.GetCause(),
+            GetVisualRange(),
+            GetVisibleTerrainTable(),
+            targets,
+            TRUE,
+            FALSE);
+
+        SHORT nCharacters = g_pBaldurChitin->GetObjectGame()->GetNumCharacters();
+        bResult = targets.GetCount() - nCharacters == statusTrigger.GetSpecifics();
+        break;
+    }
+    case CAITRIGGER_4081: {
+        // Not in TRIGGER.IDS.
+        m_pArea->GetAllInRange(m_pos,
+            statusTrigger.GetCause(),
+            GetVisualRange(),
+            GetVisibleTerrainTable(),
+            targets,
+            TRUE,
+            FALSE);
+
+        SHORT nCharacters = g_pBaldurChitin->GetObjectGame()->GetNumCharacters();
+        bResult = targets.GetCount() - nCharacters < statusTrigger.GetSpecifics();
+        break;
+    }
+    case CAITRIGGER_4082: {
+        // Not in TRIGGER.IDS.
+        m_pArea->GetAllInRange(m_pos,
+            statusTrigger.GetCause(),
+            GetVisualRange(),
+            GetVisibleTerrainTable(),
+            targets,
+            TRUE,
+            FALSE);
+
+        SHORT nCharacters = g_pBaldurChitin->GetObjectGame()->GetNumCharacters();
+        bResult = targets.GetCount() - nCharacters > statusTrigger.GetSpecifics();
+        break;
+    }
+    case CAITRIGGER_NUMCREATURE:
+        m_pArea->GetAllInRange(m_pos,
+            statusTrigger.GetCause(),
+            GetVisualRange(),
+            GetVisibleTerrainTable(),
+            targets,
+            TRUE,
+            FALSE);
+        bResult = targets.GetCount() == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_NUMCREATUREGT:
+        m_pArea->GetAllInRange(m_pos,
+            statusTrigger.GetCause(),
+            GetVisualRange(),
+            GetVisibleTerrainTable(),
+            targets,
+            TRUE,
+            FALSE);
+        bResult = targets.GetCount() > statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_NUMCREATURELT:
+        m_pArea->GetAllInRange(m_pos,
+            statusTrigger.GetCause(),
+            GetVisualRange(),
+            GetVisibleTerrainTable(),
+            targets,
+            TRUE,
+            FALSE);
+        bResult = targets.GetCount() < statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_ACTIONLISTEMPTY:
+        if (m_queuedActions.GetCount() != 0) {
+            bResult = FALSE;
+        } else if (m_curAction.GetActionID() == CAIAction::NO_ACTION) {
+            bResult = TRUE;
+        } else {
+            bResult = FALSE;
+        }
+        break;
+    case CAITRIGGER_STATECHECK:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = (statusTrigger.GetSpecifics() & pSprite->GetDerivedStats()->m_generalState) != 0;
+        break;
+    case CAITRIGGER_NOTSTATECHECK:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = (statusTrigger.GetSpecifics() & pSprite->GetDerivedStats()->m_generalState) == 0;
+        break;
+    case CAITRIGGER_CHECKSTAT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetDerivedStats()->GetAtOffset(static_cast<SHORT>(statusTrigger.GetInt1())) == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_CHECKSTATGT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetDerivedStats()->GetAtOffset(static_cast<SHORT>(statusTrigger.GetInt1())) > statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_CHECKSTATLT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+        bResult = pSprite->GetDerivedStats()->GetAtOffset(static_cast<SHORT>(statusTrigger.GetInt1())) < statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_REACTION: {
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        BYTE nReaction = GetReaction(pSprite);
+        pSprite->FeedBack(CGameSprite::FEEDBACK_29, nReaction, 0, 0, -1, 0, 0);
+        bResult = nReaction == statusTrigger.GetSpecifics();
+        break;
+    }
+    case CAITRIGGER_REACTIONGT: {
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        BYTE nReaction = GetReaction(pSprite);
+        pSprite->FeedBack(CGameSprite::FEEDBACK_29, nReaction, 0, 0, -1, 0, 0);
+        bResult = nReaction > statusTrigger.GetSpecifics();
+        break;
+    }
+    case CAITRIGGER_REACTIONLT: {
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        BYTE nReaction = GetReaction(pSprite);
+        pSprite->FeedBack(CGameSprite::FEEDBACK_29, nReaction, 0, 0, -1, 0, 0);
+        bResult = nReaction < statusTrigger.GetSpecifics();
+        break;
+    }
+    case CAITRIGGER_GLOBALTIMEREXACT: {
+        bResult = FALSE;
+
+        sScope = statusTrigger.GetString2();
+        sScope.MakeUpper();
+        sTemp1 = sScope.Left(6);
+        sName = statusTrigger.GetString1();
+
+        CVariable* pVariable;
+        if (sTemp1 == "GLOBAL") {
+            pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sName);
+        } else if (sTemp1 == "LOCALS") {
+            if (GetObjectType() != TYPE_SPRITE) {
+                bResult = FALSE;
+                break;
+            }
+
+            pVariable = static_cast<CGameSprite*>(this)->GetLocalVariables()->FindKey(sName);
+        } else {
+            if (sTemp1 == "MYAREA") {
+                sTemp1 = m_pArea->GetHeader()->m_areaName;
+            }
+
+            CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sTemp1);
+            if (pArea == NULL) {
+                break;
+            }
+
+            pVariable = pArea->GetVariables()->FindKey(sName);
+        }
+
+        if (pVariable == NULL) {
+            bResult = FALSE;
+            break;
+        }
+
+        ULONG nGameTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+        bResult = static_cast<ULONG>(pVariable->GetIntValue()) == nGameTime;
+        break;
+    }
+    case CAITRIGGER_GLOBALTIMEREXPIRED: {
+        bResult = FALSE;
+
+        sScope = statusTrigger.GetString2();
+        sScope.MakeUpper();
+        sTemp1 = sScope.Left(6);
+        sName = statusTrigger.GetString1();
+
+        CVariable* pVariable;
+        if (sTemp1 == "GLOBAL") {
+            pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sName);
+        } else if (sTemp1 == "LOCALS") {
+            if (GetObjectType() != TYPE_SPRITE) {
+                bResult = FALSE;
+                break;
+            }
+
+            pVariable = static_cast<CGameSprite*>(this)->GetLocalVariables()->FindKey(sName);
+        } else {
+            if (sTemp1 == "MYAREA") {
+                sTemp1 = m_pArea->GetHeader()->m_areaName;
+            }
+
+            CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sTemp1);
+            if (pArea == NULL) {
+                break;
+            }
+
+            pVariable = pArea->GetVariables()->FindKey(sName);
+        }
+
+        if (pVariable == NULL) {
+            bResult = TRUE;
+            break;
+        }
+
+        ULONG nGameTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+        bResult = static_cast<ULONG>(pVariable->GetIntValue()) < nGameTime;
+        break;
+    }
+    case CAITRIGGER_GLOBALTIMERNOTEXPIRED: {
+        bResult = FALSE;
+
+        sScope = statusTrigger.GetString2();
+        sScope.MakeUpper();
+        sTemp1 = sScope.Left(6);
+        sName = statusTrigger.GetString1();
+
+        CVariable* pVariable;
+        if (sTemp1 == "GLOBAL") {
+            pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sName);
+        } else if (sTemp1 == "LOCALS") {
+            if (GetObjectType() != TYPE_SPRITE) {
+                bResult = FALSE;
+                break;
+            }
+
+            pVariable = static_cast<CGameSprite*>(this)->GetLocalVariables()->FindKey(sName);
+        } else {
+            if (sTemp1 == "MYAREA") {
+                sTemp1 = m_pArea->GetHeader()->m_areaName;
+            }
+
+            CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sTemp1);
+            if (pArea == NULL) {
+                break;
+            }
+
+            pVariable = pArea->GetVariables()->FindKey(sName);
+        }
+
+        if (pVariable == NULL) {
+            bResult = FALSE;
+            break;
+        }
+
+        ULONG nGameTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+        bResult = nGameTime < static_cast<ULONG>(pVariable->GetIntValue());
+        break;
+    }
+    case CAITRIGGER_PARTYHASITEM:
+        for (SHORT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->GetNumCharacters(); nPortrait++) {
+            LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+
+            BYTE rc;
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                return FALSE;
+            }
+
+            if (pSprite->FindItemPersonal(statusTrigger.GetString1(), 0, FALSE) != -1) {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return TRUE;
+            }
+
+            if (pSprite->FindItemBags(statusTrigger.GetString1(), 0, FALSE) != -1) {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return TRUE;
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+        return FALSE;
+    case CAITRIGGER_TRUE:
+        return TRUE;
+    case CAITRIGGER_GLOBALTIMERSTARTED: {
+        sScope = statusTrigger.GetString2();
+        sScope.MakeUpper();
+        sTemp1 = sScope.Left(6);
+        sName = statusTrigger.GetString1();
+
+        CVariable* pVariable;
+        if (sTemp1 == "GLOBAL") {
+            pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sName);
+        } else if (sTemp1 == "LOCALS") {
+            if (GetObjectType() != TYPE_SPRITE) {
+                bResult = FALSE;
+                break;
+            }
+
+            pVariable = static_cast<CGameSprite*>(this)->GetLocalVariables()->FindKey(sName);
+        } else {
+            if (sTemp1 == "MYAREA") {
+                sTemp1 = m_pArea->GetHeader()->m_areaName;
+            }
+
+            CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sTemp1);
+            if (pArea == NULL) {
+                bResult = FALSE;
+                break;
+            }
+
+            pVariable = pArea->GetVariables()->FindKey(sName);
+        }
+
+        if (pVariable != NULL) {
+            bResult = TRUE;
+            break;
+        }
+
+        bResult = FALSE;
+        break;
+    }
+    case CAITRIGGER_ISTEAMBITON:
+        bResult = statusTrigger.GetSpecifics() & sub_45B6D0();
+        break;
+    case CAITRIGGER_ISPLAYERNUMBER:
+        statusTrigger.Decode(this);
+
+        pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+        if (pObject == NULL) {
+            bResult = FALSE;
+            break;
+        }
+
+        if (statusTrigger.GetSpecifics() < 1) {
+            bResult = FALSE;
+            break;
+        }
+
+        if (statusTrigger.GetSpecifics() > 6) {
+            bResult = FALSE;
+            break;
+        }
+
+        // NOTE: Uninline `GetFixedOrderCharacterId`.
+        bResult = g_pBaldurChitin->GetObjectGame()->GetFixedOrderCharacterId(static_cast<SHORT>(statusTrigger.GetSpecifics() - 1)) == pObject->GetId();
+        break;
+    case CAITRIGGER_CHECKSKILL:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        // NOTE: Skill values are read as signed chars.
+        bResult = static_cast<char>(pSprite->GetDerivedStats()->m_nSkills[statusTrigger.GetInt1()]) == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_CHECKSKILLGT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = static_cast<char>(pSprite->GetDerivedStats()->m_nSkills[statusTrigger.GetInt1()]) > statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_CHECKSKILLLT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = static_cast<char>(pSprite->GetDerivedStats()->m_nSkills[statusTrigger.GetInt1()]) < statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_LEVELINCLASS:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = static_cast<LONG>(pSprite->GetDerivedStats()->GetClassLevel(statusTrigger.GetInt1())) == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_LEVELINCLASSGT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = static_cast<LONG>(pSprite->GetDerivedStats()->GetClassLevel(statusTrigger.GetInt1())) > statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_LEVELINCLASSLT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = static_cast<LONG>(pSprite->GetDerivedStats()->GetClassLevel(statusTrigger.GetInt1())) < statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_407F:
+        statusTrigger.Decode(this);
+
+        pObject = statusTrigger.GetCause().sub_40CB20(this, TYPE_AIBASE, FALSE);
+        if (pObject == NULL) {
+            return FALSE;
+        }
+
+        if (pObject->GetObjectType() == TYPE_SPRITE) {
+            bResult = static_cast<CGameSprite*>(pObject)->FindItemPersonal(statusTrigger.GetString1(), 0, FALSE) != -1;
+        } else {
+            bResult = FALSE;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        pObject = NULL;
+        break;
+    case CAITRIGGER_HASITEM:
+        statusTrigger.Decode(this);
+
+        pObject = statusTrigger.GetCause().sub_40CB20(this, TYPE_AIBASE, FALSE);
+        if (pObject == NULL) {
+            return FALSE;
+        }
+
+        if (pObject->GetObjectType() == TYPE_SPRITE) {
+            if (static_cast<CGameSprite*>(pObject)->FindItemPersonal(statusTrigger.GetString1(), 0, FALSE) != -1) {
+                bResult = TRUE;
+            } else {
+                bResult = static_cast<CGameSprite*>(pObject)->FindItemBags(statusTrigger.GetString1(), 0, FALSE) != -1;
+            }
+        } else if (pObject->GetObjectType() == TYPE_CONTAINER) {
+            CResRef resRef(statusTrigger.GetString1());
+            bResult = static_cast<CGameContainer*>(pObject)->FindItemSlot(resRef) != -1;
+        } else {
+            bResult = FALSE;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        pObject = NULL;
+        break;
+    case CAITRIGGER_INPARTY: {
+        statusTrigger.Decode(this);
+
+        if (statusTrigger.GetCause().GetInstance() != -1) {
+            if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(statusTrigger.GetCause().GetInstance()) != -1) {
+                // NOTE: Result is not checked.
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(statusTrigger.GetCause().GetInstance(),
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+
+                if ((pSprite->GetDerivedStats()->m_generalState & 0x800) != 0) {
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(statusTrigger.GetCause().GetInstance(),
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    return FALSE;
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(statusTrigger.GetCause().GetInstance(),
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return TRUE;
+            }
+        } else {
+            for (int nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->GetNumCharacters(); nPortrait++) {
+                BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(g_pBaldurChitin->GetObjectGame()->GetCharacterId(static_cast<SHORT>(nPortrait)),
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+                if (rc == CGameObjectArray::SUCCESS) {
+                    if (pSprite->GetAIType().OfType(statusTrigger.GetCause(), FALSE, FALSE)
+                        && (pSprite->GetDerivedStats()->m_generalState & 0x800) == 0) {
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(g_pBaldurChitin->GetObjectGame()->GetCharacterId(static_cast<SHORT>(nPortrait)),
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                        return TRUE;
+                    }
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(g_pBaldurChitin->GetObjectGame()->GetCharacterId(static_cast<SHORT>(nPortrait)),
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                }
+            }
+        }
+
+        CTypedPtrArray<CPtrArray, int*>& overflow = g_pBaldurChitin->GetObjectGame()->GetCharacterOverflow();
+        for (int nIndex = 0; nIndex < overflow.GetSize(); nIndex++) {
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(reinterpret_cast<LONG>(overflow.ElementAt(nIndex)),
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+            if (rc == CGameObjectArray::SUCCESS) {
+                if (pSprite->GetAIType().OfType(statusTrigger.GetCause(), FALSE, FALSE)
+                    && (pSprite->GetDerivedStats()->m_generalState & 0x800) == 0) {
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(reinterpret_cast<LONG>(overflow.ElementAt(nIndex)),
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    return TRUE;
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(reinterpret_cast<LONG>(overflow.ElementAt(nIndex)),
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+
+        // FIXME: `pSprite` is left pointing at the last (already released)
+        // sprite, so the cleanup below releases it a second time.
+        break;
+    }
+    case CAITRIGGER_RANDOMNUM:
+        bResult = m_randValue % statusTrigger.GetSpecifics() + 1 == statusTrigger.GetInt1();
+        break;
+    case CAITRIGGER_RANDOMNUMGT:
+        bResult = m_randValue % statusTrigger.GetSpecifics() + 1 > statusTrigger.GetInt1();
+        break;
+    case CAITRIGGER_RANDOMNUMLT:
+        bResult = m_randValue % statusTrigger.GetSpecifics() + 1 < statusTrigger.GetInt1();
+        break;
+    case CAITRIGGER_PARTYGOLD:
+        bResult = g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_nPartyGold == static_cast<DWORD>(statusTrigger.GetSpecifics());
+        break;
+    case CAITRIGGER_PARTYGOLDGT:
+        bResult = g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_nPartyGold > static_cast<DWORD>(statusTrigger.GetSpecifics());
+        break;
+    case CAITRIGGER_PARTYGOLDLT:
+        bResult = g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_nPartyGold < static_cast<DWORD>(statusTrigger.GetSpecifics());
+        break;
+    case CAITRIGGER_DEAD:
+        statusTrigger.Decode(this);
+
+        pObject = statusTrigger.GetCause().sub_40D0F0(this, TRUE);
+        if (pObject == NULL) {
+            bResult = TRUE;
+            break;
+        }
+
+        if (pObject->GetObjectType() != TYPE_SPRITE) {
+            bResult = TRUE;
+            break;
+        }
+
+        if ((static_cast<CGameSprite*>(pObject)->GetDerivedStats()->m_generalState & 0x800) != 0) {
+            bResult = TRUE;
+            break;
+        }
+
+        if ((static_cast<CGameSprite*>(pObject)->GetBaseStats()->m_generalState & 0x800) != 0) {
+            bResult = TRUE;
+            break;
+        }
+
+        bResult = FALSE;
+        break;
+    case CAITRIGGER_HASWEAPONEQUIPED:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = pSprite->GetEquipment()->m_selectedWeapon != CGameSpriteEquipment::SLOT_FIST;
+        break;
+    case CAITRIGGER_HAPPINESS:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = pSprite->GetHappiness() == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_HAPPINESSGT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = pSprite->GetHappiness() > statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_HAPPINESSLT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = pSprite->GetHappiness() < statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_NUMINPARTY:
+        bResult = g_pBaldurChitin->GetObjectGame()->GetNumCharacters() == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_NUMINPARTYGT:
+        bResult = g_pBaldurChitin->GetObjectGame()->GetNumCharacters() > statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_NUMINPARTYLT:
+        bResult = g_pBaldurChitin->GetObjectGame()->GetNumCharacters() < statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_NUMDEAD:
+        sTemp2 = DEAD_GLOBAL_PREFIX + statusTrigger.GetString1();
+
+        // NOTE: Result is unused.
+        sTemp2.Left(32);
+
+        {
+            CVariable* pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sTemp2);
+            if (pVariable != NULL) {
+                bResult = pVariable->GetIntValue() == statusTrigger.GetSpecifics();
+            } else {
+                bResult = statusTrigger.GetSpecifics() == 0;
+            }
+        }
+        break;
+    case CAITRIGGER_NUMDEADGT:
+        sTemp2 = DEAD_GLOBAL_PREFIX + statusTrigger.GetString1();
+
+        // NOTE: Result is unused.
+        sTemp2.Left(32);
+
+        {
+            CVariable* pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sTemp2);
+            if (pVariable != NULL) {
+                bResult = pVariable->GetIntValue() > statusTrigger.GetSpecifics();
+            } else {
+                bResult = statusTrigger.GetSpecifics() < 0;
+            }
+        }
+        break;
+    case CAITRIGGER_NUMDEADLT:
+        sTemp2 = DEAD_GLOBAL_PREFIX + statusTrigger.GetString1();
+
+        // NOTE: Result is unused.
+        sTemp2.Left(32);
+
+        {
+            CVariable* pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sTemp2);
+            if (pVariable != NULL) {
+                bResult = pVariable->GetIntValue() < statusTrigger.GetSpecifics();
+            } else {
+                bResult = statusTrigger.GetSpecifics() > 0;
+            }
+        }
+        break;
+    case CAITRIGGER_CONTAINS:
+        statusTrigger.Decode(this);
+
+        pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+        if (pObject == NULL) {
+            return FALSE;
+        }
+
+        if (pObject->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+            CGameContainer* pContainer = static_cast<CGameContainer*>(pObject);
+            for (SHORT nSlot = 0; nSlot < pContainer->GetNumItems(); nSlot++) {
+                CItem* pItem = pContainer->GetItem(nSlot);
+                if (pItem != NULL && pItem->GetResRef() == statusTrigger.GetString1()) {
+                    bResult = TRUE;
+                    break;
+                }
+            }
+        } else {
+            bResult = FALSE;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        pObject = NULL;
+        break;
+    case CAITRIGGER_OPENSTATE:
+        statusTrigger.Decode(this);
+
+        pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+        if (pObject == NULL) {
+            return FALSE;
+        }
+
+        if (pObject->GetObjectType() == CGameObject::TYPE_DOOR) {
+            if (statusTrigger.GetSpecifics() != 0) {
+                bResult = static_cast<CGameDoor*>(pObject)->sub_45B700();
+            } else {
+                bResult = !static_cast<CGameDoor*>(pObject)->sub_45B700();
+            }
+        } else {
+            bResult = FALSE;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        pObject = NULL;
+        break;
+    case CAITRIGGER_ISOVERME:
+        if (GetObjectType() != CGameObject::TYPE_TRIGGER) {
+            return FALSE;
+        }
+
+        statusTrigger.Decode(this);
+
+        if (statusTrigger.GetCause().GetInstance() == -1) {
+            LONG nIndex;
+            if (GetVertListType() == CGameObject::LIST_FRONT) {
+                nIndex = m_pArea->GetNearest(m_id,
+                    statusTrigger.GetCause(),
+                    GetVisualRange(),
+                    GetVisibleTerrainTable(),
+                    TRUE,
+                    TRUE,
+                    FALSE,
+                    0,
+                    FALSE);
+            } else {
+                nIndex = m_pArea->sub_46DAE0(m_pos.x,
+                    m_pos.y,
+                    statusTrigger.GetCause(),
+                    GetVisualRange(),
+                    GetVisibleTerrainTable(),
+                    TRUE,
+                    TRUE,
+                    0,
+                    0);
+            }
+
+            if (nIndex == CGameObjectArray::INVALID_INDEX) {
+                return FALSE;
+            }
+
+            BYTE rc;
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nIndex,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pObject,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                return FALSE;
+            }
+
+            bResult = static_cast<CGameTrigger*>(this)->IsOverActivate(pObject->GetPos());
+            if (bResult) {
+                // NOTE: Original calls `CAIObjectType::operator=` (0x45B370),
+                // which only calls `Set`.
+                m_lTrigger.Set(pObject->GetAIType());
+
+                CMessage* message = new CMessageSetLastObject(pObject->GetAIType(), 0, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nIndex,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            pObject = NULL;
+        } else {
+            pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+            if (pObject != NULL) {
+                bResult = static_cast<CGameTrigger*>(this)->IsOverActivate(pObject->GetPos());
+                if (bResult) {
+                    // NOTE: See above.
+                    m_lTrigger.Set(pObject->GetAIType());
+
+                    CMessage* message = new CMessageSetLastObject(pObject->GetAIType(), 0, m_id, m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                pObject = NULL;
+            }
+        }
+        break;
+    case CAITRIGGER_NUMITEMS:
+        statusTrigger.Decode(this);
+
+        pObject = statusTrigger.GetCause().sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+        if (pObject == NULL) {
+            return FALSE;
+        }
+
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            bResult = static_cast<CGameSprite*>(pObject)->CountItemPersonal(statusTrigger.GetString1()) == statusTrigger.GetSpecifics();
+        } else if (pObject->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+            bResult = static_cast<CGameContainer*>(pObject)->CountItem(CResRef(statusTrigger.GetString1())) == statusTrigger.GetSpecifics();
+        } else {
+            bResult = FALSE;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        pObject = NULL;
+        break;
+    case CAITRIGGER_NUMITEMSGT:
+        statusTrigger.Decode(this);
+
+        pObject = statusTrigger.GetCause().sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+        if (pObject == NULL) {
+            return FALSE;
+        }
+
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            bResult = static_cast<CGameSprite*>(pObject)->CountItemPersonal(statusTrigger.GetString1()) > statusTrigger.GetSpecifics();
+        } else if (pObject->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+            bResult = static_cast<CGameContainer*>(pObject)->CountItem(CResRef(statusTrigger.GetString1())) > statusTrigger.GetSpecifics();
+        } else {
+            bResult = FALSE;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        pObject = NULL;
+        break;
+    case CAITRIGGER_NUMITEMSLT:
+        statusTrigger.Decode(this);
+
+        pObject = statusTrigger.GetCause().sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+        if (pObject == NULL) {
+            return FALSE;
+        }
+
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            bResult = static_cast<CGameSprite*>(pObject)->CountItemPersonal(statusTrigger.GetString1()) < statusTrigger.GetSpecifics();
+        } else if (pObject->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+            bResult = static_cast<CGameContainer*>(pObject)->CountItem(CResRef(statusTrigger.GetString1())) < statusTrigger.GetSpecifics();
+        } else {
+            bResult = FALSE;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        pObject = NULL;
+        break;
+    case CAITRIGGER_NUMITEMSPARTY:
+        {
+            LONG nCount = 0;
+            for (SHORT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->GetNumCharacters(); nPortrait++) {
+                LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    return FALSE;
+                }
+
+                nCount += pSprite->CountItemPersonal(statusTrigger.GetString1());
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+
+            // NOTE: Returns directly, the shares are already released.
+            bResult = nCount == statusTrigger.GetSpecifics();
+            return bResult;
+        }
+        break;
+    case CAITRIGGER_NUMITEMSPARTYGT:
+        {
+            LONG nCount = 0;
+            for (SHORT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->GetNumCharacters(); nPortrait++) {
+                LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    return FALSE;
+                }
+
+                nCount += pSprite->CountItemPersonal(statusTrigger.GetString1());
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+
+            // NOTE: Returns directly, the shares are already released.
+            bResult = nCount > statusTrigger.GetSpecifics();
+            return bResult;
+        }
+        break;
+    case CAITRIGGER_NUMITEMSPARTYLT:
+        {
+            LONG nCount = 0;
+            for (SHORT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->GetNumCharacters(); nPortrait++) {
+                LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    return FALSE;
+                }
+
+                nCount += pSprite->CountItemPersonal(statusTrigger.GetString1());
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+
+            // NOTE: Returns directly, the shares are already released.
+            bResult = nCount < statusTrigger.GetSpecifics();
+            return bResult;
+        }
+        break;
+    case CAITRIGGER_407E:
+        sScope = statusTrigger.GetString1();
+        sName = m_pArea->GetHeader()->m_areaName;
+
+        // NOTE: Original stores the raw compare result, so this is TRUE when
+        // the names differ.
+        bResult = sScope.Compare(sName);
+        break;
+    case CAITRIGGER_4083:
+        bResult = m_pArea->GetBattleSongCounter() == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_4084:
+        bResult = m_pArea->GetBattleSongCounter() < statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_4085:
+        bResult = m_pArea->GetBattleSongCounter() > statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_4086:
+        bResult = m_pArea->GetHeader()->m_areaType & static_cast<WORD>(statusTrigger.GetSpecifics());
+        break;
+    case CAITRIGGER_4090:
+        statusTrigger.Decode(this);
+
+        if (statusTrigger.GetCause().GetInstance() != -1) {
+            if (g_pBaldurChitin->GetObjectGame()->GetFixedOrderCharacterPortraitNum(statusTrigger.GetCause().GetInstance()) != statusTrigger.GetSpecifics()) {
+                return FALSE;
+            }
+
+            // NOTE: Result is not checked.
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(statusTrigger.GetCause().GetInstance(),
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+
+            if ((pSprite->GetDerivedStats()->m_generalState & STATE_DEAD) != 0) {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(statusTrigger.GetCause().GetInstance(),
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return FALSE;
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(statusTrigger.GetCause().GetInstance(),
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            return TRUE;
+        } else {
+            SHORT nSlot = static_cast<SHORT>(statusTrigger.GetSpecifics());
+
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(g_pBaldurChitin->GetObjectGame()->GetFixedOrderCharacterId(nSlot),
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+            if (rc != CGameObjectArray::SUCCESS) {
+                return FALSE;
+            }
+
+            if (pSprite->GetAIType().OfType(statusTrigger.GetCause(), FALSE, FALSE)
+                && (pSprite->GetDerivedStats()->m_generalState & STATE_DEAD) == 0) {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(g_pBaldurChitin->GetObjectGame()->GetFixedOrderCharacterId(nSlot),
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return TRUE;
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(g_pBaldurChitin->GetObjectGame()->GetFixedOrderCharacterId(nSlot),
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            return FALSE;
+        }
+        break;
+    case CAITRIGGER_4092:
+        {
+            CPoint ptObject;
+            CPoint ptTarget;
+            CAIObjectType typeTarget;
+
+            typeTarget.SetName(statusTrigger.GetString1());
+
+            statusTrigger.Decode(this);
+
+            pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+            if (pObject == NULL) {
+                return FALSE;
+            }
+
+            ptObject = pObject->GetPos();
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            pObject = NULL;
+
+            typeTarget.Decode(this);
+
+            pObject = typeTarget.sub_40CCA0(this, FALSE);
+            if (pObject == NULL) {
+                return FALSE;
+            }
+
+            ptTarget = pObject->GetPos();
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            pObject = NULL;
+
+            double a = sub_45B300(m_pos, ptObject);
+            double b = sub_45B300(m_pos, ptTarget);
+            double c = sub_45B300(ptObject, ptTarget);
+
+            if (a > b || c > b) {
+                return FALSE;
+            }
+
+            a = sqrt(a);
+            b = sqrt(b);
+            c = sqrt(c);
+
+            // NOTE: Multiplies by pi instead of dividing.
+            if (acos((b * b + a * a - c * c) / (b * a + b * a)) * 360.0 / 2.0 * 3.1415926535 >= 30.0) {
+                return FALSE;
+            }
+
+            return TRUE;
+        }
+        break;
+    case CAITRIGGER_LEVEL:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = static_cast<LONG>(pSprite->GetDerivedStats()->GetClassMaskLevel(0xFFF)) == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_LEVELGT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = static_cast<LONG>(pSprite->GetDerivedStats()->GetClassMaskLevel(0xFFF)) > statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_LEVELLT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = static_cast<LONG>(pSprite->GetDerivedStats()->GetClassMaskLevel(0xFFF)) < statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_BITGLOBAL: {
+        CVariable* pVariable;
+
+        sScope = statusTrigger.GetString1();
+        sScope.MakeUpper();
+        int nIndex = sScope.Find(":");
+        sTemp1 = sScope.Left(nIndex);
+        sTemp2 = sScope.Right(sScope.GetLength() - nIndex - 1);
+
+        if (sTemp1 == "GLOBAL") {
+            pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sTemp2);
+        } else if (sTemp1 == "LOCALS") {
+            if (GetObjectType() != TYPE_SPRITE) {
+                bResult = FALSE;
+                break;
+            }
+
+            pVariable = static_cast<CGameSprite*>(this)->GetLocalVariables()->FindKey(sTemp2);
+        } else {
+            if (sTemp1 == "MYAREA") {
+                sTemp1 = m_pArea->GetHeader()->m_areaName;
+            }
+
+            CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sTemp1);
+            if (pArea == NULL) {
+                break;
+            }
+
+            pVariable = pArea->GetVariables()->FindKey(sTemp2);
+        }
+
+        if (pVariable == NULL) {
+            bResult = statusTrigger.GetSpecifics() == 0;
+            break;
+        }
+
+        // NOTE: The OR and XOR checks are only reached when the first check
+        // for 1 succeeded, so they can never pass. This mirrors the original.
+        if (statusTrigger.GetInt1() == 1) {
+            if ((pVariable->GetIntValue() & statusTrigger.GetSpecifics()) != 0) {
+                bResult = TRUE;
+            } else if (statusTrigger.GetInt1() == 2) {
+                if ((pVariable->GetIntValue() | statusTrigger.GetSpecifics()) != 0) {
+                    bResult = TRUE;
+                } else if (statusTrigger.GetInt1() == 3) {
+                    if ((pVariable->GetIntValue() ^ statusTrigger.GetSpecifics()) != 0) {
+                        bResult = TRUE;
+                    }
+                }
+            }
+        }
+        break;
+    }
+    case CAITRIGGER_GLOBALBITGLOBAL: {
+        CVariable* pVariable;
+
+        sScope = statusTrigger.GetString1();
+        sScope.MakeUpper();
+        int nIndex = sScope.Find(":");
+        sTemp1 = sScope.Left(nIndex);
+        sTemp2 = sScope.Right(sScope.GetLength() - nIndex - 1);
+
+        LONG nValue = 0;
+        CString sScope2;
+        CString sName2;
+
+        sScope = statusTrigger.GetString2();
+        sScope.MakeUpper();
+        nIndex = sScope.Find(":");
+        sScope2 = sScope.Left(nIndex);
+        sName2 = sScope.Right(sScope.GetLength() - nIndex - 1);
+
+        if (sScope2 == "GLOBAL") {
+            pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sName2);
+            if (pVariable != NULL) {
+                nValue = pVariable->GetIntValue();
+            }
+        } else if (sScope2 == "LOCALS") {
+            if (GetObjectType() == TYPE_SPRITE) {
+                pVariable = static_cast<CGameSprite*>(this)->GetLocalVariables()->FindKey(sName2);
+                if (pVariable != NULL) {
+                    nValue = pVariable->GetIntValue();
+                }
+            }
+        } else {
+            if (sScope2 == "MYAREA") {
+                sScope2 = m_pArea->GetHeader()->m_areaName;
+            }
+
+            CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sScope2);
+            if (pArea != NULL) {
+                pVariable = pArea->GetVariables()->FindKey(sName2);
+                if (pVariable != NULL) {
+                    nValue = pVariable->GetIntValue();
+                }
+            }
+        }
+
+        if (sTemp1 == "GLOBAL") {
+            pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sTemp2);
+        } else if (sTemp1 == "LOCALS") {
+            if (GetObjectType() != TYPE_SPRITE) {
+                bResult = FALSE;
+                break;
+            }
+
+            pVariable = static_cast<CGameSprite*>(this)->GetLocalVariables()->FindKey(sTemp2);
+        } else {
+            if (sTemp1 == "MYAREA") {
+                sTemp1 = m_pArea->GetHeader()->m_areaName;
+            }
+
+            CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sTemp1);
+            if (pArea == NULL) {
+                break;
+            }
+
+            pVariable = pArea->GetVariables()->FindKey(sTemp2);
+        }
+
+        if (pVariable == NULL) {
+            bResult = statusTrigger.GetSpecifics() == 0;
+            break;
+        }
+
+        // NOTE: Same nesting as `BitGlobal`: the OR and XOR checks are only
+        // reached when the check for 1 succeeded.
+        if (statusTrigger.GetSpecifics() == 1) {
+            if ((nValue & pVariable->GetIntValue()) != 0) {
+                bResult = TRUE;
+            } else if (statusTrigger.GetSpecifics() == 2) {
+                if ((pVariable->GetIntValue() | nValue) != 0) {
+                    bResult = TRUE;
+                } else if (statusTrigger.GetSpecifics() == 3) {
+                    if ((pVariable->GetIntValue() ^ nValue) != 0) {
+                        bResult = TRUE;
+                    }
+                }
+            }
+        }
+        break;
+    }
+    case CAITRIGGER_CREATUREHIDDEN:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = pSprite->GetBaseStats()->field_294;
+        break;
+    case CAITRIGGER_HELPEX:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = FALSE;
+        switch (statusTrigger.GetSpecifics()) {
+        case 1:
+            bResult = pSprite->GetAIType().GetEnemyAlly() == m_lHelp.GetEnemyAlly();
+            m_lHelp.SetEnemyAlly(255);
+            break;
+        case 2:
+            bResult = pSprite->GetAIType().GetGeneral() == m_lHelp.GetGeneral();
+            m_lHelp.SetGeneral(255);
+            break;
+        case 3:
+            bResult = pSprite->GetAIType().GetRace() == m_lHelp.GetRace();
+            m_lHelp.SetRace(255);
+            break;
+        case 4:
+            bResult = pSprite->GetAIType().GetClass() & m_lHelp.GetClass();
+            m_lHelp.SetClass(255);
+            break;
+        case 5:
+            bResult = pSprite->GetAIType().GetSpecific() == m_lHelp.GetSpecific();
+            m_lHelp.SetSpecific(255);
+            break;
+        case 6:
+            bResult = pSprite->GetAIType().GetGender() == m_lHelp.GetGender();
+            m_lHelp.SetGender(255);
+            break;
+        case 7:
+            bResult = pSprite->GetAIType().GetAlignment() == m_lHelp.GetAlignment();
+            m_lHelp.SetAlignment(255);
+            break;
+        }
+        break;
+    case CAITRIGGER_NEARLOCATION:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        switch (statusTrigger.GetSpecifics()) {
+        case -2:
+            statusTrigger.SetSpecifics(static_cast<WORD>(static_cast<CGameSprite*>(this)->GetBaseStats()->field_2E4));
+            break;
+        case -1:
+            statusTrigger.SetSpecifics(GetPos().x);
+            break;
+        }
+
+        switch (statusTrigger.GetInt1()) {
+        case -2:
+            statusTrigger.SetInt1(static_cast<WORD>(static_cast<CGameSprite*>(this)->GetBaseStats()->field_2E6));
+            break;
+        case -1:
+            statusTrigger.SetInt1(GetPos().y);
+            break;
+        }
+
+        if (statusTrigger.GetSpecifics() > 0 && statusTrigger.GetInt1() > 0) {
+            LONG nRange = statusTrigger.GetInt2();
+            LONG dx = (pSprite->GetPos().x - statusTrigger.GetSpecifics()) / CPathSearch::GRID_SQUARE_SIZEX;
+            LONG dy = (pSprite->GetPos().y - statusTrigger.GetInt1()) / CPathSearch::GRID_SQUARE_SIZEY;
+            if (dx * dx + dy * dy <= nRange * nRange) {
+                bResult = TRUE;
+            }
+        }
+        break;
+    case CAITRIGGER_ONISLAND:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            bResult = TRUE;
+            break;
+        }
+
+        if ((pSprite->GetBaseStats()->m_generalState & 0x800) != 0) {
+            bResult = TRUE;
+            break;
+        }
+
+        if ((pSprite->GetDerivedStats()->m_generalState & 0x800) != 0) {
+            bResult = TRUE;
+            break;
+        }
+
+        {
+            LONG x = pSprite->GetPos().x;
+            LONG y = pSprite->GetPos().y;
+            if (x <= 1027 && y >= 105 && y <= 590) {
+                if (x < 692 && y < 590) {
+                    bResult = TRUE;
+                } else if (x < 1018 && y < 459) {
+                    bResult = TRUE;
+                } else if (x < 1027 && y < 301) {
+                    bResult = TRUE;
+                }
+            }
+        }
+        break;
+    case CAITRIGGER_TIMERACTIVE: {
+        POSITION pos = m_timers.GetHeadPosition();
+        bResult = FALSE;
+        while (pos != NULL) {
+            CGameTimer* pTimer = m_timers.GetNext(pos);
+            if (pTimer != NULL) {
+                if (pTimer->GetId() == statusTrigger.GetSpecifics()) {
+                    bResult = TRUE;
+                }
+            }
+        }
+        break;
+    }
+    case CAITRIGGER_CHECKPARTYLEVEL: {
+        BYTE nMinLevel = 255;
+        for (SHORT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->GetNumCharacters(); nPortrait++) {
+            LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+
+            BYTE rc;
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                return FALSE;
+            }
+
+            nMinLevel = min(nMinLevel, pSprite->GetDerivedStats()->m_nLevel);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        // FIXME: `pSprite` still points to the last party member, so it is
+        // released a second time at the end of the function.
+        bResult = statusTrigger.GetSpecifics() <= nMinLevel;
+        break;
+    }
+    case CAITRIGGER_DIFFICULTY:
+        switch (statusTrigger.GetInt1()) {
+        case 1:
+            bResult = g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nDifficultyLevel == statusTrigger.GetSpecifics();
+            break;
+        case 2:
+            bResult = static_cast<LONG>(g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nDifficultyLevel) < statusTrigger.GetSpecifics();
+            break;
+        case 3:
+            bResult = static_cast<LONG>(g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nDifficultyLevel) > statusTrigger.GetSpecifics();
+            break;
+        default:
+            bResult = FALSE;
+            break;
+        }
+        break;
+    case CAITRIGGER_40AC:
+    case CAITRIGGER_CHECKSPELLSTATE:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = pSprite->GetDerivedStats()->m_spellStates[statusTrigger.GetSpecifics()];
+        break;
+    case CAITRIGGER_ISHEARTOFFURYMODEON:
+        bResult = g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nNightmareMode;
+        break;
+    case CAITRIGGER_SEQUENCE:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+        if (pObject == NULL) {
+            break;
+        }
+
+        if (pObject->GetObjectType() == TYPE_STATIC) {
+            bResult = static_cast<CGameStatic*>(pObject)->GetVidCell()->GetCurrentSequenceId() == statusTrigger.GetSpecifics();
+        } else if (pObject->GetObjectType() == TYPE_SPRITE) {
+            bResult = static_cast<CGameSprite*>(pObject)->GetSequence() == statusTrigger.GetSpecifics();
+        }
+        break;
+    case CAITRIGGER_SUMMONINGLIMIT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = Icewind586B70::Instance()->GetCount() == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_SUMMONINGLIMITGT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = Icewind586B70::Instance()->GetCount() > statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_SUMMONINGLIMITLT:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = Icewind586B70::Instance()->GetCount() < statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_TOTALITEMCNT:
+        if (1) {
+            statusTrigger.Decode(this);
+
+            pObject = statusTrigger.GetCause().sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+            if (pObject == NULL) {
+                return FALSE;
+            }
+
+            INT nCount = 0;
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                CGameSprite* pTarget = static_cast<CGameSprite*>(pObject);
+                pTarget->GetEquipment();
+                for (INT nSlot = CGameSpriteEquipment::NUM_SLOT - 1; nSlot >= 0; nSlot--) {
+                    CItem* pItem = pTarget->GetEquipment()->m_items[nSlot];
+                    if (pItem != NULL) {
+                        CString sResRef = pItem->GetResRef().GetResRefStr();
+                        if (pItem->GetMaxStackable() > 1) {
+                            nCount += pTarget->GetEquipment()->m_items[nSlot]->GetUsageCount(0);
+                        } else if (pItem->GetItemType() == 58) {
+                            nCount += g_pBaldurChitin->GetObjectGame()->GetNumberOfItemsInBag(pItem->GetResRef(), CString(""));
+                        } else if (sResRef != "00FIST"
+                            && sResRef.Left(7) != "00MFIST"
+                            && (pItem->GetFlagsFile() & 0x44) != 0x40) {
+                            nCount++;
+                        }
+                    }
+                }
+            } else if (pObject->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+                nCount = static_cast<CGameContainer*>(pObject)->GetTotalItemCount(CString(""));
+            }
+
+            bResult = nCount == statusTrigger.GetSpecifics();
+        }
+        break;
+    case CAITRIGGER_TOTALITEMCNTGT:
+        if (1) {
+            statusTrigger.Decode(this);
+
+            pObject = statusTrigger.GetCause().sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+            if (pObject == NULL) {
+                return FALSE;
+            }
+
+            INT nCount = 0;
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                CGameSprite* pTarget = static_cast<CGameSprite*>(pObject);
+                pTarget->GetEquipment();
+                for (INT nSlot = CGameSpriteEquipment::NUM_SLOT - 1; nSlot >= 0; nSlot--) {
+                    CItem* pItem = pTarget->GetEquipment()->m_items[nSlot];
+                    if (pItem != NULL) {
+                        CString sResRef = pItem->GetResRef().GetResRefStr();
+                        if (pItem->GetMaxStackable() > 1) {
+                            nCount += pItem->GetUsageCount(0);
+                        } else if (pItem->GetItemType() == 58) {
+                            nCount += g_pBaldurChitin->GetObjectGame()->GetNumberOfItemsInBag(pItem->GetResRef(), CString(""));
+                        } else if (sResRef != "00FIST"
+                            && sResRef.Left(7) != "00MFIST"
+                            && (pItem->GetFlagsFile() & 0x44) != 0x40) {
+                            nCount++;
+                        }
+                    }
+                }
+            } else if (pObject->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+                nCount = static_cast<CGameContainer*>(pObject)->GetTotalItemCount(CString(""));
+            }
+
+            bResult = nCount > statusTrigger.GetSpecifics();
+        }
+        break;
+    case CAITRIGGER_TOTALITEMCNTLT:
+        if (1) {
+            statusTrigger.Decode(this);
+
+            pObject = statusTrigger.GetCause().sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+            if (pObject == NULL) {
+                return FALSE;
+            }
+
+            INT nCount = 0;
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                CGameSprite* pTarget = static_cast<CGameSprite*>(pObject);
+                pTarget->GetEquipment();
+                for (INT nSlot = CGameSpriteEquipment::NUM_SLOT - 1; nSlot >= 0; nSlot--) {
+                    CItem* pItem = pTarget->GetEquipment()->m_items[nSlot];
+                    if (pItem != NULL) {
+                        CString sResRef = pItem->GetResRef().GetResRefStr();
+                        if (pItem->GetMaxStackable() > 1) {
+                            nCount += pItem->GetUsageCount(0);
+                        } else if (pItem->GetItemType() == 58) {
+                            nCount += g_pBaldurChitin->GetObjectGame()->GetNumberOfItemsInBag(pItem->GetResRef(), CString(""));
+                        } else if (sResRef != "00FIST"
+                            && sResRef.Left(7) != "00MFIST"
+                            && (pItem->GetFlagsFile() & 0x44) != 0x40) {
+                            nCount++;
+                        }
+                    }
+                }
+            } else if (pObject->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+                nCount = static_cast<CGameContainer*>(pObject)->GetTotalItemCount(CString(""));
+            }
+
+            bResult = nCount < statusTrigger.GetSpecifics();
+        }
+        break;
+    case CAITRIGGER_PARTYLEVELVS:
+        if (1) {
+            statusTrigger.Decode(this);
+
+            pObject = statusTrigger.GetCause().sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+            if (pObject == NULL) {
+                return FALSE;
+            }
+
+            INT nLevel = 0;
+            INT nTotal = 0;
+            for (INT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->GetNumCharacters(); nPortrait++) {
+                LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+
+                // NOTE: Shares into `pSprite`, which is released once more at
+                // the end of the function (original bug).
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    return FALSE;
+                }
+
+                nTotal += pSprite->GetDerivedStats()->m_nLevel;
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+
+            INT nAverage = nTotal / g_pBaldurChitin->GetObjectGame()->GetNumCharacters();
+
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                nLevel = static_cast<CGameSprite*>(pObject)->GetDerivedStats()->GetAtOffset(STAT_CLASSLEVELSUM);
+            }
+
+            bResult = nAverage == nLevel;
+        }
+        break;
+    case CAITRIGGER_PARTYLEVELVSGT:
+        if (1) {
+            statusTrigger.Decode(this);
+
+            pObject = statusTrigger.GetCause().sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+            if (pObject == NULL) {
+                return FALSE;
+            }
+
+            INT nLevel = 0;
+            INT nTotal = 0;
+            for (INT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->GetNumCharacters(); nPortrait++) {
+                LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+
+                // NOTE: Shares into `pSprite`, which is released once more at
+                // the end of the function (original bug).
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    return FALSE;
+                }
+
+                nTotal += pSprite->GetDerivedStats()->m_nLevel;
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+
+            INT nAverage = nTotal / g_pBaldurChitin->GetObjectGame()->GetNumCharacters();
+
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                nLevel = static_cast<CGameSprite*>(pObject)->GetDerivedStats()->GetAtOffset(STAT_CLASSLEVELSUM);
+            }
+
+            bResult = nAverage > nLevel;
+        }
+        break;
+    case CAITRIGGER_PARTYLEVELVSLT:
+        if (1) {
+            statusTrigger.Decode(this);
+
+            pObject = statusTrigger.GetCause().sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+            if (pObject == NULL) {
+                return FALSE;
+            }
+
+            INT nLevel = 0;
+            INT nTotal = 0;
+            for (INT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->GetNumCharacters(); nPortrait++) {
+                LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+
+                // NOTE: Shares into `pSprite`, which is released once more at
+                // the end of the function (original bug).
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    return FALSE;
+                }
+
+                nTotal += pSprite->GetDerivedStats()->GetClassMaskLevel(0xFFF);
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+
+            INT nAverage = nTotal / g_pBaldurChitin->GetObjectGame()->GetNumCharacters();
+
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                nLevel = static_cast<CGameSprite*>(pObject)->GetDerivedStats()->GetAtOffset(STAT_CLASSLEVELSUM);
+            }
+
+            bResult = nAverage < nLevel;
+        }
+        break;
+    case CAITRIGGER_TOTALITEMCNTEXCLUDE:
+        if (1) {
+            statusTrigger.Decode(this);
+
+            pObject = statusTrigger.GetCause().sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+            if (pObject == NULL) {
+                return FALSE;
+            }
+
+            INT nCount = 0;
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                CGameSprite* pTarget = static_cast<CGameSprite*>(pObject);
+                pTarget->GetEquipment();
+                for (INT nSlot = CGameSpriteEquipment::NUM_SLOT - 1; nSlot >= 0; nSlot--) {
+                    if (pTarget->GetEquipment()->m_items[nSlot] != NULL) {
+                        if (!(pTarget->GetEquipment()->m_items[nSlot]->GetResRef() == statusTrigger.GetString1())) {
+                            if (pTarget->GetEquipment()->m_items[nSlot]->GetMaxStackable() > 1) {
+                                nCount += pTarget->GetEquipment()->m_items[nSlot]->GetUsageCount(0);
+                            } else if (pTarget->GetEquipment()->m_items[nSlot]->GetItemType() == 58) {
+                                nCount += g_pBaldurChitin->GetObjectGame()->GetNumberOfItemsInBag(pTarget->GetEquipment()->m_items[nSlot]->GetResRef(), statusTrigger.GetString1());
+                            } else {
+                                nCount++;
+                            }
+                        }
+                    }
+                }
+            } else if (pObject->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+                // NOTE: Excludes nothing in containers (unlike the GT variant).
+                nCount = static_cast<CGameContainer*>(pObject)->GetTotalItemCount(CString(""));
+            }
+
+            bResult = nCount == statusTrigger.GetSpecifics();
+        }
+        break;
+    case CAITRIGGER_TOTALITEMCNTEXCLUDEGT:
+        if (1) {
+            statusTrigger.Decode(this);
+
+            pObject = statusTrigger.GetCause().sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+            if (pObject == NULL) {
+                return FALSE;
+            }
+
+            INT nCount = 0;
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                CGameSprite* pTarget = static_cast<CGameSprite*>(pObject);
+                pTarget->GetEquipment();
+                for (INT nSlot = CGameSpriteEquipment::NUM_SLOT - 1; nSlot >= 0; nSlot--) {
+                    if (pTarget->GetEquipment()->m_items[nSlot] != NULL) {
+                        if (!(pTarget->GetEquipment()->m_items[nSlot]->GetResRef() == statusTrigger.GetString1())) {
+                            if (pTarget->GetEquipment()->m_items[nSlot]->GetMaxStackable() > 1) {
+                                nCount += pTarget->GetEquipment()->m_items[nSlot]->GetUsageCount(0);
+                            } else if (pTarget->GetEquipment()->m_items[nSlot]->GetItemType() == 58) {
+                                nCount += g_pBaldurChitin->GetObjectGame()->GetNumberOfItemsInBag(pTarget->GetEquipment()->m_items[nSlot]->GetResRef(), statusTrigger.GetString1());
+                            } else {
+                                nCount++;
+                            }
+                        }
+                    }
+                }
+            } else if (pObject->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+                nCount = static_cast<CGameContainer*>(pObject)->GetTotalItemCount(statusTrigger.GetString1());
+            }
+
+            bResult = nCount > statusTrigger.GetSpecifics();
+        }
+        break;
+    case CAITRIGGER_TOTALITEMCNTEXCLUDELT:
+        if (1) {
+            statusTrigger.Decode(this);
+
+            pObject = statusTrigger.GetCause().sub_40CB20(this, CGameObject::TYPE_AIBASE, FALSE);
+            if (pObject == NULL) {
+                return FALSE;
+            }
+
+            INT nCount = 0;
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                CGameSprite* pTarget = static_cast<CGameSprite*>(pObject);
+                pTarget->GetEquipment();
+                for (INT nSlot = CGameSpriteEquipment::NUM_SLOT - 1; nSlot >= 0; nSlot--) {
+                    if (pTarget->GetEquipment()->m_items[nSlot] != NULL) {
+                        if (!(pTarget->GetEquipment()->m_items[nSlot]->GetResRef() == statusTrigger.GetString1())) {
+                            if (pTarget->GetEquipment()->m_items[nSlot]->GetMaxStackable() > 1) {
+                                nCount += pTarget->GetEquipment()->m_items[nSlot]->GetUsageCount(0);
+                            } else if (pTarget->GetEquipment()->m_items[nSlot]->GetItemType() == 58) {
+                                nCount += g_pBaldurChitin->GetObjectGame()->GetNumberOfItemsInBag(pTarget->GetEquipment()->m_items[nSlot]->GetResRef(), statusTrigger.GetString1());
+                            } else {
+                                nCount++;
+                            }
+                        }
+                    }
+                }
+            } else if (pObject->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+                // NOTE: Excludes nothing in containers (unlike the GT variant).
+                nCount = static_cast<CGameContainer*>(pObject)->GetTotalItemCount(CString(""));
+            }
+
+            bResult = nCount < statusTrigger.GetSpecifics();
+        }
+        break;
+    case CAITRIGGER_CHECKPARTYAVERAGELEVEL:
+        if (1) {
+            INT nTotal = 0;
+            for (SHORT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->GetNumCharacters(); nPortrait++) {
+                LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+
+                // NOTE: The original shares party members into `pSprite`
+                // without clearing it afterwards, so the last one is released
+                // a second time at the end of this function.
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    return FALSE;
+                }
+
+                nTotal += pSprite->GetDerivedStats()->GetClassMaskLevel(0xFFF);
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+
+            INT nAverage = nTotal / g_pBaldurChitin->GetObjectGame()->GetNumCharacters();
+
+            if (statusTrigger.GetInt1() == 1) {
+                bResult = nAverage == statusTrigger.GetSpecifics();
+            } else if (statusTrigger.GetInt1() == 2) {
+                bResult = nAverage < statusTrigger.GetSpecifics();
+            } else if (statusTrigger.GetInt1() == 3) {
+                bResult = nAverage > statusTrigger.GetSpecifics();
+            } else {
+                bResult = FALSE;
+            }
+        }
+        break;
+    case CAITRIGGER_NEARBYDIALOG:
+        if (1) {
+            LONG nRange = statusTrigger.GetSpecifics();
+            if (nRange == 0) {
+                nRange = max(GetArea()->GetInfinity()->nAreaX, GetArea()->GetInfinity()->nAreaY);
+            }
+
+            bResult = m_pArea->GetNearestDialogMatch(m_id, CResRef(statusTrigger.GetString1()), nRange) != CGameObjectArray::INVALID_INDEX;
+        }
+        break;
+    case CAITRIGGER_CHECKAREADIFFLEVEL:
+        bResult = FALSE;
+        if (m_pArea != NULL) {
+            LONG nLevel = statusTrigger.GetSpecifics();
+            if (nLevel >= 1 && nLevel <= 3) {
+                CAreaFileHeader* pHeader = m_pArea->GetHeader();
+                if (pHeader->field_4E < pHeader->field_4C && nLevel == 1) {
+                    bResult = TRUE;
+                }
+
+                if (pHeader->field_4E >= pHeader->field_4C && pHeader->field_4E < pHeader->field_4D && nLevel == 2) {
+                    bResult = TRUE;
+                }
+
+                if (pHeader->field_4E >= pHeader->field_4D && nLevel == 3) {
+                    bResult = TRUE;
+                }
+            }
+        }
+        break;
+    case CAITRIGGER_NUMCREATURESLTMYLEVEL:
+    case CAITRIGGER_NUMCREATURESATMYLEVEL:
+    case CAITRIGGER_NUMCREATURESGTMYLEVEL:
+        bResult = FALSE;
+        if (GetObjectType() == TYPE_SPRITE && m_pArea != NULL) {
+            statusTrigger.Decode(this);
+
+            if (GetVertListType() == LIST_FRONT) {
+                if (GetVertListPos() != NULL) {
+                    m_pArea->GetAllInRange(GetVertListPos(),
+                        GetPos(),
+                        statusTrigger.GetCause(),
+                        GetVisualRange(),
+                        GetVisibleTerrainTable(),
+                        targets,
+                        TRUE,
+                        FALSE);
+                }
+            } else {
+                m_pArea->GetAllInRange(GetPos(),
+                    statusTrigger.GetCause(),
+                    GetVisualRange(),
+                    GetVisibleTerrainTable(),
+                    targets,
+                    TRUE,
+                    FALSE);
+            }
+
+            INT nCount = targets.GetCount();
+            if (nCount > 0) {
+                LONG nMyLevel = static_cast<CGameSprite*>(this)->GetLevel();
+
+                if (statusTrigger.GetSpecifics() != 0) {
+                    nCount = 0;
+
+                    POSITION pos = targets.GetHeadPosition();
+                    while (pos != NULL) {
+                        LONG nId = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+                        CGameObject* pTarget;
+                        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            &pTarget,
+                            INFINITE);
+                        if (rc == CGameObjectArray::SUCCESS) {
+                            if (pTarget->GetObjectType() == TYPE_SPRITE) {
+                                nCount += static_cast<CGameSprite*>(pTarget)->GetLevel();
+                            }
+
+                            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nId,
+                                CGameObjectArray::THREAD_ASYNCH,
+                                INFINITE);
+                        }
+                    }
+                }
+
+                if (statusTrigger.m_triggerID == CAITRIGGER_NUMCREATURESLTMYLEVEL && nCount < nMyLevel) {
+                    bResult = TRUE;
+                } else if (statusTrigger.m_triggerID == CAITRIGGER_NUMCREATURESATMYLEVEL && nCount == nMyLevel) {
+                    bResult = TRUE;
+                } else if (statusTrigger.m_triggerID == CAITRIGGER_NUMCREATURESGTMYLEVEL && nCount > nMyLevel) {
+                    bResult = TRUE;
+                }
+            }
+        }
+        break;
+    case CAITRIGGER_ITEMISIDENTIFIED:
+        bResult = FALSE;
+        statusTrigger.Decode(this);
+        if (1) {
+            CString sItem(statusTrigger.GetString1());
+
+            INT nCharacters = g_pBaldurChitin->GetObjectGame()->GetNumCharacters();
+            for (INT nPortrait = 0; nPortrait < nCharacters; nPortrait++) {
+                LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(static_cast<SHORT>(nPortrait));
+
+                // NOTE: The original shares party members into `pSprite`
+                // without clearing it afterwards, so the last one is released
+                // a second time at the end of this function.
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    SHORT nSlot = pSprite->FindItemPersonal(sItem, 0, FALSE);
+                    if (nSlot == -1) {
+                        nSlot = pSprite->FindItemBags(sItem, 0, FALSE);
+                    }
+
+                    if (nSlot != -1) {
+                        CItem* pItem = pSprite->GetEquipment()->m_items[nSlot];
+                        if (pItem != NULL && (pItem->GetFlags() & 0x1) != 0) {
+                            bResult = TRUE;
+                        }
+                    }
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+
+                    if (nSlot != -1) {
+                        break;
+                    }
+                }
+            }
+        }
+        break;
+    case CAITRIGGER_TRIGGERSETGLOBAL:
+        bResult = TRUE;
+        sScope = statusTrigger.GetString1();
+        sScope.MakeUpper();
+        sTemp1 = sScope.Left(6);
+        sTemp2 = sScope.Right(sScope.GetLength() - 6);
+
+        if (sTemp1 == "GLOBAL") {
+            CVariable* pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sTemp2);
+            if (pVariable != NULL) {
+                pVariable->SetIntValue(statusTrigger.GetSpecifics());
+            } else {
+                CVariable variable;
+                variable.SetName(sTemp2);
+                variable.SetIntValue(statusTrigger.GetSpecifics());
+                g_pBaldurChitin->GetObjectGame()->GetVariables()->AddKey(variable);
+            }
+        } else if (sTemp1 == "LOCALS") {
+            if (GetObjectType() != TYPE_SPRITE) {
+                break;
+            }
+
+            CVariable* pVariable = static_cast<CGameSprite*>(this)->GetLocalVariables()->FindKey(sTemp2);
+            if (pVariable != NULL) {
+                pVariable->SetIntValue(statusTrigger.GetSpecifics());
+            } else {
+                CVariable variable;
+                variable.SetName(sTemp2);
+                variable.SetIntValue(statusTrigger.GetSpecifics());
+                static_cast<CGameSprite*>(this)->GetLocalVariables()->AddKey(variable);
+            }
+        } else {
+            if (sTemp1 == "MYAREA") {
+                // NOTE: `m_areaName` is not NUL-terminated.
+                sTemp1 = m_pArea->GetHeader()->m_areaName;
+            }
+
+            CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sTemp1);
+            if (pArea == NULL) {
+                break;
+            }
+
+            CVariable* pVariable = pArea->GetVariables()->FindKey(sTemp2);
+            if (pVariable != NULL) {
+                pVariable->SetIntValue(statusTrigger.GetSpecifics());
+            } else {
+                CVariable variable;
+                variable.SetName(sTemp2);
+                variable.SetIntValue(statusTrigger.GetSpecifics());
+                pArea->GetVariables()->AddKey(variable);
+            }
+        }
+
+        if (1) {
+            CMessage* message = new CMessageSetVariable(sTemp2,
+                sTemp1,
+                statusTrigger.GetSpecifics(),
+                0,
+                m_id,
+                m_id,
+                0);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+        break;
+    case CAITRIGGER_ANYPCONMAP:
+        bResult = FALSE;
+        if (1) {
+            INT nCharacters = g_pBaldurChitin->GetObjectGame()->GetNumCharacters();
+            for (INT nPortrait = 0; nPortrait < nCharacters; nPortrait++) {
+                CGameSprite* pCharacter;
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(g_pBaldurChitin->GetObjectGame()->GetCharacterId(static_cast<SHORT>(nPortrait)),
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pCharacter),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    if ((pCharacter->GetDerivedStats()->m_generalState & STATE_DEAD) != 0) {
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(g_pBaldurChitin->GetObjectGame()->GetCharacterId(static_cast<SHORT>(nPortrait)),
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                    } else {
+                        if (pCharacter->GetArea() == GetArea()) {
+                            bResult = TRUE;
+                        }
+
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(g_pBaldurChitin->GetObjectGame()->GetCharacterId(static_cast<SHORT>(nPortrait)),
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+
+                        if (bResult == TRUE) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        break;
+    case CAITRIGGER_CHECKDOORFLAGS:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CB20(this, TYPE_DOOR, FALSE);
+        if (pObject == NULL) {
+            bResult = FALSE;
+            break;
+        }
+
+        bResult = statusTrigger.GetSpecifics() & static_cast<CGameDoor*>(pObject)->GetFlags();
+        break;
+    case CAITRIGGER_ISCREATUREHIDDENINSHADOWS:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CB20(this, TYPE_SPRITE, FALSE);
+        if (pObject == NULL) {
+            bResult = FALSE;
+            break;
+        }
+
+        bResult = static_cast<CGameSprite*>(pObject)->sub_453170();
+        break;
+    case CAITRIGGER_CHARGECOUNT:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+        if (pObject == NULL) {
+            bResult = -2;
+            break;
+        }
+
+        if (pObject->GetObjectType() == TYPE_CONTAINER) {
+            break;
+        }
+
+        if (pObject->GetObjectType() != TYPE_SPRITE) {
+            bResult = FALSE;
+            break;
+        }
+
+        if (1) {
+            CGameSprite* pTarget = static_cast<CGameSprite*>(pObject);
+
+            SHORT nSlot = pTarget->FindItemPersonal(statusTrigger.GetString1(), 0, FALSE);
+            if (nSlot == -1) {
+                break;
+            }
+
+            CItem* pItem = pTarget->GetEquipment()->m_items[nSlot];
+            if (pItem == NULL) {
+                break;
+            }
+
+            WORD nCharges = pItem->GetUsageCount(statusTrigger.GetSpecifics());
+            switch (statusTrigger.GetInt2()) {
+            case 1:
+                bResult = nCharges == statusTrigger.GetInt1();
+                break;
+            case 2:
+                bResult = nCharges < statusTrigger.GetInt1();
+                break;
+            case 3:
+                bResult = nCharges > statusTrigger.GetInt1();
+                break;
+            default:
+                bResult = FALSE;
+                break;
+            }
+        }
+        break;
+    case CAITRIGGER_ISACTIVE:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+        if (pObject == NULL) {
+            break;
+        }
+
+        if (pObject->GetObjectType() == TYPE_SOUND) {
+            bResult = static_cast<CGameSound*>(pObject)->IsActive();
+        } else if (pObject->GetObjectType() == TYPE_SPRITE) {
+            bResult = static_cast<CGameSprite*>(pObject)->GetActive();
+        } else if (pObject->GetObjectType() == TYPE_TRIGGER) {
+            bResult = static_cast<CGameTrigger*>(pObject)->sub_45B950();
+        }
+        break;
+    case CAITRIGGER_INTRAP:
+        statusTrigger.Decode(this);
+        if (GetObjectType() == TYPE_TRIGGER) {
+            // NOTE: Passes `TYPE_SPRITE` as `checkBackList`.
+            pObject = statusTrigger.GetCause().sub_40CCA0(this, TYPE_SPRITE);
+        }
+
+        if (pObject != NULL) {
+            bResult = static_cast<CGameTrigger*>(this)->IsOverActivate(pObject->GetPos());
+        } else {
+            bResult = -2;
+        }
+        break;
+    case CAITRIGGER_ISEXTENDEDNIGHT:
+        bResult = m_pArea->GetHeader()->m_areaType & 0x40;
+        break;
+    case CAITRIGGER_INCUTSCENEMODE:
+        bResult = g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_mode == 0x142;
+        break;
+    case CAITRIGGER_HASITEMINSLOT:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CB20(this, TYPE_SPRITE, FALSE);
+        if (pObject == NULL) {
+            break;
+        }
+
+        if (statusTrigger.GetSpecifics() >= CScreenInventory::PERSONAL_INVENTORY_SIZE) {
+            break;
+        }
+
+        if (static_cast<CGameSprite*>(pObject)->GetEquipment()->m_items[statusTrigger.GetSpecifics()] != NULL) {
+            bResult = static_cast<CGameSprite*>(pObject)->GetEquipment()->m_items[statusTrigger.GetSpecifics()]->GetResRef() == statusTrigger.GetString1();
+        } else {
+            bResult = statusTrigger.GetString1() == "";
+        }
+        break;
+    case CAITRIGGER_ISROTATION:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CB20(this, TYPE_SPRITE, FALSE);
+        if (pObject == NULL) {
+            break;
+        }
+
+        bResult = static_cast<CGameSprite*>(pObject)->GetDirection() == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_ISFACINGSAVEDROTATION:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CB20(this, TYPE_SPRITE, FALSE);
+        if (pObject == NULL) {
+            break;
+        }
+
+        bResult = static_cast<CGameSprite*>(pObject)->GetBaseStats()->field_2E8 == static_cast<CGameSprite*>(pObject)->GetDirection();
+        break;
+    case CAITRIGGER_FRAME:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+        if (pObject == NULL) {
+            break;
+        }
+
+        if (1) {
+            LONG nMax = max(statusTrigger.GetSpecifics(), statusTrigger.GetInt1());
+            LONG nMin = min(statusTrigger.GetSpecifics(), statusTrigger.GetInt1());
+
+            SHORT nFrame;
+            if (pObject->GetObjectType() == TYPE_STATIC) {
+                nFrame = static_cast<CGameStatic*>(pObject)->GetVidCell()->GetCurrentFrameId();
+            } else if (pObject->GetObjectType() == TYPE_SPRITE) {
+                nFrame = static_cast<CGameSprite*>(pObject)->GetAnimation()->m_animation->GetCurrentFrame();
+            } else {
+                break;
+            }
+
+            if (nFrame <= nMax && nFrame >= nMin) {
+                bResult = TRUE;
+            } else {
+                bResult = FALSE;
+            }
+        }
+        break;
+    case CAITRIGGER_SETLASTMARKEDOBJECT:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+        if (pObject != NULL) {
+            sub_4530F0(pObject->GetAIType());
+        } else {
+            sub_4530F0(CAIObjectType::NOONE);
+        }
+        bResult = TRUE;
+        break;
+    case CAITRIGGER_SETSPELLTARGET:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+        if (pObject != NULL) {
+            sub_45B6E0(pObject->GetAIType());
+        } else {
+            sub_45B6E0(CAIObjectType::NOONE);
+        }
+        bResult = TRUE;
+        break;
+    case CAITRIGGER_ISPATHCRITICALOBJECT:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CCA0(this, FALSE);
+        if (pObject == NULL) {
+            bResult = FALSE;
+            break;
+        }
+
+        bResult = (static_cast<CGameSprite*>(pObject)->GetBaseStats()->m_flags >> 13) & 1;
+        break;
+    case CAITRIGGER_ANYPCSEESENEMY:
+        if (1) {
+            CAIObjectType typeEnemy(CAIObjectType::EA_ENEMY, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0);
+            bResult = FALSE;
+
+            for (SHORT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->GetNumCharacters(); nPortrait++) {
+                LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+
+                CGameSprite* pCharacter;
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pCharacter),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    typeEnemy.Decode(pCharacter);
+
+                    CGameObject* pEnemy = typeEnemy.sub_40CB20(pCharacter, TYPE_SPRITE, FALSE);
+                    if (pEnemy != NULL) {
+                        bResult = pCharacter->CanSeeTarget(pEnemy, FALSE);
+
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pEnemy->GetId(),
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                    }
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+
+                    if (bResult == TRUE) {
+                        break;
+                    }
+                }
+            }
+        }
+        break;
+    case CAITRIGGER_FALLENPALADIN:
+    case CAITRIGGER_OUTOFAMMO:
+        statusTrigger.Decode(this);
+        pObject = statusTrigger.GetCause().sub_40CB20(this, TYPE_SPRITE, FALSE);
+        if (pObject == NULL) {
+            return FALSE;
+        }
+
+        bResult = FALSE;
+        if (pObject->GetObjectType() != TYPE_SPRITE) {
+            break;
+        }
+
+        if ((static_cast<CGameSprite*>(pObject)->GetDerivedStats()->m_classMask & 0x7) == 0) {
+            bResult = FALSE;
+            break;
+        }
+
+        if ((static_cast<CGameSprite*>(pObject)->GetBaseStats()->m_flags & 0x200) != 0) {
+            bResult = TRUE;
+        }
+        break;
+    case CAITRIGGER_FALSE:
+    case CAITRIGGER_HASINNATEABILITY:
+        bResult = FALSE;
+        break;
+    case CAITRIGGER_ISANIMATIONID:
+        bSpriteNotShared = GetTriggerSprite(statusTrigger, &pSprite);
+        if (pSprite == NULL) {
+            return FALSE;
+        }
+
+        bResult = pSprite->GetAnimation()->GetAnimationId() == statusTrigger.GetSpecifics();
+        break;
+    case CAITRIGGER_PCINSTORE:
+        bResult = FALSE;
+        if (1) {
+            CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+            for (SHORT nPortrait = 0; nPortrait < pGame->GetNumCharacters(); nPortrait++) {
+                LONG nCharacterId = pGame->GetCharacterId(nPortrait);
+
+                CGameSprite* pCharacter;
+                BYTE rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pCharacter),
+                    INFINITE);
+                if (rc != CGameObjectArray::SUCCESS) {
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameAIBase.cpp
+                    // __LINE__: 6035
+                    UTIL_ASSERT(FALSE);
+                    return -2;
+                }
+
+                if (pCharacter->sub_45B710()) {
+                    pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    bResult = TRUE;
+                    break;
+                }
+
+                pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+        break;
+    default:
+        break;
+    }
+
+    if (pSprite != NULL && !bSpriteNotShared) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pSprite->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    if (pObject != NULL) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    return bResult;
+}
+
 // 0x45B6D0
 int CGameAIBase::sub_45B6D0()
 {
@@ -1893,6 +4936,96 @@ int CGameAIBase::sub_45B6D0()
 void CGameAIBase::sub_45B6E0(const CAIObjectType& type)
 {
     field_3BA.Set(type);
+}
+
+// 0x45D050
+BOOL CGameAIBase::GetTriggerSprite(CAITrigger& trigger, CGameSprite** ppSprite)
+{
+    trigger.m_triggerCause.Decode(this);
+
+    *ppSprite = static_cast<CGameSprite*>(trigger.m_triggerCause.sub_40CB20(this, CGameObject::TYPE_SPRITE, FALSE));
+    if (*ppSprite != NULL) {
+        if ((*ppSprite)->GetAIType().Equal(CAIObjectType::NOT_SPRITE)) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare((*ppSprite)->m_id,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            *ppSprite = NULL;
+        }
+    }
+
+    return FALSE;
+}
+
+// 0x44DAC0
+BOOL CGameAIBase::CanSeeTarget(CGameObject* pTarget, BOOL bIgnoreDead)
+{
+    if (pTarget == NULL || pTarget->m_pArea != m_pArea) {
+        return FALSE;
+    }
+
+    if (pTarget->GetObjectType() == TYPE_SPRITE) {
+        if (static_cast<CGameSprite*>(pTarget)->m_baseStats.field_294) {
+            return FALSE;
+        }
+
+        if (!bIgnoreDead
+            && (static_cast<CGameSprite*>(pTarget)->m_derivedStats.m_generalState & STATE_DEAD) != 0) {
+            return FALSE;
+        }
+    }
+
+    BOOL bOrderable = FALSE;
+
+    LONG nTargetX = pTarget->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX;
+    LONG nTargetY = pTarget->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY;
+    LONG nX = GetPos().x / CPathSearch::GRID_SQUARE_SIZEX;
+    LONG nY = GetPos().y / CPathSearch::GRID_SQUARE_SIZEY;
+    LONG nDistance = (nX - nTargetX) * (nX - nTargetX) + (nY - nTargetY) * (nY - nTargetY);
+
+    if (pTarget->GetObjectType() == TYPE_SPRITE) {
+        bOrderable = static_cast<CGameSprite*>(pTarget)->Orderable(FALSE);
+    }
+
+    if (nDistance > GetVisualRange() * GetVisualRange()) {
+        return FALSE;
+    }
+
+    if (!m_pArea->CheckLOS(pTarget->GetPos(), GetPos(), GetVisibleTerrainTable(), static_cast<BOOLEAN>(bOrderable))) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+// 0x45D560
+BYTE CGameAIBase::GetReaction(CGameSprite* pSprite)
+{
+    BYTE nReactionRoll = m_reactionRoll;
+    SHORT nCHR = pSprite->m_derivedStats.m_nCHR;
+
+    SHORT nReputation;
+    if (pSprite->GetAIType().m_nEnemyAlly == CAIObjectType::EA_PC) {
+        nReputation = g_pBaldurChitin->GetObjectGame()->m_nReputation / CInfGame::REPUTATION_MULTIPLIER;
+    } else {
+        nReputation = pSprite->m_derivedStats.m_nReputation;
+    }
+
+    BYTE nReaction = static_cast<BYTE>(atol(g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_tReactionModCharisma.GetAt(CPoint(static_cast<WORD>(nCHR) - 1, 0))));
+    nReaction += static_cast<BYTE>(atol(g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_tReactionModReputation.GetAt(CPoint(static_cast<WORD>(nReputation) - 1, 0))));
+    nReaction += nReactionRoll;
+
+    if (GetObjectType() == CGameObject::TYPE_SPRITE) {
+        if ((pSprite->GetAIType().m_nClassMask & CLASSMASK_RANGER) != 0) {
+            if (g_pBaldurChitin->GetObjectGame()->GetRuleTables().IsHatedRace(pSprite->GetAIType(), static_cast<CGameSprite*>(this)->m_baseStats)) {
+                if (nReaction < 4) {
+                    return 0;
+                }
+                nReaction -= 4;
+            }
+        }
+    }
+
+    return nReaction;
 }
 
 // -----------------------------------------------------------------------------

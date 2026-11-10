@@ -1128,6 +1128,33 @@ SHORT CGameContainer::CountItem(const CResRef& res)
     return nCount;
 }
 
+// 0x481C50
+SHORT CGameContainer::GetTotalItemCount(CString sExcludeResRef)
+{
+    INT nCount = 0;
+
+    POSITION pos = m_lstItems.GetHeadPosition();
+    while (pos != NULL) {
+        CItem* pItem = m_lstItems.GetNext(pos);
+        if (pItem == NULL) {
+            break;
+        }
+
+        WORD nMaxStackable = pItem->GetMaxStackable();
+        if (!(pItem->GetResRef() == sExcludeResRef)) {
+            if (nMaxStackable > 1) {
+                nCount += pItem->GetUsageCount(0);
+            } else if (pItem->GetItemType() == 58) {
+                nCount += g_pBaldurChitin->GetObjectGame()->GetNumberOfItemsInBag(pItem->GetResRef(), CString(""));
+            } else {
+                nCount++;
+            }
+        }
+    }
+
+    return static_cast<SHORT>(nCount);
+}
+
 // FIXME: `scriptRes` should be reference.
 //
 // 0x45FE90

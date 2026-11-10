@@ -9489,7 +9489,7 @@ CVidBitmap* CInfGame::GetMasterBitmap()
     return &m_rgbMasterBitmap;
 }
 
-// NOTE: Inlined.
+// 0x45B610
 LONG CInfGame::GetFixedOrderCharacterId(SHORT nSlot)
 {
     if (nSlot < 6) {

@@ -76,6 +76,7 @@ public:
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_PATH;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_SEQUENCE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_TRIGGER;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_SET_VARIABLE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SPRITE_DEATH;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SPRITE_EQUIPMENT;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SPRITE_PETRIFY;
@@ -1060,6 +1061,24 @@ public:
     void Run() override;
 
     /* 000C */ CAITrigger m_trigger;
+};
+
+class CMessageSetVariable : public CMessage {
+public:
+    CMessageSetVariable(const CString& sName, const CString& sScope, LONG nValue, BYTE nOperation, LONG caller, LONG target, DWORD dwFlags);
+    ~CMessageSetVariable() override;
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CString m_sScope;
+    /* 0010 */ CString m_sName;
+    /* 0014 */ LONG m_nValue;
+    /* 0018 */ BYTE m_nOperation;
+    /* 001A */ DWORD m_dwFlags;
 };
 
 class CMessageSpriteDeath : public CMessage {

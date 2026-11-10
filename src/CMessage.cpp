@@ -209,6 +209,9 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_SEQUENCE = 50;
 // 0x84CF0B
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_TRIGGER = 52;
 
+// 0x84CF0C
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_VARIABLE = 53;
+
 // 0x84CF06
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_LAST_OBJECT = 47;
 
@@ -10724,6 +10727,62 @@ void CMessageSetTrigger::Run()
             CGameObjectArray::THREAD_ASYNCH,
             INFINITE);
     }
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x45B890
+CMessageSetVariable::CMessageSetVariable(const CString& sName, const CString& sScope, LONG nValue, BYTE nOperation, LONG caller, LONG target, DWORD dwFlags)
+    : CMessage(caller, target)
+{
+    m_sScope = sScope;
+    m_sName = sName;
+    m_nValue = nValue;
+    m_dwFlags = dwFlags;
+    m_nOperation = nOperation;
+}
+
+// 0x453590
+CMessageSetVariable::~CMessageSetVariable()
+{
+}
+
+// 0x43E170
+SHORT CMessageSetVariable::GetCommType()
+{
+    return BROADCAST_FORCED;
+}
+
+// 0x40A0E0
+BYTE CMessageSetVariable::GetMsgType()
+{
+    return CBaldurMessage::MSG_TYPE_CMESSAGE;
+}
+
+// 0x453560
+BYTE CMessageSetVariable::GetMsgSubType()
+{
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_VARIABLE;
+}
+
+// 0x50A4D0
+void CMessageSetVariable::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    // TODO: Incomplete.
+}
+
+// 0x50A6C0
+BOOL CMessageSetVariable::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x50A820
+void CMessageSetVariable::Run()
+{
+    // TODO: Incomplete.
 }
 
 // -----------------------------------------------------------------------------

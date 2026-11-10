@@ -40,6 +40,7 @@ public:
     /* 0000 */ ~CGameAIBase() override;
     /* 002C */ BOOLEAN CompressTime(DWORD deltaTime) override;
     /* 0048 */ void RemoveFromArea() override;
+    /* 0064 */ BOOL EvaluateStatusTrigger(const CAITrigger& trigger) override;
     /* 006C */ virtual void ClearActions(BOOL a1);
     /* 0074 */ virtual void AddAction(const CAIAction& action);
     /* 0078 */ virtual void AddEffect(CGameEffect* pEffect, BYTE list, BOOL noSave, BOOL immediateApply);
@@ -53,6 +54,7 @@ public:
     /* 0098 */ virtual SHORT GetVisualRange();
     /* 009C */ virtual const BYTE* GetVisibleTerrainTable();
     /* 00A0 */ virtual const BYTE* GetTerrainTable();
+    /* 00A4 */ virtual BOOL GetTriggerSprite(CAITrigger& trigger, CGameSprite** ppSprite);
     /* 00A8 */ virtual SHORT GetHelpRange();
     /* 00AC */ virtual void ApplyTriggers();
     /* 00B0 */ virtual void AutoPause(DWORD type);
@@ -129,6 +131,8 @@ public:
     void SetLastActionReturn(SHORT returnValue);
     int sub_45B6D0();
     void sub_45B6E0(const CAIObjectType& type);
+    BOOL CanSeeTarget(CGameObject* pTarget, BOOL bIgnoreDead);
+    BYTE GetReaction(CGameSprite* pSprite);
 
     /* 006E */ CAIObjectType m_lAttacker;
     /* 00AA */ LONG m_lAttackStyle;
