@@ -2857,11 +2857,11 @@ BOOL CInfGame::SaveGame(BOOLEAN bProgressBarRequired, BOOLEAN bProgressBarInPlac
     return TRUE;
 }
 
-// Converts "GAMEV2.0" party creature (0x180 bytes) to "GAMEV2.1" format.
-static void sub_5A79E0(BYTE* pCreature20, CSavedGamePartyCreature21* pCreature21);
+// Converts "GAMEV2.0" party creature to "GAMEV2.1" format.
+static void sub_5A79E0(const CSavedGamePartyCreature20* pCreature20, CSavedGamePartyCreature21* pCreature21);
 
 // Converts "GAMEV2.1" party creature to "GAMEV2.2" format.
-static void sub_5A7BF0(CSavedGamePartyCreature21* pCreature21, CSavedGamePartyCreature* pCreature22);
+static void sub_5A7BF0(const CSavedGamePartyCreature21* pCreature21, CSavedGamePartyCreature* pCreature22);
 
 // 0x5A7E40
 void CInfGame::Unmarshal(BYTE* pGame, LONG nGame, BOOLEAN bProgressBarInPlace)
@@ -2979,9 +2979,9 @@ void CInfGame::Unmarshal(BYTE* pGame, LONG nGame, BOOLEAN bProgressBarInPlace)
     // never set. IWD2 saves don't have global creatures.
     for (DWORD nCreature = 0; nCreature < pHeader->m_globalCreatureTableCount;) {
         if (nVersion == 20) {
-            sub_5A79E0(pGame + pHeader->m_partyCreatureTableOffset, &creature21);
+            sub_5A79E0(reinterpret_cast<CSavedGamePartyCreature20*>(pGame + pHeader->m_partyCreatureTableOffset), &creature21);
             pCreature21 = &creature21;
-            cnt += 0x180;
+            cnt += sizeof(CSavedGamePartyCreature20);
         } else if (nVersion == 21) {
             pCreature21 = reinterpret_cast<CSavedGamePartyCreature21*>(pGame + pHeader->m_partyCreatureTableOffset);
             sub_5A7BF0(pCreature21, &creature22);
@@ -3118,10 +3118,10 @@ void CInfGame::Unmarshal(BYTE* pGame, LONG nGame, BOOLEAN bProgressBarInPlace)
 
     for (DWORD nCharacter = 0; nCharacter < pHeader->m_partyCreatureTableCount; nCharacter++) {
         if (nVersion == 20) {
-            sub_5A79E0(pGame + pHeader->m_partyCreatureTableOffset + nCharacter * 0x180, &creature21);
+            sub_5A79E0(reinterpret_cast<CSavedGamePartyCreature20*>(pGame + pHeader->m_partyCreatureTableOffset) + nCharacter, &creature21);
             sub_5A7BF0(&creature21, &creature22);
             pCreature22 = &creature22;
-            cnt += 0x180;
+            cnt += sizeof(CSavedGamePartyCreature20);
         } else if (nVersion == 21) {
             sub_5A7BF0(reinterpret_cast<CSavedGamePartyCreature21*>(pGame + pHeader->m_partyCreatureTableOffset) + nCharacter,
                 &creature22);
@@ -3438,15 +3438,96 @@ void CInfGame::Unmarshal(BYTE* pGame, LONG nGame, BOOLEAN bProgressBarInPlace)
 }
 
 // 0x5A79E0
-static void sub_5A79E0(BYTE* pCreature20, CSavedGamePartyCreature21* pCreature21)
+static void sub_5A79E0(const CSavedGamePartyCreature20* pCreature20, CSavedGamePartyCreature21* pCreature21)
 {
-    // TODO: Incomplete.
+    pCreature21->m_wFlags = pCreature20->m_wFlags;
+    pCreature21->m_portraitId = pCreature20->m_portraitId;
+    pCreature21->m_creatureOffset = pCreature20->m_creatureOffset;
+    pCreature21->m_creatureSize = pCreature20->m_creatureSize;
+    memcpy(pCreature21->m_creatureResRef, pCreature20->m_creatureResRef, RESREF_SIZE);
+    pCreature21->m_creatureFacing = pCreature20->m_creatureFacing;
+    memcpy(pCreature21->m_areaName, pCreature20->m_areaName, RESREF_SIZE);
+    pCreature21->m_posX = pCreature20->m_posX;
+    pCreature21->m_posY = pCreature20->m_posY;
+    pCreature21->m_posViewX = pCreature20->m_posViewX;
+    pCreature21->m_posViewY = pCreature20->m_posViewY;
+    pCreature21->m_nModalState = pCreature20->m_nModalState;
+    pCreature21->m_nHappiness = pCreature20->m_nHappiness;
+    memcpy(pCreature21->m_nNumberOfTimesInteractedWith, pCreature20->m_nNumberOfTimesInteractedWith, sizeof(pCreature20->m_nNumberOfTimesInteractedWith));
+
+    // NOTE: 2.0 has 4 quick weapon slots and 3 quick spells, the rest stay
+    // as they are.
+    memcpy(pCreature21->m_quickWeaponsItemNum, pCreature20->m_quickWeaponsItemNum, sizeof(pCreature20->m_quickWeaponsItemNum));
+    memcpy(pCreature21->m_quickWeaponsAbilityNum, pCreature20->m_quickWeaponsAbilityNum, sizeof(pCreature20->m_quickWeaponsAbilityNum));
+    memcpy(pCreature21->m_quickSpellsSpellId, pCreature20->m_quickSpellsSpellId, sizeof(pCreature20->m_quickSpellsSpellId));
+    memcpy(pCreature21->m_quickItemsItemNum, pCreature20->m_quickItemsItemNum, sizeof(pCreature20->m_quickItemsItemNum));
+    memcpy(pCreature21->m_quickItemsAbilityNum, pCreature20->m_quickItemsAbilityNum, sizeof(pCreature20->m_quickItemsAbilityNum));
+
+    memcpy(pCreature21->m_name, pCreature20->m_name, SCRIPTNAME_SIZE);
+    pCreature21->m_nNumberOfTimesTalkedTo = pCreature20->m_nNumberOfTimesTalkedTo;
+    pCreature21->m_strStrongestKillName = pCreature20->m_strStrongestKillName;
+    pCreature21->m_nStrongestKillXPValue = pCreature20->m_nStrongestKillXPValue;
+    pCreature21->m_nPreviousTimeWithParty = pCreature20->m_nPreviousTimeWithParty;
+    pCreature21->m_nJoinPartyTime = pCreature20->m_nJoinPartyTime;
+    pCreature21->m_bWithParty = pCreature20->m_bWithParty;
+    pCreature21->m_nChapterKillsXPValue = pCreature20->m_nChapterKillsXPValue;
+    pCreature21->m_nChapterKillsNumber = pCreature20->m_nChapterKillsNumber;
+    pCreature21->m_nGameKillsXPValue = pCreature20->m_nGameKillsXPValue;
+    pCreature21->m_nGameKillsNumber = pCreature20->m_nGameKillsNumber;
+    memcpy(pCreature21->m_lSpellStatsName, pCreature20->m_lSpellStatsName, sizeof(pCreature20->m_lSpellStatsName));
+    memcpy(pCreature21->m_lSpellStatsCount, pCreature20->m_lSpellStatsCount, sizeof(pCreature20->m_lSpellStatsCount));
+    memcpy(pCreature21->m_lWeaponStatsName, pCreature20->m_lWeaponStatsName, sizeof(pCreature20->m_lWeaponStatsName));
+    memcpy(pCreature21->m_lWeaponStatsCount, pCreature20->m_lWeaponStatsCount, sizeof(pCreature20->m_lWeaponStatsCount));
+    memcpy(pCreature21->m_secondarySounds, pCreature20->m_secondarySounds, RESREF_SIZE);
+    memcpy(pCreature21->field_200, pCreature20->field_160, sizeof(pCreature20->field_160));
 }
 
 // 0x5A7BF0
-static void sub_5A7BF0(CSavedGamePartyCreature21* pCreature21, CSavedGamePartyCreature* pCreature22)
+static void sub_5A7BF0(const CSavedGamePartyCreature21* pCreature21, CSavedGamePartyCreature* pCreature22)
 {
-    // TODO: Incomplete.
+    pCreature22->m_wFlags = pCreature21->m_wFlags;
+    pCreature22->m_portraitId = pCreature21->m_portraitId;
+    pCreature22->m_creatureOffset = pCreature21->m_creatureOffset;
+    pCreature22->m_creatureSize = pCreature21->m_creatureSize;
+    memcpy(pCreature22->m_creatureResRef, pCreature21->m_creatureResRef, RESREF_SIZE);
+    pCreature22->m_creatureFacing = pCreature21->m_creatureFacing;
+    memcpy(pCreature22->m_areaName, pCreature21->m_areaName, RESREF_SIZE);
+    pCreature22->m_posX = pCreature21->m_posX;
+    pCreature22->m_posY = pCreature21->m_posY;
+    pCreature22->m_posViewX = pCreature21->m_posViewX;
+    pCreature22->m_posViewY = pCreature21->m_posViewY;
+    pCreature22->m_nModalState = pCreature21->m_nModalState;
+    pCreature22->m_nHappiness = pCreature21->m_nHappiness;
+    memcpy(pCreature22->m_nNumberOfTimesInteractedWith, pCreature21->m_nNumberOfTimesInteractedWith, sizeof(pCreature21->m_nNumberOfTimesInteractedWith));
+    memcpy(pCreature22->m_quickWeaponsItemNum, pCreature21->m_quickWeaponsItemNum, sizeof(pCreature21->m_quickWeaponsItemNum));
+    memcpy(pCreature22->m_quickWeaponsAbilityNum, pCreature21->m_quickWeaponsAbilityNum, sizeof(pCreature21->m_quickWeaponsAbilityNum));
+
+    // NOTE: 2.1 has 6 quick spells, innates and songs and no spell classes,
+    // the rest stay as they are.
+    memcpy(pCreature22->m_quickSpellsSpellId, pCreature21->m_quickSpellsSpellId, sizeof(pCreature21->m_quickSpellsSpellId));
+    memcpy(pCreature22->m_quickItemsItemNum, pCreature21->m_quickItemsItemNum, sizeof(pCreature21->m_quickItemsItemNum));
+    memcpy(pCreature22->m_quickItemsAbilityNum, pCreature21->m_quickItemsAbilityNum, sizeof(pCreature21->m_quickItemsAbilityNum));
+    memcpy(pCreature22->m_quickInnatesSpellId, pCreature21->m_quickInnatesSpellId, sizeof(pCreature21->m_quickInnatesSpellId));
+    memcpy(pCreature22->m_quickSongsSpellId, pCreature21->m_quickSongsSpellId, sizeof(pCreature21->m_quickSongsSpellId));
+    memcpy(pCreature22->field_19A, pCreature21->field_148, sizeof(pCreature21->field_148));
+
+    memcpy(pCreature22->m_name, pCreature21->m_name, SCRIPTNAME_SIZE);
+    pCreature22->m_nNumberOfTimesTalkedTo = pCreature21->m_nNumberOfTimesTalkedTo;
+    pCreature22->m_strStrongestKillName = pCreature21->m_strStrongestKillName;
+    pCreature22->m_nStrongestKillXPValue = pCreature21->m_nStrongestKillXPValue;
+    pCreature22->m_nPreviousTimeWithParty = pCreature21->m_nPreviousTimeWithParty;
+    pCreature22->m_nJoinPartyTime = pCreature21->m_nJoinPartyTime;
+    pCreature22->m_bWithParty = pCreature21->m_bWithParty;
+    pCreature22->m_nChapterKillsXPValue = pCreature21->m_nChapterKillsXPValue;
+    pCreature22->m_nChapterKillsNumber = pCreature21->m_nChapterKillsNumber;
+    pCreature22->m_nGameKillsXPValue = pCreature21->m_nGameKillsXPValue;
+    pCreature22->m_nGameKillsNumber = pCreature21->m_nGameKillsNumber;
+    memcpy(pCreature22->m_lSpellStatsName, pCreature21->m_lSpellStatsName, sizeof(pCreature21->m_lSpellStatsName));
+    memcpy(pCreature22->m_lSpellStatsCount, pCreature21->m_lSpellStatsCount, sizeof(pCreature21->m_lSpellStatsCount));
+    memcpy(pCreature22->m_lWeaponStatsName, pCreature21->m_lWeaponStatsName, sizeof(pCreature21->m_lWeaponStatsName));
+    memcpy(pCreature22->m_lWeaponStatsCount, pCreature21->m_lWeaponStatsCount, sizeof(pCreature21->m_lWeaponStatsCount));
+    memcpy(pCreature22->m_secondarySounds, pCreature21->m_secondarySounds, RESREF_SIZE);
+    memcpy(pCreature22->field_25E, pCreature21->field_200, sizeof(pCreature21->field_200));
 }
 
 // 0x5A9680
