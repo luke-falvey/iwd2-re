@@ -14,8 +14,8 @@ public:
     BOOL OpenFile();
     UINT ReadResource(RESID resID, LPVOID lpBuf, UINT nCount, UINT nOffset);
     void UnCache();
-    BOOL sub_789A20();
-    BOOL sub_789CE0();
+    BOOL Cache();
+    DWORD GetCacheSize();
     BOOLEAN sub_78A0F0(CString& sResFileName);
 
     /* 0004 */ int field_4;

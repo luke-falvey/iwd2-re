@@ -1384,7 +1384,67 @@ void CInfGame::sub_5A0160()
 // 0x5A04B0
 LONG CInfGame::CachingRequirements(const CString& areaName)
 {
-    return 0;
+    CAreaFile cAreaFile;
+    LONG nTotal = 0;
+
+    // NOTE: Uninline.
+    cAreaFile.SetResRef(CResRef(areaName), TRUE, TRUE);
+
+    BYTE* pData = cAreaFile.GetData();
+    if (pData == NULL) {
+        return 0;
+    }
+
+    // NOTE: The WED resref is at offset 8 of the ARE file (after signature
+    // and version).
+    CResFile* pResFile = g_pChitin->cDimm.GetResFilePtr(g_pChitin->cDimm.GetResID(CResRef(pData + 8), 1003));
+    cAreaFile.ReleaseData();
+
+    if (pResFile == NULL) {
+        return 0;
+    }
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return pResFile->GetCacheSize();
+    }
+
+    CString sResFileName;
+    CString sXLabel;
+    CString sYLabel;
+    CPoint ptLocation;
+
+    pResFile->sub_78A0F0(sResFileName);
+
+    if ((m_ruleTables.m_tAreaLinkageCaching.Find(sResFileName, ptLocation, TRUE)
+            & m_ruleTables.m_tAreaLinkageCaching.Find(sResFileName, sXLabel, sYLabel, TRUE))
+        == TRUE) {
+        // NOTE: Uninline.
+        CString sCount = m_ruleTables.m_tAreaLinkageCaching.GetAt(CPoint(0, ptLocation.y));
+        int nCount = atoi(sCount.GetBuffer(sCount.GetLength()));
+
+        if (nCount != 0) {
+            int index = 0;
+            UINT nResFileID = g_pChitin->cDimm.GetResFileID(sYLabel);
+            while (index <= nCount) {
+                pResFile = g_pChitin->cDimm.GetResFilePtr(nResFileID);
+                if (pResFile == NULL) {
+                    return nTotal;
+                }
+
+                nTotal += pResFile->GetCacheSize();
+
+                index++;
+
+                // NOTE: Uninline.
+                sResFileName = m_ruleTables.m_tAreaLinkageCaching.GetAt(CPoint(index, ptLocation.y));
+                nResFileID = g_pChitin->cDimm.GetResFileID(sResFileName);
+            }
+
+            return nTotal;
+        }
+    }
+
+    return pResFile->GetCacheSize();
 }
 
 // 0x5A0950
@@ -1413,7 +1473,7 @@ BOOL CInfGame::CacheResFileWithResource(const CString& areaName)
     }
 
     if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
-        if (pResFile->sub_789CE0() == TRUE) {
+        if (pResFile->Cache() == TRUE) {
             pResFile->UnCache();
         }
         return TRUE;
@@ -1445,8 +1505,8 @@ BOOL CInfGame::CacheResFileWithResource(const CString& areaName)
                     return FALSE;
                 }
 
-                if (!pResFile->sub_789A20()) {
-                    if (pResFile->sub_789CE0() == TRUE) {
+                if (!pResFile->GetCacheSize()) {
+                    if (pResFile->Cache() == TRUE) {
                         pResFile->UnCache();
                     }
                 }
@@ -1470,8 +1530,8 @@ BOOL CInfGame::CacheResFileWithResource(const CString& areaName)
                 // value read past the last column by the first loop.
                 CResCache::stru_8FB90C[CResCache::dword_8FB92C++] = sResFileName;
 
-                if (pResFile->sub_789A20()) {
-                    if (pResFile->sub_789CE0() == TRUE) {
+                if (pResFile->GetCacheSize()) {
+                    if (pResFile->Cache() == TRUE) {
                         pResFile->UnCache();
                     }
                 }
@@ -1487,7 +1547,7 @@ BOOL CInfGame::CacheResFileWithResource(const CString& areaName)
         }
     }
 
-    if (pResFile->sub_789CE0() == TRUE) {
+    if (pResFile->Cache() == TRUE) {
         pResFile->UnCache();
     }
 
