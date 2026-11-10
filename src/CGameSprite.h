@@ -421,6 +421,8 @@ public:
     /* 0048 */ void RemoveFromArea() override;
     /* 004C */ void Render(CGameArea* pArea, CVidMode* pVidMode, INT nSurface) override;
     /* 0058 */ void SetCursor(LONG nToolTip) override;
+    /* 0064 */ BOOL EvaluateStatusTrigger(const CAITrigger& trigger) override;
+    /* 0070 */ void UpdateTarget(CGameObject* pTarget) override;
     /* 007C */ void ClearAI(BOOLEAN bSetSequence) override;
     /* 0094 */ void SetScript(SHORT level, CAIScript* script) override;
     /* 009C */ const BYTE* GetVisibleTerrainTable() override;
@@ -548,6 +550,9 @@ public:
     STRREF GetNameRef();
     void PlaySound(const CResRef& res);
     BOOL Orderable(BOOL bIgnoreControl);
+    BOOL IsVisibleToCaller(BOOL bCallerCanSeeInvisible);
+    BOOL CanTarget(CGameSprite* pTarget, DWORD dwFlags);
+    BOOL IsSpellTargetValid(CGameSprite* pTarget, INT nSpellId, DWORD dwFlags);
     BOOL Animate();
     DWORD GetSpecialization();
     void ResolveInstants(BOOL dropNonInstants);

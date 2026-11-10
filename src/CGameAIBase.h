@@ -42,6 +42,7 @@ public:
     /* 0048 */ void RemoveFromArea() override;
     /* 0064 */ BOOL EvaluateStatusTrigger(const CAITrigger& trigger) override;
     /* 006C */ virtual void ClearActions(BOOL a1);
+    /* 0070 */ virtual void UpdateTarget(CGameObject* pTarget);
     /* 0074 */ virtual void AddAction(const CAIAction& action);
     /* 0078 */ virtual void AddEffect(CGameEffect* pEffect, BYTE list, BOOL noSave, BOOL immediateApply);
     /* 007C */ virtual void ClearAI(BOOLEAN a1);
@@ -133,6 +134,8 @@ public:
     void sub_45B6E0(const CAIObjectType& type);
     BOOL CanSeeTarget(CGameObject* pTarget, BOOL bIgnoreDead);
     BYTE GetReaction(CGameSprite* pSprite);
+    CGameObject* GetTargetShareType(const CAIObjectType& type, BYTE objectType);
+    void DecodeSpell(INT nID, CString& sSpell);
 
     /* 006E */ CAIObjectType m_lAttacker;
     /* 00AA */ LONG m_lAttackStyle;
