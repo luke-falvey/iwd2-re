@@ -53,27 +53,27 @@ public:
     /* 0014 */ virtual void StoreBackground(INT nFrom, INT nTo, INT x, INT y, const CRect& rClip, CRect& rStorage, BOOLEAN bNumbered);
     /* 0018 */ virtual BOOL GetFrame(BOOLEAN bDemanded);
 
-    BOOL sub_7AF1C0(WORD* pSurface, LONG lPitch, DWORD dwFlags);
+    BOOL Blt8To16(WORD* pSurface, LONG lPitch, DWORD dwFlags);
     BOOL Blt8To16(WORD* pSurface, LONG lPitch, const CPoint& pt, const CRect& rClip, DWORD dwFlags, const CPoint& ptSource);
-    BOOL sub_7AF8A0(WORD* pSurface, LONG lPitch, DWORD dwFlags);
-    BOOL sub_7AFB50(WORD* pSurface, LONG lPitch, DWORD dwFlags);
-    BOOL sub_7AFED0(WORD* pSurface, LONG lPitch, DWORD dwFlags, INT nTransVal);
+    BOOL Blt8To16ClearShadow(WORD* pSurface, LONG lPitch, DWORD dwFlags);
+    BOOL Blt8To16Brightest(WORD* pSurface, LONG lPitch, DWORD dwFlags);
+    BOOL Blt8To16Translucent(WORD* pSurface, LONG lPitch, DWORD dwFlags, INT nTransVal);
 
-    BOOL sub_7CECD0(BYTE* pSurface, LONG lPitch, DWORD dwFlags);
+    BOOL Blt8To24(BYTE* pSurface, LONG lPitch, DWORD dwFlags);
     BOOL Blt8To24(BYTE* pSurface, LONG lPitch, const CPoint& pt, const CRect& rClip, DWORD dwFlags, const CPoint& ptSource);
-    BOOL sub_7CF3F0(BYTE* pSurface, LONG lPitch, DWORD dwFlags);
-    BOOL sub_7CF650(BYTE* pSurface, LONG lPitch, DWORD dwFlags);
-    BOOL sub_7CF8D0(BYTE* pSurface, LONG lPitch, DWORD dwFlags, INT nTransVal);
+    BOOL Blt8To24ClearShadow(BYTE* pSurface, LONG lPitch, DWORD dwFlags);
+    BOOL Blt8To24Brightest(BYTE* pSurface, LONG lPitch, DWORD dwFlags);
+    BOOL Blt8To24Translucent(BYTE* pSurface, LONG lPitch, DWORD dwFlags, INT nTransVal);
 
     BOOL Blt8To32(DWORD* pSurface, LONG lPitch, DWORD dwFlags, INT nTransVal);
     BOOL Blt8To32(DWORD* pSurface, LONG lPitch, const CPoint& pt, const CRect& rClip, DWORD dwFlags, const CPoint& ptSource, INT nTransVal);
     BOOL Blt8To32ClearShadow(DWORD* pSurface, LONG lPitch, DWORD dwFlags);
     BOOL Blt8To32Brightest(DWORD* pSurface, LONG lPitch, DWORD dwFlags);
-    BOOL sub_7D0950(DWORD* pSurface, LONG lPitch, DWORD dwFlags, INT nTransVal);
+    BOOL Blt8To32Translucent(DWORD* pSurface, LONG lPitch, DWORD dwFlags, INT nTransVal);
 
-    BOOL sub_7B49D0(WORD* pSurface, LONG lPitch, DWORD dwFlags);
-    BOOL sub_7D0C60(BYTE* pSurface, LONG lPitch, DWORD dwFlags);
-    BOOL sub_7D1190(DWORD* pSurface, LONG lPitch, DWORD dwFlags);
+    BOOL Blt8To16Glow(WORD* pSurface, LONG lPitch, DWORD dwFlags);
+    BOOL Blt8To24Glow(BYTE* pSurface, LONG lPitch, DWORD dwFlags);
+    BOOL Blt8To32Glow(DWORD* pSurface, LONG lPitch, DWORD dwFlags);
 
     static void RenderTexture(INT x, INT y, const CRect& rFxRect, CSize dataPitch, const CRect& rClip, DWORD dwFlags);
     BOOL Render3d(INT nRefPtX, INT nRefPtY, DWORD dwFlags, INT nTransVal);
