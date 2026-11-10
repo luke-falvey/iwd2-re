@@ -2716,7 +2716,7 @@ BOOL CInfGame::SaveGame(BOOLEAN bProgressBarRequired, BOOLEAN bProgressBarInPlac
 
     std::vector<int> ids = Icewind586B70::Instance()->sub_587510();
     for (std::vector<int>::iterator it = ids.begin(); it != ids.end(); it++) {
-        g_pBaldurChitin->GetBaldurMessage()->sub_43D8D0(*it);
+        g_pBaldurChitin->GetBaldurMessage()->DemandTimedEffects(*it);
     }
     Icewind586B70::Instance()->sub_587190();
 

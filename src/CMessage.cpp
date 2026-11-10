@@ -2584,17 +2584,143 @@ BOOLEAN CBaldurMessage::NonBlockingWaitForSignal(BYTE signalType, BYTE signalToW
 // 0x4337D0
 BYTE CBaldurMessage::KickOutWaitingForSignal(BYTE signalType, BYTE signalToWaitFor)
 {
-    // TODO: Incomplete.
+    BOOLEAN bSignalReceived[6];
+    BYTE nHostPlayer;
+    BOOLEAN bAllReceived;
+    INT nPlayerNumber;
+    INT nIndex;
+    INT nCount;
 
-    return FALSE;
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return -1;
+    }
+
+    nHostPlayer = static_cast<BYTE>(g_pChitin->cNetwork.m_nHostPlayer);
+    if (nHostPlayer == 0xFF) {
+        nHostPlayer = 0;
+    }
+
+    if (signalType == SIGNAL_SERVER) {
+        memset(bSignalReceived, FALSE, sizeof(bSignalReceived));
+        bSignalReceived[nHostPlayer] = TRUE;
+    } else {
+        memset(bSignalReceived, TRUE, sizeof(bSignalReceived));
+        bSignalReceived[nHostPlayer] = FALSE;
+    }
+
+    CString sPlayerName;
+
+    nIndex = m_nSignalQueueStart;
+    nCount = 0;
+    while (nIndex != m_nSignalQueueEnd && nCount < m_nSignalQueueSize) {
+        if (m_pnSignalType[nIndex] == signalType
+            && m_pnSignalData[nIndex] == signalToWaitFor) {
+            bSignalReceived[m_pnSignalFrom[nIndex]] = TRUE;
+        }
+        nIndex = (nIndex + 1) % m_nSignalQueueSize;
+        nCount++;
+    }
+
+    // Kick the first player we're still waiting for.
+    bAllReceived = TRUE;
+    for (nPlayerNumber = 0; nPlayerNumber < 6; nPlayerNumber++) {
+        if (g_pChitin->cNetwork.GetPlayerID(nPlayerNumber) != 0
+            && !bSignalReceived[nPlayerNumber]
+            && bAllReceived == TRUE) {
+            bAllReceived = FALSE;
+            g_pChitin->cNetwork.GetPlayerName(nPlayerNumber, sPlayerName);
+            KickPlayerRequest(sPlayerName);
+        }
+    }
+
+    return TRUE;
 }
 
 // 0x433950
 BOOLEAN CBaldurMessage::WaitForSignal(BYTE signalType, BYTE signalToWaitFor)
 {
-    // TODO: Incomplete.
+    BOOLEAN bSignalReceived[6];
+    CString sPlayerName;
+    BYTE nHostPlayer;
+    BOOLEAN bAllReceived;
+    INT nPlayerNumber;
+    INT nIndex;
+    INT nCount;
 
-    return FALSE;
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return FALSE;
+    }
+
+    nHostPlayer = static_cast<BYTE>(g_pChitin->cNetwork.m_nHostPlayer);
+    if (nHostPlayer == 0xFF) {
+        nHostPlayer = 0;
+    }
+
+    if (signalType == SIGNAL_SERVER) {
+        memset(bSignalReceived, FALSE, sizeof(bSignalReceived));
+        bSignalReceived[nHostPlayer] = TRUE;
+    } else {
+        memset(bSignalReceived, TRUE, sizeof(bSignalReceived));
+        bSignalReceived[nHostPlayer] = FALSE;
+    }
+
+    // NOTE: `bSignalReceived` is initialized once and accumulates across
+    // iterations.
+    do {
+        nIndex = m_nSignalQueueStart;
+        nCount = 0;
+        while (nIndex != m_nSignalQueueEnd && nCount < m_nSignalQueueSize) {
+            if (m_pnSignalType[nIndex] == signalType
+                && m_pnSignalData[nIndex] == signalToWaitFor) {
+                bSignalReceived[m_pnSignalFrom[nIndex]] = TRUE;
+            }
+            nIndex = (nIndex + 1) % m_nSignalQueueSize;
+            nCount++;
+        }
+
+        bAllReceived = TRUE;
+        for (nPlayerNumber = 0; nPlayerNumber < 6; nPlayerNumber++) {
+            if (g_pChitin->cNetwork.GetPlayerID(nPlayerNumber) != 0
+                && !bSignalReceived[nPlayerNumber]
+                && bAllReceived == TRUE) {
+                bAllReceived = FALSE;
+                g_pChitin->cNetwork.GetPlayerName(nPlayerNumber, sPlayerName);
+            }
+        }
+
+        if (!bAllReceived) {
+            // Pull one pending signal from the first player we're still
+            // waiting for.
+            if (g_pChitin->cNetwork.PeekSpecificMessage(sPlayerName, MSG_TYPE_SIGNAL, MSG_SUBTYPE_SIGNAL) == TRUE) {
+                DWORD dwSize;
+                BYTE* pMessage = g_pChitin->cNetwork.FetchSpecificMessage(sPlayerName,
+                    MSG_TYPE_SIGNAL,
+                    MSG_SUBTYPE_SIGNAL,
+                    dwSize);
+                INT nFrom = g_pChitin->cNetwork.FindPlayerLocationByName(sPlayerName, FALSE);
+
+                BYTE nType = pMessage[CNetwork::SPEC_MSG_HEADER_LENGTH];
+                BYTE nData = pMessage[CNetwork::SPEC_MSG_HEADER_LENGTH + 1];
+                m_pnSignalFrom[m_nSignalQueueEnd] = static_cast<BYTE>(nFrom);
+                m_pnSignalType[m_nSignalQueueEnd] = nType;
+                m_pnSignalData[m_nSignalQueueEnd] = nData;
+                m_nSignalQueueEnd = (m_nSignalQueueEnd + 1) % m_nSignalQueueSize;
+
+                delete pMessage;
+            } else {
+                g_pChitin->m_bDisplayStale = TRUE;
+                SleepEx(60, FALSE);
+            }
+        }
+
+        if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+            return FALSE;
+        }
+    } while (!bAllReceived);
+
+    RemoveSignalsFromQueue(signalType, signalToWaitFor);
+
+    return TRUE;
 }
 
 // 0x433BE0
@@ -4471,7 +4597,7 @@ void CBaldurMessage::HandleBlockingMessages()
         nMsgFrom,
         dwSize);
     if (pData != NULL) {
-        OnDemandSettingsNightmareMode(nMsgFrom);
+        OnDemandTimedEffects(nMsgFrom, pData, dwSize);
         delete pData;
     }
 
@@ -4857,11 +4983,207 @@ BOOL CBaldurMessage::OnDemandSettingsNightmareMode(INT nMsgFrom)
 }
 
 // 0x43D8D0
-BOOLEAN CBaldurMessage::sub_43D8D0(LONG nCharacterId)
+BOOLEAN CBaldurMessage::DemandTimedEffects(LONG nCharacterId)
 {
-    // TODO: Incomplete.
+    CGameObject* pObject;
+    BYTE rc;
 
-    return FALSE;
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return FALSE;
+    }
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return FALSE;
+    }
+
+    // NOTE: Inlined `GetServiceProvider`.
+    if (g_pChitin->cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL
+        || g_pChitin->cNetwork.m_idLocalPlayer == pObject->m_remotePlayerID) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return FALSE;
+    }
+
+    INT nPlayerNumber = g_pChitin->cNetwork.FindPlayerLocationByID(pObject->m_remotePlayerID, FALSE);
+    if (static_cast<SHORT>(nPlayerNumber) == -1) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return FALSE;
+    }
+
+    CString sPlayerName;
+    g_pChitin->cNetwork.GetPlayerName(static_cast<SHORT>(nPlayerNumber), sPlayerName);
+
+    if (strcmp(sPlayerName, "") == 0) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return FALSE;
+    }
+
+    DWORD dwSize = sizeof(PLAYER_ID) + sizeof(LONG);
+    BYTE* pData = CreateBuffer(dwSize);
+
+    *reinterpret_cast<PLAYER_ID*>(pData) = pObject->m_remotePlayerID;
+    *reinterpret_cast<LONG*>(pData + sizeof(PLAYER_ID)) = pObject->m_remoteObjectID;
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    g_pChitin->cNetwork.SendSpecificMessage(sPlayerName,
+        CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_PLAYERCHAR,
+        MSG_SUBTYPE_PLAYERCHAR_70,
+        pData,
+        dwSize);
+
+    DestroyBuffer(pData);
+
+    INT nTimeWaited = 0;
+    while (!g_pChitin->cNetwork.PeekSpecificMessage(sPlayerName, MSG_TYPE_PLAYERCHAR, MSG_SUBTYPE_PLAYERCHAR_102)
+        && g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+        g_pBaldurChitin->GetBaldurMessage()->HandleBlockingMessages();
+
+        g_pChitin->m_bDisplayStale = TRUE;
+        Sleep(60);
+
+        nTimeWaited += 60;
+        if (nTimeWaited > 5000) {
+            return FALSE;
+        }
+    }
+
+    if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+        BYTE* pMessage = g_pChitin->cNetwork.FetchSpecificMessage(sPlayerName,
+            MSG_TYPE_PLAYERCHAR,
+            MSG_SUBTYPE_PLAYERCHAR_102,
+            dwSize);
+        // NOTE: `pMessage` is never freed (original leak).
+        OnSendTimedEffects(0, pMessage, dwSize);
+    }
+
+    return TRUE;
+}
+
+// 0x43DC40
+BOOLEAN CBaldurMessage::OnDemandTimedEffects(INT nMsgFrom, BYTE* pByteMessage, DWORD dwSize)
+{
+    LONG localObjectID;
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return FALSE;
+    }
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pByteMessage + CNetwork::SPEC_MSG_HEADER_LENGTH);
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pByteMessage + CNetwork::SPEC_MSG_HEADER_LENGTH + sizeof(PLAYER_ID));
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    CString sPlayerName;
+    g_pChitin->cNetwork.GetPlayerName(nMsgFrom, sPlayerName);
+    SendTimedEffects(sPlayerName, localObjectID);
+
+    return TRUE;
+}
+
+// 0x43DD20
+BOOLEAN CBaldurMessage::SendTimedEffects(const CString& sPlayerName, LONG nCharacterId)
+{
+    CGameSprite* pSprite;
+    BYTE* pEffects;
+    BYTE rc;
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return FALSE;
+    }
+
+    ULONG nEffectsSize = pSprite->m_timedEffectList.Marshal(&pEffects, 1, FALSE);
+
+    DWORD dwSize = nEffectsSize + sizeof(PLAYER_ID) + sizeof(LONG);
+    BYTE* pData = CreateBuffer(dwSize);
+
+    *reinterpret_cast<PLAYER_ID*>(pData) = pSprite->m_remotePlayerID;
+    *reinterpret_cast<LONG*>(pData + sizeof(PLAYER_ID)) = pSprite->m_remoteObjectID;
+    memcpy(pData + sizeof(PLAYER_ID) + sizeof(LONG), pEffects, nEffectsSize);
+
+    delete pEffects;
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    g_pChitin->cNetwork.SendSpecificMessage(sPlayerName,
+        CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_PLAYERCHAR,
+        MSG_SUBTYPE_PLAYERCHAR_102,
+        pData,
+        dwSize);
+
+    DestroyBuffer(pData);
+
+    return TRUE;
+}
+
+// 0x43DE50
+BOOLEAN CBaldurMessage::OnSendTimedEffects(INT nMsgFrom, BYTE* pByteMessage, DWORD dwSize)
+{
+    LONG localObjectID;
+    CGameSprite* pSprite;
+    BYTE rc;
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return FALSE;
+    }
+
+    INT nMsgPtr = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pByteMessage + nMsgPtr);
+    nMsgPtr += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pByteMessage + nMsgPtr);
+    nMsgPtr += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(localObjectID,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return FALSE;
+    }
+
+    pSprite->m_timedEffectList.Unmarshal(pByteMessage + nMsgPtr, dwSize - nMsgPtr, pSprite, 1);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(localObjectID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return TRUE;
 }
 
 // 0x43DF40
