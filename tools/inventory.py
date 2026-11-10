@@ -77,20 +77,27 @@ def load_exclusions() -> set[int]:
     return out
 
 
-def scan_source() -> tuple[dict[int, list[str]], Counter]:
+def scan_source() -> tuple[dict[int, list[str]], Counter, set[int]]:
     annotations: dict[int, list[str]] = defaultdict(list)
     incomplete: Counter = Counter()
+    stubbed: set[int] = set()
     for p in sorted(SRC.rglob("*")):
         if p.suffix not in (".cpp", ".h"):
             continue
         text = p.read_text(encoding="utf-8", errors="replace")
         rel = p.relative_to(REPO).as_posix()
-        for m in ANNOTATION.finditer(text):
+        marks = list(ANNOTATION.finditer(text))
+        for i, m in enumerate(marks):
             annotations[int(m.group(1), 16)].append(rel)
+            # A function is stubbed if its body (up to the next annotation)
+            # still has a TODO: Incomplete marker.
+            end = marks[i + 1].start() if i + 1 < len(marks) else len(text)
+            if INCOMPLETE.search(text, m.end(), end):
+                stubbed.add(int(m.group(1), 16))
         n = len(INCOMPLETE.findall(text))
         if n:
             incomplete[rel] = n
-    return annotations, incomplete
+    return annotations, incomplete, stubbed
 
 
 def is_countable(f: dict, exclusions: set[int]) -> bool:
@@ -106,7 +113,7 @@ def is_countable(f: dict, exclusions: set[int]) -> bool:
 
 
 def build_report(funcs: list[dict], source: str) -> dict:
-    annotations, incomplete = scan_source()
+    annotations, incomplete, stubbed = scan_source()
     exclusions = load_exclusions()
     countable = [f for f in funcs if is_countable(f, exclusions)]
     done = [f for f in countable if f["addr"] in annotations]
@@ -134,6 +141,7 @@ def build_report(funcs: list[dict], source: str) -> dict:
         "game_range": [f"0x{GAME_START:X}", f"0x{GAME_END:X}"],
         "functions_total": len(countable),
         "functions_done": len(done),
+        "functions_complete": sum(1 for f in done if f["addr"] not in stubbed),
         "incomplete_markers": sum(incomplete.values()),
         "incomplete_by_file": dict(incomplete.most_common()),
         "annotations_total": len(annotations),
@@ -144,6 +152,11 @@ def build_report(funcs: list[dict], source: str) -> dict:
     if has_size:
         report["bytes_total"] = sum(f["size"] for f in countable)
         report["bytes_done"] = sum(f["size"] for f in done)
+        report["bytes_complete"] = sum(f["size"] for f in done if f["addr"] not in stubbed)
+        report["largest_stubs"] = [
+            {"addr": f"0x{f['addr']:X}", "name": f.get("name", ""), "size": f["size"]}
+            for f in sorted((f for f in done if f["addr"] in stubbed), key=lambda f: -f["size"])[:40]
+        ]
     report["next"] = [
         {"addr": f"0x{f['addr']:X}", "name": f.get("name", ""), "translated_callers": n, **({"size": f["size"]} if "size" in f else {})}
         for n, f in ranked[:50]
@@ -154,9 +167,11 @@ def build_report(funcs: list[dict], source: str) -> dict:
 def print_report(r: dict) -> None:
     pct = 100.0 * r["functions_done"] / max(1, r["functions_total"])
     print(f"function list: {r['function_list']}  game range {r['game_range'][0]}-{r['game_range'][1]}")
-    print(f"functions: {r['functions_done']}/{r['functions_total']} ({pct:.1f}%)")
+    print(f"functions: {r['functions_done']}/{r['functions_total']} ({pct:.1f}%) annotated, "
+          f"{r['functions_complete']} without TODO ({100.0 * r['functions_complete'] / max(1, r['functions_total']):.1f}%)")
     if "bytes_total" in r:
-        print(f"bytes:     {r['bytes_done']}/{r['bytes_total']} ({100.0 * r['bytes_done'] / max(1, r['bytes_total']):.1f}%)")
+        print(f"bytes:     {r['bytes_done']}/{r['bytes_total']} ({100.0 * r['bytes_done'] / max(1, r['bytes_total']):.1f}%) annotated, "
+              f"{r['bytes_complete']} without TODO ({100.0 * r['bytes_complete'] / max(1, r['bytes_total']):.1f}%)")
     print(f"TODO: Incomplete markers: {r['incomplete_markers']}")
     for f, n in list(r["incomplete_by_file"].items())[:10]:
         print(f"  {n:4} {f}")
