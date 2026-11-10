@@ -45,7 +45,10 @@ public:
     WORD m_fogProbability;
     WORD m_lightningProbability;
     WORD m_windSpeed;
-    DWORD field_4C;
+    BYTE m_nDifficultyLevel2;
+    BYTE m_nDifficultyLevel3;
+    BYTE m_nPartyLevel;
+    BYTE field_4F;
     DWORD field_50;
     DWORD field_54;
     DWORD field_58;

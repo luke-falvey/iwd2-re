@@ -2476,7 +2476,7 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
     areaSize -= sizeof(CAreaFileHeader);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
-    // __LINE__: 4939
+    // __LINE__: 4964
     UTIL_ASSERT(areaSize > 0);
 
     memcpy(&m_header, pArea + cnt, sizeof(CAreaFileHeader));
@@ -2528,6 +2528,7 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
         // __LINE__: 5033
         UTIL_ASSERT_MSG(FALSE, (LPCSTR)("Missing WED file: " + cStr));
+        return;
     }
 
     m_pResWED->Request();
@@ -2625,7 +2626,61 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
 
     mpSpawner = new CSpawnFile(&INIFile);
 
-    // TODO: Incomplete.
+    // DIFFICULTY
+    LONG nPartyLevel = g_pBaldurChitin->GetObjectGame()->GetAveragePartyLevel();
+
+    INT nDifficulty;
+    if (nPartyLevel >= m_header.m_nDifficultyLevel3) {
+        nDifficulty = 3;
+    } else {
+        nDifficulty = nPartyLevel >= m_header.m_nDifficultyLevel2 ? 2 : 1;
+    }
+
+    CInfGameUnknownEntry* pOverride = NULL;
+    POSITION pos = g_pBaldurChitin->GetObjectGame()->field_4BDC.GetHeadPosition();
+    while (pos != NULL) {
+        CInfGameUnknownEntry* pEntry = reinterpret_cast<CInfGameUnknownEntry*>(g_pBaldurChitin->GetObjectGame()->field_4BDC.GetNext(pos));
+        if (pEntry != NULL && pEntry->m_sName == cStr) {
+            pOverride = pEntry;
+            break;
+        }
+    }
+
+    if (pOverride != NULL) {
+        if ((pOverride->field_4 & 0x1) != 0) {
+            nDifficulty = pOverride->field_8;
+        } else if ((pOverride->field_4 & 0x2) != 0) {
+            nDifficulty += pOverride->field_8;
+        }
+
+        // Overrides are one-shot, remove every entry for this area.
+        CTypedPtrList<CPtrList, CString*>& overrides = g_pBaldurChitin->GetObjectGame()->field_4BDC;
+        pos = overrides.GetHeadPosition();
+        while (pos != NULL) {
+            POSITION posOld = pos;
+            CString* pName = overrides.GetNext(pos);
+            if (pName == NULL) {
+                overrides.RemoveAt(posOld);
+            }
+
+            // NOTE: Original dereferences `pName` even when it's `NULL`.
+            if (*pName == cStr) {
+                overrides.RemoveAt(posOld);
+                if (pName != NULL) {
+                    delete pName;
+                }
+            }
+        }
+    }
+
+    BYTE nDifficultyMask;
+    if (nDifficulty >= 3) {
+        nDifficultyMask = 4;
+    } else {
+        nDifficultyMask = nDifficulty >= 2 ? 2 : 1;
+    }
+
+    m_header.m_nPartyLevel = static_cast<BYTE>(nPartyLevel);
 
     // CREATURES
     CCreatureFile creatureData;
@@ -2652,50 +2707,61 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
                 UTIL_ASSERT(m_header.m_lastSaved == 0);
 
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
-                // __LINE__: 5211
+                // __LINE__: 5212
                 UTIL_ASSERT(pCreature->m_creatureSize == 0);
 
-                if (pCreature->m_expirationTime == -1
-                    || pCreature->m_expirationTime * CTimerWorld::TIMESCALE_MSEC_PER_SEC > m_pGame->GetWorldTimer()->m_gameTime) {
-                    // NOTE: Uninline.
-                    creatureData.SetResRef(CResRef(pCreature->m_creatureData), TRUE, TRUE);
-
-                    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
-                    // __LINE__: 5237
-                    UTIL_ASSERT_MSG(creatureData.GetDataSize(),
-                        CString("Creature file not found ") + CString(reinterpret_cast<char*>(pCreature->m_creatureData), RESREF_SIZE).GetBuffer(RESREF_SIZE + 1));
-
-                    pSprite = new CGameSprite(creatureData.GetData(),
-                        creatureData.GetDataSize(),
-                        0,
-                        pCreature->m_type,
-                        -1,
-                        pCreature->m_huntingRange,
-                        pCreature->m_followRange,
-                        pCreature->m_timeOfDayVisible,
-                        CPoint(pCreature->m_startingPosX, pCreature->m_startingPosY),
-                        pCreature->m_facing);
-
-                    pSprite->SetResRef(CResRef(pCreature->m_creatureData));
-
-                    if ((pCreature->m_dwFlags & 0x8) != 0) {
-                        pSprite->GetBaseStats()->m_flags |= 0x8000;
-
-                        CAIObjectType typeAI = pSprite->GetAIType();
-                        typeAI.m_nEnemyAlly = CAIObjectType::EA_EVILCUTOFF;
-                        pSprite->SetAIType(typeAI, TRUE, TRUE);
-                    }
-
-                    if ((pCreature->m_dwFlags & 0x2) != 0) {
-                        pSprite->GetBaseStats()->m_flags |= 0x10000;
-                    }
-
-                    if ((pCreature->m_dwFlags & 0x4) != 0) {
-                        pSprite->GetBaseStats()->m_flags |= 0x20000;
-                    }
-
-                    creatureData.ReleaseData();
+                if ((pCreature->m_difficultyFlags & nDifficultyMask) == 0) {
+                    continue;
                 }
+
+                LONG nExpirationTime;
+                if (pCreature->m_expirationTime == -1) {
+                    nExpirationTime = -1;
+                } else {
+                    nExpirationTime = pCreature->m_expirationTime * CTimerWorld::TIMESCALE_MSEC_PER_SEC;
+                    if (static_cast<DWORD>(nExpirationTime) <= m_pGame->GetWorldTimer()->m_gameTime) {
+                        continue;
+                    }
+                }
+
+                // NOTE: Uninline.
+                creatureData.SetResRef(CResRef(pCreature->m_creatureData), TRUE, TRUE);
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
+                // __LINE__: 5237
+                UTIL_ASSERT_MSG(creatureData.GetDataSize(),
+                    CString("Creature file not found ") + CString(reinterpret_cast<char*>(pCreature->m_creatureData), RESREF_SIZE).GetBuffer(RESREF_SIZE + 1));
+
+                pSprite = new CGameSprite(creatureData.GetData(),
+                    creatureData.GetDataSize(),
+                    0,
+                    pCreature->m_type,
+                    nExpirationTime,
+                    pCreature->m_huntingRange,
+                    pCreature->m_followRange,
+                    pCreature->m_timeOfDayVisible,
+                    CPoint(pCreature->m_startingPosX, pCreature->m_startingPosY),
+                    pCreature->m_facing);
+
+                pSprite->SetResRef(CResRef(pCreature->m_creatureData));
+
+                if ((pCreature->m_dwFlags & 0x8) != 0) {
+                    pSprite->GetBaseStats()->m_flags |= 0x8000;
+
+                    CAIObjectType typeAI = pSprite->GetAIType();
+                    typeAI.m_nEnemyAlly = CAIObjectType::EA_EVILCUTOFF;
+                    pSprite->SetAIType(typeAI, TRUE, TRUE);
+                }
+
+                if ((pCreature->m_dwFlags & 0x2) != 0) {
+                    pSprite->GetBaseStats()->m_flags |= 0x10000;
+                }
+
+                if ((pCreature->m_dwFlags & 0x4) != 0) {
+                    pSprite->GetBaseStats()->m_flags |= 0x20000;
+                }
+
+                creatureData.ReleaseData();
             } else {
                 areaSize -= pCreature->m_creatureSize;
 
@@ -2703,69 +2769,83 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
                 // __LINE__: 5309
                 UTIL_ASSERT(areaSize >= 0);
 
-                if (pCreature->m_expirationTime == -1
-                    || pCreature->m_expirationTime * CTimerWorld::TIMESCALE_MSEC_PER_SEC > m_pGame->GetWorldTimer()->m_gameTime) {
-                    pSprite = new CGameSprite(pArea + pCreature->m_creatureOffset,
-                        pCreature->m_creatureSize,
-                        0,
-                        pCreature->m_type,
-                        pCreature->m_expirationTime != -1
-                            ? pCreature->m_expirationTime * CTimerWorld::TIMESCALE_MSEC_PER_SEC
-                            : -1,
-                        pCreature->m_huntingRange,
-                        pCreature->m_followRange,
-                        pCreature->m_timeOfDayVisible,
-                        CPoint(pCreature->m_startingPosX, pCreature->m_startingPosY),
-                        pCreature->m_facing);
-
-                    pSprite->SetResRef(CResRef(pCreature->m_creatureData));
-
-                    if ((pCreature->m_dwFlags & 0x8) != 0) {
-                        pSprite->GetBaseStats()->m_flags |= 0x8000;
-
-                        CAIObjectType typeAI = pSprite->GetAIType();
-                        typeAI.m_nEnemyAlly = CAIObjectType::EA_EVILCUTOFF;
-                        pSprite->SetAIType(typeAI, TRUE, TRUE);
+                LONG nExpirationTime;
+                if (pCreature->m_expirationTime == -1) {
+                    nExpirationTime = -1;
+                } else {
+                    nExpirationTime = pCreature->m_expirationTime * CTimerWorld::TIMESCALE_MSEC_PER_SEC;
+                    if (static_cast<DWORD>(nExpirationTime) <= m_pGame->GetWorldTimer()->m_gameTime) {
+                        continue;
                     }
+                }
 
-                    if ((pCreature->m_dwFlags & 0x2) != 0) {
-                        pSprite->GetBaseStats()->m_flags |= 0x10000;
-                    }
+                pSprite = new CGameSprite(pArea + pCreature->m_creatureOffset,
+                    pCreature->m_creatureSize,
+                    0,
+                    pCreature->m_type,
+                    nExpirationTime,
+                    pCreature->m_huntingRange,
+                    pCreature->m_followRange,
+                    pCreature->m_timeOfDayVisible,
+                    CPoint(pCreature->m_startingPosX, pCreature->m_startingPosY),
+                    pCreature->m_facing);
 
-                    if ((pCreature->m_dwFlags & 0x4) != 0) {
-                        pSprite->GetBaseStats()->m_flags |= 0x20000;
-                    }
+                pSprite->SetResRef(CResRef(pCreature->m_creatureData));
+
+                if ((pCreature->m_dwFlags & 0x8) != 0) {
+                    pSprite->GetBaseStats()->m_flags |= 0x8000;
+
+                    CAIObjectType typeAI = pSprite->GetAIType();
+                    typeAI.m_nEnemyAlly = CAIObjectType::EA_EVILCUTOFF;
+                    pSprite->SetAIType(typeAI, TRUE, TRUE);
+                }
+
+                if ((pCreature->m_dwFlags & 0x2) != 0) {
+                    pSprite->GetBaseStats()->m_flags |= 0x10000;
+                }
+
+                if ((pCreature->m_dwFlags & 0x4) != 0) {
+                    pSprite->GetBaseStats()->m_flags |= 0x20000;
                 }
             }
 
-            if (pSprite != NULL) {
-                if ((pSprite->GetBaseStats()->m_generalState & STATE_DEAD) != 0
-                    && pSprite->GetAnimation()->CanLieDown()) {
-                    pSprite->AddToArea(this,
-                        CPoint(pCreature->m_posX, pCreature->m_posY),
-                        0,
-                        CGameObject::LIST_BACK);
-                } else {
-                    pSprite->AddToArea(this,
-                        CPoint(pCreature->m_posX, pCreature->m_posY),
-                        0,
-                        pSprite->GetAnimation()->GetListType());
-                }
+            if (pSprite == NULL) {
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
+                // __LINE__: 5349
+                UTIL_ASSERT(!"Failed to create creature");
+                continue;
+            }
 
-                pSprite->LoadAreaInformation(pCreature);
+            if ((pSprite->GetBaseStats()->m_generalState & STATE_DEAD) != 0
+                && pSprite->GetAnimation()->CanLieDown()) {
+                pSprite->AddToArea(this,
+                    CPoint(pCreature->m_posX, pCreature->m_posY),
+                    0,
+                    CGameObject::LIST_BACK);
+            } else {
+                pSprite->AddToArea(this,
+                    CPoint(pCreature->m_posX, pCreature->m_posY),
+                    0,
+                    pSprite->GetAnimation()->GetListType());
+            }
 
-                if (pSprite->GetAIType().m_nEnemyAlly <= CAIObjectType::EA_CONTROLCUTOFF
-                    && pSprite->GetAIType().m_nEnemyAlly == CAIObjectType::EA_FAMILIAR) {
-                    g_pBaldurChitin->GetObjectGame()->AddCharacterToAllies(pSprite->GetId());
-                }
+            pSprite->LoadAreaInformation(pCreature);
 
-                if (pSprite->CompressTime(deltaTime)) {
-                    creatureName.SetName(CString(pSprite->GetScriptName()));
-                    creatureName.m_intValue = pSprite->GetId();
-                    m_namedCreatures.AddKey(creatureName);
-                }
+            if (pSprite->GetAIType().m_nEnemyAlly <= CAIObjectType::EA_CONTROLCUTOFF
+                && pSprite->GetAIType().m_nEnemyAlly != CAIObjectType::EA_FAMILIAR) {
+                g_pBaldurChitin->GetObjectGame()->AddCharacterToAllies(pSprite->GetId());
+            }
+
+            if (pSprite->CompressTime(deltaTime)) {
+                creatureName.SetName(CString(pSprite->GetScriptName()));
+                creatureName.m_intValue = pSprite->GetId();
+                m_namedCreatures.AddKey(creatureName);
             }
         }
+    }
+
+    if (bProgressBarInPlace && offsets->m_creatureTableCount == 0) {
+        ProgressBarCallback(8 * dwPerArea, FALSE);
     }
 
     // VARIABLES
@@ -2804,6 +2884,7 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
                 // __LINE__: 5416
                 UTIL_ASSERT(FALSE);
+                continue;
             }
 
             memcpy(pEntryPoint,
@@ -2815,6 +2896,8 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
             // __LINE__: 5421
             UTIL_ASSERT(areaSize >= 0);
+
+            m_entryPoints.AddTail(pEntryPoint);
         }
     }
 
@@ -2896,10 +2979,6 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
         }
     }
 
-    if (bProgressBarInPlace && offsets->m_triggerObjectListCount == 0) {
-        ProgressBarCallback(dwPerArea, FALSE);
-    }
-
     // TILED
     if (offsets->m_tiledObjectListCount != 0) {
         for (DWORD nTiledObject = 0; nTiledObject < offsets->m_tiledObjectListCount; nTiledObject++) {
@@ -2941,7 +3020,9 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
         }
     }
 
-    if (bProgressBarInPlace && offsets->m_tiledObjectListCount == 0) {
+    // NOTE: The original checks the trigger count here (and not after the
+    // trigger loop above).
+    if (bProgressBarInPlace && offsets->m_triggerObjectListCount == 0) {
         ProgressBarCallback(dwPerArea, FALSE);
     }
 
@@ -2955,18 +3036,23 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
             // __LINE__: 5554
             UTIL_ASSERT(areaSize >= 0);
 
+            if (bProgressBarInPlace) {
+                ProgressBarCallback(dwPerArea / offsets->m_randomMonsterSpawningPointTableCount, FALSE);
+            }
+
             CGameSpawning* pSpawning = new CGameSpawning(this, pSpawnObject);
 
             if (pSpawning == NULL) {
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
                 // __LINE__: 5564
                 UTIL_ASSERT(FALSE);
+                continue;
             }
 
-            pSpawning->CompressTime(deltaTime);
-
-            if (bProgressBarInPlace) {
-                ProgressBarCallback(dwPerArea / offsets->m_randomMonsterSpawningPointTableCount, FALSE);
+            if (pSpawning->CompressTime(deltaTime)) {
+                creatureName.SetName(CString(reinterpret_cast<char*>(pSpawnObject->m_scriptName)));
+                creatureName.m_intValue = pSpawning->GetId();
+                m_namedCreatures.AddKey(creatureName);
             }
         }
     }
@@ -2987,17 +3073,18 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
 
             CGameSound* pSound = new CGameSound(this, pSoundObject);
 
+            if (bProgressBarInPlace) {
+                ProgressBarCallback(dwPerArea / offsets->m_soundObjectCount, FALSE);
+            }
+
             if (pSound == NULL) {
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
                 // __LINE__: 5600
                 UTIL_ASSERT(FALSE);
+                continue;
             }
 
             pSound->CompressTime(deltaTime);
-
-            if (bProgressBarInPlace) {
-                ProgressBarCallback(dwPerArea / offsets->m_soundObjectCount, FALSE);
-            }
         }
     }
 
@@ -3082,8 +3169,14 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
         ProgressBarCallback(dwPerArea, FALSE);
     }
 
+    if (offsets->m_script[0] == '\0') {
+        memcpy(offsets->m_script, m_header.m_areaName, RESREF_SIZE);
+    }
+
     CGameAIArea* pAIArea = new CGameAIArea();
-    pAIArea->SetDefaultScript(new CAIScript(CResRef(cStr)));
+
+    // NOTE: Uninline.
+    pAIArea->SetDefaultScript(new CAIScript(CResRef(offsets->m_script)));
     m_nAIIndex = pAIArea->GetId();
     pAIArea->AddToArea(this, CPoint(0, 0), 0, CGameObject::LIST_BACK);
 
@@ -3127,7 +3220,9 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
 
     CVariable* pVisited = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sExtraVarName);
     if (pVisited != NULL) {
-        pVisited->m_intValue = 1;
+        if (pVisited->m_intValue == 0) {
+            pVisited->m_intValue = 1;
+        }
     } else {
         CVariable cVisited;
         cVisited.SetName(sExtraVarName);
@@ -3141,7 +3236,7 @@ void CGameArea::Unmarshal(BYTE* pArea, LONG areaSize, const CString& sName, BOOL
 
     CVariable* pRevealed = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sExtraVarName);
     if (pRevealed != NULL) {
-        if (pRevealed == 0) {
+        if (pRevealed->m_intValue == 0) {
             pRevealed->m_intValue = 1;
         }
     } else {

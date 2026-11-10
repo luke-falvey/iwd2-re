@@ -281,7 +281,7 @@ public:
     /* 0028 */ DWORD m_dwFlags;
     /* 002C */ WORD m_type;
     /* 002E */ char m_cFirstResSlot;
-    /* 002F */ BYTE structureAlignment1[1];
+    /* 002F */ BYTE m_difficultyFlags;
     /* 0030 */ DWORD m_animationType;
     /* 0034 */ WORD m_facing;
     /* 0036 */ BYTE structureAlignment2[2];
