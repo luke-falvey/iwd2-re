@@ -6,6 +6,9 @@
 #include "CAIObjectType.h"
 
 #define CAIACTION_ATTACK 3
+#define CAIACTION_MOVETOPOINT 23
+#define CAIACTION_PROTECTPOINT 27
+#define CAIACTION_PROTECTOBJECT 87
 #define CAIACTION_LEAVEAREALUA 110
 #define CAIACTION_212 212
 #define CAIACTION_MOVEVIEWPOINTUNTILDONE 264
@@ -24,6 +27,7 @@ public:
     static const SHORT USEITEM;
     static const SHORT CONTINUE;
     static const SHORT JUMPTOPOINT;
+    static const SHORT STARTTIMER;
     static const SHORT WAIT;
     static const SHORT SMALLWAIT;
     static const SHORT FACE;
@@ -44,6 +48,7 @@ public:
     static const SHORT PLAYERDIALOG;
     static const SHORT APPLYSPELL;
     static const SHORT MOVETOOBJECTFOLLOW;
+    static const SHORT BREAKINSTANTS;
     static const SHORT REALLYFORCESPELL;
     static const SHORT SPELLNODEC;
     static const SHORT SPELLPOINTNODEC;

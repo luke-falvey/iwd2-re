@@ -7,7 +7,9 @@
 #include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CItem.h"
+#include "CMessage.h"
 #include "CPathSearch.h"
+#include "CProjectile.h"
 #include "CResRef.h"
 #include "CScreenWorld.h"
 #include "CUtil.h"
@@ -1153,6 +1155,96 @@ SHORT CGameContainer::GetTotalItemCount(CString sExcludeResRef)
     }
 
     return static_cast<SHORT>(nCount);
+}
+
+// 0x481D30
+SHORT CGameContainer::DropInventoryEx(CString sExclude)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    BOOLEAN bHavePile = FALSE;
+    LONG iPile;
+    CGameContainer* pPile;
+
+    if (m_pArea != NULL) {
+        for (SHORT nSlot = 0; nSlot < m_lstItems.GetCount(); nSlot++) {
+            if (!bHavePile) {
+                iPile = pGame->GetGroundPile(m_id);
+                if (iPile == CGameObjectArray::INVALID_INDEX) {
+                    return ACTION_ERROR;
+                }
+
+                if (pGame->GetObjectArray()->GetDeny(iPile,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pPile),
+                        INFINITE)
+                    != CGameObjectArray::SUCCESS) {
+                    return ACTION_ERROR;
+                }
+
+                bHavePile = TRUE;
+            }
+
+            // NOTE: Uninline.
+            CItem* pItem = GetItem(nSlot);
+            if (pItem != NULL) {
+                // NOTE: Increments `nSlot` after compressing, so the next
+                // item is skipped.
+                if (pItem->cResRef != sExclude) {
+                    pPile->PlaceItemInBlankSlot(pItem, TRUE, 0x7FFF);
+                    SetItem(nSlot, NULL);
+                    CompressContainer();
+                }
+            } else {
+                CompressContainer();
+            }
+        }
+
+        if (bHavePile) {
+            pGame->GetObjectArray()->ReleaseDeny(iPile,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    return ACTION_DONE;
+}
+
+// 0x482040
+SHORT CGameContainer::SpellHitEffect(CGameAIBase* pSource, const CPoint& ptTarget, LONG targetId, LONG projectileType, LONG nHeight)
+{
+    CProjectile* pProjectile;
+    LONG nMessageType = projectileType;
+
+    if (projectileType != 210) {
+        pProjectile = CProjectile::sub_560310(static_cast<WORD>(projectileType), NULL, FALSE);
+        nMessageType = projectileType + 0x1000;
+    } else {
+        pProjectile = CProjectile::DecodeProjectile(211, pSource, FALSE);
+    }
+
+    if (pProjectile == NULL) {
+        // TODO: Not in the original; remove once 0x51EAF0 and 0x560310 are
+        // translated.
+        return ACTION_ERROR;
+    }
+
+    CMessageFireProjectile* pMessage = new CMessageFireProjectile(static_cast<WORD>(nMessageType),
+        targetId,
+        ptTarget,
+        nHeight,
+        m_id,
+        m_id,
+        0);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+    pProjectile->Fire(m_pArea,
+        m_id,
+        targetId,
+        ptTarget,
+        nHeight,
+        static_cast<SHORT>(projectileType));
+
+    return ACTION_DONE;
 }
 
 // FIXME: `scriptRes` should be reference.

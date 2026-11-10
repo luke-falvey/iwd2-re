@@ -85,7 +85,7 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ADD_ACTION = 0;
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ADD_EFFECT = 1;
 
 // 0x84CED9
-const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_2 = 2;
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ADD_INVENTORY_ITEM = 2;
 
 // 0x84CEDA
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ANIMATION_CHANGE = 3;
@@ -133,7 +133,7 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXT = 16;
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXTREF = 17;
 
 // 0x84CEE9
-const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_18 = 18;
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_DOOR_OPEN = 18;
 
 // 0x84CEEA
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_DOOR_STATUS = 19;
@@ -181,7 +181,7 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_PLAY_SOUND = 32;
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_PLAY_SOUND_REF = 33;
 
 // 0x84CEF9
-const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_34 = 34;
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_REMOVE_INVENTORY_ITEM = 34;
 
 // 0x84CEFA
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_REMOVE_REPLIES = 35;
@@ -412,10 +412,10 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_AREA_TYPE = 109;
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SET_AREA_REST_ENCOUNTER = 110;
 
 // 0x84CF46
-const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_111 = 111;
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SAVE_GAME = 111;
 
 // 0x84CF47
-const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_112 = 112;
+const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_PLAY_SOUND_POINT = 112;
 
 // 0x84CF48
 const BYTE CBaldurMessage::MSG_SUBTYPE_CMESSAGE_PICKED_DIALOG_RESPONSE = 113;
@@ -3501,6 +3501,14 @@ BOOLEAN CBaldurMessage::OnPauseAnnounceStatus(INT nMsgFrom, BYTE* pMessage, DWOR
     return TRUE;
 }
 
+// 0x434BA0
+BOOLEAN CBaldurMessage::SendChapterAnnounceToServer(BYTE nChapter, CResRef cResRef)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x434D80
 BOOLEAN CBaldurMessage::sub_434D80(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
@@ -3783,6 +3791,14 @@ void CBaldurMessage::CleanLeaveAreaLuaRequest()
     m_bLeaveAreaLuaRequestPending = FALSE;
     m_nLeaveAreaLuaReplyValue = 0;
     m_bLeaveAreaLuaReplyReturned = FALSE;
+}
+
+// 0x4381C0
+BOOLEAN CBaldurMessage::SendLeaveAreaLUAPanic(CPoint ptStart, LONG nFace, CString sArea, CString sParchment)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
 }
 
 // 0x438F40
@@ -5847,14 +5863,14 @@ void CMessageHandler::AsynchronousUpdate()
                         }
                     }
                     break;
-                case 2: // MSG_SUBTYPE_CMESSAGE_2
+                case 2: // MSG_SUBTYPE_CMESSAGE_ADD_INVENTORY_ITEM
                     if (bLocal) {
-                        CMessage2 message(CItem(), 0, 0);
+                        CMessageAddInventoryItem message(CItem(), 0, 0);
                         if (message.UnmarshalMessage(pData, dwSize)) {
                             message.Run();
                         }
                     } else {
-                        CMessage2* message = new CMessage2(CItem(), 0, 0);
+                        CMessageAddInventoryItem* message = new CMessageAddInventoryItem(CItem(), 0, 0);
                         if (message->UnmarshalMessage(pData, dwSize)) {
                             m_messageList.AddTail(message);
                         } else {
@@ -6087,14 +6103,14 @@ void CMessageHandler::AsynchronousUpdate()
                         }
                     }
                     break;
-                case 18: // MSG_SUBTYPE_CMESSAGE_18
+                case 18: // MSG_SUBTYPE_CMESSAGE_DOOR_OPEN
                     if (bLocal) {
-                        CMessage18 message(0, 0, 0);
+                        CMessageDoorOpen message(0, 0, 0);
                         if (message.UnmarshalMessage(pData, dwSize)) {
                             message.Run();
                         }
                     } else {
-                        CMessage18* message = new CMessage18(0, 0, 0);
+                        CMessageDoorOpen* message = new CMessageDoorOpen(0, 0, 0);
                         if (message->UnmarshalMessage(pData, dwSize)) {
                             m_messageList.AddTail(message);
                         } else {
@@ -6327,14 +6343,14 @@ void CMessageHandler::AsynchronousUpdate()
                         }
                     }
                     break;
-                case 34: // MSG_SUBTYPE_CMESSAGE_34
+                case 34: // MSG_SUBTYPE_CMESSAGE_REMOVE_INVENTORY_ITEM
                     if (bLocal) {
-                        CMessage34 message(0, 0, 0);
+                        CMessageRemoveInventoryItem message(0, 0, 0);
                         if (message.UnmarshalMessage(pData, dwSize)) {
                             message.Run();
                         }
                     } else {
-                        CMessage34* message = new CMessage34(0, 0, 0);
+                        CMessageRemoveInventoryItem* message = new CMessageRemoveInventoryItem(0, 0, 0);
                         if (message->UnmarshalMessage(pData, dwSize)) {
                             m_messageList.AddTail(message);
                         } else {
@@ -7487,14 +7503,14 @@ void CMessageHandler::AsynchronousUpdate()
                         }
                     }
                     break;
-                case 111: // MSG_SUBTYPE_CMESSAGE_111
+                case 111: // MSG_SUBTYPE_CMESSAGE_SAVE_GAME
                     if (bLocal) {
-                        CMessage111 message(0, 0, 0);
+                        CMessageSaveGame message(0, 0, 0);
                         if (message.UnmarshalMessage(pData, dwSize)) {
                             message.Run();
                         }
                     } else {
-                        CMessage111* message = new CMessage111(0, 0, 0);
+                        CMessageSaveGame* message = new CMessageSaveGame(0, 0, 0);
                         if (message->UnmarshalMessage(pData, dwSize)) {
                             m_messageList.AddTail(message);
                         } else {
@@ -7502,14 +7518,14 @@ void CMessageHandler::AsynchronousUpdate()
                         }
                     }
                     break;
-                case 112: // MSG_SUBTYPE_CMESSAGE_112
+                case 112: // MSG_SUBTYPE_CMESSAGE_PLAY_SOUND_POINT
                     if (bLocal) {
-                        CMessage112 message(CResRef(""), 0, CPoint(0, 0), 0, 0);
+                        CMessagePlaySoundPoint message(CResRef(""), 0, CPoint(0, 0), 0, 0);
                         if (message.UnmarshalMessage(pData, dwSize)) {
                             message.Run();
                         }
                     } else {
-                        CMessage112* message = new CMessage112(CResRef(""), 0, CPoint(0, 0), 0, 0);
+                        CMessagePlaySoundPoint* message = new CMessagePlaySoundPoint(CResRef(""), 0, CPoint(0, 0), 0, 0);
                         if (message->UnmarshalMessage(pData, dwSize)) {
                             m_messageList.AddTail(message);
                         } else {
@@ -21828,37 +21844,37 @@ void CMessageChangeStat::Run()
 // -----------------------------------------------------------------------------
 
 // 0x4F5130
-CMessage2::CMessage2(const CItem& item, LONG caller, LONG target)
+CMessageAddInventoryItem::CMessageAddInventoryItem(const CItem& item, LONG caller, LONG target)
     : CMessage(caller, target)
 {
     m_item = item;
 }
 
 // 0x4641A0
-CMessage2::~CMessage2()
+CMessageAddInventoryItem::~CMessageAddInventoryItem()
 {
 }
 
 // 0x40A0D0
-SHORT CMessage2::GetCommType()
+SHORT CMessageAddInventoryItem::GetCommType()
 {
     return SEND;
 }
 
 // 0x40A0E0
-BYTE CMessage2::GetMsgType()
+BYTE CMessageAddInventoryItem::GetMsgType()
 {
     return CBaldurMessage::MSG_TYPE_CMESSAGE;
 }
 
 // 0x464170
-BYTE CMessage2::GetMsgSubType()
+BYTE CMessageAddInventoryItem::GetMsgSubType()
 {
-    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_2;
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ADD_INVENTORY_ITEM;
 }
 
 // 0x4F8D60
-void CMessage2::MarshalMessage(BYTE** pData, DWORD* dwSize)
+void CMessageAddInventoryItem::MarshalMessage(BYTE** pData, DWORD* dwSize)
 {
     CResRef resRef;
     CString sResRef;
@@ -21941,7 +21957,7 @@ void CMessage2::MarshalMessage(BYTE** pData, DWORD* dwSize)
 }
 
 // 0x4F8FA0
-BOOL CMessage2::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+BOOL CMessageAddInventoryItem::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
     // __LINE__: 5584
@@ -21994,7 +22010,7 @@ BOOL CMessage2::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 }
 
 // 0x4F9150
-void CMessage2::Run()
+void CMessageAddInventoryItem::Run()
 {
     CGameSprite* pSprite;
 
@@ -22049,32 +22065,32 @@ void CMessage2::Run()
 // -----------------------------------------------------------------------------
 
 // 0x4F53E0
-CMessage18::CMessage18(BYTE a1, LONG caller, LONG target)
+CMessageDoorOpen::CMessageDoorOpen(BOOLEAN bOpen, LONG caller, LONG target)
     : CMessage(caller, target)
 {
-    field_C = a1;
+    m_bOpen = bOpen;
 }
 
 // 0x40A0D0
-SHORT CMessage18::GetCommType()
+SHORT CMessageDoorOpen::GetCommType()
 {
     return SEND;
 }
 
 // 0x40A0E0
-BYTE CMessage18::GetMsgType()
+BYTE CMessageDoorOpen::GetMsgType()
 {
     return CBaldurMessage::MSG_TYPE_CMESSAGE;
 }
 
 // 0x466470
-BYTE CMessage18::GetMsgSubType()
+BYTE CMessageDoorOpen::GetMsgSubType()
 {
-    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_18;
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_DOOR_OPEN;
 }
 
 // 0x4FCF00
-void CMessage18::MarshalMessage(BYTE** pData, DWORD* dwSize)
+void CMessageDoorOpen::MarshalMessage(BYTE** pData, DWORD* dwSize)
 {
     PLAYER_ID remoteSourcePlayerID = 0;
     LONG remoteSourceObjectID;
@@ -22149,7 +22165,7 @@ void CMessage18::MarshalMessage(BYTE** pData, DWORD* dwSize)
     *reinterpret_cast<LONG*>(*pData + cnt) = remoteSourceObjectID;
     cnt += sizeof(LONG);
 
-    *reinterpret_cast<BYTE*>(*pData + cnt) = field_C;
+    *reinterpret_cast<BYTE*>(*pData + cnt) = m_bOpen;
     cnt += sizeof(BYTE);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
@@ -22158,7 +22174,7 @@ void CMessage18::MarshalMessage(BYTE** pData, DWORD* dwSize)
 }
 
 // 0x4FD0E0
-BOOL CMessage18::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+BOOL CMessageDoorOpen::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
     // __LINE__: 9293
@@ -22192,7 +22208,7 @@ BOOL CMessage18::UnmarshalMessage(BYTE* pData, DWORD dwSize)
         m_sourceId = CGameObjectArray::INVALID_INDEX;
     }
 
-    field_C = *reinterpret_cast<BYTE*>(pData + cnt);
+    m_bOpen = *reinterpret_cast<BYTE*>(pData + cnt);
     cnt += sizeof(BYTE);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
@@ -22203,7 +22219,7 @@ BOOL CMessage18::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 }
 
 // 0x4FD1D0
-void CMessage18::Run()
+void CMessageDoorOpen::Run()
 {
     CAIObjectType type;
     CGameDoor* pDoor;
@@ -22217,7 +22233,7 @@ void CMessage18::Run()
     } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
 
     if (rc == CGameObjectArray::SUCCESS) {
-        if (static_cast<BYTE>(pDoor->m_dwFlags & 0x1) != field_C) {
+        if (static_cast<BYTE>(pDoor->m_dwFlags & 0x1) != m_bOpen) {
             CGameObject* pObject;
 
             do {
@@ -22229,7 +22245,7 @@ void CMessage18::Run()
 
             if (rc == CGameObjectArray::SUCCESS) {
                 type.Set(pObject->GetAIType());
-                pDoor->sub_489680(type, FALSE);
+                pDoor->ToggleDoor(type, FALSE);
 
                 g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
                     CGameObjectArray::THREAD_ASYNCH,
@@ -22364,13 +22380,13 @@ void CMessageEnterDialogMode::Run()
 // -----------------------------------------------------------------------------
 
 // 0x4F59D0
-CMessageInsertResponse::CMessageInsertResponse(const CAIResponse& response, LONG a2, LONG a3, LONG caller, LONG target, LONG a6)
+CMessageInsertResponse::CMessageInsertResponse(const CAIResponse& response, BOOL checkCurrentResponse, BOOL clearActions, LONG caller, LONG target, BOOL bRunInstants)
     : CMessage(caller, target)
 {
     m_response.Set(response);
-    field_30 = a2;
-    field_34 = a3;
-    field_38 = a6;
+    m_checkCurrentResponse = checkCurrentResponse;
+    m_clearActions = clearActions;
+    m_bRunInstants = bRunInstants;
 }
 
 // 0x4632B0
@@ -22414,7 +22430,53 @@ BOOL CMessageInsertResponse::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 // 0x502570
 void CMessageInsertResponse::Run()
 {
-    // TODO: Incomplete.
+    CGameAIBase* pSprite;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if ((pSprite->GetObjectType() & CGameObject::TYPE_AIBASE) != 0) {
+            if (m_bRunInstants == TRUE) {
+                POSITION pos = m_response.m_actionList.GetHeadPosition();
+                while (pos != NULL) {
+                    CAIAction curAction;
+
+                    // NOTE: Uninline.
+                    curAction = pSprite->m_curAction;
+
+                    POSITION curr = pos;
+                    CAIAction* pAction = m_response.m_actionList.GetNext(pos);
+                    pAction->m_internalFlags |= 0x2;
+
+                    if (g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_lDLGINST.Find(pAction->m_actionID) != NULL) {
+                        pSprite->SetCurrAction(*pAction);
+                        pSprite->ExecuteAction();
+                        m_response.m_actionList.RemoveAt(curr);
+
+                        if (pAction != NULL) {
+                            delete pAction;
+                        }
+                    }
+
+                    pSprite->SetCurrAction(curAction);
+                }
+            }
+
+            if (m_response.m_actionList.GetCount() > 0) {
+                pSprite->InsertResponse(m_response, m_checkCurrentResponse, m_clearActions);
+            }
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -22636,32 +22698,32 @@ void CMessageLoadDialog::Run()
 // -----------------------------------------------------------------------------
 
 // 0x4F5C70
-CMessage34::CMessage34(WORD a1, LONG caller, LONG target)
+CMessageRemoveInventoryItem::CMessageRemoveInventoryItem(SHORT slotNum, LONG caller, LONG target)
     : CMessage(caller, target)
 {
-    field_C = a1;
+    m_slotNum = slotNum;
 }
 
 // 0x40A0D0
-SHORT CMessage34::GetCommType()
+SHORT CMessageRemoveInventoryItem::GetCommType()
 {
     return SEND;
 }
 
 // 0x40A0E0
-BYTE CMessage34::GetMsgType()
+BYTE CMessageRemoveInventoryItem::GetMsgType()
 {
     return CBaldurMessage::MSG_TYPE_CMESSAGE;
 }
 
 // 0x4641F0
-BYTE CMessage34::GetMsgSubType()
+BYTE CMessageRemoveInventoryItem::GetMsgSubType()
 {
-    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_34;
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_REMOVE_INVENTORY_ITEM;
 }
 
 // 0x504070
-void CMessage34::MarshalMessage(BYTE** pData, DWORD* dwSize)
+void CMessageRemoveInventoryItem::MarshalMessage(BYTE** pData, DWORD* dwSize)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
     // __LINE__: 15295
@@ -22705,7 +22767,7 @@ void CMessage34::MarshalMessage(BYTE** pData, DWORD* dwSize)
     *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
     cnt += sizeof(LONG);
 
-    *reinterpret_cast<WORD*>(*pData + cnt) = field_C;
+    *reinterpret_cast<WORD*>(*pData + cnt) = m_slotNum;
     cnt += sizeof(WORD);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
@@ -22714,7 +22776,7 @@ void CMessage34::MarshalMessage(BYTE** pData, DWORD* dwSize)
 }
 
 // 0x5041A0
-BOOL CMessage34::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+BOOL CMessageRemoveInventoryItem::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
     // __LINE__: 15367
@@ -22735,7 +22797,7 @@ BOOL CMessage34::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 
     m_targetId = localObjectID;
 
-    field_C = *reinterpret_cast<WORD*>(pData + cnt);
+    m_slotNum = *reinterpret_cast<WORD*>(pData + cnt);
     cnt += sizeof(WORD);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
@@ -22746,9 +22808,48 @@ BOOL CMessage34::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 }
 
 // 0x504250
-void CMessage34::Run()
+void CMessageRemoveInventoryItem::Run()
 {
-    // TODO: Incomplete.
+    // TODO: Incomplete. Only the removal itself is translated; the quick
+    // weapon (43-50) / quick item (15-17) button fix-ups after
+    // `UpdatePersonalItemStatus` (0x5043B2 onwards) are missing.
+
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (pSprite->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            if (pSprite->m_equipment.m_items[m_slotNum] != NULL) {
+                pSprite->Unequip(m_slotNum);
+                g_pBaldurChitin->GetObjectGame()->AddDisposableItem(pSprite->m_equipment.m_items[m_slotNum]);
+                pSprite->m_equipment.m_items[m_slotNum] = NULL;
+
+                if (m_slotNum == pSprite->m_equipment.m_selectedWeapon) {
+                    pSprite->EquipMostDamagingMelee();
+                }
+            }
+
+            CMessageSpriteEquipment* pMessage = new CMessageSpriteEquipment(pSprite,
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage,
+                FALSE,
+                pMessage->GetCommType());
+
+            g_pBaldurChitin->GetActiveEngine()->UpdatePersonalItemStatus(m_targetId);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -24477,32 +24578,32 @@ void CMessage108::Run()
 // -----------------------------------------------------------------------------
 
 // 0x453490
-CMessage111::CMessage111(STRREF strText, LONG caller, LONG target)
+CMessageSaveGame::CMessageSaveGame(STRREF strText, LONG caller, LONG target)
     : CMessage(caller, target)
 {
     m_strText = strText;
 }
 
 // 0x43E170
-SHORT CMessage111::GetCommType()
+SHORT CMessageSaveGame::GetCommType()
 {
     return BROADCAST_FORCED;
 }
 
 // 0x40A0E0
-BYTE CMessage111::GetMsgType()
+BYTE CMessageSaveGame::GetMsgType()
 {
     return CBaldurMessage::MSG_TYPE_CMESSAGE;
 }
 
 // 0x4534B0
-BYTE CMessage111::GetMsgSubType()
+BYTE CMessageSaveGame::GetMsgSubType()
 {
-    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_111;
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SAVE_GAME;
 }
 
 // 0x504C40
-void CMessage111::MarshalMessage(BYTE** pData, DWORD* dwSize)
+void CMessageSaveGame::MarshalMessage(BYTE** pData, DWORD* dwSize)
 {
     *dwSize = sizeof(STRREF);
 
@@ -24516,7 +24617,7 @@ void CMessage111::MarshalMessage(BYTE** pData, DWORD* dwSize)
 }
 
 // 0x504C80
-BOOL CMessage111::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+BOOL CMessageSaveGame::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 {
     m_strText = *reinterpret_cast<STRREF*>(pData + CNetwork::SPEC_MSG_HEADER_LENGTH);
 
@@ -24524,7 +24625,7 @@ BOOL CMessage111::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 }
 
 // 0x504CA0
-void CMessage111::Run()
+void CMessageSaveGame::Run()
 {
     // TODO: Incomplete.
 }
@@ -24532,7 +24633,7 @@ void CMessage111::Run()
 // -----------------------------------------------------------------------------
 
 // 0x4F5BF0
-CMessage112::CMessage112(CResRef cResSound, BYTE nChannel, CPoint ptPos, LONG caller, LONG target)
+CMessagePlaySoundPoint::CMessagePlaySoundPoint(CResRef cResSound, BYTE nChannel, CPoint ptPos, LONG caller, LONG target)
     : CMessage(caller, target)
 {
     m_cResSound = cResSound;
@@ -24541,25 +24642,25 @@ CMessage112::CMessage112(CResRef cResSound, BYTE nChannel, CPoint ptPos, LONG ca
 }
 
 // 0x4536E0
-SHORT CMessage112::GetCommType()
+SHORT CMessagePlaySoundPoint::GetCommType()
 {
     return BROADCAST_FORCED_OTHERS;
 }
 
 // 0x40A0E0
-BYTE CMessage112::GetMsgType()
+BYTE CMessagePlaySoundPoint::GetMsgType()
 {
     return CBaldurMessage::MSG_TYPE_CMESSAGE;
 }
 
 // 0x45EDD0
-BYTE CMessage112::GetMsgSubType()
+BYTE CMessagePlaySoundPoint::GetMsgSubType()
 {
-    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_112;
+    return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_PLAY_SOUND_POINT;
 }
 
 // 0x503AA0
-void CMessage112::MarshalMessage(BYTE** pData, DWORD* dwSize)
+void CMessagePlaySoundPoint::MarshalMessage(BYTE** pData, DWORD* dwSize)
 {
     CString sResRef;
 
@@ -24638,7 +24739,7 @@ void CMessage112::MarshalMessage(BYTE** pData, DWORD* dwSize)
 }
 
 // 0x503CB0
-BOOL CMessage112::UnmarshalMessage(BYTE* pData, DWORD dwSize)
+BOOL CMessagePlaySoundPoint::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 {
     // FIXME: Unused.
     CString v1;
@@ -24689,7 +24790,7 @@ BOOL CMessage112::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 }
 
 // 0x503E60
-void CMessage112::Run()
+void CMessagePlaySoundPoint::Run()
 {
     CSound cSound;
     cSound.SetResRef(m_cResSound, TRUE, TRUE);

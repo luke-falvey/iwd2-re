@@ -585,7 +585,7 @@ void CGameDoor::SetCursor(LONG nToolTip)
 }
 
 // 0x489680
-void CGameDoor::sub_489680(const CAIObjectType& type, BOOL a2)
+void CGameDoor::ToggleDoor(const CAIObjectType& cause, BOOL bIgnoreLock)
 {
     // TODO: Incomplete.
 }
@@ -751,14 +751,18 @@ void CGameDoor::Marshal(CAreaFileDoorObject** pDoorObject)
 }
 
 // 0x48B2C0
-const CPoint& CGameDoor::sub_48B2C0(const CPoint& pt)
+const CPoint& CGameDoor::GetClosestDest(const CPoint& pt)
 {
     LONG dx1 = pt.x - m_ptDest1.x;
     LONG dy1 = pt.y - m_ptDest1.y;
     LONG dx2 = pt.x - m_ptDest2.x;
     LONG dy2 = pt.y - m_ptDest2.y;
 
-    if (dy1 * dy1 * 16 / 9 + dx1 * dx1 < dy2 * dy2 * 16 / 9 + dx2 * dx2) {
+    // NOTE: Y distance is scaled by 4/3 (isometric).
+    LONG nDist1 = dx1 * dx1 + (dy1 * dy1 * 16) / 9;
+    LONG nDist2 = dx2 * dx2 + (dy2 * dy2 * 16) / 9;
+
+    if (nDist1 < nDist2) {
         return m_ptDest1;
     }
 

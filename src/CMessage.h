@@ -36,7 +36,7 @@ public:
     static const BYTE MSG_TYPE_CMESSAGE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_ADD_ACTION;
     static const BYTE MSG_SUBTYPE_CMESSAGE_ADD_EFFECT;
-    static const BYTE MSG_SUBTYPE_CMESSAGE_2;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_ADD_INVENTORY_ITEM;
     static const BYTE MSG_SUBTYPE_CMESSAGE_ANIMATION_CHANGE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_CHANGE_DIRECTION;
     static const BYTE MSG_SUBTYPE_CMESSAGE_CLEAR_ACTIONS;
@@ -52,7 +52,7 @@ public:
     static const BYTE MSG_SUBTYPE_CMESSAGE_CUT_SCENE_MODE_STATUS;
     static const BYTE MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXT;
     static const BYTE MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXTREF;
-    static const BYTE MSG_SUBTYPE_CMESSAGE_18;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_DOOR_OPEN;
     static const BYTE MSG_SUBTYPE_CMESSAGE_DOOR_STATUS;
     static const BYTE MSG_SUBTYPE_CMESSAGE_DROP_PATH;
     static const BYTE MSG_SUBTYPE_CMESSAGE_ENTER_DIALOG;
@@ -68,7 +68,7 @@ public:
     static const BYTE MSG_SUBTYPE_CMESSAGE_PARTY_GOLD;
     static const BYTE MSG_SUBTYPE_CMESSAGE_PLAY_SOUND;
     static const BYTE MSG_SUBTYPE_CMESSAGE_PLAY_SOUND_REF;
-    static const BYTE MSG_SUBTYPE_CMESSAGE_34;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_REMOVE_INVENTORY_ITEM;
     static const BYTE MSG_SUBTYPE_CMESSAGE_REMOVE_REPLIES;
     static const BYTE MSG_SUBTYPE_CMESSAGE_REPUTATION_CHANGE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_ACTIVE;
@@ -145,8 +145,8 @@ public:
     static const BYTE MSG_SUBTYPE_CMESSAGE_108;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_AREA_TYPE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_AREA_REST_ENCOUNTER;
-    static const BYTE MSG_SUBTYPE_CMESSAGE_111;
-    static const BYTE MSG_SUBTYPE_CMESSAGE_112;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_SAVE_GAME;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_PLAY_SOUND_POINT;
     static const BYTE MSG_SUBTYPE_CMESSAGE_PICKED_DIALOG_RESPONSE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_AREA_EXPLORED;
     static const BYTE MSG_SUBTYPE_CMESSAGE_115;
@@ -325,7 +325,9 @@ public:
     BOOLEAN OnPauseRequestToServer(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN PauseAnnounceStatus(BOOLEAN bHardPauseStatus, BOOLEAN bPauseStatus, PLAYER_ID idPauser);
     BOOLEAN OnPauseAnnounceStatus(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN SendChapterAnnounceToServer(BYTE nChapter, CResRef cResRef);
     BOOLEAN ChapterAnnounceStatus(BYTE nChapter, CResRef cResRef);
+    BOOLEAN SendLeaveAreaLUAPanic(CPoint ptStart, LONG nFace, CString sArea, CString sParchment);
     BOOLEAN SendMapWorldCancelRequestToServer();
     BOOLEAN SendMapWorldAnnounceStatus(BOOLEAN bActive, PLAYER_ID idController, LONG nLeavingEdge);
     BOOLEAN SendMapWorldRevealArea(CString sAreaResRef);
@@ -1914,10 +1916,10 @@ public:
     /* 0012 */ BOOLEAN m_modify;
 };
 
-class CMessage2 : public CMessage {
+class CMessageAddInventoryItem : public CMessage {
 public:
-    CMessage2(const CItem& item, LONG caller, LONG target);
-    ~CMessage2() override;
+    CMessageAddInventoryItem(const CItem& item, LONG caller, LONG target);
+    ~CMessageAddInventoryItem() override;
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
@@ -1928,9 +1930,9 @@ public:
     /* 000C */ CItem m_item;
 };
 
-class CMessage18 : public CMessage {
+class CMessageDoorOpen : public CMessage {
 public:
-    CMessage18(BYTE a1, LONG caller, LONG target);
+    CMessageDoorOpen(BOOLEAN bOpen, LONG caller, LONG target);
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
@@ -1938,7 +1940,7 @@ public:
     BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
-    /* 000C */ BYTE field_C;
+    /* 000C */ BOOLEAN m_bOpen;
 };
 
 class CMessageEnterDialogMode : public CMessage {
@@ -1956,7 +1958,7 @@ public:
 
 class CMessageInsertResponse : public CMessage {
 public:
-    CMessageInsertResponse(const CAIResponse& response, LONG a2, LONG a3, LONG caller, LONG target, LONG a6);
+    CMessageInsertResponse(const CAIResponse& response, BOOL checkCurrentResponse, BOOL clearActions, LONG caller, LONG target, BOOL bRunInstants);
     ~CMessageInsertResponse() override;
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
@@ -1966,9 +1968,9 @@ public:
     void Run() override;
 
     /* 000C */ CAIResponse m_response;
-    /* 0030 */ LONG field_30;
-    /* 0034 */ LONG field_34;
-    /* 0038 */ LONG field_38;
+    /* 0030 */ BOOL m_checkCurrentResponse;
+    /* 0034 */ BOOL m_clearActions;
+    /* 0038 */ BOOL m_bRunInstants;
 };
 
 class CMessageLoadDialog : public CMessage {
@@ -1986,9 +1988,9 @@ public:
     /* 0010 */ LONG field_10;
 };
 
-class CMessage34 : public CMessage {
+class CMessageRemoveInventoryItem : public CMessage {
 public:
-    CMessage34(WORD a1, LONG caller, LONG target);
+    CMessageRemoveInventoryItem(SHORT slotNum, LONG caller, LONG target);
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
@@ -1996,7 +1998,7 @@ public:
     BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
-    /* 000C */ WORD field_C;
+    /* 000C */ SHORT m_slotNum;
 };
 
 class CMessage51 : public CMessage {
@@ -2167,9 +2169,9 @@ public:
     /* 001C */ DWORD field_1C;
 };
 
-class CMessage111 : public CMessage {
+class CMessageSaveGame : public CMessage {
 public:
-    CMessage111(STRREF strText, LONG caller, LONG target);
+    CMessageSaveGame(STRREF strText, LONG caller, LONG target);
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
@@ -2180,9 +2182,9 @@ public:
     /* 000C */ STRREF m_strText;
 };
 
-class CMessage112 : public CMessage {
+class CMessagePlaySoundPoint : public CMessage {
 public:
-    CMessage112(CResRef cResSound, BYTE nChannel, CPoint ptPos, LONG caller, LONG target);
+    CMessagePlaySoundPoint(CResRef cResSound, BYTE nChannel, CPoint ptPos, LONG caller, LONG target);
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;

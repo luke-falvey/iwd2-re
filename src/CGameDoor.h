@@ -18,14 +18,14 @@ public:
     /* 0048 */ void RemoveFromArea() override;
     /* 0058 */ void SetCursor(LONG nToolTip) override;
 
+    void ToggleDoor(const CAIObjectType& cause, BOOL bIgnoreLock);
     void OnDoorStatusUpdate(BOOLEAN bDoorOpened, DWORD dwFlags, WORD nTrapActivated, WORD nTrapDetected);
     void Marshal(CAreaFileDoorObject** pDoorObject);
+    const CPoint& GetClosestDest(const CPoint& pt);
     void SetDrawPoly(SHORT time);
-    const CPoint& sub_48B2C0(const CPoint& pt);
     DWORD GetFlags();
     void SetFlags(DWORD dwFlags);
     BOOL sub_45B700();
-    void sub_489680(const CAIObjectType& type, BOOL a2);
 
     /* 0598 */ CResRef m_resID;
     /* 05A0 */ CRect m_rOpenBounding;

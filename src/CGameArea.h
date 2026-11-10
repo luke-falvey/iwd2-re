@@ -15,6 +15,8 @@
 #include "FileFormat.h"
 
 class CAIObjectType;
+class CGameEffect;
+class CGameObject;
 class CInfGame;
 class CObjectMarker;
 class CSpawnFile;
@@ -175,6 +177,7 @@ public:
     void GetAllInPoly(const CRect& rBounding, CPoint* pPoly, SHORT nPoly, const CAIObjectType& type, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOLEAN checkBackList);
     LONG sub_46DAE0(INT x, INT y, const CAIObjectType& type, int range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BOOL farthest, BOOL summonedOnly);
     BOOLEAN CanSaveGame(STRREF& strError);
+    void sub_46E130(CGameEffect* pEffect, BOOL a2, BOOL bCheckSpecifics, BYTE nSpecifics, CGameObject* pExclude);
     void AIUpdate();
     void CompressTime(DWORD deltaTime);
     void DebugDump(const CString& message, BOOLEAN bEchoToScreen);

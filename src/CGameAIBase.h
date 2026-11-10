@@ -4,6 +4,7 @@
 #include "CAIAction.h"
 #include "CAIObjectType.h"
 #include "CGameObject.h"
+#include "CSound.h"
 
 class CAIResponse;
 class CAIScript;
@@ -63,8 +64,6 @@ public:
 
     void CheckTimers(LONG cycles);
     void ClearTriggers();
-    CGameObject* GetTargetShareType(BYTE type);
-    void ProcessPendingTriggers();
     BOOL CheckAppropriateTarget(CSpell* pSpell, CGameAIBase* pTarget);
     BOOL PartyHasItem(const CResRef& resRef);
     void ApplyEffectToParty(CGameEffect* pEffect);
@@ -116,6 +115,34 @@ public:
     SHORT SpawnPtDeactivate(CGameSpawning* target);
     SHORT SpawnPtSpawn(CGameSpawning* target);
     SHORT StaticStart(CGameStatic* target, BOOL bStart);
+    CGameObject* GetTargetShareType(BYTE objectType);
+    CGameObject* GetTargetShare();
+    void ProcessPendingTriggers();
+    SHORT PlaySound(CPoint pos, BOOL bUsePoint);
+    SHORT SetGlobal();
+    SHORT IncrementGlobal();
+    SHORT CreateCreature();
+    SHORT CreateCreatureObject(CGameObject* pObject);
+    SHORT ForceSpell(CGameAIBase* pTarget);
+    SHORT ForceSpellPoint();
+    SHORT ApplySpell(CGameAIBase* pTarget);
+    SHORT SetGlobalTimer();
+    SHORT StartCutScene();
+    SHORT CreateItem();
+    SHORT ClearAllActions();
+    SHORT TakePartyItem();
+    SHORT sub_464200();
+    BOOL sub_464950(CItem* pItem, BOOL a2, BOOL a3, INT nCount, BOOL bFeedback);
+    SHORT GiveItemCreate(CGameObject* pObject);
+    SHORT GivePartyGoldGlobal();
+    SHORT IncrementChapter();
+    SHORT AddExperiencePartyGlobal();
+    SHORT OpenDoor(CGameDoor* pDoor);
+    SHORT CloseDoor(CGameDoor* pDoor);
+    SHORT MultiPlayerSync();
+    SHORT LeaveAreaLUAPanic();
+    SHORT BitGlobal();
+    SHORT GlobalBitGlobal();
 
     SCRIPTNAME& GetScriptName();
     void SetTrigger(const CAITrigger& trigger);

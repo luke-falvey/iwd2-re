@@ -408,10 +408,19 @@ void CGameObject::SetCursor(LONG nToolTip)
     }
 }
 
-// 0x4C83F0
+// 0x4C80E0
 void CGameObject::FloatText(STRREF strRef, int a2, int a3)
 {
     // TODO: Incomplete.
+}
+
+// 0x4C83F0
+SHORT CGameObject::TransferInventory(CGameObject* pTarget)
+{
+    // TODO: Incomplete.
+
+    // NOTE: `CGameAIBase::ACTION_ERROR`.
+    return -2;
 }
 
 // 0x78E750

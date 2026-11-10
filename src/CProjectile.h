@@ -5,6 +5,7 @@
 #include "CGameObject.h"
 #include "CSound.h"
 
+class CGameAIBase;
 class CGameArea;
 
 class CProjectile : public CGameObject {
@@ -22,6 +23,10 @@ public:
     SHORT GetDirection(CPoint target);
     void PlaySound(CResRef resRef, BOOL loop, BOOL fireAndForget);
 
+    static CProjectile* DecodeProjectile(WORD projectileType, CGameAIBase* pSource, BOOL a3);
+    static void sub_52A640(LONG nObjectId, CPoint& pt, BOOLEAN a3);
+    static CProjectile* sub_560310(WORD projectileType, CGameAIBase* pSource, BOOL a3);
+
     /* 006E */ WORD m_projectileType;
     /* 0076 */ LONG m_targetId;
     /* 007A */ LONG m_callBackProjectile;
@@ -32,6 +37,8 @@ public:
     /* 0166 */ BOOL m_loopArrivalSound;
     /* 016A */ BOOLEAN m_bHasHeight;
     /* 0182 */ LONG field_182;
+    /* 0186 */ LONG field_186;
+    /* 018A */ CResRef field_18A;
 };
 
 #endif /* CPROJECTILE_H_ */

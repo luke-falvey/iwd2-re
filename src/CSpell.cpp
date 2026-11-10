@@ -106,6 +106,14 @@ SPELL_ABILITY* CSpell::GetAbility(LONG abilityNum) const
     return pAbility;
 }
 
+// 0x54A510
+CGameEffect* CSpell::DecodeEffect(LONG nAbility, LONG nEffect, CGameAIBase* pCaster, DWORD a4, DWORD a5, BYTE casterLevel)
+{
+    // TODO: Incomplete.
+
+    return NULL;
+}
+
 // 0x54A970
 SHORT CSpell::GetLevel() const
 {

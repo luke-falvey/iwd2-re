@@ -265,6 +265,7 @@ public:
     static const ITEM_ABILITY DEFAULT_ATTACK;
 
     static const LONG STANDARD_VERBAL_CONSTANT_LENGTH;
+    static const LONG STEALTH_GREYOUT_DURATION;
 
     static const SHORT FLY_RIGHT;
     static const SHORT FLY_LEFT;
@@ -568,6 +569,8 @@ public:
     void GetQuickWeapon(BYTE buttonNum, CButtonData& buttonData);
     void InitializeWalkingSound();
     void PlayDialogSound(CGameSprite* pNPC);
+    void CheckQuickLists(CAbilityId* ab, SHORT changeAmount, BOOL remove, BOOL removeSpellIfZero);
+    void UpdateFeats(CCreatureFileHeader* pOldBaseStats, CDerivedStats* pDerivedStats);
     void AddKnownDivineSpells(const BYTE& nClass);
     void DisplayTextRef(STRREF nameRef, STRREF textRef, COLORREF nameColor, COLORREF textColor);
     void GetNumInventoryPersonalSlots(INT& nUsedSlots, INT& nTotalSlots);
@@ -600,7 +603,6 @@ public:
     void ResolveInstants(BOOL dropNonInstants);
     void ResolvePausedAction(const CAIAction* curAction, POSITION pos);
     void ResolveTargetPoint(const CAIAction* curAction, POSITION pos);
-    void sub_71ABA0(const CAbilityId& abilityId, SHORT a2, BOOL a3, BOOL a4);
     BOOL sub_71CFF0();
     void sub_71D0B0();
     CItem* sub_722740(const CString& sName);
@@ -684,6 +686,8 @@ public:
     SHORT Enemy();
     SHORT SetDialog();
     void SelectWeaponAbility(unsigned char a1, unsigned char a2, unsigned char a3, unsigned char a4);
+    void sub_755A70(CSpell* pSpell, SPELL_ABILITY* pAbility, const CPoint& ptTarget);
+    void ApplyCastingEffectPost(CSpell* pSpell, SPELL_ABILITY* pAbility);
     void sub_756930(CItem* pItem, CItem* pLauncher);
     SHORT EquipItem();
     SHORT FindTraps();
@@ -701,6 +705,10 @@ public:
     SHORT DropItem(CItem* pItem);
     void sub_761990();
     SHORT PlayBardSong();
+    SHORT SpellCastEffect(const CString& sString1, const CString& sString2, LONG nSpecific1, LONG nSpecific2, LONG nSpecific3);
+    SHORT SpellHitEffect(CGameAIBase* pSource, const CPoint& ptTarget, LONG targetId, LONG projectileType, LONG nHeight);
+    SHORT XEquipItem(CString sItem, LONG slotNum, BOOL bEquip);
+    BOOL sub_727720(const CResRef& resRef, BYTE& nClass, int& a3, BYTE& nLevel);
     BOOL HasClassMask(DWORD dwMask);
     INT GetClassLevel(INT iClassType);
     void SetClassLevel(INT iClassType, INT nLevel);

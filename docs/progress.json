@@ -5,23 +5,23 @@
     "0x7DA200"
   ],
   "functions_total": 9831,
-  "functions_done": 7163,
-  "functions_complete": 6734,
-  "incomplete_markers": 458,
+  "functions_done": 7213,
+  "functions_complete": 6775,
+  "incomplete_markers": 467,
   "incomplete_by_file": {
-    "src/CMessage.cpp": 82,
-    "src/CGameSprite.cpp": 77,
+    "src/CMessage.cpp": 83,
+    "src/CGameSprite.cpp": 82,
     "src/CVidMode.cpp": 20,
     "src/CScreenCharacter.cpp": 19,
     "src/CStore.cpp": 16,
+    "src/CInfGame.cpp": 14,
     "src/CVidCell.cpp": 14,
-    "src/CInfGame.cpp": 13,
     "src/CScreenInventory.cpp": 12,
     "src/CScreenStore.cpp": 12,
     "src/CDerivedStats.cpp": 11,
-    "src/CGameAIBase.cpp": 11,
     "src/CScreenWorld.cpp": 10,
     "src/CBaldurProjector.cpp": 7,
+    "src/CGameAIBase.cpp": 7,
     "src/CItem.cpp": 7,
     "src/CScreenCreateChar.cpp": 7,
     "src/CVidBitmap.cpp": 7,
@@ -39,6 +39,7 @@
     "src/CGameDialog.cpp": 4,
     "src/CGameEffect.cpp": 4,
     "src/CGameSpy.cpp": 4,
+    "src/CProjectile.cpp": 4,
     "src/CChitin.cpp": 3,
     "src/CScreenConnection.cpp": 3,
     "src/CScreenWorldMap.cpp": 3,
@@ -46,6 +47,7 @@
     "src/CSwitchCDStatus.cpp": 3,
     "src/CTiledObject.cpp": 3,
     "src/CGameAreaNotes.cpp": 2,
+    "src/CGameObject.cpp": 2,
     "src/CGameObjectArray.cpp": 2,
     "src/CImm.cpp": 2,
     "src/CRuleTables.cpp": 2,
@@ -59,15 +61,15 @@
     "src/CDimm.cpp": 1,
     "src/CGameAnimationTypeMonsterAnkheg.cpp": 1,
     "src/CGameAnimationTypeMonsterLayeredSpell.cpp": 1,
+    "src/CGameArea.cpp": 1,
     "src/CGameContainer.cpp": 1,
     "src/CGameDoor.cpp": 1,
-    "src/CGameObject.cpp": 1,
     "src/CGameSpawning.cpp": 1,
     "src/CMoveList.cpp": 1,
-    "src/CProjectile.cpp": 1,
     "src/CScreenChapter.cpp": 1,
     "src/CScreenMap.cpp": 1,
     "src/CScreenSave.cpp": 1,
+    "src/CSpell.cpp": 1,
     "src/CTimerWorld.cpp": 1,
     "src/CUIControlFactory.cpp": 1,
     "src/CUIControlTextDisplay.cpp": 1,
@@ -78,8 +80,8 @@
     "src/CWarp.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 9636,
-  "annotations_not_function_start": 2451,
+  "annotations_total": 9691,
+  "annotations_not_function_start": 2456,
   "duplicate_annotations": {
     "0x7ACD60": [
       "src/CAIObjectType.cpp",
@@ -236,6 +238,7 @@
       "src/CChitin.cpp",
       "src/CChitin.cpp",
       "src/CChitin.cpp",
+      "src/CGameAIBase.cpp",
       "src/CGameAIBase.cpp",
       "src/CGameAnimationType.cpp",
       "src/CGameAnimationType.cpp",
@@ -1275,6 +1278,7 @@
     "0x8477C4",
     "0x8477C6",
     "0x8477D2",
+    "0x8477EC",
     "0x8477F0",
     "0x8477F2",
     "0x84781A",
@@ -1297,6 +1301,7 @@
     "0x847886",
     "0x84788A",
     "0x8478B4",
+    "0x8478D8",
     "0x8478DD",
     "0x8478DE",
     "0x8478F2",
@@ -1471,10 +1476,12 @@
     "0x847D44",
     "0x847D98",
     "0x847DA4",
+    "0x847DD0",
     "0x847DDC",
     "0x847DF6",
     "0x847E04",
     "0x847E3C",
+    "0x847E3E",
     "0x847E46",
     "0x847F48",
     "0x847F50",
@@ -2008,6 +2015,7 @@
     "0x85BBC0",
     "0x85BBD0",
     "0x85BCA0",
+    "0x85BD1C",
     "0x85BD79",
     "0x85BD7A",
     "0x85BD7B",
@@ -3706,9 +3714,14 @@
     "0xA1917C"
   ],
   "bytes_total": 3846937,
-  "bytes_done": 2960815,
-  "bytes_complete": 2298320,
+  "bytes_done": 3067102,
+  "bytes_complete": 2356152,
   "largest_stubs": [
+    {
+      "addr": "0x51EAF0",
+      "name": "CProjectile_DecodeProjectile",
+      "size": 41864
+    },
     {
       "addr": "0x58A340",
       "name": "CButtonArray_UpdateButtons",
@@ -3720,14 +3733,14 @@
       "size": 21176
     },
     {
-      "addr": "0x44DC10",
-      "name": "CGameAIBase_ExecuteAction",
-      "size": 19230
-    },
-    {
       "addr": "0x58FF20",
       "name": "CButtonArray_OnLButtonClick",
       "size": 15132
+    },
+    {
+      "addr": "0x560310",
+      "name": "FUN_00560310",
+      "size": 13633
     },
     {
       "addr": "0x74CDB0",
@@ -3903,25 +3916,20 @@
       "addr": "0x407280",
       "name": "FUN_00407280",
       "size": 3385
-    },
-    {
-      "addr": "0x747F80",
-      "name": "CGameSprite_RandomWalk_RandomTurn",
-      "size": 3352
     }
   ],
   "next": [
+    {
+      "addr": "0x40F940",
+      "name": "CResRef_operator_equ-equ",
+      "translated_callers": 58,
+      "size": 31
+    },
     {
       "addr": "0x442990",
       "name": "CResHelper_CResUnknown_SetResRef",
       "translated_callers": 55,
       "size": 228
-    },
-    {
-      "addr": "0x40F940",
-      "name": "CResRef_operator_equ-equ",
-      "translated_callers": 54,
-      "size": 31
     },
     {
       "addr": "0x4428A0",
@@ -3932,13 +3940,13 @@
     {
       "addr": "0x4699F0",
       "name": "CResHelper<CResSpell>_SetResRef",
-      "translated_callers": 34,
+      "translated_callers": 37,
       "size": 228
     },
     {
       "addr": "0x7B5370",
       "name": "C2DArray_Destruct",
-      "translated_callers": 33,
+      "translated_callers": 35,
       "size": 76
     },
     {
@@ -3960,6 +3968,12 @@
       "size": 52
     },
     {
+      "addr": "0x5F66F0",
+      "name": "CSpellListArray_GetSize",
+      "translated_callers": 13,
+      "size": 19
+    },
+    {
       "addr": "0x409800",
       "name": "CNode_PopNext",
       "translated_callers": 12,
@@ -3972,10 +3986,10 @@
       "size": 225
     },
     {
-      "addr": "0x5F66F0",
-      "name": "CSpellListArray_GetSize",
-      "translated_callers": 12,
-      "size": 19
+      "addr": "0x402A50",
+      "name": "FUN_00402a50",
+      "translated_callers": 11,
+      "size": 84
     },
     {
       "addr": "0x44AD80",
@@ -3996,22 +4010,16 @@
       "size": 68
     },
     {
-      "addr": "0x402A50",
-      "name": "FUN_00402a50",
-      "translated_callers": 9,
-      "size": 84
-    },
-    {
       "addr": "0x51DE20",
       "name": "FUN_0051de20",
       "translated_callers": 8,
       "size": 18
     },
     {
-      "addr": "0x51EAF0",
-      "name": "CProjectile_DecodeProjectile",
+      "addr": "0x537220",
+      "name": "StringContainer_Set",
       "translated_callers": 8,
-      "size": 41864
+      "size": 156
     },
     {
       "addr": "0x5F9870",
@@ -4032,22 +4040,16 @@
       "size": 217
     },
     {
-      "addr": "0x537220",
-      "name": "StringContainer_Set",
-      "translated_callers": 7,
-      "size": 156
-    },
-    {
-      "addr": "0x54A510",
-      "name": "CSpell_DecodeEffect",
-      "translated_callers": 7,
-      "size": 1086
-    },
-    {
       "addr": "0x5F9AA0",
       "name": "FUN_005f9aa0",
       "translated_callers": 7,
       "size": 14
+    },
+    {
+      "addr": "0x403530",
+      "name": "FUN_00403530",
+      "translated_callers": 6,
+      "size": 32
     },
     {
       "addr": "0x405370",
@@ -4062,12 +4064,6 @@
       "size": 228
     },
     {
-      "addr": "0x46E130",
-      "name": "FUN_0046e130",
-      "translated_callers": 6,
-      "size": 663
-    },
-    {
       "addr": "0x5B9C60",
       "name": "CInfGame_CheckIfPlayerInPortraitSlotCanUseItem",
       "translated_callers": 6,
@@ -4078,12 +4074,6 @@
       "name": "CGameSprite_Swing",
       "translated_callers": 6,
       "size": 7023
-    },
-    {
-      "addr": "0x403530",
-      "name": "FUN_00403530",
-      "translated_callers": 5,
-      "size": 32
     },
     {
       "addr": "0x40A130",
@@ -4210,6 +4200,24 @@
       "name": "CScreenWorld_StartDialog",
       "translated_callers": 4,
       "size": 4007
+    },
+    {
+      "addr": "0x75D450",
+      "name": "CGameSprite_B3AUTO_0075d450",
+      "translated_callers": 4,
+      "size": 2934
+    },
+    {
+      "addr": "0x780770",
+      "name": "CResTile_GetTileData",
+      "translated_callers": 4,
+      "size": 14
+    },
+    {
+      "addr": "0x403310",
+      "name": "FUN_00403310",
+      "translated_callers": 3,
+      "size": 11
     }
   ]
 }
