@@ -174,7 +174,45 @@ typedef struct {
 
 class CGameSpriteLastUpdate {
 public:
+    CGameSpriteLastUpdate();
+    ~CGameSpriteLastUpdate();
     void Initialize(BOOL bFullUpdateRequired);
+
+    /* 0000 */ LONG* m_pPath;
+    /* 0004 */ SHORT m_nPath;
+    /* 0006 */ SHORT field_6;
+    /* 0008 */ CPoint field_8;
+    /* 0010 */ BYTE field_10;
+    /* 0012 */ SHORT field_12;
+    /* 0014 */ CPoint field_14;
+    /* 001C */ SHORT field_1C;
+    /* 001E */ LONG field_1E;
+    /* 0022 */ SHORT field_22;
+    /* 0024 */ SHORT field_24;
+    /* 0026 */ LONG field_26;
+    /* 002A */ SHORT field_2A;
+    /* 002C */ SHORT field_2C;
+    /* 002E */ SHORT field_2E;
+    /* 0030 */ SHORT field_30;
+    /* 0032 */ SHORT field_32;
+    /* 0034 */ SHORT field_34;
+    /* 0036 */ SHORT field_36;
+    /* 0038 */ SHORT field_38;
+    /* 003A */ SHORT field_3A;
+    /* 003C */ BYTE* field_3C;
+    /* 0040 */ BYTE field_40;
+    /* 0041 */ BYTE field_41;
+    /* 0042 */ BYTE field_42;
+    /* 0043 */ BYTE field_43;
+    /* 0044 */ CString field_44;
+    /* 0048 */ BYTE field_48;
+    /* 004A */ LONG field_4A;
+    /* 004E */ std::bitset<256> field_4E;
+    /* 006E */ BYTE field_6E;
+    /* 0070 */ LONG field_70;
+    /* 0074 */ BYTE field_74;
+    /* 0075 */ unsigned char field_75[131];
+    /* 00F8 */ BOOL m_bFullUpdateRequired;
 };
 
 class CGameSprite : public CGameAIBase {
@@ -541,8 +579,9 @@ public:
     void sub_723BF0(BOOLEAN a1, BOOLEAN a2);
     INT GetAC();
     INT sub_723F60();
-    void sub_72DE60();
     void sub_71E760(CDerivedStats& DStats, int a2);
+    void sub_722D50(BYTE nClass, SHORT nLevels, int a3);
+    void CheckStatsChange();
     int sub_71F6E0();
     const CString& GetName();
     STRREF GetNameRef();
@@ -554,6 +593,7 @@ public:
     void ResolvePausedAction(const CAIAction* curAction, POSITION pos);
     void ResolveTargetPoint(const CAIAction* curAction, POSITION pos);
     BOOL ProcessEffectList();
+    BOOL HandlePersistantEffects(LONG deltaT);
     void ClearStoredPaths();
     void ClearDialogActions();
     BOOL HandleEffects();
@@ -612,6 +652,7 @@ public:
     BOOL sub_763A40(UINT nFeatNumber, INT a2);
     int GetExtraFeats(BYTE nClass);
     int GetExtraSkillPoints(BYTE nClass);
+    INT GetSkillBonus(UINT iSkillNumber);
     void SetSkillValue(UINT iSkillNumber, INT iSkillValue);
     INT GetSkillValue(UINT iSkillNumber);
     INT GetSkillCost(UINT iSkillNumber, BYTE nClass);
@@ -977,6 +1018,8 @@ public:
     /* 72DE */ int field_72DE;
     /* 72E2 */ LONG field_72E2;
     /* 72E6 */ CGameButtonList* m_internalButtonList;
+    /* 72EA */ WORD m_nLastMoveScale; // #guess
+    /* 72EC */ DWORD m_dwLastGeneralState; // #guess
     /* 72F0 */ CList<CGameSpriteSoundEntry, CGameSpriteSoundEntry> field_72F0;
     /* 730C */ CList<CGameSpriteSoundEntry, CGameSpriteSoundEntry> field_730C;
     /* 7328 */ CList<CGameSpriteSoundEntry, CGameSpriteSoundEntry> field_7328;

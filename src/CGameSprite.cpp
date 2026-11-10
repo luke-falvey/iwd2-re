@@ -17,6 +17,7 @@
 #include "CScreenCreateChar.h"
 #include "CScreenInventory.h"
 #include "CScreenMap.h"
+#include "CScreenStore.h"
 #include "CScreenWorld.h"
 #include "CSpawn.h"
 #include "CSpell.h"
@@ -6260,19 +6261,80 @@ void CGameSprite::UpdateSpriteEffect()
             if (m_pSpriteEffectArray != NULL) {
                 CRect rFx;
                 CPoint ptReference;
+                BOOL bFxRectUpdated = FALSE;
                 m_animation.CalculateFxRect(rFx, ptReference, m_posZ);
 
                 for (BYTE nIndex = 0; nIndex < m_spriteEffectSequenceLength; nIndex++) {
-                    if ((g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime / 2) % m_spriteEffectSequenceLength == nIndex) {
-                        BYTE intensity = m_spriteEffectBaseIntensity + m_spriteEffectRandomIntensity - 1;
-                        memset(&(m_pSpriteEffectArray[intensity]),
-                            -1,
-                            sizeof(USHORT) * (intensity));
-                        // TODO: Incomplete.
-                    } else {
-                        BYTE intensity = m_spriteEffectBaseIntensity + m_spriteEffectRandomIntensity - 1;
+                    // NOTE: Base intensity is signed.
+                    INT nMaxIntensity = static_cast<char>(m_spriteEffectBaseIntensity) + m_spriteEffectRandomIntensity;
 
-                        // TODO: Incomplete.
+                    if ((g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime / 2) % m_spriteEffectSequenceLength == nIndex) {
+                        memset(&(m_pSpriteEffectArray[(nMaxIntensity - 1) * nIndex]),
+                            -1,
+                            sizeof(USHORT) * (nMaxIntensity - 1));
+
+                        if (m_spriteEffectDuration >= m_spriteEffectSequenceLength) {
+                            BYTE nRandomIntensity = m_spriteEffectRandomIntensity != 0
+                                ? static_cast<BYTE>(rand() % m_spriteEffectRandomIntensity)
+                                : 0;
+
+                            for (BYTE nParticle = 0; nParticle < static_cast<char>(m_spriteEffectBaseIntensity) + nRandomIntensity; nParticle++) {
+                                SHORT nArrayIndex = static_cast<SHORT>((static_cast<char>(m_spriteEffectBaseIntensity) + m_spriteEffectRandomIntensity - 1) * nIndex + nParticle);
+
+                                BYTE nSequence = m_spriteEffectSequenceNumber != 0
+                                    ? static_cast<BYTE>(rand() % m_spriteEffectSequenceNumber)
+                                    : 0;
+                                m_pSpriteEffectArray[nArrayIndex] = static_cast<USHORT>(nSequence << 8);
+
+                                INT nRangeX = rFx.right / 3 + 1;
+                                m_pSpriteEffectArrayPosition[nArrayIndex].x = rFx.right / 3
+                                    - ptReference.x
+                                    + (nRangeX != 0 ? rand() % nRangeX : 0);
+
+                                INT nRangeY = 4 * rFx.bottom / 5 + 1;
+                                m_pSpriteEffectArrayPosition[nArrayIndex].y = rFx.bottom
+                                    - (nRangeY != 0 ? rand() % nRangeY : 0)
+                                    - ptReference.y;
+                            }
+                        }
+                    } else {
+                        for (BYTE nParticle = 0; nParticle < m_spriteEffectRandomIntensity + static_cast<char>(m_spriteEffectBaseIntensity) - 1; nParticle++) {
+                            SHORT nArrayIndex = static_cast<SHORT>((m_spriteEffectRandomIntensity + static_cast<char>(m_spriteEffectBaseIntensity) - 1) * nIndex + nParticle);
+
+                            if (m_pSpriteEffectArray[nArrayIndex] == 0xFFFF) {
+                                break;
+                            }
+
+                            if (m_pSpriteEffectArrayPosition[nArrayIndex].x < rFx.right / 3 - ptReference.x
+                                || m_pSpriteEffectArrayPosition[nArrayIndex].x > 2 * rFx.right / 3 - ptReference.x) {
+                                INT nRangeX = rFx.right / 3 + 1;
+                                m_pSpriteEffectArrayPosition[nArrayIndex].x = rFx.right / 3
+                                    - ptReference.x
+                                    + (nRangeX != 0 ? rand() % nRangeX : 0);
+
+                                if (!bFxRectUpdated) {
+                                    m_rSpriteEffectFX = rFx;
+                                    m_ptSpriteEffectReference = ptReference;
+                                    bFxRectUpdated = TRUE;
+                                }
+                            }
+
+                            if (m_pSpriteEffectArrayPosition[nArrayIndex].y > rFx.bottom - ptReference.y
+                                || m_pSpriteEffectArrayPosition[nArrayIndex].y < rFx.bottom - 4 * rFx.bottom / 5 - ptReference.y - 1) {
+                                INT nRangeY = 4 * rFx.bottom / 5 + 1;
+                                m_pSpriteEffectArrayPosition[nArrayIndex].y = rFx.bottom
+                                    - (nRangeY != 0 ? rand() % nRangeY : 0)
+                                    - ptReference.y;
+
+                                if (!bFxRectUpdated) {
+                                    m_rSpriteEffectFX = rFx;
+                                    m_ptSpriteEffectReference = ptReference;
+                                    bFxRectUpdated = TRUE;
+                                }
+                            }
+
+                            m_pSpriteEffectArray[nArrayIndex]++;
+                        }
                     }
                 }
             }
@@ -9092,6 +9154,12 @@ INT CGameSprite::GetNumQuickWeaponSlots()
     return g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetNumQuickWeaponSlots(m_typeAI.m_nClass);
 }
 
+// 0x71C0C0
+void CGameSprite::CheckStatsChange()
+{
+    // TODO: Incomplete.
+}
+
 // 0x71D310
 SHORT CGameSprite::FindItemPersonal(const CString& sName, int number, BOOL restrictToEquiped)
 {
@@ -10325,42 +10393,179 @@ LONG CGameSprite::GetLevel()
     return m_derivedStats.GetAtOffset(STAT_CLASSLEVELSUM);
 }
 
+// NOTE: Inlined in `CGameSprite::CGameSprite`.
+CGameSpriteLastUpdate::CGameSpriteLastUpdate()
+{
+    field_70 = 0;
+    m_pPath = NULL;
+    field_3C = NULL;
+    Initialize(FALSE);
+}
+
+// NOTE: Inlined in `CGameSprite::~CGameSprite`.
+CGameSpriteLastUpdate::~CGameSpriteLastUpdate()
+{
+    if (m_pPath != NULL) {
+        delete[] m_pPath;
+    }
+
+    if (field_3C != NULL) {
+        delete[] field_3C;
+    }
+}
+
 // 0x723B20
 void CGameSpriteLastUpdate::Initialize(BOOL bFullUpdateRequired)
 {
-    // TODO: Incomplete.
+    if (m_pPath != NULL) {
+        delete[] m_pPath;
+    }
+
+    m_pPath = NULL;
+    m_nPath = 0;
+    field_6 = 0;
+    field_8.x = 0;
+    field_8.y = 0;
+    field_10 = 0;
+    field_14.x = 0;
+    field_14.y = 0;
+    field_1E = 0;
+    field_22 = 0;
+    field_24 = 0;
+    field_26 = 0;
+    field_2A = 0;
+    field_2C = 0;
+    field_2E = 0;
+    field_30 = 0;
+    field_32 = 0;
+    field_34 = 0;
+    field_36 = 0;
+    field_38 = 0;
+    field_3A = 0;
+
+    if (field_3C != NULL) {
+        delete[] field_3C;
+    }
+
+    field_3C = NULL;
+    field_40 = 0;
+    field_41 = 0;
+    field_42 = 0;
+    field_43 = 0;
+    field_48 = 0;
+    field_4A = 0;
+    field_12 = 0;
+    field_1C = 0;
+    field_44 = "";
+    field_6E = 0;
+    field_4E.reset();
+    field_70 = 0;
+    field_74 = 0;
+    m_bFullUpdateRequired = bFullUpdateRequired;
 }
 
 // 0x723BF0
 void CGameSprite::sub_723BF0(BOOLEAN a1, BOOLEAN a2)
 {
-    // TODO: Incomplete.
+    if (field_70F2 == TRUE && a1 == FALSE) {
+        if (a2 == TRUE) {
+            // NOTE: Uninline.
+            if (InControl()) {
+                g_pBaldurChitin->SelectEngine(g_pBaldurChitin->m_pEngineWorld);
+                g_pBaldurChitin->m_pEngineStore->StopStore();
+            }
+        }
+
+        CInfGame::dword_8E752C--;
+    } else if (field_70F2 == FALSE && a1 == TRUE) {
+        CInfGame::dword_8E752C++;
+    }
+
+    if (CInfGame::dword_8E752C < 0) {
+        CInfGame::dword_8E752C = 0;
+    } else if (CInfGame::dword_8E752C > g_pBaldurChitin->GetObjectGame()->m_nCharacters) {
+        CInfGame::dword_8E752C = g_pBaldurChitin->GetObjectGame()->m_nCharacters;
+    }
+
+    field_70F2 = a1;
 }
 
 // 0x723CC0
 INT CGameSprite::GetAC()
 {
-    // TODO: Incomplete.
+    INT nAC = m_derivedStats.field_C
+        + m_derivedStats.field_A
+        + m_derivedStats.field_8
+        + m_derivedStats.field_6;
 
-    return 0;
+    INT nDexBonus = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetAbilityScoreModifier(m_derivedStats.m_nDEX);
+
+    // NOTE: Uninline.
+    nDexBonus = sub_724010(nDexBonus);
+
+    if ((m_derivedStats.m_generalState & STATE_BLIND) != 0
+        && nDexBonus > 0
+        && !sub_763150(CGAMESPRITE_FEAT_BLIND_FIGHT)) {
+        nDexBonus = 0;
+    }
+
+    // NOTE: Base armor class (`0x84EBBC`).
+    return 10 + nAC + sub_723F60() + nDexBonus;
 }
 
 // 0x723F60
 INT CGameSprite::sub_723F60()
 {
-    // TODO: Incomplete.
+    if (GetClassLevel(CAIOBJECTTYPE_C_MONK) == 0) {
+        return 0;
+    }
 
-    return 0;
-}
+    CItem* pShield = m_equipment.m_items[2 * m_nWeaponSet + 44];
 
-// 0x72DE60
-void CGameSprite::sub_72DE60()
-{
-    // TODO: Incomplete.
+    if (m_equipment.m_items[1] != NULL) {
+        return 0;
+    }
+
+    if (pShield != NULL) {
+        if (pShield->GetItemType() == 47
+            || pShield->GetItemType() == 53
+            || pShield->GetItemType() == 49
+            || pShield->GetItemType() == 41) {
+            return 0;
+        }
+    }
+
+    const CRuleTables& ruleTables = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
+    if (ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nWIS) <= 0) {
+        return 0;
+    }
+
+    return ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nWIS);
 }
 
 // 0x71E760
 void CGameSprite::sub_71E760(CDerivedStats& DStats, int a2)
+{
+    for (INT iClassType = 1; iClassType <= CAIOBJECT_CLASS_MAX; iClassType++) {
+        if (m_derivedStats.GetClassLevel(iClassType) != 0) {
+            sub_722D50(static_cast<BYTE>(iClassType),
+                static_cast<SHORT>(m_derivedStats.GetClassLevel(iClassType) - DStats.GetClassLevel(iClassType)),
+                a2);
+        }
+    }
+
+    for (INT nLevel = 0; nLevel < m_derivedStats.m_nLevel - DStats.m_nLevel; nLevel++) {
+        if ((m_typeAI.m_nRace == CAIOBJECTTYPE_R_ELF
+                && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_ELF_DROW)
+            || (m_typeAI.m_nRace == CAIOBJECTTYPE_R_GNOME
+                && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_GNOME_DEEP)) {
+            m_baseStats.m_resistMagicBase++;
+        }
+    }
+}
+
+// 0x722D50
+void CGameSprite::sub_722D50(BYTE nClass, SHORT nLevels, int a3)
 {
     // TODO: Incomplete.
 }
@@ -10724,13 +10929,427 @@ void CGameSprite::ResolveTargetPoint(const CAIAction* curAction, POSITION pos)
 // 0x72DE60
 BOOL CGameSprite::ProcessEffectList()
 {
-    // TODO: Incomplete.
+    // NOTE: Uninline.
+    if (!InControl()) {
+        return FALSE;
+    }
 
-    // NOTE: This functions is huge. The next function call is necessary to
-    // move on with character editor.
-    HandleEffects();
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    BOOL bResult = TRUE;
 
-    return FALSE;
+    if (!m_bAllowEffectListCall) {
+        field_72A2++;
+        return TRUE;
+    }
+
+    while (1) {
+        m_bAllowEffectListCall = FALSE;
+        field_72A2 = min(field_72A2, 5);
+
+        if ((m_id & 0xF) == (field_44A & 0xF)
+            || field_562C
+            || m_bHPCONBonusTotalUpdate) {
+            m_lastRegenerationTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+
+            field_70F6 = static_cast<BYTE>(rand() % 20 + 1);
+            field_70F7 = static_cast<BYTE>(rand() % 20 + 1);
+            field_70F8 = static_cast<BYTE>(rand() % 20 + 1);
+            field_70F9 = static_cast<BYTE>(rand() % 20 + 1);
+            field_70FA = static_cast<BYTE>(rand() % 100);
+
+            BOOL bEncumbranceChanged = FALSE;
+            if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
+                DWORD nWeight = GetCarriedWeight();
+
+                const CRuleTables& ruleTables = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
+                SHORT nWeightAllowance = static_cast<SHORT>(atol(ruleTables.m_tStrengthMod.GetAt(CPoint(3, m_derivedStats.m_nSTR))));
+                DWORD nMaxWeight = static_cast<INT>(static_cast<float>(ruleTables.GetEncumbranceMod(this)) / 100.0f
+                    * static_cast<float>(nWeightAllowance));
+
+                // NOTE: `120` is `0x85BCAC`.
+                if (nWeight > nMaxWeight * 120 / 100) {
+                    bEncumbranceChanged = m_animation.GetMoveScale() != 0;
+                } else if (nWeight > nMaxWeight) {
+                    bEncumbranceChanged = m_animation.GetMoveScale() != m_animation.GetMoveScaleDefault() / 2;
+                } else {
+                    bEncumbranceChanged = m_animation.GetMoveScale() < m_animation.GetMoveScaleDefault();
+                }
+            }
+
+            if (m_timedEffectList.CheckEffects()
+                || m_equipedEffectList.CheckEffects()
+                || field_562C
+                || bEncumbranceChanged
+                || m_bHPCONBonusTotalUpdate) {
+                field_562C = FALSE;
+
+                m_tempStats = m_derivedStats;
+
+                m_nLastMoveScale = m_animation.GetMoveScale();
+                m_dwLastGeneralState = m_derivedStats.m_generalState;
+
+                m_animation.ResetMoveScale();
+
+                if (m_animation.GetMoveScale() > 0) {
+                    INT nMoveScale = m_animation.GetMoveScale();
+
+                    if (m_typeAI.IsClassValid(CAIObjectType::C_BARBARIAN)
+                        && !sub_724690(3)) {
+                        nMoveScale = static_cast<INT>(static_cast<float>(nMoveScale) * 1.2f);
+                    }
+
+                    if (GetAIType().IsClassValid(CAIObjectType::C_MONK)
+                        && (m_equipment.m_items[1] == NULL || sub_724690(0))) {
+                        nMoveScale += static_cast<INT>(m_derivedStats.GetClassLevel(CAIOBJECTTYPE_C_MONK)) / 3;
+                    }
+
+                    if (sub_763150(CGAMESPRITE_FEAT_DASH)) {
+                        nMoveScale++;
+                    }
+
+                    m_animation.SetMoveScale(static_cast<BYTE>(nMoveScale));
+                }
+
+                if (m_hasColorRangeEffects) {
+                    for (INT nRange = 0; nRange < 7; nRange++) {
+                        m_animation.SetColorRange(static_cast<BYTE>(nRange), m_baseStats.m_colors[nRange]);
+                    }
+                }
+
+                if (m_hasColorEffects) {
+                    m_animation.ClearColorEffectsAll();
+                }
+
+                if (field_7430 && field_5640) {
+                    SHORT nSequence = m_nSequence;
+
+                    UnequipAll(TRUE);
+
+                    if (m_pArea != NULL && m_animation.GetListType() != LIST_FLIGHT) {
+                        m_pArea->m_search.RemoveObject(CPoint(GetPos().x / CPathSearch::GRID_SQUARE_SIZEX,
+                                                           GetPos().y / CPathSearch::GRID_SQUARE_SIZEY),
+                            GetAIType().GetEnemyAlly(),
+                            m_animation.GetPersonalSpace(),
+                            field_54A8,
+                            field_7430);
+                    }
+
+                    // NOTE: Uninline.
+                    m_animation.SetAnimationType(m_baseStats.m_animationType,
+                        m_baseStats.m_colors,
+                        m_nDirection);
+
+                    if (m_pArea != NULL && m_animation.GetListType() != LIST_FLIGHT) {
+                        m_pArea->m_search.AddObject(CPoint(GetPos().x / CPathSearch::GRID_SQUARE_SIZEX,
+                                                        GetPos().y / CPathSearch::GRID_SQUARE_SIZEY),
+                            GetAIType().GetEnemyAlly(),
+                            m_animation.GetPersonalSpace(),
+                            field_54A8,
+                            field_7430);
+                    }
+
+                    SetSequence(SEQ_READY);
+                    SetSequence(static_cast<BYTE>(nSequence));
+
+                    EquipAll(TRUE);
+
+                    CMessage* pMessage = new CMessageAnimationChange(m_baseStats.m_animationType,
+                        m_id,
+                        m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+                }
+
+                if (m_hasColorEffects || field_5640) {
+                    CMessage* pMessage = new CMessageColorReset(m_id, m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+                }
+
+                m_hasColorRangeEffects = FALSE;
+                m_hasColorEffects = FALSE;
+                field_5640 = FALSE;
+
+                m_portraitIcons.RemoveAll();
+
+                g_pBaldurChitin->GetObjectGame()->UpdatePortrait(g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id), 1);
+
+                bResult = HandleEffects();
+
+                m_bForceVisualEffects = TRUE;
+
+                CAIAction action;
+
+                if ((m_derivedStats.m_generalState & STATE_BERSERK) != 0
+                    && m_berserkActive
+                    && m_curAction.m_actionID != CAIAction::ATTACK
+                    && m_curAction.m_actionID != CAIAction::BERSERK) {
+                    action = CAIAction(CAIAction::BERSERK, 0x7FFFFFFF, 0, 0);
+
+                    ClearActions(FALSE);
+
+                    // NOTE: Uninline.
+                    DropPath();
+
+                    m_interrupt = TRUE;
+                    AddAction(action);
+                }
+
+                if ((m_dwLastGeneralState & STATE_PANIC) != 0
+                    && (m_derivedStats.m_generalState & STATE_PANIC) == 0
+                    && !m_moraleFailure) {
+                    // NOTE: Uninline.
+                    if (InControl()) {
+                        m_bSendSpriteUpdate = TRUE;
+                    }
+
+                    ClearActions(FALSE);
+
+                    CMessage* pMessage = new CMessageDropPath(m_id, m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                    CAIAction nextAction;
+                    SetCurrAction(GetNextAction(nextAction));
+                }
+
+                if ((m_derivedStats.m_generalState & STATE_PANIC) != 0) {
+                    action = CAIAction(CAIAction::PANIC, CPoint(-1, -1), 0, -1);
+
+                    ClearActions(FALSE);
+                    m_interrupt = TRUE;
+                    AddAction(action);
+                } else if (m_curAction.m_actionID == CAIAction::BERSERK
+                    || m_curAction.m_actionID == CAIAction::PANIC) {
+                    action = CAIAction::NULL_ACTION;
+
+                    ClearActions(FALSE);
+                    m_interrupt = TRUE;
+                    AddAction(action);
+                }
+
+                if ((m_typeAI.m_nEnemyAlly == CAIObjectType::EA_0x847C3A
+                        || m_typeAI.m_nEnemyAlly == CAIObjectType::EA_CONTROLLED)
+                    && !g_pBaldurChitin->GetObjectGame()->IsAlly(m_id)
+                    && !g_pBaldurChitin->GetObjectGame()->IsFamiliar(m_id)
+                    && g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) == -1) {
+                    g_pBaldurChitin->GetObjectGame()->AddCharacterToAllies(m_id);
+                } else if (m_typeAI.m_nEnemyAlly >= CAIObjectType::EA_GOODCUTOFF) {
+                    g_pBaldurChitin->GetObjectGame()->RemoveCharacterFromAllies(m_id);
+                }
+
+                if (!sub_7245D0()
+                    && !m_derivedStats.m_bCasterHold
+                    && (g_pBaldurChitin->GetObjectGame()->m_nTimeStop == 0
+                        || g_pBaldurChitin->GetObjectGame()->m_nTimeStopCaster == m_id)) {
+                    if ((m_derivedStats.m_generalState & (STATE_DEAD | STATE_STONE_DEATH | STATE_FROZEN_DEATH)) == 0
+                        || m_nSequence == SEQ_DIE) {
+                        m_animationRunning = TRUE;
+                    }
+                } else {
+                    m_animation.SetMoveScale(0);
+                    m_animationRunning = FALSE;
+                }
+
+                if (m_derivedStats.m_nIntoxication > 0) {
+                    if (static_cast<DWORD>(field_44A) % (CTimerWorld::TIMESCALE_MIN_PER_HOUR * CTimerWorld::TIMESCALE_SEC_PER_MIN * CTimerWorld::TIMESCALE_MSEC_PER_SEC) == 0
+                        && m_baseStats.m_intoxication > 0) {
+                        INT nIntoxicationRate;
+                        INT nRecoveryRate;
+                        INT nIntoxicationCap;
+                        pGame->GetRuleTables().GetIntoxicationInfo(static_cast<BYTE>(m_derivedStats.m_nCON),
+                            nIntoxicationRate,
+                            nRecoveryRate,
+                            nIntoxicationCap);
+
+                        m_baseStats.m_intoxication = static_cast<BYTE>(max(m_baseStats.m_intoxication - nRecoveryRate, 0));
+                    }
+
+                    char nIntoxicationMod = static_cast<char>(atol(g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_tIntoxicationMod.GetAt(CPoint(0, m_derivedStats.m_nIntoxication))));
+                    m_derivedStats.m_nLuck += nIntoxicationMod;
+
+                    if (nIntoxicationMod != 0) {
+                        // NOTE: Uninline.
+                        AddPortraitIcon(5);
+                    }
+
+                    m_baseStats.m_morale += static_cast<char>(atol(g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_tIntoxicationMod.GetAt(CPoint(0, m_derivedStats.m_nIntoxication))));
+                    m_baseStats.m_morale = static_cast<BYTE>(min(m_baseStats.m_morale, 20));
+                    m_baseStats.m_morale = static_cast<BYTE>(max(m_baseStats.m_morale, 0));
+                }
+
+                char nFatigueMod = static_cast<char>(atol(g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_tFatigueMod.GetAt(CPoint(0, m_derivedStats.m_nFatigue))));
+                m_derivedStats.m_nLuck += nFatigueMod;
+
+                if (nFatigueMod != 0) {
+                    // NOTE: Uninline.
+                    AddPortraitIcon(39);
+                }
+
+                CheckStatsChange();
+
+                if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
+                    g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateButtons();
+                }
+
+                if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
+                    DWORD nWeight = GetCarriedWeight();
+
+                    const CRuleTables& ruleTables = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
+                    SHORT nWeightAllowance = static_cast<SHORT>(atol(ruleTables.m_tStrengthMod.GetAt(CPoint(3, m_derivedStats.m_nSTR))));
+                    DWORD nMaxWeight = static_cast<INT>(static_cast<float>(ruleTables.GetEncumbranceMod(this)) / 100.0f
+                        * static_cast<float>(nWeightAllowance));
+
+                    if (nWeight > nMaxWeight * 120 / 100) {
+                        if (g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_mode != 0x142) {
+                            m_animation.SetMoveScale(0);
+                            m_derivedStats.m_nEncumberance = 2;
+                        }
+                    } else if (nWeight > nMaxWeight) {
+                        if (g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_mode != 0x142) {
+                            m_animation.SetMoveScale(static_cast<BYTE>(m_animation.GetMoveScale() / 2));
+                            m_derivedStats.m_nEncumberance = 1;
+                        }
+                    } else {
+                        m_derivedStats.m_nEncumberance = 0;
+                    }
+                }
+
+                if (m_nLastMoveScale != m_animation.GetMoveScale() && m_pPath != NULL) {
+                    INT nDistance = static_cast<INT>(sqrt(static_cast<double>((m_posDest.y - m_pos.y) * (m_posDest.y - m_pos.y) * 16 / 9
+                                                             + (m_posDest.x - m_pos.x) * (m_posDest.x - m_pos.x)))
+                        + 0.5);
+                    if (nDistance == 0) {
+                        m_posDelta.x = 0;
+                        m_posDelta.y = 0;
+                    } else {
+                        if (m_animation.GetMoveScale() > 8) {
+                            if (nDistance < m_animation.GetMoveScale()) {
+                                nDistance = 1;
+                            } else {
+                                nDistance = (m_animation.GetMoveScale() / 2 + nDistance) / m_animation.GetMoveScale();
+                            }
+
+                            m_posDelta.x = ((m_posDest.x - m_pos.x) << EXACT_SCALE) / nDistance;
+                            m_posDelta.y = (((m_posDest.y - m_pos.y) * 4 / 3) << EXACT_SCALE) / nDistance;
+                        } else {
+                            m_posDelta.x = (((m_posDest.x - m_pos.x) << EXACT_SCALE) * m_animation.GetMoveScale()) / nDistance;
+                            m_posDelta.y = ((((m_posDest.y - m_pos.y) * 4 / 3) << EXACT_SCALE) * m_animation.GetMoveScale()) / nDistance;
+                        }
+                    }
+                }
+
+                if ((m_derivedStats.m_generalState & STATE_STONE_DEATH) != 0) {
+                    if (m_animation.IsFalseColor()) {
+                        m_hasColorRangeEffects = TRUE;
+
+                        for (INT nRange = 0; nRange < 7; nRange++) {
+                            CColorRange* pColorRange = new CColorRange();
+                            pColorRange->m_range = static_cast<BYTE>(nRange);
+                            pColorRange->m_color = CVidPalette::STONE;
+                            m_derivedStats.m_appliedColorRanges.AddTail(pColorRange);
+
+                            m_animation.SetColorRange(static_cast<BYTE>(nRange), CVidPalette::STONE);
+                        }
+                    }
+                } else if ((m_derivedStats.m_generalState & STATE_FROZEN_DEATH) != 0) {
+                    if (m_animation.IsFalseColor()) {
+                        m_hasColorRangeEffects = TRUE;
+
+                        for (INT nRange = 0; nRange < 7; nRange++) {
+                            CColorRange* pColorRange = new CColorRange();
+                            pColorRange->m_range = static_cast<BYTE>(nRange);
+                            pColorRange->m_color = CVidPalette::ICE;
+                            m_derivedStats.m_appliedColorRanges.AddTail(pColorRange);
+
+                            m_animation.SetColorRange(static_cast<BYTE>(nRange), CVidPalette::ICE);
+                        }
+
+                        m_animation.SetColorRangeAll(CVidPalette::ICE);
+                    }
+                }
+
+                // NOTE: Uninline.
+                if (m_pArea != NULL && InControl()) {
+                    m_bSendSpriteUpdate = TRUE;
+
+                    // NOTE: Original compares number of color effects against
+                    // both cached counters (probably should be color ranges
+                    // for the second one).
+                    if (m_derivedStats.m_appliedColorEffects.GetCount() != field_7536
+                        || m_derivedStats.m_appliedColorEffects.GetCount() != field_7532) {
+                        CMessage* pMessage = new CMessageColorUpdate(this, m_id, m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                        field_7536 = m_derivedStats.m_appliedColorEffects.GetCount();
+                        field_7532 = m_derivedStats.m_appliedColorRanges.GetCount();
+                    }
+
+                    if (m_derivedStats.m_cImmunitiesWeapon.GetCount() != field_9D08) {
+                        CMessage* pMessage = new CMessageWeaponImmumityUpdate(this, m_id, m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                        field_9D08 = m_derivedStats.m_cImmunitiesWeapon.GetCount();
+                    }
+
+                    if (m_derivedStats.m_cImmunitiesProjectile.GetCount() != field_9D0C) {
+                        CMessage* pMessage = new CMessageProjectileImmunityUpdate(this, m_id, m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                        field_9D0C = m_derivedStats.m_cImmunitiesProjectile.GetCount();
+                    }
+
+                    if (m_derivedStats.m_cImmunitiesSpellLevel.GetLevelMask() != field_9D10) {
+                        CMessage* pMessage = new CMessageSpellLevelImmunityUpdate(this, m_id, m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                        field_9D10 = m_derivedStats.m_cImmunitiesSpellLevel.GetLevelMask();
+                    }
+                }
+            }
+
+            g_pBaldurChitin->GetActiveEngine()->UpdateCharacterStatus(m_id);
+
+            m_nLastMoveScale = m_animation.GetMoveScale();
+            m_dwLastGeneralState = m_derivedStats.m_generalState;
+        }
+
+        if (field_72A2 <= 0) {
+            break;
+        }
+
+        field_72A2--;
+    }
+
+    m_bAllowEffectListCall = TRUE;
+
+    if (g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_active) {
+        HandlePersistantEffects(1);
+    }
+
+    return bResult;
+}
+
+// 0x733200
+BOOL CGameSprite::HandlePersistantEffects(LONG deltaT)
+{
+    POSITION pos = m_persistantEffects.GetHeadPosition();
+    while (pos != NULL) {
+        POSITION posOld = pos;
+        CPersistantEffect* pEffect = m_persistantEffects.GetNext(pos);
+        if (pEffect->m_deleted) {
+            m_persistantEffects.RemoveAt(posOld);
+            delete pEffect;
+        } else {
+            pEffect->AIUpdate(this, deltaT);
+
+            if (pEffect->m_deleted || pEffect->m_done) {
+                m_persistantEffects.RemoveAt(posOld);
+                delete pEffect;
+            }
+        }
+    }
+
+    m_derivedStats.m_cRegeneratedPersistantEffectList.AIUpdate(this, deltaT);
+
+    return TRUE;
 }
 
 // 0x733290
@@ -10787,8 +11406,9 @@ void CGameSprite::ClearAI(BOOLEAN bSetSequence)
 BOOL CGameSprite::HandleEffects()
 {
     BOOL bRetry;
-    BOOL v1;
-    BOOL v2;
+    BOOL bResult;
+    CGameObject* pVisualEffect;
+    BYTE rc;
 
     do {
         bRetry = FALSE;
@@ -10802,12 +11422,51 @@ BOOL CGameSprite::HandleEffects()
 
         m_activeImprisonment = TRUE;
 
-        // TODO: Incomplete.
-        v1 = FALSE;
-        v2 = FALSE;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(field_72E2,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pVisualEffect,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            // TODO: Incomplete. Calls `CVisualEffect::SetAllDelete` (0x555200)
+            // on `pVisualEffect` (`CVisualEffect` is not yet defined).
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(field_72E2,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        m_bonusStats.BonusInit();
+
+        bResult = TRUE;
+
+        bResult &= m_equipedEffectList.HandleList(this);
+        if (m_equipedEffectList.m_retry) {
+            bRetry = TRUE;
+        }
+
+        bResult &= m_timedEffectList.HandleList(this);
+        if (m_timedEffectList.m_retry) {
+            bRetry = TRUE;
+        }
+
+        m_derivedStats += m_bonusStats;
+
+        for (UINT iSkillNumber = 0; iSkillNumber < CGAMESPRITE_SKILL_NUMSKILLS; iSkillNumber++) {
+            m_derivedStats.m_nSkills[iSkillNumber] += static_cast<BYTE>(GetSkillBonus(iSkillNumber));
+
+            // NOTE: Signed compare.
+            m_derivedStats.m_nSkills[iSkillNumber] = static_cast<BYTE>(max(static_cast<char>(m_derivedStats.m_nSkills[iSkillNumber]), 0));
+        }
+
+        if (g_pBaldurChitin->GetActiveEngine()->GetSelectedCharacter() == g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id)) {
+            g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateState();
+        }
     } while (bRetry);
 
-    return v1 && v2;
+    return bResult;
 }
 
 // 0x7349A0
@@ -14498,6 +15157,172 @@ int CGameSprite::GetExtraSkillPoints(BYTE nClass)
     return sp;
 }
 
+// 0x763E40
+INT CGameSprite::GetSkillBonus(UINT iSkillNumber)
+{
+    const CRuleTables& ruleTables = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
+
+    BOOL bUntrained = atol(ruleTables.m_tSkills.GetAt(CPoint(3, iSkillNumber))) != 0;
+    INT nBonus = 0;
+
+    // NOTE: Uninline.
+    if (GetSkillValue(iSkillNumber) == 0 && !bUntrained) {
+        return 0;
+    }
+
+    if (m_derivedStats.HasClass(CAIOBJECTTYPE_C_CLERIC)) {
+        INT nDomain;
+        switch (m_baseStats.m_specialization & SPECMASK_CLERIC) {
+        case SPECMASK_CLERIC_ILMATER:
+            nDomain = 0;
+            break;
+        case SPECMASK_CLERIC_LATHANDER:
+            nDomain = 1;
+            break;
+        case SPECMASK_CLERIC_SELUNE:
+            nDomain = 2;
+            break;
+        case SPECMASK_CLERIC_HELM:
+            nDomain = 3;
+            break;
+        case SPECMASK_CLERIC_OGHMA:
+            nDomain = 4;
+            break;
+        case SPECMASK_CLERIC_TEMPUS:
+            nDomain = 5;
+            break;
+        case SPECMASK_CLERIC_BANE:
+            nDomain = 6;
+            break;
+        case SPECMASK_CLERIC_MASK:
+            nDomain = 7;
+            break;
+        case SPECMASK_CLERIC_TALOS:
+            nDomain = 8;
+            break;
+        default:
+            // FIXME: Probably wrong, uses skill number as domain.
+            nDomain = iSkillNumber;
+            break;
+        }
+
+        nBonus = atol(ruleTables.m_tSkills.GetAt(CPoint(nDomain + 15, iSkillNumber)));
+    }
+
+    switch (iSkillNumber) {
+    case CGAMESPRITE_SKILL_ALCHEMY:
+        if (m_typeAI.m_nRace == CAIOBJECTTYPE_R_GNOME
+            && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_PURERACE) {
+            nBonus += 2;
+        }
+
+        if (m_derivedStats.HasClass(CAIOBJECTTYPE_C_BARD)) {
+            nBonus++;
+        }
+
+        return ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nINT) + nBonus;
+    case CGAMESPRITE_SKILL_ANIMAL_EMPATHY:
+    case CGAMESPRITE_SKILL_BLUFF:
+    case CGAMESPRITE_SKILL_USE_MAGIC_DEVICE:
+        if (m_typeAI.m_nRace == CAIOBJECTTYPE_R_HUMAN
+            && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_HUMAN_TIEFLING
+            && iSkillNumber == CGAMESPRITE_SKILL_BLUFF) {
+            nBonus += 2;
+        }
+
+        return ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nCHR) + nBonus;
+    case CGAMESPRITE_SKILL_CONCENTRATION:
+        // NOTE: Domain bonus is ignored.
+        nBonus = ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nCON);
+
+        if (sub_763150(CGAMESPRITE_FEAT_DISCIPLINE)) {
+            nBonus += 2;
+        }
+
+        if (sub_763150(CGAMESPRITE_FEAT_COMBAT_CASTING)) {
+            nBonus += 4;
+        }
+
+        return nBonus;
+    case CGAMESPRITE_SKILL_DIPLOMACY:
+        if (sub_763150(CGAMESPRITE_FEAT_COURTEOUS_MAGOCRACY)) {
+            nBonus += 2;
+        }
+
+        return ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nCHR) + nBonus;
+    case CGAMESPRITE_SKILL_DISABLE_DEVICE:
+        // NOTE: Domain bonus is ignored.
+        return ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nINT);
+    case CGAMESPRITE_SKILL_HIDE:
+        if ((m_typeAI.m_nRace == CAIOBJECTTYPE_R_HUMAN
+                && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_HUMAN_TIEFLING)
+            || (m_typeAI.m_nRace == CAIOBJECTTYPE_R_GNOME
+                && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_GNOME_DEEP)) {
+            nBonus += 2;
+        }
+
+        return sub_724010(ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nDEX)) + nBonus;
+    case CGAMESPRITE_SKILL_INTIMIDATE:
+        if (sub_763150(CGAMESPRITE_FEAT_BULLHEADED)) {
+            nBonus += 2;
+        }
+
+        return ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nCHR) + nBonus;
+    case CGAMESPRITE_SKILL_KNOWLEDGE_ARCANA:
+        if (m_derivedStats.HasClass(CAIOBJECTTYPE_C_BARD)) {
+            nBonus++;
+        }
+
+        return ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nINT) + nBonus;
+    case CGAMESPRITE_SKILL_MOVE_SILENTLY:
+        if (m_typeAI.m_nRace == CAIOBJECTTYPE_R_HALFLING
+            || (m_typeAI.m_nRace == CAIOBJECTTYPE_R_DWARF
+                && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_DWARF_GRAY)) {
+            nBonus += 4;
+        }
+
+        return sub_724010(ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nDEX)) + nBonus;
+    case CGAMESPRITE_SKILL_OPEN_LOCK:
+    case CGAMESPRITE_SKILL_PICK_POCKET:
+        return sub_724010(ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nDEX)) + nBonus;
+    case CGAMESPRITE_SKILL_SEARCH:
+        switch (m_typeAI.m_nRace) {
+        case CAIOBJECTTYPE_R_ELF:
+        case CAIOBJECTTYPE_R_DWARF:
+            nBonus += 2;
+            break;
+        case CAIOBJECTTYPE_R_HALF_ELF:
+            nBonus++;
+            break;
+        }
+
+        if (m_typeAI.m_nRace == CAIOBJECTTYPE_R_GNOME
+            && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_GNOME_DEEP) {
+            nBonus += 2;
+        }
+
+        return ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nINT) + nBonus;
+    case CGAMESPRITE_SKILL_SPELLCRAFT:
+        if (sub_763150(CGAMESPRITE_FEAT_COURTEOUS_MAGOCRACY)) {
+            nBonus += 2;
+        }
+
+        if (m_derivedStats.HasClass(CAIOBJECTTYPE_C_BARD)) {
+            nBonus++;
+        }
+
+        return ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nINT) + nBonus;
+    case CGAMESPRITE_SKILL_WILDERNESS_LORE:
+        if (sub_763150(CGAMESPRITE_FEAT_FORESTER)) {
+            nBonus += 2;
+        }
+
+        return ruleTables.GetAbilityScoreModifier(m_derivedStats.m_nWIS) + nBonus;
+    }
+
+    return 0;
+}
+
 // 0x764270
 void CGameSprite::SetSkillValue(UINT iSkillNumber, INT iSkillValue)
 {
@@ -15177,7 +16002,7 @@ INT CGameSprite::sub_724010(INT a1)
 {
     CItem* pItem = m_equipment.m_items[1];
     if (pItem == NULL) {
-        return 1;
+        return a1;
     }
 
     switch (pItem->GetItemType()) {
