@@ -11333,6 +11333,41 @@ void CPersistantEffect::PlaySound(const CResRef& res, CGameSprite* pSprite)
 
 // -----------------------------------------------------------------------------
 
+// NOTE: Inlined in `CDerivedStats::CDerivedStats`.
+CPersistantEffectListRegenerated::CPersistantEffectListRegenerated()
+{
+    m_nCounter = 0;
+}
+
+// 0x51E8B0
+void CPersistantEffectListRegenerated::AIUpdate(CGameSprite* pSprite, LONG deltaT)
+{
+    POSITION pos = GetHeadPosition();
+    while (pos != NULL) {
+        POSITION posOld = pos;
+        CPersistantEffect* pEffect = GetNext(pos);
+        if (pEffect->m_deleted) {
+            RemoveAt(posOld);
+            delete pEffect;
+        } else {
+            pEffect->AIUpdate(pSprite, deltaT);
+
+            if ((pSprite->GetBaseStats()->m_generalState & STATE_DEAD) != 0) {
+                return;
+            }
+
+            if (pEffect->m_deleted || pEffect->m_done) {
+                RemoveAt(posOld);
+                delete pEffect;
+            }
+        }
+    }
+
+    m_nCounter++;
+}
+
+// -----------------------------------------------------------------------------
+
 // 0x4AD280
 CPersistantEffectBurningDeath::CPersistantEffectBurningDeath()
 {

@@ -109,6 +109,20 @@ void CImmunitiesSpellLevel::ClearAll()
     }
 }
 
+// 0x4E7000
+INT CImmunitiesSpellLevel::GetLevelMask()
+{
+    INT nMask = 0;
+    INT nBit = 1;
+
+    for (int index = 1; index < 10; index++) {
+        nMask += m_levels[index] * nBit;
+        nBit *= 2;
+    }
+
+    return nMask;
+}
+
 // 0x4E7030
 CImmunitiesSpellLevel& CImmunitiesSpellLevel::operator=(const CImmunitiesSpellLevel& other)
 {
