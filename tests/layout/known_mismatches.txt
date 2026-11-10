@@ -217,19 +217,6 @@ CChitin::m_sStartUpPlayer
 CChitin::m_sStartUpSession
 CChitin::nAUCounter
 CChitin::pActiveEngine
-CCreatureFileHeader::field_2E2
-CCreatureFileHeader::field_2E4
-CCreatureFileHeader::field_2E6
-CCreatureFileHeader::field_2E8
-CCreatureFileHeader::field_2E9
-CCreatureFileHeader::field_2EA
-CCreatureFileHeader::field_2F7
-CCreatureFileHeader::field_2F8
-CCreatureFileHeader::field_2F9
-CCreatureFileHeader::field_2FB
-CCreatureFileHeader::field_2FC
-CCreatureFileHeader::field_2FF
-CCreatureFileHeader::m_fadeSpeed
 CDerivedStats::field_1E0
 CDerivedStats::field_1E4
 CDerivedStats::field_1E8
@@ -1043,7 +1030,6 @@ CGameSprite::m_currSndArmor
 CGameSprite::m_currSndWalk
 CGameSprite::m_curSpell
 CGameSprite::m_deltaDirection
-CGameSprite::m_derivedStats
 CGameSprite::m_destMarker
 CGameSprite::m_dialog
 CGameSprite::m_dialogWait

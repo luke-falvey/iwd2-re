@@ -12879,7 +12879,7 @@ SHORT CGameSprite::sub_75F240()
 {
     m_baseStats.field_2E4 = static_cast<SHORT>(m_pos.x);
     m_baseStats.field_2E6 = static_cast<SHORT>(m_pos.y);
-    m_baseStats.field_2E8 = m_nDirection;
+    m_baseStats.field_2E8 = static_cast<BYTE>(m_nDirection);
     return ACTION_DONE;
 }
 

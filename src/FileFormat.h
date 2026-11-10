@@ -606,19 +606,29 @@ public:
     /* 0284 */ RESREF m_scriptSpecial3;
     /* 028C */ RESREF m_scriptMovement;
     /* 0294 */ BOOLEAN field_294;
+    /* 0295 */ unsigned char field_295;
+    /* 0296 */ unsigned char field_296;
+    /* 0297 */ unsigned char field_297;
+    /* 0298 */ WORD field_298[5];
+    /* 02A2 */ char field_2A2[32];
+    /* 02C2 */ char field_2C2[32];
     /* 02E2 */ BOOLEAN field_2E2;
+    /* 02E3 */ unsigned char field_2E3;
     /* 02E4 */ SHORT field_2E4;
     /* 02E6 */ SHORT field_2E6;
-    /* 02E8 */ SHORT field_2E8;
+    /* 02E8 */ BYTE field_2E8;
     /* 02E9 */ BYTE field_2E9;
     /* 02EA */ BOOLEAN field_2EA[6];
+    /* 02F0 */ unsigned char field_2F0[7];
     /* 02F7 */ BOOLEAN field_2F7;
     /* 02F8 */ BOOLEAN field_2F8;
     /* 02F9 */ BYTE field_2F9;
     /* 02FA */ BYTE m_fadeSpeed;
     /* 02FB */ unsigned char field_2FB;
     /* 02FC */ unsigned char field_2FC;
+    /* 02FD */ unsigned char field_2FD[2];
     /* 02FF */ unsigned char field_2FF;
+    /* 0300 */ unsigned char field_300[124];
 };
 
 #pragma pack(push)
