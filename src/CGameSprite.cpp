@@ -184,6 +184,9 @@ const ITEM_ABILITY CGameSprite::DEFAULT_ATTACK = {
 // 0x85BCA0
 const LONG CGameSprite::STANDARD_VERBAL_CONSTANT_LENGTH = 300;
 
+// 0x85BD1C
+const LONG CGameSprite::STEALTH_GREYOUT_DURATION = 90;
+
 // 0x85C09C
 const SHORT CGameSprite::FLY_RIGHT = -1;
 
@@ -8770,6 +8773,12 @@ void CGameSprite::sub_71A550(CButtonData buttonData, BOOLEAN firstCall)
     }
 }
 
+// 0x71ABA0
+void CGameSprite::CheckQuickLists(CAbilityId* ab, SHORT changeAmount, BOOL remove, BOOL removeSpellIfZero)
+{
+    // TODO: Incomplete.
+}
+
 // 0x71B3B0
 void CGameSprite::CheckToolTipItem(BYTE buttonNum)
 {
@@ -9403,6 +9412,12 @@ void CGameSprite::PlayDialogSound(CGameSprite* pNPC)
     } else {
         PlaySound(SOUND_SELECT, TRUE, TRUE, FALSE);
     }
+}
+
+// 0x71E240
+void CGameSprite::UpdateFeats(CCreatureFileHeader* pOldBaseStats, CDerivedStats* pDerivedStats)
+{
+    // TODO: Incomplete.
 }
 
 // 0x71E9F0
@@ -12674,6 +12689,26 @@ void CGameSprite::SelectWeaponAbility(unsigned char a1, unsigned char a2, unsign
     // TODO: Incomplete.
 }
 
+// 0x754EE0
+SHORT CGameSprite::DropInventory(BOOLEAN a1, CString sExclude)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x755A70
+void CGameSprite::sub_755A70(CSpell* pSpell, SPELL_ABILITY* pAbility, const CPoint& ptTarget)
+{
+    // TODO: Incomplete.
+}
+
+// 0x7564E0
+void CGameSprite::ApplyCastingEffectPost(CSpell* pSpell, SPELL_ABILITY* pAbility)
+{
+    // TODO: Incomplete.
+}
+
 // 0x756930
 void CGameSprite::sub_756930(CItem* pItem, CItem* pLauncher)
 {
@@ -13722,6 +13757,96 @@ SHORT CGameSprite::PlayBardSong()
         g_pBaldurChitin->GetObjectGame()->GetButtonArray()->SetSelectedButton(100);
         g_pBaldurChitin->GetObjectGame()->SetState(0);
         g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateButtons();
+    }
+
+    return ACTION_DONE;
+}
+
+// 0x761C50
+SHORT CGameSprite::SpellCastEffect(const CString& sString1, const CString& sString2, LONG nSpecific1, LONG nSpecific2, LONG nSpecific3)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x7624F0
+SHORT CGameSprite::SpellHitEffect(CGameAIBase* pSource, const CPoint& ptTarget, LONG targetId, LONG projectileType, LONG nHeight)
+{
+    CProjectile* pProjectile;
+    LONG nMessageType = projectileType;
+
+    if (projectileType != 210) {
+        pProjectile = CProjectile::sub_560310(static_cast<WORD>(projectileType), pSource, FALSE);
+        nMessageType = projectileType + 0x1000;
+    } else {
+        pProjectile = CProjectile::DecodeProjectile(211, pSource, FALSE);
+    }
+
+    if (pProjectile == NULL) {
+        // TODO: Not in the original; remove once 0x51EAF0 and 0x560310 are
+        // translated.
+        return ACTION_ERROR;
+    }
+
+    CMessage115* pMessage = new CMessage115(static_cast<WORD>(nMessageType),
+        targetId,
+        ptTarget,
+        nHeight,
+        m_id,
+        m_id,
+        0);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+    pProjectile->Fire(m_pArea,
+        m_id,
+        targetId,
+        ptTarget,
+        nHeight,
+        static_cast<SHORT>(projectileType));
+
+    return ACTION_DONE;
+}
+
+// 0x7625F0
+SHORT CGameSprite::XEquipItem(CString sItem, LONG slotNum, BOOL bEquip)
+{
+    SHORT nSlot = FindItemPersonal(sItem, 0, FALSE);
+    if (nSlot == -1) {
+        return ACTION_ERROR;
+    }
+
+    if (bEquip) {
+        CItem** ppItem = &(m_equipment.m_items[nSlot]);
+
+        (*ppItem)->Equip(this, slotNum, FALSE);
+
+        if (m_equipment.m_items[slotNum] != NULL) {
+            m_equipment.m_items[slotNum]->Unequip(this, slotNum, TRUE, FALSE);
+        }
+
+        CItem* pTemp = *ppItem;
+        *ppItem = m_equipment.m_items[static_cast<SHORT>(slotNum)];
+        m_equipment.m_items[static_cast<SHORT>(slotNum)] = pTemp;
+    } else {
+        m_equipment.m_items[nSlot]->Unequip(this, nSlot, TRUE, FALSE);
+
+        nSlot = FindItemPersonal(sItem, 0, TRUE);
+        if (nSlot != -1) {
+            int index;
+            for (index = 0; index < CScreenInventory::PERSONAL_INVENTORY_SIZE; index++) {
+                if (m_equipment.m_items[18 + index] == NULL) {
+                    m_equipment.m_items[18 + index] = m_equipment.m_items[nSlot];
+                    break;
+                }
+            }
+
+            if (index == CScreenInventory::PERSONAL_INVENTORY_SIZE) {
+                PutItemGround(m_equipment.m_items[nSlot]);
+            }
+
+            m_equipment.m_items[nSlot] = NULL;
+        }
     }
 
     return ACTION_DONE;
@@ -16108,6 +16233,26 @@ INT CGameSprite::sub_726800()
 void CGameSprite::sub_726810(BYTE nWeaponSet)
 {
     // TODO: Incomplete.
+}
+
+// 0x727720
+BOOL CGameSprite::sub_727720(const CResRef& resRef, BYTE& nClass, int& a3, BYTE& nLevel)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x727B80
+BOOL CGameSprite::IsVisibleToCaller(BOOL a1)
+{
+    if (!a1
+        && (m_derivedStats.m_generalState & STATE_INVISIBLE) != 0
+        && (m_baseStats.field_2FC & 0x1) == 0) {
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 // 0x58FEE0

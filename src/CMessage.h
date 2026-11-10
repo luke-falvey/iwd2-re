@@ -7,6 +7,7 @@
 
 #include "BalDataTypes.h"
 #include "CAIAction.h"
+#include "CAIResponse.h"
 #include "CAITrigger.h"
 #include "CChatBuffer.h"
 #include "CColorEffects.h"
@@ -32,6 +33,7 @@ public:
     static const BYTE MSG_TYPE_CMESSAGE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_ADD_ACTION;
     static const BYTE MSG_SUBTYPE_CMESSAGE_ADD_EFFECT;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_ADD_INVENTORY_ITEM;
     static const BYTE MSG_SUBTYPE_CMESSAGE_ANIMATION_CHANGE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_CHANGE_DIRECTION;
     static const BYTE MSG_SUBTYPE_CMESSAGE_CLEAR_ACTIONS;
@@ -47,6 +49,7 @@ public:
     static const BYTE MSG_SUBTYPE_CMESSAGE_CUT_SCENE_MODE_STATUS;
     static const BYTE MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXT;
     static const BYTE MSG_SUBTYPE_CMESSAGE_DISPLAY_TEXTREF;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_DOOR_OPEN;
     static const BYTE MSG_SUBTYPE_CMESSAGE_DOOR_STATUS;
     static const BYTE MSG_SUBTYPE_CMESSAGE_DROP_PATH;
     static const BYTE MSG_SUBTYPE_CMESSAGE_ENTER_DIALOG;
@@ -55,10 +58,12 @@ public:
     static const BYTE MSG_SUBTYPE_CMESSAGE_EXIT_STORE_MODE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_FIRE_PROJECTILE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_INSERT_ACTION;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_INSERT_RESPONSE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_LEAVE_PARTY;
     static const BYTE MSG_SUBTYPE_CMESSAGE_PARTY_GOLD;
     static const BYTE MSG_SUBTYPE_CMESSAGE_PLAY_SOUND;
     static const BYTE MSG_SUBTYPE_CMESSAGE_PLAY_SOUND_REF;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_REMOVE_INVENTORY_ITEM;
     static const BYTE MSG_SUBTYPE_CMESSAGE_REMOVE_REPLIES;
     static const BYTE MSG_SUBTYPE_CMESSAGE_REPUTATION_CHANGE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_ACTIVE;
@@ -76,6 +81,7 @@ public:
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_PATH;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_SEQUENCE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_TRIGGER;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_SET_VARIABLE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SPRITE_DEATH;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SPRITE_EQUIPMENT;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SPRITE_PETRIFY;
@@ -121,7 +127,10 @@ public:
     static const BYTE MSG_SUBTYPE_CMESSAGE_107;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_AREA_TYPE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_AREA_REST_ENCOUNTER;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_SAVE_GAME;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_PLAY_SOUND_POINT;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_AREA_EXPLORED;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_115;
     static const BYTE MSG_SUBTYPE_CMESSAGE_CHANGE_STAT;
     static const BYTE MSG_SUBTYPE_CMESSAGE_120;
     static const BYTE MSG_SUBTYPE_CMESSAGE_END_GAME;
@@ -296,7 +305,9 @@ public:
     BOOLEAN OnPauseRequestToServer(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN PauseAnnounceStatus(BOOLEAN bHardPauseStatus, BOOLEAN bPauseStatus, PLAYER_ID idPauser);
     BOOLEAN OnPauseAnnounceStatus(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN SendChapterAnnounceToServer(BYTE nChapter, CResRef cResRef);
     BOOLEAN ChapterAnnounceStatus(BYTE nChapter, CResRef cResRef);
+    BOOLEAN SendLeaveAreaLUAPanic(CPoint ptStart, LONG nFace, CString sArea, CString sParchment);
     BOOLEAN SendMapWorldCancelRequestToServer();
     BOOLEAN SendMapWorldAnnounceStatus(BOOLEAN bActive, PLAYER_ID idController, LONG nLeavingEdge);
     BOOLEAN SendMapWorldRevealArea(CString sAreaResRef);
@@ -674,6 +685,19 @@ public:
     /* 0020 */ BOOLEAN m_moveToTop;
 };
 
+class CMessageDoorOpen : public CMessage {
+public:
+    CMessageDoorOpen(BOOLEAN bOpen, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ BOOLEAN m_bOpen;
+};
+
 class CMessageDoorStatus : public CMessage {
 public:
     CMessageDoorStatus(CGameDoor* pDoor, LONG caller, LONG target);
@@ -763,6 +787,23 @@ public:
     void Run() override;
 
     /* 000C */ CAIAction m_action;
+};
+
+class CMessageInsertResponse : public CMessage {
+public:
+    CMessageInsertResponse(const CAIResponse& response, BOOL checkCurrentResponse, BOOL clearActions, BOOL bRunInstants, LONG caller, LONG target);
+    ~CMessageInsertResponse() override;
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CAIResponse m_response;
+    /* 0030 */ BOOL m_checkCurrentResponse;
+    /* 0034 */ BOOL m_clearActions;
+    /* 0038 */ BOOL m_bRunInstants;
 };
 
 class CMessageLeaveParty : public CMessage {
@@ -1545,6 +1586,53 @@ public:
     /* 0020 */ int field_20;
 };
 
+// NOTE: Same layout as `CMessageFireProjectile`, but the projectile type is
+// stored plus one.
+class CMessage115 : public CMessage {
+public:
+    CMessage115(WORD projectileType, LONG projectileTargetId, const CPoint& projectileTarget, LONG height, LONG caller, LONG target, unsigned char a7);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ WORD m_projectileType;
+    /* 000E */ LONG m_projectileTargetId;
+    /* 0012 */ CPoint m_projectileTarget;
+    /* 001A */ LONG m_height;
+    /* 001E */ unsigned char field_1E;
+    /* 0020 */ int field_20;
+};
+
+class CMessageAddInventoryItem : public CMessage {
+public:
+    CMessageAddInventoryItem(const CItem& item, LONG caller, LONG target);
+    ~CMessageAddInventoryItem() override;
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CItem m_item;
+};
+
+class CMessageRemoveInventoryItem : public CMessage {
+public:
+    CMessageRemoveInventoryItem(SHORT slotNum, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ SHORT m_slotNum;
+};
+
 class CMessageStopEscapeArea : public CMessage {
 public:
     CMessageStopEscapeArea(LONG caller, LONG target);
@@ -1718,6 +1806,19 @@ public:
     /* 000C */ BOOLEAN m_bHide;
 };
 
+class CMessageSaveGame : public CMessage {
+public:
+    CMessageSaveGame(STRREF strDescription, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ STRREF m_strDescription;
+};
+
 class CMessageSetAreaExplored : public CMessage {
 public:
     CMessageSetAreaExplored(BOOLEAN bExplored, LONG caller, LONG target);
@@ -1773,6 +1874,40 @@ public:
     /* 000C */ WORD m_stat;
     /* 000E */ DWORD m_value;
     /* 0012 */ BOOLEAN m_modify;
+};
+
+class CMessageSetVariable : public CMessage {
+public:
+    CMessageSetVariable(const CString& sScope, const CString& sName, LONG nValue, BOOLEAN bIncrement, DWORD dwFlags, LONG caller, LONG target);
+    ~CMessageSetVariable() override;
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CString m_sScope;
+    /* 0010 */ CString m_sName;
+    /* 0014 */ LONG m_nValue;
+    /* 0018 */ BOOLEAN m_bIncrement;
+    /* 001A */ DWORD m_dwFlags;
+};
+
+class CMessagePlaySoundPoint : public CMessage {
+public:
+    CMessagePlaySoundPoint(CResRef cResSound, const CPoint& pt, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CResRef m_cResSound;
+    /* 0014 */ BYTE m_nChannel;
+    /* 0015 */ BOOLEAN m_bPositioned;
+    /* 0016 */ CPoint m_pt;
 };
 
 #endif /* CMESSAGE_H_ */

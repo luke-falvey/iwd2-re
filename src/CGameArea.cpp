@@ -824,6 +824,12 @@ BOOLEAN CGameArea::CanSaveGame(STRREF& strError)
     return TRUE;
 }
 
+// 0x46E130
+void CGameArea::sub_46E130(CGameEffect* pEffect, BOOL a2, BOOL bCheckSpecifics, BYTE nSpecifics, CGameObject* pExclude)
+{
+    // TODO: Incomplete.
+}
+
 // 0x46E3D0
 void CGameArea::AIUpdate()
 {

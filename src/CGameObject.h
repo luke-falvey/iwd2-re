@@ -67,6 +67,7 @@ public:
     /* 0068 */ virtual BOOLEAN IsProjectile();
 
     void FloatText(STRREF strRef, int a2, int a3);
+    SHORT TransferInventory(CGameObject* pTarget);
 
     CGameArea* GetArea();
     LONG GetId();

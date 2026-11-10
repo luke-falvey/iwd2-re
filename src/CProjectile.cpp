@@ -32,6 +32,14 @@ void CProjectile::AddEffect(CGameEffect* pEffect)
     m_effectList.AddTail(pEffect);
 }
 
+// 0x51EAF0
+CProjectile* CProjectile::DecodeProjectile(WORD projectileType, CGameAIBase* pSource, BOOL a3)
+{
+    // TODO: Incomplete.
+
+    return NULL;
+}
+
 // 0x529F10
 void CProjectile::ClearEffects()
 {
@@ -154,6 +162,20 @@ void CProjectile::PlaySound(CResRef resRef, BOOL loop, BOOL fireAndForget)
         m_sound.SetChannel(15, reinterpret_cast<DWORD>(m_pArea));
         m_sound.Play(m_pos.x, m_pos.y, 0, FALSE);
     }
+}
+
+// 0x52A640
+void CProjectile::sub_52A640(LONG nObjectId, CPoint& pt, BOOLEAN a3)
+{
+    // TODO: Incomplete.
+}
+
+// 0x560310
+CProjectile* CProjectile::sub_560310(WORD projectileType, CGameAIBase* pSource, BOOL a3)
+{
+    // TODO: Incomplete.
+
+    return NULL;
 }
 
 // 0x78E730

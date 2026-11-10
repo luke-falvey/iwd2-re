@@ -1397,6 +1397,8 @@ CPersistantEffect84C4D4::field_44
 CPersistantEffect84C4D4::field_54
 CPersistantEffect84C4D4::field_58
 CProjectile::field_182
+CProjectile::field_186
+CProjectile::field_18A
 CProjectile::m_arrivalSoundRef
 CProjectile::m_bHasHeight
 CProjectile::m_callBackProjectile

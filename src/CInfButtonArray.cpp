@@ -139,6 +139,12 @@ void CInfButtonArray::UpdateButtons()
     // TODO: Incomplete.
 }
 
+// 0x452C40
+INT CInfButtonArray::GetState()
+{
+    return m_nState;
+}
+
 // 0x452C50
 void CInfButtonArray::SetSelectedButton(INT nSelectedButton)
 {

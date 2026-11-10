@@ -4,6 +4,7 @@
 #include "CAIAction.h"
 #include "CAIObjectType.h"
 #include "CGameObject.h"
+#include "CSound.h"
 
 class CAIResponse;
 class CAIScript;
@@ -41,6 +42,7 @@ public:
     /* 002C */ BOOLEAN CompressTime(DWORD deltaTime) override;
     /* 0048 */ void RemoveFromArea() override;
     /* 006C */ virtual void ClearActions(BOOL a1);
+    /* 0070 */ virtual void UpdateTarget(CGameObject* pTarget);
     /* 0074 */ virtual void AddAction(const CAIAction& action);
     /* 0078 */ virtual void AddEffect(CGameEffect* pEffect, BYTE list, BOOL noSave, BOOL immediateApply);
     /* 007C */ virtual void ClearAI(BOOLEAN a1);
@@ -111,6 +113,36 @@ public:
     SHORT SpawnPtDeactivate(CGameSpawning* target);
     SHORT SpawnPtSpawn(CGameSpawning* target);
     SHORT StaticStart(CGameStatic* target, BOOL bStart);
+    CGameObject* GetTargetShareType(BYTE objectType);
+    CGameObject* GetTargetShareAIType(const CAIObjectType& type, BYTE objectType);
+    CGameObject* GetTargetShare();
+    void ProcessPendingTriggers();
+    void DecodeSpell(LONG spellID, CString& sSpell);
+    SHORT PlaySound(CPoint pos, BOOL bUsePoint);
+    SHORT SetGlobal();
+    SHORT IncrementGlobal();
+    SHORT CreateCreature();
+    SHORT CreateCreatureObject(CGameObject* pObject);
+    SHORT ForceSpell(CGameAIBase* pTarget);
+    SHORT ForceSpellPoint();
+    SHORT ApplySpell(CGameAIBase* pTarget);
+    SHORT SetGlobalTimer();
+    SHORT StartCutScene();
+    SHORT CreateItem();
+    SHORT ClearAllActions();
+    SHORT TakePartyItem();
+    SHORT sub_464200();
+    BOOL sub_464950(CItem* pItem, BOOL a2, BOOL a3, INT nCount, BOOL bFeedback);
+    SHORT GiveItemCreate(CGameObject* pObject);
+    SHORT GivePartyGoldGlobal();
+    SHORT IncrementChapter();
+    SHORT AddExperiencePartyGlobal();
+    SHORT OpenDoor(CGameDoor* pDoor);
+    SHORT CloseDoor(CGameDoor* pDoor);
+    SHORT MultiPlayerSync();
+    SHORT LeaveAreaLUAPanic();
+    SHORT BitGlobal();
+    SHORT GlobalBitGlobal();
 
     SCRIPTNAME& GetScriptName();
     void SetTrigger(const CAITrigger& trigger);

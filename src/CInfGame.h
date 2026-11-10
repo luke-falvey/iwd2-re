@@ -106,6 +106,8 @@ public:
         memset(field_9, 0, sizeof(field_9));
     }
 
+    CInfGameUnknownEntry(const CString& sName);
+
     /* 0000 */ CString m_sName;
     /* 0004 */ DWORD field_4;
     /* 0008 */ BYTE field_8;
@@ -234,6 +236,8 @@ public:
     void sub_5BDBA0(int a1, BOOL a2);
     void ReputationAdjustment(SHORT reputationAdjustment, BOOL set);
     void ChangeReputation(SHORT eventCode);
+    LONG AddPartyXP(DWORD nXP, BOOLEAN bFeedback, BOOLEAN bChallengeRating);
+    BOOL ChangeStoreMarkup(const CResRef& resRef, LONG nBuyMarkup, LONG nSellMarkup, LONG nAdditionalMarkup);
     void AddDisposableItem(CItem* pItem);
     void DestroyDisposableItems();
     void AddPartyGold(LONG dwAddPartyGold);
@@ -299,6 +303,7 @@ public:
     CVariableHash* GetVariables();
     CVidBitmap* GetMasterBitmap();
     CNamedCreatureVariableHash* GetNamedCreatures();
+    CInfGameUnknownEntry* FindUnknownEntry(const CString& sName);
     void SetTempCursor(BYTE tempCursor);
     CGameOptions* GetOptions();
     SHORT GetReputation();

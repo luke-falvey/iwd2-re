@@ -11,6 +11,7 @@
 #include "CGameAnimationType.h"
 #include "CGameArea.h"
 #include "CGameContainer.h"
+#include "CGameEffect.h"
 #include "CGameObject.h"
 #include "CGameSprite.h"
 #include "CInfCursor.h"
@@ -8318,6 +8319,111 @@ CString CInfGame::GetDirCharacters()
     return m_sCharactersDir;
 }
 
+// 0x5C0BB0
+LONG CInfGame::AddPartyXP(DWORD nXP, BOOLEAN bFeedback, BOOLEAN bChallengeRating)
+{
+    CGameSprite* pSprite;
+    BYTE rc;
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    SHORT nIndex;
+    SHORT nLevels = 0;
+    SHORT nAlive = 0;
+
+    for (nIndex = 0; nIndex < m_nCharacters; nIndex++) {
+        // NOTE: Uninline.
+        LONG nCharacterId = GetCharacterId(nIndex);
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
+                nAlive++;
+                nLevels += pSprite->m_derivedStats.m_nLevel;
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    if (nAlive == 0) {
+        nAlive = 1;
+    }
+
+    if (bChallengeRating) {
+        nXP = static_cast<DWORD>(pGame->m_ruleTables.sub_542560(static_cast<unsigned short>(nXP),
+                  static_cast<unsigned short>(nLevels / nAlive)))
+            >> 1;
+    }
+
+    DWORD nShare = nXP / nAlive;
+    DWORD nRemainder = nXP % nAlive;
+
+    ITEM_EFFECT effect;
+    CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_XP);
+    // NOTE: Read from an unnamed WORD constant at 0x8491AA.
+    effect.durationType = 1;
+    effect.effectAmount = nShare;
+
+    LONG nTotal = 0;
+
+    for (nIndex = 0; nIndex < m_nCharacters; nIndex++) {
+        // NOTE: Uninline.
+        LONG nCharacterId = GetCharacterId(nIndex);
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
+                // NOTE: The original compares the remainder as SHORT.
+                if (static_cast<SHORT>(nRemainder) > 0) {
+                    effect.effectAmount = nShare + 1;
+                    nRemainder--;
+                } else {
+                    effect.effectAmount = nShare;
+                }
+
+                INT nPenalty = pSprite->GetMulticlassingPenalty();
+                if (nPenalty > 0) {
+                    effect.effectAmount = (100 - nPenalty) * effect.effectAmount / 100;
+                }
+
+                nTotal += effect.effectAmount;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    CPoint(-1, -1),
+                    -1,
+                    CPoint(-1, -1));
+
+                // NOTE: Uninline (both ids).
+                CMessageAddEffect* pMessage = new CMessageAddEffect(pEffect,
+                    GetCharacterId(nIndex),
+                    GetCharacterId(nIndex));
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    FeedBack(FEEDBACK_EXPERIENCE, nTotal, bFeedback);
+
+    return nTotal;
+}
+
 // 0x5C1090
 BYTE CInfGame::GetCharactersControlled()
 {
@@ -9131,6 +9237,14 @@ LONG CInfGame::GetAveragePartyLevel()
     return nAverageLevel / m_nCharacters;
 }
 
+// 0x5C9C90
+BOOL CInfGame::ChangeStoreMarkup(const CResRef& resRef, LONG nBuyMarkup, LONG nSellMarkup, LONG nAdditionalMarkup)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // NOTE: Unclear why `nClass` is passed as pointer.
 // TODO: Move to `CRuleTables`.
 //
@@ -9411,6 +9525,30 @@ void CInfGame::SetCurrentChapter(INT nChapter)
     if (pVar != NULL) {
         pVar->m_intValue = nChapter;
     }
+}
+
+// 0x452F50
+CInfGameUnknownEntry::CInfGameUnknownEntry(const CString& sName)
+    : m_sName(sName)
+{
+    field_4 = 0;
+    field_8 = 0;
+    memset(field_9, 0, sizeof(field_9));
+}
+
+// 0x452F80
+//
+// NOTE: The original is a `__thiscall` on `&field_4BDC` (a list helper).
+CInfGameUnknownEntry* CInfGame::FindUnknownEntry(const CString& sName)
+{
+    POSITION pos = field_4BDC.GetHeadPosition();
+    while (pos != NULL) {
+        CInfGameUnknownEntry* pEntry = reinterpret_cast<CInfGameUnknownEntry*>(field_4BDC.GetNext(pos));
+        if (pEntry != NULL && pEntry->m_sName.CompareNoCase(sName) == 0) {
+            return pEntry;
+        }
+    }
+    return NULL;
 }
 
 // 0x452FD0

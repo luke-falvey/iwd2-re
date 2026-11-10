@@ -18,8 +18,10 @@ public:
     /* 0048 */ void RemoveFromArea() override;
     /* 0058 */ void SetCursor(LONG nToolTip) override;
 
+    void ToggleDoor(const CAIObjectType& cause, BOOL bIgnoreLock);
     void OnDoorStatusUpdate(BOOLEAN bDoorOpened, DWORD dwFlags, WORD nTrapActivated, WORD nTrapDetected);
     void Marshal(CAreaFileDoorObject** pDoorObject);
+    const CPoint& GetClosestDest(const CPoint& pt);
     void SetDrawPoly(SHORT time);
     DWORD GetFlags();
     void SetFlags(DWORD dwFlags);

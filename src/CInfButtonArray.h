@@ -44,6 +44,7 @@ public:
     void OnLButtonPressed(int buttonID);
     void OnRButtonPressed(int buttonID);
 
+    INT GetState();
     void SetSelectedButton(INT nSelectedButton);
     void UpdateCustomizableButtonTypes(INT* pButtonList);
     void UpdateSelectedWeaponSet(BYTE nIndex);
