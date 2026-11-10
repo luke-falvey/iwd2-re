@@ -4307,6 +4307,7 @@ BOOL CGameEffectColorLightSolid::ApplyEffect(CGameSprite* pSprite)
 CGameEffectAnimationChange::CGameEffectAnimationChange(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target)
     : CGameEffect(effect, source, sourceID, target, FALSE)
 {
+    field_18C = -1;
 }
 
 // 0x495AD0
@@ -4316,6 +4317,7 @@ CGameEffect* CGameEffectAnimationChange::Copy()
     CGameEffectAnimationChange* copy = new CGameEffectAnimationChange(effect, m_source, m_sourceID, m_target);
     delete effect;
     copy->CopyFromBase(this);
+    copy->field_18C = field_18C;
     return copy;
 }
 

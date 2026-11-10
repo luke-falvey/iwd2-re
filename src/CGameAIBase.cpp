@@ -289,12 +289,36 @@ void CGameAIBase::DoAction()
     }
 }
 
+// 0x44DAC0
+BOOL CGameAIBase::SeeTarget(CGameObject* pTarget, BOOL a2)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x44DC10
 SHORT CGameAIBase::ExecuteAction()
 {
     // TODO: Incomplete.
 
     return ACTION_ERROR;
+}
+
+// 0x45BDD0
+CGameObject* CGameAIBase::GetTargetShareType(BYTE type)
+{
+    // TODO: Incomplete.
+
+    return NULL;
+}
+
+// 0x45C030
+CGameObject* CGameAIBase::GetTargetShareAIType(const CAIObjectType& type, BYTE objectType)
+{
+    // TODO: Incomplete.
+
+    return NULL;
 }
 
 // 0x45C300
@@ -337,6 +361,12 @@ void CGameAIBase::ProcessAI()
     // TODO: Incomplete.
 }
 
+// 0x45CA10
+void CGameAIBase::ProcessPendingTriggers()
+{
+    // TODO: Incomplete.
+}
+
 // 0x45D130
 void CGameAIBase::RemoveFromArea()
 {
@@ -353,6 +383,12 @@ void CGameAIBase::RemoveFromArea()
     }
 
     delete this;
+}
+
+// 0x45D3E0
+void CGameAIBase::DecodeSpell(LONG spellId, CString& sSpell)
+{
+    // TODO: Incomplete.
 }
 
 // 0x44CC70

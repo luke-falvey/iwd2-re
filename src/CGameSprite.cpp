@@ -8,6 +8,7 @@
 #include "CGameArea.h"
 #include "CGameButtonList.h"
 #include "CGameContainer.h"
+#include "CGameDoor.h"
 #include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CItem.h"
@@ -8770,6 +8771,12 @@ void CGameSprite::sub_71A550(CButtonData buttonData, BOOLEAN firstCall)
     }
 }
 
+// 0x71ABA0
+void CGameSprite::sub_71ABA0(const CAbilityId& abilityId, SHORT a2, BOOL a3, BOOL a4)
+{
+    // TODO: Incomplete.
+}
+
 // 0x71B3B0
 void CGameSprite::CheckToolTipItem(BYTE buttonNum)
 {
@@ -9090,6 +9097,45 @@ void CGameSprite::CheckLoadState()
 INT CGameSprite::GetNumQuickWeaponSlots()
 {
     return g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetNumQuickWeaponSlots(m_typeAI.m_nClass);
+}
+
+// 0x71CFF0
+BOOL CGameSprite::sub_71CFF0()
+{
+    if ((m_baseStats.field_2FB & 0x1) != 0) {
+        return TRUE;
+    }
+
+    BYTE nMorale = m_baseStats.m_morale < 20 ? m_baseStats.m_morale : 20;
+    m_baseStats.m_morale = nMorale;
+
+    nMorale = nMorale > 0 ? nMorale : 0;
+    m_baseStats.m_morale = nMorale;
+
+    if (m_derivedStats.m_nMoraleRecoveryTime == 0) {
+        m_baseStats.m_morale = 10;
+    } else if (static_cast<DWORD>(field_44A) % (m_derivedStats.m_nMoraleRecoveryTime * 15) == 0) {
+        if (nMorale > 10) {
+            nMorale--;
+            m_baseStats.m_morale = nMorale;
+        } else if (nMorale < 10) {
+            nMorale++;
+            m_baseStats.m_morale = nMorale;
+        }
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->m_gameSave.m_cutScene
+        || (m_curAction.m_internalFlags & 0x1) != 0) {
+        return TRUE;
+    }
+
+    return m_derivedStats.m_nMoraleBreak < m_baseStats.m_morale;
+}
+
+// 0x71D0B0
+void CGameSprite::sub_71D0B0()
+{
+    // TODO: Incomplete.
 }
 
 // 0x71D310
@@ -10223,6 +10269,14 @@ SHORT CGameSprite::TakeItemBags(const CString& sName, LONG number, SHORT slotNum
 // Returns `TRUE` if object contains quest items or containers (such as potion
 // bags). See STREF #26585.
 //
+// 0x722740
+CItem* CGameSprite::sub_722740(const CString& sName)
+{
+    // TODO: Incomplete.
+
+    return NULL;
+}
+
 // 0x723350
 BOOL CGameSprite::HaveUnexportableItems()
 {
@@ -10437,6 +10491,18 @@ STRREF CGameSprite::GetNameRef()
     return strName;
 }
 
+// 0x727B80
+BOOL CGameSprite::sub_727B80(BOOL bCanSeeInvisible)
+{
+    if (!bCanSeeInvisible
+        && (m_derivedStats.m_generalState & STATE_INVISIBLE) != 0
+        && (m_baseStats.field_2FC & 0x1) == 0) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 // 0x728270
 void CGameSprite::PlaySound(const CResRef& res)
 {
@@ -10517,6 +10583,18 @@ BOOL CGameSprite::Animate()
 DWORD CGameSprite::GetSpecialization()
 {
     return m_baseStats.m_specialization;
+}
+
+// 0x728B70
+void CGameSprite::ProcessPendingTriggers()
+{
+    if ((m_derivedStats.m_generalState & STATE_PANIC) == 0
+        && !m_inCutScene
+        && !g_pBaldurChitin->GetObjectGame()->m_gameSave.m_cutScene
+        && sub_7202E0()
+        && (m_baseStats.m_flags & 0x80000000) == 0) {
+        CGameAIBase::ProcessPendingTriggers();
+    }
 }
 
 // 0x728BC0
@@ -10611,6 +10689,1146 @@ void CGameSprite::ResolveInstants(BOOL dropNonInstants)
         field_9D14 = 0;
         field_9D15 = 0;
     }
+}
+
+// 0x728F80
+SHORT CGameSprite::ExecuteAction()
+{
+    // TODO: Incomplete (action 223 does not send `CMessageRemoveItem`).
+
+    SHORT actionReturn = ACTION_DONE;
+    CGameObject* pObject = NULL;
+    BOOL bShare = FALSE;
+    BOOL bSavedShare = FALSE;
+    CString sSpell;
+    CItem* pItem;
+    ITEM_EFFECT* effect = NULL;
+    CGameEffect* pEffect;
+    CMessage* message;
+    SHORT slotNum;
+    DWORD nTickCount;
+
+    if (m_curAction.m_actionID == 178) {
+        // BreakInstants()
+        SetCurrAction(GetNextAction(m_aiAction));
+    }
+
+    switch (m_curAction.m_actionID) {
+    case 0:
+        // NoAction()
+        actionReturn = ACTION_DONE;
+        m_noActionCount++;
+        break;
+    case 1:
+    case 36:
+        // ActionOverride(), Continue()
+        break;
+    case 3:
+    case 98:
+        // Attack(), AttackNoSound()
+        nTickCount = GetTickCount();
+        g_pBaldurChitin->field_1AB2[1] += nTickCount - g_pBaldurChitin->field_1AF2[1];
+        g_pBaldurChitin->field_1AF2[1] = nTickCount;
+
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        if (pObject == NULL) {
+            if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
+                CAIObjectType type(CAIObjectType::ANYONE);
+                type.m_nEnemyAlly = m_typeAI.GetEnemyOf().m_nEnemyAlly;
+                pObject = GetTargetShareAIType(type, CGameObject::TYPE_SPRITE);
+            }
+        }
+
+        if (pObject != NULL
+            && (m_baseStats.m_flags & 0x100000) == 0
+            && pObject->GetAIType().m_nEnemyAlly <= CAIObjectType::EA_GOODCUTOFF) {
+            m_baseStats.m_flags |= 0x100000;
+        }
+
+        actionReturn = Attack(static_cast<CGameSprite*>(pObject));
+
+        nTickCount = GetTickCount();
+        g_pBaldurChitin->field_1A72[1] += nTickCount - g_pBaldurChitin->field_1AF2[1];
+        g_pBaldurChitin->field_1AF2[1] = nTickCount;
+        break;
+    case 5:
+        // BackStab()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        actionReturn = ACTION_ERROR;
+        break;
+    case 6:
+        // __FILE__: .\Include\ObjCreature.h
+        // __LINE__: 1077
+        UTIL_ASSERT(FALSE);
+        actionReturn = ACTION_NORMAL;
+        break;
+    case 8:
+        // Dialogue()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        if (pObject != NULL) {
+            if ((static_cast<CGameSprite*>(pObject)->m_baseStats.m_generalState & STATE_DEAD) == 0
+                && (static_cast<CGameSprite*>(pObject)->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
+                bShare = TRUE;
+                actionReturn = Dialog(static_cast<CGameSprite*>(pObject));
+                break;
+            }
+            bShare = TRUE;
+            bSavedShare = TRUE;
+        }
+
+        {
+            CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+            INT nIndex;
+            for (nIndex = 0; nIndex < pGame->m_nCharacters; nIndex++) {
+                LONG nCharacterId = static_cast<SHORT>(nIndex) < pGame->m_nCharacters
+                    ? pGame->m_characterPortraits[static_cast<SHORT>(nIndex)]
+                    : CGameObjectArray::INVALID_INDEX;
+
+                CGameSprite* pSprite;
+                BYTE rc;
+                do {
+                    rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                // NOTE: Dead party members are not released.
+                if (rc == CGameObjectArray::SUCCESS
+                    && (pSprite->m_baseStats.m_generalState & STATE_DEAD) == 0
+                    && (pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
+                    actionReturn = Dialog(pSprite);
+                    pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    break;
+                }
+            }
+
+            bShare = bSavedShare;
+
+            if (nIndex == pGame->m_nCharacters) {
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+                // __LINE__: 1066
+                UTIL_ASSERT_MSG(FALSE, "Couldn't get a sprite to start dialog with");
+                actionReturn = ACTION_ERROR;
+            }
+        }
+        break;
+    case 9:
+        // DropItem()
+        slotNum = FindItemPersonal(m_curAction.GetString1(), 0, FALSE);
+        if (slotNum != -1) {
+            actionReturn = DropItem(slotNum);
+        } else {
+            actionReturn = DropItem(sub_722740(m_curAction.GetString1()));
+        }
+        break;
+    case 10:
+        // Enemy()
+        actionReturn = Enemy();
+        break;
+    case 11:
+        // EquipItem()
+        slotNum = FindItemPersonal(m_curAction.GetString1(), 0, FALSE);
+        if (slotNum == -1) {
+            actionReturn = ACTION_ERROR;
+        } else {
+            if (m_curAction.m_specificID != 0) {
+                m_equipment.m_items[slotNum]->Equip(this, slotNum, FALSE);
+            } else {
+                m_equipment.m_items[slotNum]->Unequip(this, slotNum, TRUE, FALSE);
+            }
+            actionReturn = ACTION_DONE;
+        }
+        break;
+    case 12:
+        // __FILE__: .\Include\ObjCreature.h
+        // __LINE__: 1137
+        UTIL_ASSERT_MSG(FALSE, "Tracking is not implemented");
+        actionReturn = ACTION_NORMAL;
+        break;
+    case 13:
+        // FindTraps()
+        actionReturn = FindTraps();
+        break;
+    case 14:
+        // GetItem()
+        pObject = sub_733340();
+        bShare = TRUE;
+        actionReturn = ACTION_DONE;
+        break;
+    case 15:
+        // GiveItem()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        actionReturn = GiveItem(static_cast<CGameSprite*>(pObject));
+        break;
+    case 17:
+        // Help()
+        actionReturn = Help();
+        break;
+    case 18:
+        // Hide()
+        if (!m_bHiding) {
+            actionReturn = Hide();
+        }
+        break;
+    case 19:
+        // JoinParty()
+        actionReturn = JoinParty();
+        break;
+    case 20:
+        // LayHands()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        actionReturn = ACTION_DONE;
+        break;
+    case 21:
+        // LeaveParty()
+        actionReturn = LeaveParty();
+        break;
+    case 22:
+        // MoveToObject()
+        if (GetObjectType() != CGameObject::TYPE_SPRITE) {
+            actionReturn = ACTION_ERROR;
+            break;
+        }
+
+        pObject = sub_733340();
+        if (pObject == NULL) {
+            break;
+        }
+
+        bShare = TRUE;
+
+        {
+            BYTE objectType = pObject->GetObjectType();
+            if (objectType == CGameObject::TYPE_DOOR) {
+                // NOTE: The original passes an uninitialized point.
+                CPoint pt;
+                pt = static_cast<CGameDoor*>(pObject)->sub_48B2C0(pt);
+                actionReturn = sub_73FEC0(pt, FALSE);
+            } else if (objectType == CGameObject::TYPE_SPRITE) {
+                if ((m_baseStats.m_flags & 0x100000) == 0
+                    && pObject->GetAIType().m_nEnemyAlly <= CAIObjectType::EA_GOODCUTOFF) {
+                    m_baseStats.m_flags |= 0x100000;
+                }
+                actionReturn = MoveToObject(static_cast<CGameAIBase*>(pObject));
+                m_lastActionID = 22;
+            } else {
+                CPoint pt = pObject->GetPos();
+                actionReturn = sub_73FEC0(pt, FALSE);
+            }
+        }
+        break;
+    case 23:
+    case 90:
+    case 207:
+        // MoveToPoint(), MoveToPointNoRecticle()
+        ResolveTargetPoint(&m_curAction, m_queuedActions.GetHeadPosition());
+        actionReturn = MoveToPoint();
+        break;
+    case 24:
+        // Panic()
+        actionReturn = Panic();
+        break;
+    case 25:
+        // PickPockets()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        actionReturn = PickPockets(static_cast<CGameSprite*>(pObject));
+        break;
+    case 27:
+        // ProtectPoint()
+        ResolveTargetPoint(&m_curAction, m_queuedActions.GetHeadPosition());
+        actionReturn = ProtectPoint();
+        break;
+    case 28:
+        // RemoveTraps()
+        pObject = GetTargetShareType(CGameObject::TYPE_AIBASE);
+        bShare = TRUE;
+        actionReturn = RemoveTraps(static_cast<CGameAIBase*>(pObject));
+        break;
+    case 29:
+    case 184:
+        // RunAwayFrom(), RunAwayFromNoInterrupt()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        actionReturn = RunAwayFrom(static_cast<CGameSprite*>(pObject));
+        break;
+    case 31:
+    case 191:
+        // Spell(), SpellNoDec()
+        pObject = GetTargetShareType(CGameObject::TYPE_AIBASE);
+        bShare = TRUE;
+        actionReturn = Spell(static_cast<CGameAIBase*>(pObject));
+        break;
+    case 33:
+        // Turn()
+        actionReturn = Turn();
+        break;
+    case 34:
+        // UseItem()
+        pObject = GetTargetShareType(CGameObject::TYPE_AIBASE);
+        bShare = TRUE;
+        actionReturn = UseItem(static_cast<CGameAIBase*>(pObject));
+        break;
+    case 38:
+        // Swing()
+        m_attackFrame = 0;
+        actionReturn = OneSwing();
+        break;
+    case 39:
+        // Recoil()
+        actionReturn = Recoil();
+        break;
+    case 40:
+        // PlayDead()
+        actionReturn = PlayDead();
+        break;
+    case 47:
+        // Formation()
+        pObject = sub_733340();
+        bShare = TRUE;
+        actionReturn = Formation(pObject);
+        break;
+    case 48:
+        // JumpToPoint()
+        actionReturn = JumpToPoint(m_curAction.m_dest, TRUE);
+        break;
+    case 69:
+        // VEquip()
+        g_pBaldurChitin->GetObjectGame()->StepAnimation(static_cast<BYTE>(m_curAction.m_specificID + 48));
+        actionReturn = ACTION_DONE;
+        break;
+    case 84:
+    case 206:
+        // Face()
+        actionReturn = Face();
+        break;
+    case 85:
+    case 130:
+        // RandomWalk(), RandomTurn()
+        actionReturn = RandomWalk();
+        break;
+    case 86:
+        // SetInterrupt()
+        if (m_curAction.m_specificID == 0) {
+            m_baseStats.m_flags |= 0x80000000;
+        } else {
+            m_baseStats.m_flags &= ~0x80000000;
+        }
+        actionReturn = ACTION_DONE;
+        break;
+    case 87:
+        // ProtectObject()
+        pObject = GetTargetShareType(CGameObject::TYPE_AIBASE);
+        bShare = TRUE;
+        actionReturn = ProtectObject(static_cast<CGameAIBase*>(pObject));
+        break;
+    case 88:
+        // Leader()
+        m_followLeader = TRUE;
+        m_followLeaderAdditive = m_curAction.m_specificID;
+        AddAction(CAIAction(CAIAction::MOVETOPOINT, m_curAction.m_dest, 0, -1));
+        actionReturn = ACTION_DONE;
+        break;
+    case 89:
+        // Follow()
+        actionReturn = Follow();
+        break;
+    case 91:
+        // LeaveArea()
+        actionReturn = LeaveArea();
+        break;
+    case 92:
+        // SelectWeaponAbility()
+        SelectWeaponAbility(static_cast<BYTE>(m_curAction.m_specificID),
+            static_cast<BYTE>(m_curAction.m_specificID2),
+            1,
+            1);
+        actionReturn = ACTION_DONE;
+        break;
+    case 93:
+        actionReturn = sub_74CDB0();
+        break;
+    case 94:
+        // GroupAttack()
+        {
+            CAIObjectType type(CAIObjectType::ANYONE);
+            type.m_nEnemyAlly = m_typeAI.GetEnemyOf().m_nEnemyAlly;
+            pObject = GetTargetShareAIType(type, CGameObject::TYPE_SPRITE);
+            bShare = TRUE;
+            actionReturn = GroupAttack(static_cast<CGameSprite*>(pObject));
+        }
+        break;
+    case 95:
+    case 192:
+        // SpellPoint(), SpellPointNoDec()
+        actionReturn = SpellPoint();
+        break;
+    case 96:
+        // Rest()
+        actionReturn = Rest();
+        break;
+    case 97:
+        // UseItemPoint()
+        actionReturn = UseItemPoint();
+        break;
+    case 99:
+        if (m_followStart) {
+            m_followStart = FALSE;
+            actionReturn = ACTION_DONE;
+        } else {
+            actionReturn = ACTION_INTERRUPTABLE;
+        }
+        break;
+    case 100:
+        // RandomFly()
+        actionReturn = RandomFly();
+        break;
+    case 101:
+        {
+            BYTE facing = m_curAction.m_acteeID.m_nEnemyAlly;
+            BYTE circleType = m_curAction.m_acteeID.m_nGeneral;
+            if (m_actionCount == 0) {
+                SetTargetFly(circleType, facing, m_curAction.m_specificID);
+            }
+
+            if (m_actionCount > 0 && m_nSequence == SEQ_READY) {
+                m_baseStats.m_flags &= ~0x80000000;
+                actionReturn = ACTION_DONE;
+            } else {
+                actionReturn = ACTION_NORMAL;
+            }
+        }
+        break;
+    case 102:
+    case 103:
+    case 104:
+        // MoraleSet(), MoraleInc(), MoraleDec()
+        effect = new ITEM_EFFECT;
+        CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_MORALE);
+        switch (m_curAction.m_actionID) {
+        case 102:
+            effect->dwFlags = 1;
+            effect->effectAmount = m_curAction.m_specificID;
+            break;
+        case 103:
+            effect->dwFlags = 0;
+            effect->effectAmount = m_curAction.m_specificID;
+            break;
+        case 104:
+            effect->effectID = CGAMEEFFECT_MORALE;
+            effect->dwFlags = 0;
+            effect->effectAmount = -m_curAction.m_specificID;
+            break;
+        }
+
+        // NOTE: Original reads it from a constant at 0x8491AA.
+        effect->durationType = 1;
+
+        pEffect = CGameEffect::DecodeEffect(effect, m_pos, m_id, CPoint(-1, -1));
+
+        // NOTE: `pEffect` leaks if there is no target.
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        if (pObject != NULL) {
+            bShare = TRUE;
+            message = new CMessageAddEffect(pEffect, m_id, pObject->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        actionReturn = ACTION_DONE;
+        delete effect;
+        break;
+    case 105:
+        // AttackOneRound()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        if (pObject != NULL
+            && (m_baseStats.m_flags & 0x100000) == 0
+            && pObject->GetAIType().m_nEnemyAlly <= CAIObjectType::EA_GOODCUTOFF) {
+            m_baseStats.m_flags |= 0x100000;
+        }
+        actionReturn = Attack(static_cast<CGameSprite*>(pObject));
+        break;
+    case 107:
+        // MoveToOffset()
+        if (m_interrupt) {
+            actionReturn = ACTION_INTERRUPTABLE;
+        } else {
+            CPoint dest(m_pos.x + CPathSearch::GRID_SQUARE_SIZEX * m_curAction.m_dest.x,
+                m_pos.y + CPathSearch::GRID_SQUARE_SIZEY * m_curAction.m_dest.y);
+            AddAction(CAIAction(CAIAction::MOVETOPOINT, dest, 0, -1));
+            actionReturn = ACTION_DONE;
+        }
+        break;
+    case 108:
+    case 176:
+        // EscapeArea(), EscapeAreaDestroy()
+        actionReturn = EscapeArea();
+        break;
+    case 110:
+        // LeaveAreaLUA()
+        actionReturn = LeaveAreaLUA();
+        break;
+    case 111:
+        // DestroySelf()
+        sub_761650();
+        m_removeFromArea = TRUE;
+        actionReturn = ACTION_DONE;
+        break;
+    case 112:
+        // UseContainer()
+        actionReturn = UseContainer();
+        break;
+    case 119:
+        // DropInventory()
+        actionReturn = DropInventory(FALSE, CString(""));
+        break;
+    case 124:
+        // Berserk()
+        actionReturn = Berserk();
+        break;
+    case 127:
+        // CutSceneId()
+        actionReturn = ACTION_DONE;
+        break;
+    case 128:
+        // AnkhegEmerge()
+        if (m_animation.GetAboveGround()) {
+            actionReturn = ACTION_DONE;
+        } else {
+            if (m_nSequence != SEQ_EMERGE) {
+                message = new CMessageSetSequence(SEQ_EMERGE, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+            actionReturn = ACTION_NORMAL;
+        }
+        break;
+    case 129:
+        // AnkhegHide()
+        if (m_animation.GetAboveGround()) {
+            if (m_nSequence != SEQ_HIDE) {
+                message = new CMessageSetSequence(SEQ_HIDE, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+            actionReturn = ACTION_NORMAL;
+        } else {
+            actionReturn = ACTION_DONE;
+        }
+        break;
+    case 134:
+        // AttackReevaluate()
+        actionReturn = AttackReevaluate();
+        break;
+    case 135:
+        // LockScroll()
+        g_pBaldurChitin->m_pEngineWorld->m_scrollLockId = m_id;
+        actionReturn = ACTION_DONE;
+        break;
+    case 137:
+    case 198:
+        // StartDialog(), StartDialogueNoSet()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        actionReturn = StartDialog(static_cast<CGameSprite*>(pObject));
+        break;
+    case 138:
+        // SetDialog()
+        actionReturn = SetDialog();
+        break;
+    case 139:
+        // PlayerDialog()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        actionReturn = PlayerDialog(static_cast<CGameSprite*>(pObject));
+        break;
+    case 142:
+        // UseDoor()
+        actionReturn = UseDoor();
+        break;
+    case 145:
+        // PickLock()
+        pObject = GetTargetShareType(CGameObject::TYPE_AIBASE);
+        bShare = TRUE;
+        actionReturn = PickLock(static_cast<CGameAIBase*>(pObject));
+        break;
+    case 146:
+        // Polymorph()
+        effect = new ITEM_EFFECT;
+        CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_ANIMATIONCHANGE);
+        effect->effectAmount = m_curAction.m_specificID;
+
+        // NOTE: Original reads it from a constant at 0x8491AA.
+        effect->durationType = 1;
+
+        pEffect = new CGameEffectAnimationChange(effect, CPoint(-1, -1), -1, CPoint(-1, -1));
+
+        message = new CMessageAddEffect(pEffect, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        actionReturn = ACTION_DONE;
+        delete effect;
+        break;
+    case 147:
+        // RemoveSpell()
+        actionReturn = RemoveSpell();
+        break;
+    case 148:
+        // BashDoor()
+        pObject = GetTargetShareType(CGameObject::TYPE_AIBASE);
+        bShare = TRUE;
+        actionReturn = BashDoor(static_cast<CGameAIBase*>(pObject));
+        break;
+    case 149:
+        // EquipMostDamagingMelee()
+        actionReturn = EquipMostDamagingMelee();
+        break;
+    case 150:
+        // StartStore()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        actionReturn = StartStore(static_cast<CGameSprite*>(pObject));
+        break;
+    case 152:
+        // ChangeAIType()
+        SetAIType(m_curAction.m_acteeID, FALSE, FALSE);
+        m_liveTypeAI.Set(m_curAction.m_acteeID);
+        m_startTypeAI.Set(m_curAction.m_acteeID);
+        actionReturn = ACTION_DONE;
+        break;
+    case 166:
+        // SetNumTimesTalkedTo()
+        message = new CMessageSetNumTimesTalkedTo(m_curAction.m_specificID, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        actionReturn = ACTION_DONE;
+        break;
+    case 168:
+        // Interact()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        actionReturn = Interact(static_cast<CGameSprite*>(pObject));
+        break;
+    case 174:
+        // EquipRanged()
+        actionReturn = EquipRanged();
+        break;
+    case 175:
+        // SetLeavePartyDialogFile()
+        {
+            CString sScriptName(m_scriptName);
+            const C2DArray& tPostDialog = g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_tPostDialog;
+            m_dialog = tPostDialog.GetAt(CRuleTables::POST_DIALOG_FILE, sScriptName);
+        }
+
+        if (m_dialog == g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_tPostDialog.GetDefault()) {
+            m_dialog = "multig";
+        }
+
+        if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+            message = new CMessageSetDialogResRef(m_dialog, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        actionReturn = ACTION_DONE;
+        break;
+    case 179:
+        // DialogInterrupt()
+        m_bAllowDialogInterrupt = static_cast<BOOLEAN>(m_curAction.m_specificID);
+        actionReturn = ACTION_DONE;
+        break;
+    case 180:
+    case 208:
+    case 263:
+        // MoveToObjectFollow(), MoveToObjectUntilSee()
+        pObject = GetTargetShareType(CGameObject::TYPE_AIBASE);
+        bShare = TRUE;
+        actionReturn = MoveToObject(static_cast<CGameAIBase*>(pObject));
+        break;
+    case 182:
+        // MakeUnselectable()
+        m_nUnselectableCounter = m_curAction.m_specificID * 15;
+        actionReturn = ACTION_DONE;
+        break;
+    case 194:
+    case 219:
+        // ChangeAnimation()
+        actionReturn = ChangeAnimation();
+        break;
+    case 200:
+        // RandomWalkContinuous()
+        actionReturn = RandomWalkContinuous();
+        break;
+    case 215:
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        actionReturn = sub_73EA80(static_cast<CGameSprite*>(pObject));
+        break;
+    case 221:
+        field_72DE = m_curAction.m_specificID;
+        if (field_72DE < 1) {
+            field_72DE = 1;
+        }
+        if (field_72DE > 5) {
+            field_72DE = 5;
+        }
+        actionReturn = ACTION_DONE;
+        break;
+    case 222:
+        field_72DE += m_curAction.m_specificID;
+        if (field_72DE < 1) {
+            field_72DE = 1;
+        }
+        if (field_72DE > 5) {
+            field_72DE = 5;
+        }
+        actionReturn = ACTION_DONE;
+        break;
+    case 223:
+        for (INT nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+            if (m_equipment.m_items[nSlot] != NULL && nSlot != CGameSpriteEquipment::SLOT_FIST) {
+                // TODO: Original sends `CMessageRemoveItem(nSlot, m_id, m_id)`
+                // (vtable 0x848C04, constructor 0x4F5C70) which is not
+                // translated yet.
+
+                CAbilityId abilityId;
+                abilityId.m_itemType = 2;
+                abilityId.m_itemNum = static_cast<SHORT>(nSlot);
+                abilityId.m_abilityNum = 0;
+                sub_71ABA0(abilityId, 0, TRUE, FALSE);
+
+                abilityId.m_abilityNum = 1;
+                sub_71ABA0(abilityId, 0, TRUE, FALSE);
+
+                abilityId.m_abilityNum = 2;
+                sub_71ABA0(abilityId, 0, TRUE, FALSE);
+            }
+        }
+        actionReturn = ACTION_DONE;
+        break;
+    case 224:
+        actionReturn = sub_757720();
+        break;
+    case 225:
+        actionReturn = JumpToArea(m_curAction.GetString1(),
+            m_curAction.GetDest(),
+            static_cast<SHORT>(m_curAction.GetSpecifics()),
+            0);
+        break;
+    case 229:
+        // FaceObject()
+        pObject = GetTargetShareType(CGameObject::TYPE_AIBASE);
+        bShare = TRUE;
+        actionReturn = FaceObject(static_cast<CGameAIBase*>(pObject));
+        break;
+    case 231:
+        // WaitRandom()
+        {
+            m_curAction.m_actionID = CAIAction::WAIT;
+
+            LONG nMin = min(m_curAction.m_specificID2, m_curAction.m_specificID);
+            LONG nMax = max(m_curAction.m_specificID2, m_curAction.m_specificID);
+            LONG nRange = nMax - nMin + 1;
+            m_curAction.m_specificID = nMin + (nRange != 0 ? rand() % nRange : 0);
+
+            actionReturn = Wait();
+        }
+        break;
+    case 236:
+        // SetSavedLocation()
+        m_baseStats.field_2E4 = static_cast<SHORT>(m_pos.x);
+        m_baseStats.field_2E6 = static_cast<SHORT>(m_pos.y);
+        m_baseStats.field_2E8 = static_cast<BYTE>(m_nDirection);
+        actionReturn = ACTION_DONE;
+        break;
+    case 237:
+    case 262:
+    case 302:
+        // ReturnToSavedLocation(), ReturnToSavedLocationDelete(),
+        // ReturnToStartLoc()
+        actionReturn = ReturnToSavedLocation();
+        break;
+    case 239:
+        // SetInternal()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        if (pObject == NULL) {
+            break;
+        }
+
+        bShare = TRUE;
+        if (m_curAction.m_specificID >= 0 && m_curAction.m_specificID < 5) {
+            static_cast<CGameSprite*>(pObject)->m_baseStats.field_298[m_curAction.m_specificID] = static_cast<WORD>(m_curAction.m_specificID2);
+            actionReturn = ACTION_DONE;
+        }
+        break;
+    case 240:
+        // IncrementInternal()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        if (pObject == NULL) {
+            break;
+        }
+
+        bShare = TRUE;
+        if (m_curAction.m_specificID >= 0 && m_curAction.m_specificID < 5) {
+            static_cast<CGameSprite*>(pObject)->m_baseStats.field_298[m_curAction.m_specificID] += static_cast<WORD>(m_curAction.m_specificID2);
+            actionReturn = ACTION_DONE;
+        }
+        break;
+    case 249:
+        // SetSavedLocationPoint()
+        m_baseStats.field_2E4 = static_cast<SHORT>(m_curAction.m_specificID);
+        m_baseStats.field_2E6 = static_cast<SHORT>(m_curAction.m_specificID2);
+        m_baseStats.field_2E8 = static_cast<BYTE>(m_curAction.m_specificID3);
+        actionReturn = ACTION_DONE;
+        break;
+    case 250:
+        // RunAwayFromNoLeaveArea()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        actionReturn = RunAwayFromNoLeaveArea(static_cast<CGameSprite*>(pObject));
+        break;
+    case 255:
+        // SetBestWeapon()
+        // NOTE: The target is never released.
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        if (pObject == NULL) {
+            actionReturn = ACTION_ERROR;
+            m_nLastActionReturn = actionReturn;
+            return actionReturn;
+        }
+
+        {
+            ITEM_ABILITY* pAbility;
+            pItem = m_equipment.m_items[m_equipment.m_selectedWeapon];
+            if (pItem != NULL) {
+                pItem->Demand();
+                pAbility = pItem->GetAbility(m_equipment.m_selectedWeaponAbility);
+            } else {
+                pAbility = NULL;
+            }
+
+            const CPoint& ptTarget = pObject->GetPos();
+            LONG nTargetY = ptTarget.y / CPathSearch::GRID_SQUARE_SIZEY;
+            LONG nTargetX = ptTarget.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+            const CPoint& ptSelf = GetPos();
+            LONG nSelfY = ptSelf.y / CPathSearch::GRID_SQUARE_SIZEY;
+            LONG nSelfX = ptSelf.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+            LONG nRange = m_curAction.m_specificID;
+            if ((nSelfX - nTargetX) * (nSelfX - nTargetX) + (nSelfY - nTargetY) * (nSelfY - nTargetY) <= (nRange + 1) * (nRange + 1)) {
+                if (pAbility != NULL && static_cast<BYTE>(pAbility->type) == 1) {
+                    actionReturn = ACTION_DONE;
+                } else {
+                    actionReturn = EquipMostDamagingMelee();
+                }
+            } else {
+                if (pAbility != NULL
+                    && ((pAbility->type & 0xFF) == 4 || (pAbility->type & 0xFF) == 2)) {
+                    actionReturn = ACTION_DONE;
+                } else {
+                    actionReturn = EquipRanged();
+                }
+            }
+
+            if (pItem != NULL) {
+                pItem->Release();
+            }
+        }
+
+        m_nLastActionReturn = actionReturn;
+        return actionReturn;
+    case 256:
+        // SetDialogueRange()
+        field_7106 = m_curAction.m_specificID;
+        actionReturn = ACTION_DONE;
+        break;
+    case 257:
+        // ForceHide()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        if (pObject != NULL) {
+            // NOTE: The target is never released.
+            actionReturn = ForceHide(static_cast<CGameSprite*>(pObject));
+            pObject = NULL;
+        } else {
+            actionReturn = ACTION_ERROR;
+        }
+        break;
+    case 261:
+        // TimedMoveToPoint()
+        ResolveTargetPoint(&m_curAction, m_queuedActions.GetHeadPosition());
+        actionReturn = MoveToPoint();
+        break;
+    case 269:
+        // SetStartPos()
+        if (m_curAction.m_dest.x == -1 && m_curAction.m_dest.y == -1) {
+            m_posStart = m_pos;
+        } else {
+            m_posStart = m_curAction.m_dest;
+        }
+        actionReturn = ACTION_DONE;
+        break;
+    case 276:
+        // PlayBardSong()
+        actionReturn = PlayBardSong();
+        break;
+    case 277:
+        // TurnAMT()
+        SetDirection(static_cast<SHORT>((m_nNewDirection + m_curAction.m_specificID) % 16));
+        if ((m_pos.x != -1 || m_pos.y != -1 || m_pArea != NULL) && InControl()) {
+            message = new CMessageSpriteUpdate(this, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+        actionReturn = ACTION_DONE;
+        break;
+    case 299:
+        // EquipWeapon()
+        pItem = m_equipment.m_items[m_equipment.m_selectedWeapon];
+        if (pItem != NULL && !(pItem->GetResRef() == "00FIST")) {
+            actionReturn = ACTION_DONE;
+        } else {
+            actionReturn = EquipRanged();
+        }
+        break;
+    case 300:
+        // JumpToSavedLocation()
+        SetDirection(static_cast<SHORT>(m_baseStats.field_2E8));
+        actionReturn = JumpToPoint(CPoint(static_cast<WORD>(m_baseStats.field_2E4), static_cast<WORD>(m_baseStats.field_2E6)), TRUE);
+        break;
+    case 301:
+        // SetExtendedNight()
+        if (m_curAction.m_specificID != 0) {
+            m_pArea->m_header.m_areaType |= 0x40;
+        } else {
+            // NOTE: Clears all area type flags, not just extended night.
+            m_pArea->m_header.m_areaType = 0;
+        }
+
+        if (InControl()) {
+            message = new CMessageSetAreaType(m_pArea->m_header.m_areaType, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+        break;
+    case 309:
+        // SetMarkedSpell()
+        if (m_curAction.m_specificID == 0) {
+            if (field_588 != 0) {
+                field_588 = 0;
+            }
+        } else if (field_588 == 0) {
+            DecodeSpell(m_curAction.m_specificID, sSpell);
+            if (sSpell != "") {
+                CResRef resRef(sSpell);
+                DWORD dwClassMask = 0xFFF;
+                if (sub_725330(resRef, dwClassMask, 9, TRUE)) {
+                    field_588 = m_curAction.m_specificID;
+                }
+            }
+        }
+        actionReturn = ACTION_DONE;
+        break;
+    case 310:
+        // SetTeamBit()
+        if (m_curAction.m_specificID2 != 0) {
+            field_58C |= m_curAction.m_specificID;
+        } else {
+            field_58C &= ~m_curAction.m_specificID;
+        }
+        actionReturn = ACTION_DONE;
+        break;
+    case 311:
+        // SpellWait()
+        {
+            if (m_curAction.m_specificID == 0) {
+                m_curAction.m_specificID = field_588;
+            }
+
+            CString sResRef("");
+            DecodeSpell(m_curAction.m_specificID, sResRef);
+            if (sResRef.GetLength() == 0) {
+                // NOTE: Does not update `m_nLastActionReturn`.
+                return ACTION_ERROR;
+            }
+
+            CResRef spellResRef(sResRef);
+            CSpell cSpell(spellResRef);
+            if (!cSpell.Demand()) {
+                actionReturn = ACTION_DONE;
+            } else {
+                SHORT nCasterLevel = GetCasterLevel(&cSpell, 0, 0);
+                SPELL_ABILITY* pAbility = NULL;
+                for (INT nAbility = 0; nAbility < cSpell.GetAbilityCount(); nAbility++) {
+                    if (cSpell.GetAbility(nAbility)->minCasterLevel > nCasterLevel) {
+                        break;
+                    }
+                    pAbility = cSpell.GetAbility(nAbility);
+                }
+
+                if (pAbility == NULL) {
+                    actionReturn = ACTION_DONE;
+                } else {
+                    SHORT nMentalSpeed = m_derivedStats.m_nMentalSpeed;
+                    SHORT nWait = static_cast<SHORT>(max(pAbility->speedFactor - nMentalSpeed, 0) - nMentalSpeed - 1);
+                    if (nWait > 0) {
+                        m_curAction.m_actionID = CAIAction::WAIT;
+                        m_curAction.m_specificID = nWait;
+                        actionReturn = Wait();
+                    } else {
+                        actionReturn = ACTION_DONE;
+                    }
+                }
+
+                cSpell.Release();
+            }
+        }
+        break;
+    case 317:
+        // JumpToObject()
+        pObject = sub_733340();
+        if (pObject != NULL) {
+            bShare = TRUE;
+            actionReturn = JumpToPoint(CPoint(pObject->GetPos().x, pObject->GetPos().y), TRUE);
+        }
+        break;
+    case 319:
+        // ForceMarkedSpell()
+        if (field_588 != m_curAction.m_specificID) {
+            field_588 = m_curAction.m_specificID;
+        }
+        actionReturn = ACTION_DONE;
+        break;
+    case 321:
+        // MarkSpellAndObject()
+        actionReturn = ACTION_DONE;
+        if (field_588 != 0) {
+            break;
+        }
+
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        if (pObject != NULL) {
+            bShare = TRUE;
+        } else if ((m_curAction.m_specificID & 0x20) == 0) {
+            break;
+        }
+
+        if ((m_curAction.m_specificID & 0x2) == 0) {
+            if (pObject == NULL) {
+                actionReturn = ACTION_ERROR;
+                break;
+            }
+
+            if (!CanTarget(static_cast<CGameSprite*>(pObject), m_curAction.m_specificID)) {
+                break;
+            }
+        }
+
+        if ((m_curAction.m_specificID & 0x1) == 0) {
+            if (pObject == NULL) {
+                actionReturn = ACTION_ERROR;
+                break;
+            }
+
+            if (!SeeTarget(pObject, FALSE)) {
+                break;
+            }
+        }
+
+        {
+            CString sSpells = m_curAction.GetString1();
+            INT nSpells = sSpells.GetLength() / 4;
+            if (sSpells.GetLength() % 4 > 0) {
+                actionReturn = ACTION_ERROR;
+                break;
+            }
+
+            INT nStart = 0;
+            if ((m_curAction.m_specificID & 0x4) != 0) {
+                nStart = rand() % nSpells;
+            }
+
+            for (INT nIndex = 0; nIndex < nSpells; nIndex++) {
+                if (field_588 != 0) {
+                    break;
+                }
+
+                LONG nSpellId = atol(sSpells.Mid(nStart * 4, 4));
+
+                BOOL bValid = TRUE;
+                if ((m_curAction.m_specificID & 0x8) == 0) {
+                    DecodeSpell(nSpellId, sSpell);
+                    if (sSpell == "") {
+                        // NOTE: Does not release the target or update
+                        // `m_nLastActionReturn`.
+                        return ACTION_ERROR;
+                    }
+
+                    CResRef resRef(sSpell);
+                    DWORD dwClassMask = 0xFFF;
+                    if (!sub_725330(resRef, dwClassMask, 9, TRUE)) {
+                        bValid = FALSE;
+                    }
+                }
+
+                if (bValid
+                    && nSpellId != 0
+                    && ((m_curAction.m_specificID & 0x2) != 0
+                        || IsSpellTargetValid(pObject, nSpellId, m_curAction.m_specificID))) {
+                    field_588 = nSpellId;
+                    if (pObject != NULL) {
+                        field_3BA.Set(pObject->GetAIType());
+                    } else {
+                        field_3BA.Set(CAIObjectType::NOONE);
+                    }
+                    break;
+                }
+
+                nStart++;
+                if (nStart == nSpells) {
+                    nStart = 0;
+                }
+            }
+        }
+        break;
+    case 322:
+        // MatchHP()
+        pObject = GetTargetShareType(CGameObject::TYPE_SPRITE);
+        bShare = TRUE;
+        if (pObject != NULL) {
+            CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+            if (m_curAction.m_specificID == 0) {
+                pSprite->m_baseStats.m_maxHitPointsBase = m_baseStats.m_maxHitPointsBase;
+            } else if (m_baseStats.m_hitPoints > pSprite->m_baseStats.m_maxHitPointsBase) {
+                pSprite->m_baseStats.m_hitPoints = pSprite->m_baseStats.m_maxHitPointsBase;
+            } else {
+                pSprite->m_baseStats.m_hitPoints = m_baseStats.m_hitPoints;
+            }
+        }
+        actionReturn = ACTION_DONE;
+        break;
+    default:
+        actionReturn = CGameAIBase::ExecuteAction();
+        break;
+    }
+
+    if (pObject != NULL) {
+        if (bShare) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        } else {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(pObject->GetId(),
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    m_nLastActionReturn = actionReturn;
+
+    return actionReturn;
 }
 
 // 0x72B670
@@ -10721,6 +11939,753 @@ void CGameSprite::ResolveTargetPoint(const CAIAction* curAction, POSITION pos)
     }
 }
 
+// NOTE: Inlined in `ProcessAI`.
+static BOOL IsInstantAction(SHORT actionID)
+{
+    return g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_lInstantActions.Find(actionID) != NULL;
+}
+
+// NOTE: Inlined in `ProcessAI`.
+static BOOL IsLeaveAreaLUABlocked(SHORT actionID)
+{
+    return g_pChitin->cNetwork.m_bConnectionEstablished == TRUE
+        && actionID == CAIACTION_LEAVEAREALUA;
+}
+
+// NOTE: Inlined in `ProcessAI`.
+static void UpdateMoveDelta(CGameSprite* pSprite)
+{
+    LONG dy = pSprite->m_posDest.y - pSprite->m_pos.y;
+    LONG dx = pSprite->m_posDest.x - pSprite->m_pos.x;
+    LONG dist = static_cast<LONG>(sqrt(static_cast<double>(dy * dy * 16 / 9 + dx * dx)) + 0.5);
+    if (dist == 0) {
+        pSprite->m_posDelta.x = 0;
+        pSprite->m_posDelta.y = 0;
+    } else {
+        pSprite->m_posDelta.x = ((pSprite->m_posDest.x - pSprite->m_pos.x) << CGameSprite::EXACT_SCALE) * pSprite->GetAnimation()->GetMoveScale() / dist;
+        pSprite->m_posDelta.y = (((pSprite->m_posDest.y - pSprite->m_pos.y) * 4 / 3) << CGameSprite::EXACT_SCALE) * pSprite->GetAnimation()->GetMoveScale() / dist;
+    }
+}
+
+// 0x72B9A0
+void CGameSprite::ProcessAI()
+{
+    // 0x8F9928
+    static CAIAction aiAction;
+
+    CInfGame* pGame;
+    CMessage* message;
+    BOOL bInstant;
+
+    if (g_pBaldurChitin->m_pEngineWorld->m_bPaused == TRUE
+        && g_pBaldurChitin->cNetwork.m_bIsHost == TRUE
+        && g_pBaldurChitin->GetObjectGame()->m_gameSave.m_cutScene == TRUE) {
+        g_pBaldurChitin->m_pEngineWorld->TogglePauseGame(FALSE, TRUE, 0);
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->m_gameSave.field_1AC
+        && m_pArea != NULL
+        && !InControl()
+        && m_pArea->m_visibility.IsCharacterIdOnMap(m_id)) {
+        m_pArea->m_visibility.RemoveCharacter(m_pos, m_id, m_visibleTerrainTable);
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->m_gameSave.field_1AC
+        && !InControl()
+        && m_typeAI.m_nEnemyAlly <= CAIObjectType::EA_GOODCUTOFF) {
+        m_typeAI.m_nEnemyAlly = CAIObjectType::EA_ARENAPC;
+        m_liveTypeAI.m_nEnemyAlly = CAIObjectType::EA_ARENAPC;
+        m_startTypeAI.m_nEnemyAlly = CAIObjectType::EA_ARENAPC;
+    }
+
+    if (m_userCommandPause > 0) {
+        m_baseStats.m_flags &= ~0x80000000;
+    }
+
+    if (field_72A0 > 0) {
+        field_72A0--;
+    }
+
+    pGame = g_pBaldurChitin->GetObjectGame();
+    if (pGame->m_gameSave.m_mode == 322 && !field_72AA) {
+        field_72A8 = m_animation.GetMoveScale();
+        field_72AA = TRUE;
+        m_animation.SetMoveScale(6);
+        if (field_72A8 != 6) {
+            UpdateMoveDelta(this);
+        }
+    } else if (pGame->m_gameSave.m_mode == 322 && m_animation.GetMoveScale() != 6) {
+        field_72AA = TRUE;
+        m_animation.SetMoveScale(6);
+        UpdateMoveDelta(this);
+    } else if (g_pBaldurChitin->GetObjectGame()->m_gameSave.m_mode != 322 && field_72AA) {
+        field_72AA = FALSE;
+        m_animation.SetMoveScale(field_72A8);
+        field_562C = TRUE;
+        if (field_72A8 != 6) {
+            UpdateMoveDelta(this);
+        }
+    }
+
+    m_randValue = rand() % 0x7FFF;
+
+    SHORT nSequence = m_nSequence;
+    if ((m_derivedStats.m_generalState & STATE_DEAD) != 0
+        && nSequence != SEQ_DIE
+        && nSequence != SEQ_TWITCH
+        && nSequence != SEQ_SLEEP) {
+        SetSequence(SEQ_TWITCH);
+    }
+
+    if (m_pArea == NULL && (m_derivedStats.m_generalState & STATE_DEAD) != 0) {
+        if (!ProcessEffectList()) {
+            return;
+        }
+
+        bInstant = IsInstantAction(m_curAction.GetActionID());
+        if (!IsLeaveAreaLUABlocked(m_curAction.GetActionID()) && bInstant) {
+            do {
+                ResolveInstants(FALSE);
+                bInstant = IsInstantAction(m_curAction.GetActionID());
+                if (IsLeaveAreaLUABlocked(m_curAction.GetActionID())) {
+                    return;
+                }
+            } while (bInstant);
+            return;
+        }
+
+        SetCurrAction(GetNextAction(aiAction));
+        m_interrupt = FALSE;
+        return;
+    }
+
+    if (m_pPath == NULL
+        && nSequence == SEQ_WALK
+        && GetVertListType() != LIST_FLIGHT) {
+        SetIdleSequence();
+    }
+
+    if (m_bSelected && !Orderable(FALSE)) {
+        Unselect();
+        g_pBaldurChitin->GetObjectGame()->SelectToolbar();
+    }
+
+    if (!InControl()) {
+        return;
+    }
+
+    if (m_bEscapingArea == TRUE
+        || m_curAction.GetActionID() == 108
+        || m_curAction.GetActionID() == 176
+        || m_currentActionId == 108
+        || m_currentActionId == 176) {
+        m_dialogWait = 0;
+    }
+
+    if (m_curAction.GetActionID() == CAIAction::STARTDIALOG
+        || m_curAction.GetActionID() == CAIAction::DIALOGUE
+        || m_curAction.GetActionID() == CAIAction::STARTDIALOGUENOSET
+        || m_currentActionId == CAIAction::STARTDIALOG
+        || m_currentActionId == CAIAction::DIALOGUE
+        || m_currentActionId == CAIAction::STARTDIALOGUENOSET) {
+        m_dialogWait = 0;
+    }
+
+    if (m_curAction.GetActionID() == 207
+        || m_curAction.GetActionID() == 208
+        || m_currentActionId == 207
+        || m_currentActionId == 208) {
+        m_dialogWait = 0;
+    }
+
+    if (!sub_7202E0()) {
+        m_dialogWait = 0;
+    }
+
+    if (m_dialogWait > 0 && m_pendingTriggers.GetHeadPosition() != NULL) {
+        CAITrigger* pTrigger = m_pendingTriggers.GetHead();
+        if (pTrigger->m_triggerID == 2 || pTrigger->m_triggerID == 32) {
+            m_dialogWait = 0;
+        }
+    }
+
+    if (m_curAction.GetActionID() == 27
+        && GetAIType().m_nEnemyAlly >= CAIObjectType::EA_EVILCUTOFF) {
+        ClearActions(FALSE);
+
+        message = new CMessageDropPath(m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        message = new CMessageAddAction(CAIAction(CAIAction::NO_ACTION, CPoint(-1, -1), 0, -1), m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    if (m_curAction.GetActionID() == CAIAction::NO_ACTION) {
+        if (m_queuedActions.GetCount() != 0) {
+            SetCurrAction(GetNextAction(aiAction));
+            m_interrupt = FALSE;
+        }
+
+        if (m_curAction.GetActionID() == CAIAction::NO_ACTION) {
+            m_inCutScene = FALSE;
+            m_nCommandPause = 0;
+        }
+    }
+
+    // NOTE: Original reads 16 from a constant at 0x8485D0.
+    if (((g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1
+             && static_cast<DWORD>(field_44A) % 16 == static_cast<DWORD>(m_id) % 16)
+            || static_cast<DWORD>(field_44A) % (16 << 7) == static_cast<DWORD>(m_id) % (16 << 7))
+        && InControl()) {
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1
+            && m_nSequence != SEQ_WALK) {
+            JumpToPoint(m_pos, FALSE);
+        }
+
+        message = new CMessageSpriteUpdate(this, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1
+        && static_cast<DWORD>(field_44A) % ((16 << 7) + 3) == static_cast<DWORD>(m_id) % ((16 << 7) + 3)) {
+        sub_71D0B0();
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->m_worldTime.m_active
+        && m_nUnselectableCounter > 0) {
+        m_nUnselectableCounter--;
+    }
+
+    if (!g_pBaldurChitin->GetObjectGame()->m_worldTime.m_active) {
+        // Game is paused.
+        if (m_interrupt
+            && (m_baseStats.m_flags & 0x80000000) == 0
+            && (m_userCommandPause > 0 || m_nCommandPause > 0)) {
+            POSITION pos = m_queuedActions.GetHeadPosition();
+            if (pos != NULL) {
+                CAIAction* pAction = m_queuedActions.GetNext(pos);
+                ResolvePausedAction(pAction, pos);
+            }
+        } else {
+            ResolvePausedAction(&m_curAction, m_queuedActions.GetHeadPosition());
+        }
+
+        if (m_curAction.GetActionID() == CAIAction::NO_ACTION
+            && m_queuedActions.GetCount() != 0) {
+            SetCurrAction(GetNextAction(aiAction));
+            m_interrupt = FALSE;
+        }
+
+        if (m_interrupt && (m_baseStats.m_flags & 0x80000000) == 0) {
+            SetCurrAction(GetNextAction(aiAction));
+            m_interrupt = FALSE;
+        }
+
+        bInstant = IsInstantAction(m_curAction.GetActionID());
+        if (!IsLeaveAreaLUABlocked(m_curAction.GetActionID()) && bInstant) {
+            ResolveInstants(FALSE);
+        }
+        return;
+    }
+
+    if (!m_active || !m_activeAI || !m_activeImprisonment) {
+        // NOTE: Original reads 16 from a constant at 0x8485D0 and 120 from a
+        // constant at 0x8485E0.
+        if (static_cast<DWORD>(field_44A) % 16 == static_cast<DWORD>(m_id) % 16
+            && m_userCommandPause <= 0
+            && m_nCommandPause <= 0
+            && (field_3428 & 0x7) == 0
+            && ((m_derivedStats.m_generalState & STATE_DEAD) == 0 || field_558E)) {
+            field_54C++;
+            field_558E = TRUE;
+
+            BOOL bProcessTriggers;
+            if (m_curAction.GetActionID() == CAIAction::NO_ACTION
+                || m_pendingTriggers.GetCount() != 0
+                || field_550 >= 120
+                || field_552 > 0) {
+                bProcessTriggers = TRUE;
+            } else {
+                CRect rView(m_pArea->GetInfinity()->rViewPort);
+                INT x;
+                INT y;
+                m_pArea->GetInfinity()->GetViewPosition(x, y);
+                rView.OffsetRect(x, y);
+                bProcessTriggers = rView.PtInRect(m_pos);
+            }
+
+            if (bProcessTriggers) {
+                if ((m_derivedStats.m_generalState & STATE_DEAD) != 0) {
+                    field_558E = FALSE;
+                }
+
+                if (m_pendingTriggers.GetCount() != 0) {
+                    // NOTE: Original reads it from a constant at 0x8485E2.
+                    field_552 = 5;
+                }
+
+                ProcessPendingTriggers();
+
+                if (field_552 > 0) {
+                    field_552--;
+                }
+
+                field_550 = 0;
+            } else {
+                field_550++;
+            }
+
+            m_userCommandPause = 0;
+            m_nCommandPause = 0;
+        }
+
+        if (m_curAction.GetActionID() == CAIAction::NO_ACTION
+            && m_queuedActions.GetCount() != 0) {
+            SetCurrAction(GetNextAction(aiAction));
+            m_interrupt = FALSE;
+        }
+
+        bInstant = IsInstantAction(m_curAction.GetActionID());
+        if (!IsLeaveAreaLUABlocked(m_curAction.GetActionID()) && bInstant) {
+            do {
+                ResolveInstants(FALSE);
+                bInstant = IsInstantAction(m_curAction.GetActionID());
+                if (IsLeaveAreaLUABlocked(m_curAction.GetActionID())) {
+                    return;
+                }
+            } while (bInstant);
+            return;
+        }
+
+        SetCurrAction(GetNextAction(aiAction));
+        m_interrupt = FALSE;
+        return;
+    }
+
+    m_userCommandPause--;
+    m_nCommandPause--;
+    field_44A++;
+
+    if ((m_derivedStats.m_generalState & STATE_DEAD) == 0 && !sub_71CFF0()) {
+        // Morale failure.
+        if (!m_moraleFailure) {
+            m_moraleFailure = TRUE;
+
+            if (InControl()) {
+                message = new CMessageSpriteUpdate(this, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            // NOTE: Original reads it from a constant at 0x85BB64.
+            PlaySound(1, TRUE, FALSE, FALSE);
+
+            // NOTE: Original reads 100, 10, and 90 from constants at
+            // 0x85BC80, 0x85BC82, and 0x85BC84.
+            SHORT nRoll = static_cast<BYTE>(rand() % 100);
+            if (nRoll < 10) {
+                FeedBack(18, 0, 0, 0, -1, 0, 0);
+                aiAction.m_actionID = 24; // Panic()
+                aiAction.m_specificID = 0;
+                aiAction.m_dest.x = -1;
+                aiAction.m_dest.y = -1;
+                aiAction.m_specificID2 = -1;
+                aiAction.m_specificID3 = 0;
+                aiAction.m_string1 = "";
+                aiAction.m_string2 = "";
+                aiAction.m_internalFlags = 0;
+                m_baseStats.m_generalState |= STATE_PANIC;
+            } else if (nRoll < 90) {
+                FeedBack(19, 0, 0, 0, -1, 0, 0);
+                aiAction.m_actionID = 184; // RunAwayFromNoInterrupt()
+                aiAction.m_specificID = 0x7FFFFFFF;
+                aiAction.m_dest.x = -1;
+                aiAction.m_dest.y = -1;
+                aiAction.m_specificID2 = 0;
+                aiAction.m_specificID3 = 0;
+                aiAction.m_string1 = "";
+                aiAction.m_string2 = "";
+                aiAction.m_internalFlags = 0;
+                m_baseStats.m_generalState |= STATE_PANIC;
+            } else {
+                FeedBack(20, 0, 0, 0, -1, 0, 0);
+                m_berserkActive = TRUE;
+                aiAction.m_actionID = 124; // Berserk()
+                aiAction.m_specificID = 0x7FFFFFFF;
+                aiAction.m_dest.x = -1;
+                aiAction.m_dest.y = -1;
+                aiAction.m_specificID2 = 0;
+                aiAction.m_specificID3 = 0;
+                aiAction.m_string1 = "";
+                aiAction.m_string2 = "";
+                aiAction.m_internalFlags = 0;
+            }
+
+            ClearActions(FALSE);
+            m_interrupt = TRUE;
+            AddAction(aiAction);
+        }
+    } else if (m_dialogWait > 0
+        && m_typeAI.m_nEnemyAlly < CAIObjectType::EA_EVILCUTOFF
+        && (m_derivedStats.m_generalState & STATE_SLEEPING) == 0
+        && m_bAllowDialogInterrupt
+        && !m_derivedStats.m_bIgnoreDialogPause) {
+        // Waiting in dialog.
+        if (m_moraleFailure) {
+            m_moraleFailure = FALSE;
+
+            if (InControl()) {
+                message = new CMessageSpriteUpdate(this, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            ClearActions(FALSE);
+
+            message = new CMessageDropPath(m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            SetCurrAction(GetNextAction(aiAction));
+            m_baseStats.m_generalState &= ~STATE_PANIC;
+            m_derivedStats.m_generalState &= ~STATE_PANIC;
+        }
+
+        m_dialogWait--;
+
+        if (m_nSequence != GetIdleSequence()
+            && m_nSequence != SEQ_DIE
+            && m_nSequence != SEQ_SLEEP
+            && m_nSequence != SEQ_TWITCH) {
+            message = new CMessageSetSequence(static_cast<BYTE>(GetIdleSequence()), m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        CGameObject* pObject;
+        if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_dialogWaitTarget,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE)
+            == CGameObjectArray::SUCCESS) {
+            if (m_nDirection != GetDirection(pObject->GetPos())
+                && m_nSequence != SEQ_SLEEP) {
+                message = new CMessageSetDirection(pObject->GetPos(), m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_dialogWaitTarget,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        if (m_pPath != NULL) {
+            message = new CMessageDropPath(m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    } else {
+        if (m_moraleFailure) {
+            m_moraleFailure = FALSE;
+
+            if (InControl()) {
+                message = new CMessageSpriteUpdate(this, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            ClearActions(FALSE);
+
+            message = new CMessageDropPath(m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            SetCurrAction(GetNextAction(aiAction));
+            m_baseStats.m_generalState &= ~STATE_PANIC;
+            m_derivedStats.m_generalState &= ~STATE_PANIC;
+        }
+
+        if (((m_id ^ field_44A) & 0xF) == 0) {
+            CheckTimers(1);
+        }
+
+        if ((m_derivedStats.m_generalState & STATE_SLEEPING) != 0
+            && m_nSequence != SEQ_TWITCH
+            && m_nSequence != SEQ_DIE
+            && m_nSequence != SEQ_SLEEP) {
+            message = new CMessageSetSequence(SEQ_SLEEP, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        // NOTE: The branches below share their tails in the original, which
+        // is expressed with these flags.
+        BOOL bOverride = FALSE;
+        BOOL bReplaceAction = FALSE;
+        BOOL bMarkOverride = TRUE;
+
+        if (sub_7202E0()) {
+            DWORD generalState = m_derivedStats.m_generalState;
+            if ((generalState & STATE_HELPLESS) != 0) {
+                bOverride = TRUE;
+                if (m_curAction.GetActionID() != CAIAction::NO_ACTION) {
+                    aiAction = CAIAction::NULL_ACTION;
+                    bReplaceAction = TRUE;
+                }
+            } else if ((generalState & STATE_BERSERK) != 0 && m_berserkActive) {
+                sub_72FBF0();
+                bOverride = TRUE;
+                if (m_curAction.GetActionID() != CAIAction::ATTACK
+                    && m_curAction.GetActionID() != 124) {
+                    aiAction.m_actionID = 124; // Berserk()
+                    aiAction.m_specificID = 0x7FFFFFFF;
+                    aiAction.m_dest.x = -1;
+                    aiAction.m_dest.y = -1;
+                    aiAction.m_specificID2 = 0;
+                    aiAction.m_specificID3 = 0;
+                    aiAction.m_string1 = "";
+                    aiAction.m_string2 = "";
+                    aiAction.m_internalFlags = 0;
+                    bReplaceAction = TRUE;
+                }
+            } else if ((generalState & STATE_FEEBLEMINDED) != 0) {
+                bOverride = TRUE;
+                if (m_curAction.GetActionID() != CAIAction::NO_ACTION) {
+                    aiAction = CAIAction::NULL_ACTION;
+                    bReplaceAction = TRUE;
+                }
+            } else if ((generalState & STATE_CONFUSED) != 0) {
+                bOverride = TRUE;
+                if (static_cast<DWORD>(field_44A) % 100 == static_cast<DWORD>(m_id) % 100) {
+                    switch (rand() % 10) {
+                    case 0:
+                    case 1:
+                    case 2:
+                        aiAction.m_actionID = 184; // RunAwayFromNoInterrupt()
+                        aiAction.m_specificID = 0x7FFFFFFF;
+                        aiAction.m_dest.x = -1;
+                        aiAction.m_dest.y = -1;
+                        aiAction.m_specificID2 = 0;
+                        aiAction.m_specificID3 = 0;
+                        aiAction.m_string1 = "";
+                        aiAction.m_string2 = "";
+                        aiAction.m_internalFlags = 0;
+                        break;
+                    case 3:
+                    case 4:
+                    case 5:
+                        aiAction = CAIAction::NULL_ACTION;
+                        break;
+                    case 6:
+                    case 7:
+                    case 8:
+                    case 9:
+                        aiAction.m_actionID = CAIAction::GROUPATTACK;
+                        aiAction.m_acteeID.Set(CAIObjectType::ANYONE);
+                        aiAction.m_specificID = 0;
+                        aiAction.m_specificID2 = 0;
+                        aiAction.m_specificID3 = 0;
+                        aiAction.m_string1 = "";
+                        aiAction.m_string2 = "";
+                        aiAction.m_internalFlags = 0;
+                        break;
+                    }
+                    bReplaceAction = TRUE;
+                }
+            } else if (m_derivedStats.m_spellStates.test(SPLSTATE_ANIMAL_RAGE)) {
+                bOverride = TRUE;
+                if (m_curAction.GetActionID() != 149) {
+                    BYTE nEnemyAlly = 0;
+                    if (m_typeAI.m_nEnemyAlly >= CAIObjectType::EA_EVILCUTOFF) {
+                        if (m_curAction.GetActionID() != CAIAction::ATTACKREEVALUATE
+                            || m_curAction.m_acteeID.m_nEnemyAlly > CAIObjectType::EA_GOODCUTOFF) {
+                            nEnemyAlly = CAIObjectType::EA_GOODCUTOFF;
+                        }
+                    } else if (m_typeAI.m_nEnemyAlly <= CAIObjectType::EA_GOODCUTOFF) {
+                        if (m_curAction.GetActionID() != CAIAction::ATTACKREEVALUATE
+                            || m_curAction.m_acteeID.m_nEnemyAlly < CAIObjectType::EA_EVILCUTOFF) {
+                            nEnemyAlly = CAIObjectType::EA_EVILCUTOFF;
+                        }
+                    }
+
+                    if (nEnemyAlly != 0) {
+                        aiAction.m_actionID = CAIAction::ATTACKREEVALUATE;
+                        aiAction.m_specificID = 0;
+                        aiAction.m_dest.x = -1;
+                        aiAction.m_dest.y = -1;
+                        aiAction.m_specificID2 = -1;
+                        aiAction.m_specificID3 = 0;
+                        aiAction.m_string1 = "";
+                        aiAction.m_string2 = "";
+                        aiAction.m_internalFlags = 0;
+
+                        CAIObjectType type;
+                        type.m_nEnemyAlly = nEnemyAlly;
+                        aiAction.m_acteeID.Set(type);
+                        aiAction.m_specificID = 45;
+
+                        bReplaceAction = TRUE;
+                    }
+                }
+            } else if (m_derivedStats.m_spellStates.test(SPLSTATE_179)) {
+                bOverride = TRUE;
+                if (m_curAction.GetActionID() != CAIAction::NO_ACTION) {
+                    aiAction = CAIAction::NULL_ACTION;
+                    bReplaceAction = TRUE;
+                }
+            } else if ((generalState & STATE_CHARMED) != 0
+                && m_startTypeAI.m_nEnemyAlly <= CAIObjectType::EA_GOODCUTOFF
+                && m_typeAI.m_nEnemyAlly == CAIObjectType::EA_CHARMED_PC) {
+                bOverride = TRUE;
+                if (m_curAction.GetActionID() != CAIAction::NO_ACTION) {
+                    aiAction = CAIAction::NULL_ACTION;
+                    bReplaceAction = TRUE;
+                }
+            }
+        }
+
+        if (!bOverride && field_727E) {
+            field_727E = FALSE;
+            bOverride = TRUE;
+            bMarkOverride = FALSE;
+            if (m_curAction.GetActionID() != CAIAction::NO_ACTION) {
+                aiAction = CAIAction::NULL_ACTION;
+                bReplaceAction = TRUE;
+            }
+        }
+
+        if (bOverride) {
+            if (bReplaceAction) {
+                ClearActions(FALSE);
+                DropPath();
+                m_interrupt = TRUE;
+                AddAction(aiAction);
+            }
+
+            if (bMarkOverride) {
+                field_727E = TRUE;
+            }
+
+            ApplyTriggers();
+        } else {
+            sub_72FBF0();
+            CheckModal();
+
+            if (m_userCommandPause > 0 || m_nCommandPause > 0) {
+                ClearTriggers();
+            }
+
+            // NOTE: Original reads 16 from a constant at 0x8485D0 and 120
+            // from a constant at 0x8485E0.
+            if (static_cast<DWORD>(field_44A) % 16 == static_cast<DWORD>(m_id) % 16
+                && m_userCommandPause <= 0
+                && m_nCommandPause <= 0
+                && (field_3428 & 0x7) == 0
+                && ((m_derivedStats.m_generalState & STATE_DEAD) == 0 || field_558E)) {
+                field_54C++;
+                field_558E = TRUE;
+
+                BOOL bProcessTriggers;
+                if (m_curAction.GetActionID() == CAIAction::NO_ACTION
+                    || m_pendingTriggers.GetCount() != 0
+                    || field_550 >= 120
+                    || field_552 > 0) {
+                    bProcessTriggers = TRUE;
+                } else {
+                    CRect rView(m_pArea->GetInfinity()->rViewPort);
+                    INT x;
+                    INT y;
+                    m_pArea->GetInfinity()->GetViewPosition(x, y);
+                    rView.OffsetRect(x, y);
+                    bProcessTriggers = rView.PtInRect(m_pos);
+                }
+
+                if (bProcessTriggers) {
+                    if ((m_derivedStats.m_generalState & STATE_DEAD) != 0) {
+                        field_558E = FALSE;
+                    }
+
+                    if (m_pendingTriggers.GetCount() != 0) {
+                        // NOTE: Original reads it from a constant at 0x8485E2.
+                        field_552 = 5;
+                    }
+
+                    ProcessPendingTriggers();
+
+                    if (field_552 > 0) {
+                        field_552--;
+                    }
+
+                    field_550 = 0;
+                } else {
+                    field_550++;
+                }
+
+                m_userCommandPause = 0;
+                m_nCommandPause = 0;
+            }
+
+            if (m_curAction.GetActionID() == CAIAction::NO_ACTION
+                && m_queuedActions.GetCount() != 0) {
+                SetCurrAction(GetNextAction(aiAction));
+                m_interrupt = FALSE;
+            }
+        }
+    }
+
+    if (!ProcessEffectList()) {
+        return;
+    }
+
+    if (m_posVertList == NULL) {
+        return;
+    }
+
+    if (m_dialogWait > 0
+        && m_typeAI.m_nEnemyAlly < CAIObjectType::EA_EVILCUTOFF
+        && m_bAllowDialogInterrupt
+        && !m_derivedStats.m_bIgnoreDialogPause) {
+        return;
+    }
+
+    if ((m_derivedStats.m_generalState & STATE_DEAD) != 0) {
+        bInstant = IsInstantAction(m_curAction.GetActionID());
+        if (!IsLeaveAreaLUABlocked(m_curAction.GetActionID()) && bInstant) {
+            do {
+                ResolveInstants(FALSE);
+                bInstant = IsInstantAction(m_curAction.GetActionID());
+                if (IsLeaveAreaLUABlocked(m_curAction.GetActionID())) {
+                    return;
+                }
+            } while (bInstant);
+            return;
+        }
+
+        SetCurrAction(GetNextAction(aiAction));
+        m_interrupt = FALSE;
+        return;
+    }
+
+    pGame = g_pBaldurChitin->GetObjectGame();
+    if (!sub_7245D0()
+        && !m_derivedStats.m_bCasterHold
+        && (m_derivedStats.m_generalState & (STATE_STONE_DEATH | STATE_FROZEN_DEATH)) == 0
+        && (pGame->m_nTimeStop == 0 || pGame->m_nTimeStopCaster == m_id)) {
+        do {
+            ResolveInstants(TRUE);
+            bInstant = IsInstantAction(m_curAction.GetActionID());
+            if (IsLeaveAreaLUABlocked(m_curAction.GetActionID())) {
+                return;
+            }
+        } while (bInstant);
+    } else {
+        bInstant = IsInstantAction(m_curAction.GetActionID());
+        if (IsLeaveAreaLUABlocked(m_curAction.GetActionID()) && !sub_7245D0()) {
+            return;
+        }
+
+        while (bInstant) {
+            ResolveInstants(FALSE);
+            bInstant = IsInstantAction(m_curAction.GetActionID());
+            if (IsLeaveAreaLUABlocked(m_curAction.GetActionID())) {
+                return;
+            }
+        }
+    }
+}
+
 // 0x72DE60
 BOOL CGameSprite::ProcessEffectList()
 {
@@ -10731,6 +12696,18 @@ BOOL CGameSprite::ProcessEffectList()
     HandleEffects();
 
     return FALSE;
+}
+
+// 0x72FBF0
+void CGameSprite::sub_72FBF0()
+{
+    // TODO: Incomplete.
+}
+
+// 0x72FD20
+void CGameSprite::CheckModal()
+{
+    // TODO: Incomplete.
 }
 
 // 0x733290
@@ -10759,6 +12736,14 @@ void CGameSprite::ClearDialogActions()
         CMessageDropPath* pMessage = new CMessageDropPath(m_id, m_id);
         g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
     }
+}
+
+// 0x733340
+CGameObject* CGameSprite::sub_733340()
+{
+    // TODO: Incomplete.
+
+    return NULL;
 }
 
 // 0x7337D0
@@ -11945,6 +13930,22 @@ BOOLEAN CGameSprite::sub_737910(BOOL a1)
     return TRUE;
 }
 
+// 0x737EF0
+SHORT CGameSprite::Attack(CGameSprite* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x738E70
+SHORT CGameSprite::AttackReevaluate()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
 // 0x73B740
 SHORT CGameSprite::GetCriticalHitBonus()
 {
@@ -12287,6 +14288,22 @@ SHORT CGameSprite::sub_73D440(CItem* curWeapon)
     return mod;
 }
 
+// 0x73EA80
+SHORT CGameSprite::sub_73EA80(CGameSprite* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x73EDD0
+SHORT CGameSprite::MoveToObject(CGameAIBase* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
 // 0x73F560
 SHORT CGameSprite::MoveToPoint()
 {
@@ -12434,6 +14451,30 @@ SHORT CGameSprite::MoveToPoint()
     return ACTION_INTERRUPTABLE;
 }
 
+// 0x73FEC0
+SHORT CGameSprite::sub_73FEC0(const CPoint& dest, BOOL a2)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x740270
+SHORT CGameSprite::Spell(CGameAIBase* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x742840
+SHORT CGameSprite::SpellPoint()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
 // 0x7446F0
 SHORT CGameSprite::OneSwing()
 {
@@ -12551,6 +14592,22 @@ SHORT CGameSprite::PlayDead()
     return ACTION_DONE;
 }
 
+// 0x744C00
+SHORT CGameSprite::RunAwayFrom(CGameSprite* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x745450
+SHORT CGameSprite::Formation(CGameObject* pLeader)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
 // 0x745950
 SHORT CGameSprite::JumpToPoint(CPoint dest, BOOL spriteUpdate)
 {
@@ -12591,6 +14648,110 @@ SHORT CGameSprite::FaceObject(CGameAIBase* pObject)
     }
 
     return ACTION_DONE;
+}
+
+// 0x746480
+SHORT CGameSprite::UseItem(CGameAIBase* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x7473E0
+SHORT CGameSprite::UseItemPoint()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x747F80
+SHORT CGameSprite::RandomWalk()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x748CA0
+SHORT CGameSprite::RandomWalkContinuous()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x7496E0
+SHORT CGameSprite::ProtectPoint()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x749FC0
+SHORT CGameSprite::ProtectObject(CGameAIBase* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x74A7C0
+SHORT CGameSprite::Follow()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x74B340
+SHORT CGameSprite::LeaveAreaLUA()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x74C0D0
+SHORT CGameSprite::LeaveArea()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x74CDB0
+SHORT CGameSprite::sub_74CDB0()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x74FF10
+SHORT CGameSprite::Help()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x7500F0
+SHORT CGameSprite::Rest()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x750F10
+SHORT CGameSprite::JoinParty()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
 }
 
 // 0x751CD0
@@ -12655,6 +14816,38 @@ SHORT CGameSprite::Enemy()
     return ACTION_DONE;
 }
 
+// 0x7526D0
+SHORT CGameSprite::RandomFly()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x752DD0
+SHORT CGameSprite::Dialog(CGameSprite* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x7537A0
+SHORT CGameSprite::PlayerDialog(CGameSprite* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x7543B0
+SHORT CGameSprite::StartDialog(CGameSprite* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
 // 0x754870
 SHORT CGameSprite::SetDialog()
 {
@@ -12674,10 +14867,58 @@ void CGameSprite::SelectWeaponAbility(unsigned char a1, unsigned char a2, unsign
     // TODO: Incomplete.
 }
 
+// 0x754980
+SHORT CGameSprite::Interact(CGameSprite* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x754D70
+SHORT CGameSprite::DropItem(SHORT slotNum)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x754EE0
+SHORT CGameSprite::DropInventory(BOOLEAN a1, CString a2)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x7555F0
+SHORT CGameSprite::UseContainer()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
 // 0x756930
 void CGameSprite::sub_756930(CItem* pItem, CItem* pLauncher)
 {
     // TODO: Incomplete.
+}
+
+// 0x757540
+SHORT CGameSprite::GiveItem(CGameSprite* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x757720
+SHORT CGameSprite::sub_757720()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
 }
 
 // 0x7579C0
@@ -12717,6 +14958,14 @@ SHORT CGameSprite::FindTraps()
     return ACTION_DONE;
 }
 
+// 0x757B40
+SHORT CGameSprite::Hide()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
 // 0x758440
 SHORT CGameSprite::Panic()
 {
@@ -12736,6 +14985,22 @@ SHORT CGameSprite::Panic()
     AddAction(randomWalk);
 
     return ACTION_DONE;
+}
+
+// 0x7586E0
+SHORT CGameSprite::PickPockets(CGameSprite* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x759240
+SHORT CGameSprite::RemoveTraps(CGameAIBase* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
 }
 
 // 0x75A3F0
@@ -12758,9 +15023,73 @@ SHORT CGameSprite::Turn()
     return ACTION_DONE;
 }
 
+// 0x75A4B0
+SHORT CGameSprite::Berserk()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x75ACB0
+SHORT CGameSprite::UseDoor()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x75B280
+SHORT CGameSprite::EscapeArea()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x75BC70
+SHORT CGameSprite::PickLock(CGameAIBase* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x75C980
+SHORT CGameSprite::RemoveSpell()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x75CBD0
+SHORT CGameSprite::BashDoor(CGameAIBase* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
 // 0x75DFD0
 SHORT CGameSprite::EquipMostDamagingMelee()
 {
+    return ACTION_ERROR;
+}
+
+// 0x75E150
+SHORT CGameSprite::EquipRanged()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
+// 0x75E630
+SHORT CGameSprite::StartStore(CGameSprite* pTarget)
+{
+    // TODO: Incomplete.
+
     return ACTION_ERROR;
 }
 
@@ -12874,6 +15203,14 @@ SHORT CGameSprite::GetCasterLevel(CSpell* pSpell, BYTE nClass, DWORD nSpecializa
     return static_cast<SHORT>(nBestCasterLevel);
 }
 
+// 0x75EC50
+SHORT CGameSprite::ChangeAnimation()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
 // 0x75F240
 SHORT CGameSprite::sub_75F240()
 {
@@ -12881,6 +15218,14 @@ SHORT CGameSprite::sub_75F240()
     m_baseStats.field_2E6 = static_cast<SHORT>(m_pos.y);
     m_baseStats.field_2E8 = static_cast<BYTE>(m_nDirection);
     return ACTION_DONE;
+}
+
+// 0x75F270
+SHORT CGameSprite::ReturnToSavedLocation()
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
 }
 
 // 0x75F3D0
@@ -13582,6 +15927,14 @@ SHORT CGameSprite::SetAtOffset(DWORD stat, DWORD value, BOOL modify)
     }
 
     return 0;
+}
+
+// 0x760C50
+SHORT CGameSprite::RunAwayFromNoLeaveArea(CGameSprite* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
 }
 
 // 0x761470
@@ -14781,6 +17134,31 @@ INT CGameSprite::GetMulticlassingPenalty()
     }
 
     return nPenalty;
+}
+
+// 0x764810
+BOOL CGameSprite::CanTarget(CGameSprite* pTarget, LONG flags)
+{
+    if ((m_derivedStats.m_generalState & STATE_DEAD) == 0
+        && pTarget != NULL
+        && (pTarget->m_derivedStats.m_generalState & STATE_DEAD) == 0
+        && (pTarget->m_baseStats.m_flags & 0x20000) == 0
+        && !m_derivedStats.m_spellStates.test(SPLSTATE_HELD)
+        && (m_derivedStats.m_generalState & STATE_HELPLESS) == 0
+        && pTarget->sub_727B80(GetCanSeeInvisible())
+        && !pTarget->m_derivedStats.m_spellStates.test(SPLSTATE_SANCTUARY)) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+// 0x764880
+BOOL CGameSprite::IsSpellTargetValid(CGameObject* pTarget, LONG spellId, LONG flags)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
 }
 
 // 0x765BD0

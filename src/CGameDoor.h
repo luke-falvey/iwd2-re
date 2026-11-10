@@ -24,6 +24,7 @@ public:
     DWORD GetFlags();
     void SetFlags(DWORD dwFlags);
     BOOL sub_45B700();
+    const CPoint& sub_48B2C0(const CPoint& pt);
 
     /* 0598 */ CResRef m_resID;
     /* 05A0 */ CRect m_rOpenBounding;
