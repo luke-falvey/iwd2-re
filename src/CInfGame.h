@@ -157,6 +157,9 @@ public:
     void CharacterExport(LONG nCharacterId, CString sFileName);
     CGameArea* LoadArea(CString areaName, BYTE nTravelScreenImageToUse, BOOLEAN bProgressBarRequired, BOOLEAN bProgressBarInPlace);
     void Marshal(BYTE** pGame, LONG* nGame, BOOLEAN bProgressBarInPlace);
+    INT sub_5A69B0(BYTE* pCreature);
+    void sub_5A7740(BYTE** ppCreature, LONG* pCreatureSize);
+    void sub_5A7940(BYTE** ppCreature, LONG* pCreatureSize, BYTE* pOldCreature, LONG* pOldCreatureSize);
     BOOLEAN CanSaveGame(STRREF& strError, BOOLEAN bInRestGame, BOOLEAN bInStore);
     BOOL BackupQuickSave();
     BOOL SaveGame(BOOLEAN bProgressBarRequired, BOOLEAN bProgressBarInPlace, BOOLEAN a3);

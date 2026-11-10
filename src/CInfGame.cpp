@@ -3497,6 +3497,135 @@ void CInfGame::Unmarshal(BYTE* pGame, LONG nGame, BOOLEAN bProgressBarInPlace)
     UTIL_ASSERT(cnt == (DWORD)nGame);
 }
 
+// Converts "CRE V2.0" creature to "CRE V2.1" format (reallocates
+// `*ppCreature`).
+//
+// NOTE: Uses a register calling convention (`ppCreature` in ECX,
+// `pCreatureSize` in EDX).
+//
+// 0x5A3DB0
+static void sub_5A3DB0(BYTE** ppCreature, LONG* pCreatureSize)
+{
+    // TODO: Incomplete.
+}
+
+// Converts "CRE V2.1" creature to "CRE V2.2" format.
+//
+// NOTE: Uses a register calling convention (`ppCreature` in ECX,
+// `pCreatureSize` in EDX, the rest on stack).
+//
+// 0x5A5060
+static void sub_5A5060(BYTE** ppCreature, LONG* pCreatureSize, BYTE* pOldCreature, LONG* pOldCreatureSize)
+{
+    // TODO: Incomplete.
+}
+
+// Calculates how much "CRE V2.1" creature grows when converted to
+// "CRE V2.2" format (minus 0x240).
+//
+// 0x5A69B0
+INT CInfGame::sub_5A69B0(BYTE* pCreature)
+{
+    // TODO: Incomplete.
+    return 0;
+}
+
+// 0x5A7740
+void CInfGame::sub_5A7740(BYTE** ppCreature, LONG* pCreatureSize)
+{
+    BYTE* pCreature = *ppCreature;
+
+    if (memcmp(pCreature, "CRE V2.1", 8) == 0) {
+        return;
+    }
+
+    if (memcmp(pCreature, "CRE V9.2", 8) != 0
+        && memcmp(pCreature, "CRE V2.0", 8) != 0) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 6768
+        UTIL_ASSERT_MSG(FALSE, "Corrupt or Obsolete creature data was encountered during load! Aborting");
+    }
+
+    pCreature = *ppCreature;
+    if (memcmp(pCreature, "CRE V9.2", 8) == 0) {
+        if (pCreature[0x53] > 5) {
+            pCreature[0x53] -= 6;
+        }
+
+        pCreature[0x220] = 0;
+        pCreature[0x221] = 0;
+
+        DWORD nXP = *reinterpret_cast<DWORD*>(pCreature + 0x14);
+        if (nXP > 50000) {
+            pCreature[0x222] = 15;
+        } else if (nXP > 30000) {
+            pCreature[0x222] = 14;
+        } else if (nXP > 20000) {
+            pCreature[0x222] = 13;
+        } else if (nXP > 15000) {
+            pCreature[0x222] = 12;
+        } else if (nXP > 12000) {
+            pCreature[0x222] = 11;
+        } else if (nXP > 10000) {
+            pCreature[0x222] = 10;
+        } else if (nXP > 8000) {
+            pCreature[0x222] = 9;
+        } else if (nXP > 6000) {
+            pCreature[0x222] = 8;
+        } else if (nXP > 4000) {
+            pCreature[0x222] = 7;
+        } else if (nXP > 2000) {
+            pCreature[0x222] = 6;
+        } else if (nXP > 1400) {
+            pCreature[0x222] = 5;
+        } else if (nXP > 420) {
+            pCreature[0x222] = 4;
+        } else if (nXP > 175) {
+            pCreature[0x222] = 3;
+        } else if (nXP > 120) {
+            pCreature[0x222] = 2;
+        } else {
+            pCreature[0x222] = 1;
+        }
+
+        pCreature[0x52] = 20 - pCreature[0x52];
+        *reinterpret_cast<WORD*>(pCreature + 0x48) = 20 - *reinterpret_cast<WORD*>(pCreature + 0x48);
+
+        if (pCreature[0x2DB] == 0xFF) {
+            pCreature[0x2DB] = 2;
+        }
+
+        memcpy(*ppCreature, "CRE V2.0", 8);
+    }
+
+    if (memcmp(*ppCreature, "CRE V2.0", 8) == 0) {
+        sub_5A3DB0(ppCreature, pCreatureSize);
+    }
+}
+
+// 0x5A7940
+void CInfGame::sub_5A7940(BYTE** ppCreature, LONG* pCreatureSize, BYTE* pOldCreature, LONG* pOldCreatureSize)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 6876
+    UTIL_ASSERT(pOldCreature != NULL);
+
+    if (memcmp(pOldCreature, "CRE V2.2", 8) == 0) {
+        return;
+    }
+
+    if (memcmp(pOldCreature, "CRE V2.1", 8) != 0) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 6885
+        UTIL_ASSERT_MSG(FALSE, "Corrupt or Obsolete creature data was encountered during load! Aborting");
+        return;
+    }
+
+    if (memcmp(pOldCreature, "CRE V2.1", 8) == 0) {
+        sub_5A5060(ppCreature, pCreatureSize, pOldCreature, pOldCreatureSize);
+    }
+}
+
 // 0x5A79E0
 static void sub_5A79E0(const CSavedGamePartyCreature20* pCreature20, CSavedGamePartyCreature21* pCreature21)
 {

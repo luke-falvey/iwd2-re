@@ -7118,14 +7118,50 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
     // __LINE__: 12738
     UTIL_ASSERT(pCreature != NULL);
 
-    BOOL bNeedUpgrade = FALSE;
-    BOOL bAlloced = FALSE;
-    if (memcmp(pCreature, "CRE V2.2", 8) != 0) {
-        bNeedUpgrade = TRUE;
-    }
+    BOOL bNeedUpgrade = memcmp(pCreature, "CRE V2.2", 8);
+    BOOLEAN bAlloced = FALSE;
 
     if (bNeedUpgrade) {
-        // TODO: Incomplete.
+        if (memcmp(pCreature, "CRE V2.0", 8) == 0
+            || memcmp(pCreature, "CRE V9.2", 8) == 0) {
+            LONG new_creature_size = creatureSize + 202;
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+            // __LINE__: 12763
+            UTIL_ASSERT(new_creature_size > 0);
+
+            BYTE* pNewCreature = new BYTE[new_creature_size];
+            memcpy(pNewCreature, pCreature, min(creatureSize, new_creature_size));
+            pCreature = pNewCreature;
+            creatureSize = new_creature_size;
+            bAlloced = TRUE;
+
+            g_pBaldurChitin->GetObjectGame()->sub_5A7740(&pCreature, &creatureSize);
+        }
+
+        if (memcmp(pCreature, "CRE V2.1", 8) == 0) {
+            LONG nOldCreatureSize = creatureSize;
+            BYTE* pOldCreature = NULL;
+
+            INT nDelta = g_pBaldurChitin->GetObjectGame()->sub_5A69B0(pCreature) + 576;
+            if (nDelta != 0) {
+                LONG new_creature_size = nDelta + creatureSize;
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+                // __LINE__: 12786
+                UTIL_ASSERT(new_creature_size > 0);
+
+                pOldCreature = pCreature;
+                pCreature = new BYTE[new_creature_size];
+                creatureSize = new_creature_size;
+            }
+
+            g_pBaldurChitin->GetObjectGame()->sub_5A7940(&pCreature, &creatureSize, pOldCreature, &nOldCreatureSize);
+
+            if (bAlloced == TRUE && pOldCreature != NULL) {
+                delete[] pOldCreature;
+            }
+        }
     }
 
     ClearMarshal(TRUE);
@@ -7159,7 +7195,7 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
 
     if (GetAnimation()->GetListType() == LIST_FLIGHT) {
         // NOTE: Uninline.
-        SetFacing(4 * ((facing + 2) / 4));
+        SetFacing((4 * ((facing + 2) / 4)) % 16);
     }
 
     m_vbPortraitSmall.SetResRef(CResRef(m_baseStats.m_portraitSmall), TRUE, TRUE);
@@ -7167,6 +7203,10 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
 
     offsets = reinterpret_cast<CCreatureFileOffsets*>(pCreature + 900);
     creatureSize -= sizeof(CCreatureFileOffsets);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+    // __LINE__: 12846
+    UTIL_ASSERT(creatureSize > 0);
 
     if (m_baseStats.m_subrace == -1) {
         m_baseStats.m_subrace = 0;
@@ -7266,9 +7306,9 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
     // __LINE__: 12925
-    UTIL_ASSERT(creatureSize > 0);
+    UTIL_ASSERT(creatureSize >= 0);
 
-    if (IcewindMisc::IsPC(this)) {
+    if (!IcewindMisc::IsPC(this)) {
         if (m_equipment.m_selectedWeapon >= 43) {
             m_nWeaponSet = (m_equipment.m_selectedWeapon - 43) / 2;
         }
@@ -7307,8 +7347,8 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
 
                 const CResRef& resRef = g_pBaldurChitin->GetObjectGame()->m_spells.Get(pSpell->field_0);
                 if (memcmp(resRef.GetResRef(), "**", strlen("**")) == 0) {
-                    CString sError;
-                    sError.Format("*** %s has OBSOLETE DOMAIN SPELL FILE: %s.\n",
+                    CString sError(" ");
+                    sError.Format("*** %s has OBSOLETE SPELL FILE: %s.\n",
                         m_scriptName,
                         (LPCSTR)resRef.GetResRefStr());
                 } else {
@@ -7342,7 +7382,7 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
 
             const CResRef& resRef = g_pBaldurChitin->GetObjectGame()->m_spells.Get(pSpell->field_0);
             if (memcmp(resRef.GetResRef(), "**", strlen("**")) == 0) {
-                CString sError;
+                CString sError(" ");
                 sError.Format("*** %s has OBSOLETE DOMAIN SPELL FILE: %s.\n",
                     m_scriptName,
                     (LPCSTR)resRef.GetResRefStr());
@@ -7373,7 +7413,7 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
 
         const CResRef& resRef = g_pBaldurChitin->GetObjectGame()->GetInnateSpells()->Get(pSpell->field_0);
         if (memcmp(resRef.GetResRef(), "**", strlen("**")) == 0) {
-            CString sError;
+            CString sError(" ");
             sError.Format("*** %s has OBSOLETE INNATE SPELL FILE: %s.\n",
                 m_scriptName,
                 (LPCSTR)resRef.GetResRefStr());
@@ -7401,7 +7441,7 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
 
         const CResRef& resRef = g_pBaldurChitin->GetObjectGame()->GetMasterSongLookup().Get(pSpell->field_0);
         if (memcmp(resRef.GetResRef(), "**", strlen("**")) == 0) {
-            CString sError;
+            CString sError(" ");
             sError.Format("*** %s has OBSOLETE SONG FILE: %s.\n",
                 m_scriptName,
                 (LPCSTR)resRef.GetResRefStr());
@@ -7429,7 +7469,7 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
 
         const CResRef& resRef = g_pBaldurChitin->GetObjectGame()->GetShapeshifts()->Get(pSpell->field_0);
         if (memcmp(resRef.GetResRef(), "**", strlen("**")) == 0) {
-            CString sError;
+            CString sError(" ");
             sError.Format("*** %s has OBSOLETE SHAPESHIFT FILE: %s.\n",
                 m_scriptName,
                 (LPCSTR)resRef.GetResRefStr());
@@ -7471,8 +7511,8 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
             bIncreaseStats = TRUE;
         } else {
             if (offsets->m_enemyAlly > CAIObjectType::EA_GOODCUTOFF) {
-                m_baseStats.m_hitPoints = 3 * (m_baseStats.m_hitPoints + 80);
-                m_baseStats.m_maxHitPointsBase = 3 * (m_baseStats.m_maxHitPointsBase + 80);
+                m_baseStats.m_hitPoints = 3 * m_baseStats.m_hitPoints + 80;
+                m_baseStats.m_maxHitPointsBase = 3 * m_baseStats.m_maxHitPointsBase + 80;
                 bIncreaseStats = TRUE;
             }
         }
@@ -7482,7 +7522,7 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
             BYTE moveScale = GetAnimation()->GetMoveScale();
 
             // NOTE: Uninline.
-            GetAnimation()->SetMoveScale(static_cast<BYTE>(static_cast<float>(moveScale) * 1.3f + 1.0f));
+            GetAnimation()->SetMoveScale(static_cast<BYTE>(static_cast<double>(moveScale) * 1.3 + 1.0));
 
             if (m_baseStats.m_gold != 0) {
                 m_baseStats.m_gold += 75;
@@ -7517,8 +7557,10 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
     m_tempStats = m_derivedStats;
     m_bonusStats.BonusInit();
 
-    if (bAlloced) {
-        delete pCreature;
+    // NOTE: The original frees the buffer whenever the creature was not in
+    // "CRE V2.2" format, even if no upgrade buffer was allocated.
+    if (bNeedUpgrade) {
+        delete[] pCreature;
     }
 }
 
