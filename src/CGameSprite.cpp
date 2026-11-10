@@ -10738,18 +10738,6 @@ STRREF CGameSprite::GetNameRef()
     return strName;
 }
 
-// 0x727B80
-BOOL CGameSprite::sub_727B80(BOOL bCanSeeInvisible)
-{
-    if (!bCanSeeInvisible
-        && (m_derivedStats.m_generalState & STATE_INVISIBLE) != 0
-        && (m_baseStats.field_2FC & 0x1) == 0) {
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
 // 0x728270
 void CGameSprite::PlaySound(const CResRef& res)
 {
@@ -18012,7 +18000,7 @@ BOOL CGameSprite::CanTarget(CGameSprite* pTarget, LONG flags)
         && (pTarget->m_baseStats.m_flags & 0x20000) == 0
         && !m_derivedStats.m_spellStates.test(SPLSTATE_HELD)
         && (m_derivedStats.m_generalState & STATE_HELPLESS) == 0
-        && pTarget->sub_727B80(GetCanSeeInvisible())
+        && pTarget->IsVisibleToCaller(GetCanSeeInvisible())
         && !pTarget->m_derivedStats.m_spellStates.test(SPLSTATE_SANCTUARY)) {
         return TRUE;
     }
@@ -19353,6 +19341,18 @@ INT CGameSprite::sub_726800()
 void CGameSprite::sub_726810(BYTE nWeaponSet)
 {
     // TODO: Incomplete.
+}
+
+// 0x727B80
+BOOL CGameSprite::IsVisibleToCaller(BOOL bSeeInvisible)
+{
+    if (!bSeeInvisible
+        && (m_derivedStats.m_generalState & STATE_INVISIBLE) != 0
+        && (m_baseStats.field_2FC & 0x1) == 0) {
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 // 0x58FEE0

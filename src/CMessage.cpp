@@ -14823,14 +14823,14 @@ void CMessageSetVariable::MarshalMessage(BYTE** pData, DWORD* dwSize)
         INFINITE);
 
     *dwSize = sizeof(PLAYER_ID)
-        + sizeof(LONG);
-    *dwSize += sizeof(SHORT)
-        + m_sName.GetLength();
-    *dwSize += sizeof(SHORT)
+        + sizeof(LONG)
+        + sizeof(SHORT)
+        + m_sName.GetLength()
+        + sizeof(SHORT)
         + m_sScope.GetLength()
         + sizeof(LONG)
         + sizeof(BYTE)
-        + sizeof(LONG);
+        + sizeof(DWORD);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
     // __LINE__: 21180
@@ -14844,19 +14844,19 @@ void CMessageSetVariable::MarshalMessage(BYTE** pData, DWORD* dwSize)
     *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
     cnt += sizeof(LONG);
 
-    SHORT nLength = static_cast<SHORT>(m_sName.GetLength());
-    *reinterpret_cast<SHORT*>(*pData + cnt) = nLength;
+    SHORT nNameLength = static_cast<SHORT>(m_sName.GetLength());
+    *reinterpret_cast<SHORT*>(*pData + cnt) = nNameLength;
     cnt += sizeof(SHORT);
 
-    memcpy(*pData + cnt, m_sName.GetBuffer(nLength), nLength);
-    cnt += nLength;
+    memcpy(*pData + cnt, m_sName.GetBuffer(nNameLength), nNameLength);
+    cnt += nNameLength;
 
-    nLength = static_cast<SHORT>(m_sScope.GetLength());
-    *reinterpret_cast<SHORT*>(*pData + cnt) = nLength;
+    SHORT nScopeLength = static_cast<SHORT>(m_sScope.GetLength());
+    *reinterpret_cast<SHORT*>(*pData + cnt) = nScopeLength;
     cnt += sizeof(SHORT);
 
-    memcpy(*pData + cnt, m_sScope.GetBuffer(nLength), nLength);
-    cnt += nLength;
+    memcpy(*pData + cnt, m_sScope.GetBuffer(nScopeLength), nScopeLength);
+    cnt += nScopeLength;
 
     *reinterpret_cast<LONG*>(*pData + cnt) = m_nValue;
     cnt += sizeof(LONG);
@@ -14864,8 +14864,8 @@ void CMessageSetVariable::MarshalMessage(BYTE** pData, DWORD* dwSize)
     *reinterpret_cast<BYTE*>(*pData + cnt) = m_nOperation;
     cnt += sizeof(BYTE);
 
-    *reinterpret_cast<LONG*>(*pData + cnt) = m_dwFlags;
-    cnt += sizeof(LONG);
+    *reinterpret_cast<DWORD*>(*pData + cnt) = m_dwFlags;
+    cnt += sizeof(DWORD);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
     // __LINE__: 21226
@@ -14894,17 +14894,17 @@ BOOL CMessageSetVariable::UnmarshalMessage(BYTE* pData, DWORD dwSize)
         m_targetId = CGameObjectArray::INVALID_INDEX;
     }
 
-    SHORT nLength = *reinterpret_cast<SHORT*>(pData + cnt);
+    SHORT nNameLength = *reinterpret_cast<SHORT*>(pData + cnt);
     cnt += sizeof(SHORT);
 
-    m_sName = CString(reinterpret_cast<char*>(pData + cnt), nLength);
-    cnt += nLength;
+    m_sName = CString(reinterpret_cast<char*>(pData + cnt), nNameLength);
+    cnt += nNameLength;
 
-    nLength = *reinterpret_cast<SHORT*>(pData + cnt);
+    SHORT nScopeLength = *reinterpret_cast<SHORT*>(pData + cnt);
     cnt += sizeof(SHORT);
 
-    m_sScope = CString(reinterpret_cast<char*>(pData + cnt), nLength);
-    cnt += nLength;
+    m_sScope = CString(reinterpret_cast<char*>(pData + cnt), nScopeLength);
+    cnt += nScopeLength;
 
     m_nValue = *reinterpret_cast<LONG*>(pData + cnt);
     cnt += sizeof(LONG);
@@ -14912,8 +14912,8 @@ BOOL CMessageSetVariable::UnmarshalMessage(BYTE* pData, DWORD dwSize)
     m_nOperation = *reinterpret_cast<BYTE*>(pData + cnt);
     cnt += sizeof(BYTE);
 
-    m_dwFlags = *reinterpret_cast<LONG*>(pData + cnt);
-    cnt += sizeof(LONG);
+    m_dwFlags = *reinterpret_cast<DWORD*>(pData + cnt);
+    cnt += sizeof(DWORD);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
     // __LINE__: 21302
@@ -14925,7 +14925,109 @@ BOOL CMessageSetVariable::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 // 0x50A820
 void CMessageSetVariable::Run()
 {
-    // TODO: Incomplete.
+    // NOTE: Uninitialized in the original, which reads it even when the
+    // object could not be obtained.
+    CGameObject* pObject = NULL;
+    CVariable* pVariable;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (pObject != NULL && (m_dwFlags & 0x6) != 0) {
+        if ((m_dwFlags & 0x2) != 0) {
+            CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(m_sScope);
+            if (pArea != NULL) {
+                pArea->GetNamedCreatures()->RemoveKey(m_sName, TRUE, pObject->GetId());
+            }
+        }
+
+        if ((m_dwFlags & 0x4) != 0) {
+            g_pBaldurChitin->GetObjectGame()->GetNamedCreatures()->RemoveKey(m_sName, TRUE, pObject->GetId());
+        }
+
+        // NOTE: Released even if the object was not obtained.
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return;
+    }
+
+    if (strcmp(m_sScope, "GLOBAL") == 0) {
+        pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(m_sName);
+        if (pVariable != NULL) {
+            if (m_nOperation == 1) {
+                pVariable->m_intValue += m_nValue;
+            } else {
+                pVariable->m_intValue = m_nValue;
+            }
+        } else {
+            pVariable = new CVariable();
+            pVariable->SetName(m_sName);
+            pVariable->m_intValue = m_nValue;
+            g_pBaldurChitin->GetObjectGame()->m_variables.AddKey(*pVariable);
+            delete pVariable;
+        }
+    }
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    if (strcmp(m_sScope, "LOCALS") == 0) {
+        if (pObject != NULL && pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            CString sName(m_sName);
+            CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+
+            pVariable = pSprite->GetLocalVariables()->FindKey(sName);
+            if (pVariable != NULL) {
+                if (m_nOperation == 1) {
+                    pVariable->m_intValue += m_nValue;
+                } else {
+                    pVariable->m_intValue = m_nValue;
+                }
+            } else {
+                pVariable = new CVariable();
+                pVariable->SetName(sName);
+                pVariable->m_intValue = m_nValue;
+                pSprite->m_pLocalVariables->AddKey(*pVariable);
+                delete pVariable;
+            }
+        }
+    } else {
+        if (strcmp(m_sScope, "MYAREA") == 0) {
+            // NOTE: `m_areaName` is not NUL-terminated.
+            m_sScope = pObject->m_pArea->GetHeader()->m_areaName;
+        }
+
+        CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(m_sScope);
+        if (pArea != NULL) {
+            pVariable = pArea->GetVariables()->FindKey(m_sName);
+            if (pVariable != NULL) {
+                if (m_nOperation == 1) {
+                    pVariable->m_intValue += m_nValue;
+                } else {
+                    pVariable->m_intValue = m_nValue;
+                }
+            } else {
+                pVariable = new CVariable();
+                pVariable->SetName(m_sName);
+                pVariable->m_intValue = m_nValue;
+                pArea->m_variables.AddKey(*pVariable);
+                delete pVariable;
+            }
+        }
+    }
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
 }
 
 // -----------------------------------------------------------------------------

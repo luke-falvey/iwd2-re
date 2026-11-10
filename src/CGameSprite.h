@@ -482,6 +482,7 @@ public:
     void AIUpdateFly();
     void ChangeDirection();
     void CheckIfVisible();
+    BOOL IsVisibleToCaller(BOOL bSeeInvisible);
     void DropPath();
     void DropSearchRequest();
     BOOL MoveToBack();
@@ -599,7 +600,6 @@ public:
     BOOL sub_71CFF0();
     void sub_71D0B0();
     CItem* sub_722740(const CString& sName);
-    BOOL sub_727B80(BOOL bCanSeeInvisible);
     void sub_72FBF0();
     void CheckModal();
     CGameObject* sub_733340();
