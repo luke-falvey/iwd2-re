@@ -15,6 +15,12 @@ BYTE CVidTile::m_pPixels[16384];
 // 0x9064F8
 DWORD CVidImage::rgbTempPal[256];
 
+// 0x9060F0
+BYTE* CVidImage::m_pTranslucentTable;
+
+// 0x9068F8
+INT CVidImage::m_nTranslucentTableRefs;
+
 // 0x7ACA60
 CVidImage::CVidImage()
 {
@@ -30,13 +36,31 @@ CVidImage::CVidImage()
     memset(m_paletteAffects.aRangeLightPeriods, 0, sizeof(m_paletteAffects.aRangeLightPeriods[0]) * CVidPalette::NUM_RANGES);
     m_paletteAffects.suppressTints = 0;
 
-    // TODO: Incomplete.
+    if (m_nTranslucentTableRefs++ == 0) {
+        m_pTranslucentTable = new BYTE[0x20000];
+        if (m_pTranslucentTable != NULL) {
+            // Blend table indexed by [nDest * 0x800 + nSrc * 0x20 + nLevel]
+            // for 6-bit components and 32 translucency levels.
+            for (INT nLevel = 0; 64 - 2 * nLevel > 0; nLevel++) {
+                for (INT nSrc = 0; nSrc < 64; nSrc++) {
+                    for (INT nDest = 0; nDest < 64; nDest++) {
+                        m_pTranslucentTable[nDest * 0x800 + nSrc * 0x20 + nLevel] = static_cast<BYTE>((nSrc * (64 - 2 * nLevel) + nDest * 2 * nLevel) >> 6);
+                    }
+                }
+            }
+        }
+    }
 }
 
 // 0x7ACC40
 CVidImage::~CVidImage()
 {
-    // TODO: Incomplete.
+    if (--m_nTranslucentTableRefs == 0) {
+        if (m_pTranslucentTable != NULL) {
+            delete m_pTranslucentTable;
+            m_pTranslucentTable = NULL;
+        }
+    }
 }
 
 // #binary-identical

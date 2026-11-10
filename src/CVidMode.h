@@ -41,6 +41,8 @@ public:
     static const CString SCREEN_SHOT_DIR_NAME;
     static const CString SCREEN_SHOT_EXTENSION;
 
+    static const BYTE byte_85DE38;
+    static const BYTE byte_85DE3A;
     static short word_8BA320;
     static BYTE NUM_FADE_FRAMES;
     static BOOL bInitialized;
@@ -76,7 +78,12 @@ public:
     static void RenderFan(const VERTEX_DESC* pVertices, INT nVertices);
     static void RenderQuad(const VERTEX_DESC* pVertices, INT nVertices);
     static void RenderBlackFade3d();
+    void ScanLine16(WORD* pSurface, UINT nMajorAxis, UINT nMinorAxis, INT nMajorAxisAdjust, INT nMinorAxisAdjust, WORD color);
+    void ThickScanLine16(WORD* pSurface, UINT nMajorAxis, UINT nMinorAxis, INT nMajorAxisAdjust, INT nMinorAxisAdjust, UINT nThickness, WORD color);
     void ScanLine32(DWORD* pSurface, UINT nMajorAxis, UINT nMinorAxis, INT nMajorAxisAdjust, INT nMinorAxisAdjust, DWORD color);
+    void ScanLine24(BYTE* pSurface, UINT nMajorAxis, UINT nMinorAxis, INT nMajorAxisAdjust, INT nMinorAxisAdjust, DWORD color);
+    void ThickScanLine24(BYTE* pSurface, UINT nMajorAxis, UINT nMinorAxis, INT nMajorAxisAdjust, INT nMinorAxisAdjust, UINT nThickness, DWORD color);
+    void ThickScanLine32(DWORD* pSurface, UINT nMajorAxis, UINT nMinorAxis, INT nMajorAxisAdjust, INT nMinorAxisAdjust, UINT nThickness, DWORD color);
 
     CVidMode();
     /* 0000 */ virtual BOOLEAN SaveScreen();

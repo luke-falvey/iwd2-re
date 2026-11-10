@@ -14,6 +14,8 @@ class CResTile;
 class CVidImage {
 public:
     static DWORD rgbTempPal[256];
+    static BYTE* m_pTranslucentTable;
+    static INT m_nTranslucentTableRefs;
 
     CVidImage();
     ~CVidImage();
