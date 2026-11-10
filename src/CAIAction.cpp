@@ -15,6 +15,9 @@ const SHORT CAIAction::DIALOGUE = 8;
 // 0x8477B0
 const SHORT CAIAction::MOVETOPOINT = 23;
 
+// 0x8477B2
+const SHORT CAIAction::PANIC = 24;
+
 // 0x8477B4
 const SHORT CAIAction::PICKPOCKETS = 25;
 
@@ -81,6 +84,9 @@ const SHORT CAIAction::FORCESPELLPOINT = 114;
 // 0x847860
 const SHORT CAIAction::GIVEPARTYGOLD = 118;
 
+// 0x84786C
+const SHORT CAIAction::BERSERK = 124;
+
 // 0x847880
 const SHORT CAIAction::ATTACKREEVALUATE = 134;
 
@@ -143,6 +149,24 @@ CAIAction::CAIAction(SHORT actionID, const CPoint& dest, LONG specificID, LONG s
     m_dest = dest;
     m_specificID = specificID;
     m_specificID2 = specificID2;
+    m_specificID3 = 0;
+    m_internalFlags = 0;
+}
+
+// NOTE: Inlined.
+CAIAction::CAIAction(SHORT actionID, LONG specificID, LONG specificID2, LONG specificID3)
+{
+    // NOTE: For unknown reason it creates and immediately destroys `CAIAction`
+    // instance. This instance and its properties are not used.
+    // FIXME: Remove.
+    if (1) {
+        CAIAction action;
+    }
+
+    m_actionID = actionID;
+    m_specificID = specificID;
+    m_specificID2 = specificID2;
+    m_specificID3 = specificID3;
     m_internalFlags = 0;
 }
 

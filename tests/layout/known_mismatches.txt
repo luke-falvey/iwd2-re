@@ -1036,6 +1036,7 @@ CGameSprite::m_dialogWait
 CGameSprite::m_dialogWaitTarget
 CGameSprite::m_doBounce
 CGameSprite::m_domainSpells
+CGameSprite::m_dwLastGeneralState
 CGameSprite::m_effectExtendDirection
 CGameSprite::m_endOfDamageSeq
 CGameSprite::m_equipedEffectList
@@ -1083,6 +1084,7 @@ CGameSprite::m_nDialogData
 CGameSprite::m_nDirection
 CGameSprite::m_nHappiness
 CGameSprite::m_nHPCONBonusTotalOld
+CGameSprite::m_nLastMoveScale
 CGameSprite::m_nLastSong
 CGameSprite::m_nLastSpellbookClassIndex
 CGameSprite::m_nLastSpellbookSpellLevel

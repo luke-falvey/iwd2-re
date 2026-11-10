@@ -2879,7 +2879,7 @@ void CScreenCreateChar::UpdateFeatsPanel(CUIPanel* pPanel, CGameSprite* pSprite)
         m_nExtraFeats);
 
     pSprite->field_562C = 1;
-    pSprite->sub_72DE60();
+    pSprite->ProcessEffectList();
 
     m_nTopFeat = min(m_nTopFeat, FEAT_COUNT - FEAT_SLOTS);
 

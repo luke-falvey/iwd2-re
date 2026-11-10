@@ -18,6 +18,7 @@ public:
     static const SHORT ATTACK;
     static const SHORT DIALOGUE;
     static const SHORT MOVETOPOINT;
+    static const SHORT PANIC;
     static const SHORT PICKPOCKETS;
     static const SHORT SPELL;
     static const SHORT USEITEM;
@@ -47,6 +48,7 @@ public:
     static const SHORT SPELLNODEC;
     static const SHORT SPELLPOINTNODEC;
     static const SHORT GIVEPARTYGOLD;
+    static const SHORT BERSERK;
     static const SHORT ATTACKREEVALUATE;
     static const SHORT STARTDIALOGUENOSET;
     static const SHORT TIMEDMOVETOPOINT;
@@ -56,6 +58,7 @@ public:
 
     CAIAction();
     CAIAction(SHORT actionID, const CAIObjectType& actee, LONG specificID, LONG specificID2, LONG specificID3);
+    CAIAction(SHORT actionID, LONG specificID, LONG specificID2, LONG specificID3);
     CAIAction(SHORT actionID, const CPoint& dest, LONG specificID, LONG specificID2);
     CAIAction(SHORT actionID, const CString& name, CPoint pt, LONG specificID);
     CAIAction(SHORT actionID, const CAIObjectType& actee, const CString& name, LONG specificID, LONG specificID2);

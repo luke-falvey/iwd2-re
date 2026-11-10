@@ -118,6 +118,7 @@ public:
     static const BYTE MSG_SUBTYPE_CMESSAGE_WEAPON_IMMUNITIES_UPDATE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_101;
     static const BYTE MSG_SUBTYPE_CMESSAGE_103;
+    static const BYTE MSG_SUBTYPE_CMESSAGE_104;
     static const BYTE MSG_SUBTYPE_CMESSAGE_TOGGLE_INTERFACE;
     static const BYTE MSG_SUBTYPE_CMESSAGE_107;
     static const BYTE MSG_SUBTYPE_CMESSAGE_SET_AREA_TYPE;
@@ -1671,6 +1672,20 @@ public:
     /* 000C */ CImmunitiesWeapon m_weaponImmunities;
 };
 
+class CMessageProjectileImmunityUpdate : public CMessage {
+public:
+    CMessageProjectileImmunityUpdate(CGameSprite* pSprite, LONG caller, LONG target);
+    ~CMessageProjectileImmunityUpdate() override;
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CImmunitiesProjectile m_projectileImmunities;
+};
+
 class CMessage103 : public CMessage {
 public:
     CMessage103(BOOLEAN a1, PLAYER_ID idPlayer, INT nPortrait, LONG caller, LONG target);
@@ -1725,6 +1740,19 @@ public:
 
     /* 000C */ WORD m_probDay;
     /* 000E */ WORD m_probNight;
+};
+
+class CMessageSpellLevelImmunityUpdate : public CMessage {
+public:
+    CMessageSpellLevelImmunityUpdate(CGameSprite* pSprite, LONG caller, LONG target);
+    SHORT GetCommType() override;
+    BYTE GetMsgType() override;
+    BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
+    BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    void Run() override;
+
+    /* 000C */ CImmunitiesSpellLevel m_spellLevelImmunities;
 };
 
 class CMessageToggleInterface : public CMessage {

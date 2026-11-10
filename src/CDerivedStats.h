@@ -516,6 +516,14 @@ public:
 
 #pragma pack(pop)
 
+class CPersistantEffectListRegenerated : public CTypedPtrList<CPtrList, CPersistantEffect*> {
+public:
+    CPersistantEffectListRegenerated();
+    void AIUpdate(CGameSprite* pSprite, LONG deltaT);
+
+    /* 001C */ LONG m_nCounter;
+};
+
 class CDerivedStats : public CDerivedStatsTemplate {
 public:
     CDerivedStats();
@@ -570,7 +578,7 @@ public:
     /* 0500 */ CPtrList field_500;
     /* 051C */ CPtrList field_51C;
     /* 0538 */ CPtrList field_538;
-    /* 0554 */ CTypedPtrList<CPtrList, CPersistantEffect*> m_cRegeneratedPersistantEffectList;
+    /* 0554 */ CPersistantEffectListRegenerated m_cRegeneratedPersistantEffectList;
     /* 0574 */ CColorRanges m_appliedColorRanges;
     /* 0590 */ CColorEffects m_appliedColorEffects;
     /* 05AC */ CGameSpriteSpells m_spells;
