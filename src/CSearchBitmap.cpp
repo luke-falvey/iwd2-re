@@ -451,7 +451,95 @@ BYTE CSearchBitmap::SnapshotGetCost(CPoint point, BOOL bBump)
 // 0x548B80
 CPoint CSearchBitmap::GetNearestOpenSquare(CPoint pt, const BYTE* terrainTable, BYTE personalSpace, SHORT nDirection)
 {
-    // TODO: Incomplete.
+    SHORT nTableIndex;
+    BOOLEAN bDirectional = FALSE;
+
+    for (SHORT nRange = 0; nRange < m_GridSquareDimensions.cx && nRange < m_GridSquareDimensions.cy; nRange++) {
+        SHORT nLeft = -nRange;
+        SHORT nRight = nRange;
+        SHORT nTop = -nRange;
+        SHORT nBottom = nRange;
+
+        switch (nDirection) {
+        case 0:
+            nTop = 0;
+            bDirectional = TRUE;
+            break;
+        case 2:
+            nTop = 0;
+            nRight = 0;
+            bDirectional = TRUE;
+            break;
+        case 4:
+            nRight = 0;
+            bDirectional = TRUE;
+            break;
+        case 6:
+            nRight = 0;
+            nBottom = 0;
+            bDirectional = TRUE;
+            break;
+        case 8:
+            nBottom = 0;
+            bDirectional = TRUE;
+            break;
+        case 10:
+            nLeft = 0;
+            nBottom = 0;
+            bDirectional = TRUE;
+            break;
+        case 12:
+            nLeft = 0;
+            bDirectional = TRUE;
+            break;
+        case 14:
+            nLeft = 0;
+            nTop = 0;
+            bDirectional = TRUE;
+            break;
+        }
+
+        INT minX = max(pt.x + nLeft, 0);
+        INT maxX = min(pt.x + nRight, m_GridSquareDimensions.cx);
+        INT minY = max(pt.y + nTop, 0);
+        INT maxY = min(pt.y + nBottom, m_GridSquareDimensions.cy);
+
+        SHORT x;
+        SHORT y;
+
+        // Top row.
+        for (x = static_cast<SHORT>(minX); x <= maxX; x++) {
+            if (GetCost(CPoint(x, minY), terrainTable, personalSpace, nTableIndex, TRUE) != CPathSearch::COST_IMPASSABLE) {
+                return CPoint(x, minY);
+            }
+        }
+
+        // Left and right columns.
+        INT nStep = maxX - minX;
+        if (nStep <= 1) {
+            nStep = 1;
+        }
+
+        for (y = static_cast<SHORT>(minY + 1); y <= maxY - 1; y++) {
+            for (x = static_cast<SHORT>(minX); x <= maxX; x += static_cast<SHORT>(nStep)) {
+                if (GetCost(CPoint(x, y), terrainTable, personalSpace, nTableIndex, TRUE) != CPathSearch::COST_IMPASSABLE) {
+                    return CPoint(x, y);
+                }
+            }
+        }
+
+        // Bottom row.
+        for (x = static_cast<SHORT>(minX); x <= maxX; x++) {
+            if (GetCost(CPoint(x, maxY), terrainTable, personalSpace, nTableIndex, TRUE) != CPathSearch::COST_IMPASSABLE) {
+                return CPoint(x, maxY);
+            }
+        }
+    }
+
+    if (bDirectional) {
+        // Nothing found in the requested direction, search all around.
+        return GetNearestOpenSquare(pt, terrainTable, personalSpace, -1);
+    }
 
     return pt;
 }

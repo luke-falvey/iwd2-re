@@ -141,8 +141,55 @@ public:
 
 #pragma pack(pop)
 
-// NOTE: Party creature entry of "GAMEV2.1" saves. Only the leading fields
-// shared with `CSavedGamePartyCreature` are known.
+// NOTE: Party creature entry of "GAMEV2.0" saves. Layout is known from the
+// conversion to `CSavedGamePartyCreature21` (0x5A79E0).
+class CSavedGamePartyCreature20 {
+public:
+    CSavedGamePartyCreature20()
+    {
+        memset(this, 0, sizeof(*this));
+    }
+
+    /* 0000 */ WORD m_wFlags;
+    /* 0002 */ WORD m_portraitId;
+    /* 0004 */ DWORD m_creatureOffset;
+    /* 0008 */ DWORD m_creatureSize;
+    /* 000C */ RESREF m_creatureResRef;
+    /* 0014 */ DWORD m_creatureFacing;
+    /* 0018 */ RESREF m_areaName;
+    /* 0020 */ WORD m_posX;
+    /* 0022 */ WORD m_posY;
+    /* 0024 */ WORD m_posViewX;
+    /* 0026 */ WORD m_posViewY;
+    /* 0028 */ WORD m_nModalState;
+    /* 002A */ SHORT m_nHappiness;
+    /* 002C */ LONG m_nNumberOfTimesInteractedWith[24];
+    /* 008C */ SHORT m_quickWeaponsItemNum[4];
+    /* 0094 */ SHORT m_quickWeaponsAbilityNum[4];
+    /* 009C */ RESREF m_quickSpellsSpellId[3];
+    /* 00B4 */ SHORT m_quickItemsItemNum[3];
+    /* 00BA */ SHORT m_quickItemsAbilityNum[3];
+    /* 00C0 */ SCRIPTNAME m_name;
+    /* 00E0 */ LONG m_nNumberOfTimesTalkedTo;
+    /* 00E4 */ STRREF m_strStrongestKillName;
+    /* 00E8 */ DWORD m_nStrongestKillXPValue;
+    /* 00EC */ ULONG m_nPreviousTimeWithParty;
+    /* 00F0 */ ULONG m_nJoinPartyTime;
+    /* 00F4 */ BOOL m_bWithParty;
+    /* 00F8 */ DWORD m_nChapterKillsXPValue;
+    /* 00FC */ DWORD m_nChapterKillsNumber;
+    /* 0100 */ DWORD m_nGameKillsXPValue;
+    /* 0104 */ DWORD m_nGameKillsNumber;
+    /* 0108 */ RESREF m_lSpellStatsName[4];
+    /* 0128 */ SHORT m_lSpellStatsCount[4];
+    /* 0130 */ RESREF m_lWeaponStatsName[4];
+    /* 0150 */ SHORT m_lWeaponStatsCount[4];
+    /* 0158 */ RESREF m_secondarySounds;
+    /* 0160 */ unsigned char field_160[32];
+};
+
+// NOTE: Party creature entry of "GAMEV2.1" saves. Layout is known from the
+// conversion to `CSavedGamePartyCreature` (0x5A7BF0).
 class CSavedGamePartyCreature21 {
 public:
     CSavedGamePartyCreature21()
@@ -155,7 +202,40 @@ public:
     /* 0004 */ DWORD m_creatureOffset;
     /* 0008 */ DWORD m_creatureSize;
     /* 000C */ RESREF m_creatureResRef;
-    /* 0014 */ unsigned char field_14[524];
+    /* 0014 */ DWORD m_creatureFacing;
+    /* 0018 */ RESREF m_areaName;
+    /* 0020 */ WORD m_posX;
+    /* 0022 */ WORD m_posY;
+    /* 0024 */ WORD m_posViewX;
+    /* 0026 */ WORD m_posViewY;
+    /* 0028 */ WORD m_nModalState;
+    /* 002A */ SHORT m_nHappiness;
+    /* 002C */ LONG m_nNumberOfTimesInteractedWith[24];
+    /* 008C */ SHORT m_quickWeaponsItemNum[8];
+    /* 009C */ SHORT m_quickWeaponsAbilityNum[8];
+    /* 00AC */ RESREF m_quickSpellsSpellId[6];
+    /* 00DC */ SHORT m_quickItemsItemNum[3];
+    /* 00E2 */ SHORT m_quickItemsAbilityNum[3];
+    /* 00E8 */ RESREF m_quickInnatesSpellId[6];
+    /* 0118 */ RESREF m_quickSongsSpellId[6];
+    /* 0148 */ int field_148[6];
+    /* 0160 */ SCRIPTNAME m_name;
+    /* 0180 */ LONG m_nNumberOfTimesTalkedTo;
+    /* 0184 */ STRREF m_strStrongestKillName;
+    /* 0188 */ DWORD m_nStrongestKillXPValue;
+    /* 018C */ ULONG m_nPreviousTimeWithParty;
+    /* 0190 */ ULONG m_nJoinPartyTime;
+    /* 0194 */ BOOL m_bWithParty;
+    /* 0198 */ DWORD m_nChapterKillsXPValue;
+    /* 019C */ DWORD m_nChapterKillsNumber;
+    /* 01A0 */ DWORD m_nGameKillsXPValue;
+    /* 01A4 */ DWORD m_nGameKillsNumber;
+    /* 01A8 */ RESREF m_lSpellStatsName[4];
+    /* 01C8 */ SHORT m_lSpellStatsCount[4];
+    /* 01D0 */ RESREF m_lWeaponStatsName[4];
+    /* 01F0 */ SHORT m_lWeaponStatsCount[4];
+    /* 01F8 */ RESREF m_secondarySounds;
+    /* 0200 */ unsigned char field_200[32];
 };
 
 // Seen in `CInfGame::Unmarshal`.
