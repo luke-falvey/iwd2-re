@@ -84,6 +84,12 @@ void Icewind586B70::sub_586D60(CGameSprite* sprite1, CGameSprite* sprite2)
     }
 }
 
+// 0x586DC0
+void Icewind586B70::sub_586DC0(CGameSprite* sprite)
+{
+    // TODO: Incomplete.
+}
+
 // 0x586F20
 void Icewind586B70::sub_586F20(CGameSprite* sprite1, CGameSprite* sprite2)
 {
