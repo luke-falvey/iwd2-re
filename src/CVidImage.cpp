@@ -92,6 +92,205 @@ void CVidImage::SetPolyColor(DWORD dwFlags)
     g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
 }
 
+// 0x7B4230
+BOOL CVidImage::GetTint(INT& nRed, INT& nGreen, INT& nBlue, INT& nShiftBack, DWORD dwFlags)
+{
+    INT nMaxValue = 255;
+    BOOL bResult = FALSE;
+    INT nLightPercentage = 0;
+    INT nAddPercentage = 0;
+
+    COLORREF rgbGlobalTintColor = g_pChitin->GetCurrentVideoMode()->GetGlobalTintColor();
+    INT nAUCounter = g_pChitin->nAUCounter + reinterpret_cast<INT>(this);
+
+    if ((dwFlags & 0x20000) != 0) {
+        if ((dwFlags & 0x10000) != 0) {
+            nMaxValue = 255 * 255;
+            nRed = GetRValue(m_paletteAffects.rgbTintColor) * GetRValue(rgbGlobalTintColor);
+            nGreen = GetGValue(m_paletteAffects.rgbTintColor) * GetGValue(rgbGlobalTintColor);
+            nBlue = GetBValue(m_paletteAffects.rgbTintColor) * GetBValue(rgbGlobalTintColor);
+            nShiftBack = 16;
+        } else {
+            nMaxValue = 255;
+            nRed = GetRValue(m_paletteAffects.rgbTintColor);
+            nGreen = GetGValue(m_paletteAffects.rgbTintColor);
+            nBlue = GetBValue(m_paletteAffects.rgbTintColor);
+            nShiftBack = 8;
+        }
+        bResult = TRUE;
+    } else if ((dwFlags & 0x10000) != 0) {
+        nMaxValue = 255;
+        nRed = GetRValue(rgbGlobalTintColor);
+        nGreen = GetGValue(rgbGlobalTintColor);
+        nBlue = GetBValue(rgbGlobalTintColor);
+        nShiftBack = 8;
+        bResult = TRUE;
+    }
+
+    if (m_paletteAffects.pRangeTints[0] != NULL) {
+        if (m_paletteAffects.aRangeTintPeriods[0] == 1) {
+            nRed *= GetRValue(*m_paletteAffects.pRangeTints[0]);
+            nGreen *= GetGValue(*m_paletteAffects.pRangeTints[0]);
+            nBlue *= GetBValue(*m_paletteAffects.pRangeTints[0]);
+        } else {
+            INT nPeriod = m_paletteAffects.aRangeTintPeriods[0];
+            INT nTintPercentage = nAUCounter % (2 * nPeriod);
+            if (nPeriod < nTintPercentage) {
+                nTintPercentage = 2 * nPeriod - nTintPercentage;
+            }
+
+            nRed *= 255 - (255 - GetRValue(*m_paletteAffects.pRangeTints[0])) * nTintPercentage / nPeriod;
+            nGreen *= 255 - (255 - GetGValue(*m_paletteAffects.pRangeTints[0])) * nTintPercentage / nPeriod;
+            nBlue *= 255 - (255 - GetBValue(*m_paletteAffects.pRangeTints[0])) * nTintPercentage / nPeriod;
+        }
+
+        bResult = TRUE;
+        nShiftBack += 8;
+        nMaxValue *= 255;
+    }
+
+    if (m_paletteAffects.pRangeAdds[0] != NULL) {
+        INT nPeriod = m_paletteAffects.aRangeAddPeriods[0];
+        if (nPeriod == 1 || nPeriod == 0) {
+            nAddPercentage = nPeriod;
+        } else {
+            nAddPercentage = nAUCounter % (2 * nPeriod);
+            if (nPeriod < nAddPercentage) {
+                nAddPercentage = 2 * nPeriod - nAddPercentage;
+            }
+        }
+    }
+
+    if (m_paletteAffects.pRangeLights[0] != NULL) {
+        if (m_paletteAffects.aRangeLightPeriods[0] == 1) {
+            nLightPercentage = 1;
+        } else {
+            INT nPeriod = m_paletteAffects.aRangeLightPeriods[0];
+            nLightPercentage = nAUCounter % (2 * nPeriod);
+            if (nPeriod < nLightPercentage) {
+                nLightPercentage = 2 * nPeriod - nLightPercentage;
+            }
+        }
+    }
+
+    if ((CVidPalette::m_SuppressTintMasks[0] & m_paletteAffects.suppressTints) != 0
+        && (nLightPercentage != 0 || nAddPercentage != 0)) {
+        if (nLightPercentage > nAddPercentage) {
+            nRed += (nMaxValue - nRed) * nLightPercentage / m_paletteAffects.aRangeLightPeriods[0];
+            nGreen += (nMaxValue - nGreen) * nLightPercentage / m_paletteAffects.aRangeLightPeriods[0];
+            nBlue += (nMaxValue - nBlue) * nLightPercentage / m_paletteAffects.aRangeLightPeriods[0];
+        } else {
+            nRed += (nMaxValue - nRed) * nAddPercentage / m_paletteAffects.aRangeAddPeriods[0];
+            nGreen += (nMaxValue - nGreen) * nAddPercentage / m_paletteAffects.aRangeAddPeriods[0];
+            nBlue += (nMaxValue - nBlue) * nAddPercentage / m_paletteAffects.aRangeAddPeriods[0];
+        }
+    }
+
+    return bResult;
+}
+
+// 0x7B4600
+BOOL CVidImage::GetAdd(INT& nRed, INT& nGreen, INT& nBlue, INT& nShiftBack, DWORD dwFlags)
+{
+    BYTE nBrightnessCorrection = g_pChitin->GetCurrentVideoMode()->m_nBrightnessCorrection;
+    INT nAUCounter = g_pChitin->nAUCounter;
+    BOOL bResult = FALSE;
+
+    if ((dwFlags & 0x40000) != 0) {
+        if (nBrightnessCorrection != 0) {
+            BYTE nInvBrightness = ~nBrightnessCorrection;
+            nRed = static_cast<BYTE>(~GetRValue(m_paletteAffects.rgbAddColor)) * nInvBrightness;
+            nGreen = static_cast<BYTE>(~GetGValue(m_paletteAffects.rgbAddColor)) * nInvBrightness;
+            nBlue = static_cast<BYTE>(~GetBValue(m_paletteAffects.rgbAddColor)) * nInvBrightness;
+            nShiftBack = 16;
+        } else {
+            nRed = static_cast<BYTE>(~GetRValue(m_paletteAffects.rgbAddColor));
+            nGreen = static_cast<BYTE>(~GetGValue(m_paletteAffects.rgbAddColor));
+            nBlue = static_cast<BYTE>(~GetBValue(m_paletteAffects.rgbAddColor));
+            nShiftBack = 8;
+        }
+        bResult = TRUE;
+    } else if (nBrightnessCorrection != 0) {
+        BYTE nInvBrightness = ~nBrightnessCorrection;
+        nRed = nInvBrightness;
+        nGreen = nInvBrightness;
+        nBlue = nInvBrightness;
+        nShiftBack = 8;
+        bResult = TRUE;
+    }
+
+    if (m_paletteAffects.pRangeAdds[0] != NULL) {
+        INT nPeriod = m_paletteAffects.aRangeAddPeriods[0];
+        if (nPeriod == 1 || nPeriod == 0) {
+            nRed *= static_cast<BYTE>(~GetRValue(*m_paletteAffects.pRangeAdds[0]));
+            nGreen *= static_cast<BYTE>(~GetGValue(*m_paletteAffects.pRangeAdds[0]));
+            nBlue *= static_cast<BYTE>(~GetBValue(*m_paletteAffects.pRangeAdds[0]));
+        } else {
+            INT nAddPercentage = (nAUCounter + reinterpret_cast<INT>(this)) % (2 * nPeriod);
+            if (nPeriod < nAddPercentage) {
+                nAddPercentage = 2 * nPeriod - nAddPercentage;
+            }
+
+            nRed *= static_cast<BYTE>(~static_cast<BYTE>(GetRValue(*m_paletteAffects.pRangeAdds[0]) * nAddPercentage / nPeriod));
+            nGreen *= static_cast<BYTE>(~static_cast<BYTE>(GetGValue(*m_paletteAffects.pRangeAdds[0]) * nAddPercentage / nPeriod));
+            nBlue *= static_cast<BYTE>(~static_cast<BYTE>(GetBValue(*m_paletteAffects.pRangeAdds[0]) * nAddPercentage / nPeriod));
+        }
+
+        nShiftBack += 8;
+        return TRUE;
+    }
+
+    return bResult;
+}
+
+// 0x7B4800
+BOOL CVidImage::GetLight(INT& nRed, INT& nGreen, INT& nBlue, DWORD dwFlags)
+{
+    BYTE nGammaCorrection = g_pChitin->GetCurrentVideoMode()->m_nGammaCorrection;
+    INT nAUCounter = g_pChitin->nAUCounter;
+    BOOL bResult = FALSE;
+
+    if ((dwFlags & 0x200000) != 0) {
+        if (nGammaCorrection != 0) {
+            nRed += GetRValue(m_paletteAffects.rgbLightColor) + nGammaCorrection;
+            nGreen += GetGValue(m_paletteAffects.rgbLightColor) + nGammaCorrection;
+            nBlue += GetBValue(m_paletteAffects.rgbLightColor) + nGammaCorrection;
+        } else {
+            nRed += GetRValue(m_paletteAffects.rgbLightColor);
+            nGreen += GetGValue(m_paletteAffects.rgbLightColor);
+            nBlue += GetBValue(m_paletteAffects.rgbLightColor);
+        }
+        bResult = TRUE;
+    } else if (nGammaCorrection != 0) {
+        nRed += nGammaCorrection;
+        nGreen += nGammaCorrection;
+        nBlue += nGammaCorrection;
+        bResult = TRUE;
+    }
+
+    if (m_paletteAffects.pRangeLights[0] == NULL) {
+        return bResult;
+    }
+
+    if (m_paletteAffects.aRangeLightPeriods[0] != 1) {
+        INT nPeriod = m_paletteAffects.aRangeLightPeriods[0];
+        INT nLightPercentage = (nAUCounter + reinterpret_cast<INT>(this)) % (2 * nPeriod);
+        if (nPeriod < nLightPercentage) {
+            nLightPercentage = 2 * nPeriod - nLightPercentage;
+        }
+
+        nRed += GetRValue(*m_paletteAffects.pRangeLights[0]) * nLightPercentage / nPeriod;
+        nGreen += GetGValue(*m_paletteAffects.pRangeLights[0]) * nLightPercentage / nPeriod;
+        nBlue += GetBValue(*m_paletteAffects.pRangeLights[0]) * nLightPercentage / nPeriod;
+        return TRUE;
+    }
+
+    nRed += GetRValue(*m_paletteAffects.pRangeLights[0]);
+    nGreen += GetGValue(*m_paletteAffects.pRangeLights[0]);
+    nBlue += GetBValue(*m_paletteAffects.pRangeLights[0]);
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x7B16E0
@@ -391,36 +590,212 @@ BOOL CVidTile::Render(LPDIRECTDRAWSURFACE pSurface, INT x, INT y, CResTile* pRes
     return TRUE;
 }
 
-// 0x7B22E0
+/// 0x7B22E0
 BOOL CVidTile::BltTile8To16(WORD* pSurface, LONG lPitch, BYTE* pData, const CSize& blitSize, LONG nDataJump, DWORD dwFlags)
 {
-    // TODO: Incomplete.
+    INT nDataIndex = 0;
+    DWORD dwHighColor = g_pChitin->GetCurrentVideoMode()->field_24 << 16;
+    DWORD dwLowColor = g_pChitin->GetCurrentVideoMode()->field_24;
+    LONG nSurfaceJump = (lPitch >> 1) - blitSize.cx;
+    LONG nPairs = blitSize.cx >> 1;
 
-    return FALSE;
+    // NOTE: Pixels are written in pairs.
+    DWORD* pDest = reinterpret_cast<DWORD*>(pSurface);
+
+    if ((dwFlags & 0x8) != 0) {
+        for (LONG y = 0; y < blitSize.cy; y++) {
+            if ((y & 1) == 0) {
+                for (LONG x = 0; x < nPairs; x++) {
+                    *pDest++ = (rgbTempPal[pData[nDataIndex]] & 0xFFFF) | dwHighColor;
+                    nDataIndex += 2;
+                }
+            } else {
+                for (LONG x = 0; x < nPairs; x++) {
+                    *pDest++ = (rgbTempPal[pData[nDataIndex + 1]] << 16) | dwLowColor;
+                    nDataIndex += 2;
+                }
+            }
+
+            pDest = reinterpret_cast<DWORD*>(reinterpret_cast<WORD*>(pDest) + nSurfaceJump);
+            nDataIndex += nDataJump;
+        }
+    } else {
+        for (LONG y = 0; y < blitSize.cy; y++) {
+            for (LONG x = 0; x < nPairs; x++) {
+                *pDest++ = (rgbTempPal[pData[nDataIndex + 1]] << 16) | (rgbTempPal[pData[nDataIndex]] & 0xFFFF);
+                nDataIndex += 2;
+            }
+
+            nDataIndex += nDataJump;
+            pDest = reinterpret_cast<DWORD*>(reinterpret_cast<WORD*>(pDest) + nSurfaceJump);
+        }
+    }
+
+    return TRUE;
 }
 
 // 0x7B2440
 BOOL CVidTile::BltStencilTile8To16(WORD* pSurface, LONG lPitch, BYTE* pData, BYTE* pStencilData, const CSize& blitSize, LONG nDataJump, DWORD dwFlags)
 {
-    // TODO: Incomplete.
+    INT nDataIndex = 0;
+    DWORD dwHighColor = g_pChitin->GetCurrentVideoMode()->field_24 << 16;
+    DWORD dwLowColor = g_pChitin->GetCurrentVideoMode()->field_24;
 
-    return FALSE;
+    if ((blitSize.cx & 1) != 0) {
+        return FALSE;
+    }
+
+    LONG nSurfaceJump = (lPitch >> 1) - blitSize.cx;
+    LONG nPairs = blitSize.cx >> 1;
+
+    // NOTE: Pixels are written in pairs.
+    DWORD* pDest = reinterpret_cast<DWORD*>(pSurface);
+
+    for (LONG y = 0; y < blitSize.cy; y++) {
+        if ((y & 1) == 0) {
+            for (LONG x = 0; x < nPairs; x++) {
+                if (pStencilData[nDataIndex + 1] == CVidPalette::CLEAR_ENTRY) {
+                    *pDest = (rgbTempPal[pData[nDataIndex]] & 0xFFFF) | dwHighColor;
+                } else {
+                    *pDest = (rgbTempPal[pData[nDataIndex + 1]] << 16) | (rgbTempPal[pData[nDataIndex]] & 0xFFFF);
+                }
+                pDest++;
+                nDataIndex += 2;
+            }
+        } else {
+            for (LONG x = 0; x < nPairs; x++) {
+                if (pStencilData[nDataIndex] == CVidPalette::CLEAR_ENTRY) {
+                    *pDest = (rgbTempPal[pData[nDataIndex + 1]] << 16) | dwLowColor;
+                } else {
+                    *pDest = (rgbTempPal[pData[nDataIndex + 1]] << 16) | (rgbTempPal[pData[nDataIndex]] & 0xFFFF);
+                }
+                pDest++;
+                nDataIndex += 2;
+            }
+        }
+
+        nDataIndex += nDataJump;
+        pDest = reinterpret_cast<DWORD*>(reinterpret_cast<WORD*>(pDest) + nSurfaceJump);
+    }
+
+    return TRUE;
 }
 
 // 0x7CDD00
 BOOL CVidTile::BltTile8To24(DWORD* pSurface, LONG lPitch, BYTE* pData, const CSize& blitSize, LONG nDataJump, DWORD dwFlags)
 {
-    // TODO: Incomplete.
+    INT nDataIndex = 0;
+    DWORD color = g_pChitin->GetCurrentVideoMode()->field_24 & 0xFFFFFF;
 
-    return FALSE;
+    if ((blitSize.cx & 3) != 0) {
+        return FALSE;
+    }
+
+    // NOTE: Four 24-bit pixels are written as three DWORDs.
+    LONG nSurfaceJump = (lPitch - 3 * blitSize.cx) / 4;
+    LONG nQuads = blitSize.cx >> 2;
+
+    if ((dwFlags & 0x8) != 0) {
+        for (LONG y = 0; y < blitSize.cy; y++) {
+            if ((y & 1) == 0) {
+                for (LONG x = 0; x < nQuads; x++) {
+                    pSurface[0] = (rgbTempPal[pData[nDataIndex]] & 0xFFFFFF) | (color << 24);
+                    pSurface[1] = (rgbTempPal[pData[nDataIndex + 2]] << 16) | ((color >> 8) & 0xFFFF);
+                    pSurface[2] = ((rgbTempPal[pData[nDataIndex + 2]] >> 16) & 0xFF) | (color << 8);
+                    pSurface += 3;
+                    nDataIndex += 4;
+                }
+            } else {
+                for (LONG x = 0; x < nQuads; x++) {
+                    pSurface[0] = (rgbTempPal[pData[nDataIndex + 1]] << 24) | color;
+                    pSurface[1] = ((rgbTempPal[pData[nDataIndex + 1]] >> 8) & 0xFFFF) | (color << 16);
+                    pSurface[2] = (rgbTempPal[pData[nDataIndex + 3]] << 8) | ((color >> 16) & 0xFF);
+                    pSurface += 3;
+                    nDataIndex += 4;
+                }
+            }
+
+            // FIXME: The original never applies `nSurfaceJump` and `nDataJump`
+            // between dithered rows.
+        }
+    } else {
+        for (LONG y = 0; y < blitSize.cy; y++) {
+            for (LONG x = 0; x < nQuads; x++) {
+                pSurface[0] = (rgbTempPal[pData[nDataIndex]] & 0xFFFFFF) | (rgbTempPal[pData[nDataIndex + 1]] << 24);
+                pSurface[1] = ((rgbTempPal[pData[nDataIndex + 1]] >> 8) & 0xFFFF) | (rgbTempPal[pData[nDataIndex + 2]] << 16);
+                pSurface[2] = ((rgbTempPal[pData[nDataIndex + 2]] >> 16) & 0xFF) | (rgbTempPal[pData[nDataIndex + 3]] << 8);
+                pSurface += 3;
+                nDataIndex += 4;
+            }
+
+            nDataIndex += nDataJump;
+            pSurface += nSurfaceJump;
+        }
+    }
+
+    return TRUE;
 }
 
 // 0x7CDF90
 BOOL CVidTile::BltStencilTile8To24(DWORD* pSurface, LONG lPitch, BYTE* pData, BYTE* pStencilData, const CSize& blitSize, LONG nDataJump, DWORD dwFlags)
 {
-    // TODO: Incomplete.
+    INT nDataIndex = 0;
+    DWORD color = g_pChitin->GetCurrentVideoMode()->field_24 & 0xFFFFFF;
 
-    return FALSE;
+    if ((blitSize.cx & 3) != 0) {
+        return FALSE;
+    }
+
+    // NOTE: Four 24-bit pixels are written as three DWORDs.
+    LONG nSurfaceJump = (lPitch - 3 * blitSize.cx) / 4;
+    LONG nQuads = blitSize.cx >> 2;
+
+    for (LONG y = 0; y < blitSize.cy; y++) {
+        if ((y & 1) == 0) {
+            for (LONG x = 0; x < nQuads; x++) {
+                if (pStencilData[nDataIndex + 1] == CVidPalette::CLEAR_ENTRY) {
+                    pSurface[0] = (rgbTempPal[pData[nDataIndex]] & 0xFFFFFF) | (color << 24);
+                    pSurface[1] = (rgbTempPal[pData[nDataIndex + 2]] << 16) | ((color >> 8) & 0xFFFF);
+                } else {
+                    pSurface[0] = (rgbTempPal[pData[nDataIndex]] & 0xFFFFFF) | (rgbTempPal[pData[nDataIndex + 1]] << 24);
+                    pSurface[1] = ((rgbTempPal[pData[nDataIndex + 1]] >> 8) & 0xFFFF) | (rgbTempPal[pData[nDataIndex + 2]] << 16);
+                }
+
+                if (pStencilData[nDataIndex + 3] == CVidPalette::CLEAR_ENTRY) {
+                    pSurface[2] = ((rgbTempPal[pData[nDataIndex + 2]] >> 16) & 0xFF) | (color << 8);
+                } else {
+                    pSurface[2] = (rgbTempPal[pData[nDataIndex + 3]] << 8) | ((rgbTempPal[pData[nDataIndex + 2]] >> 16) & 0xFF);
+                }
+
+                pSurface += 3;
+                nDataIndex += 4;
+            }
+        } else {
+            for (LONG x = 0; x < nQuads; x++) {
+                if (pStencilData[nDataIndex] == CVidPalette::CLEAR_ENTRY) {
+                    pSurface[0] = (rgbTempPal[pData[nDataIndex + 1]] << 24) | color;
+                } else {
+                    pSurface[0] = (rgbTempPal[pData[nDataIndex]] & 0xFFFFFF) | (rgbTempPal[pData[nDataIndex + 1]] << 24);
+                }
+
+                if (pStencilData[nDataIndex + 2] == CVidPalette::CLEAR_ENTRY) {
+                    pSurface[1] = ((rgbTempPal[pData[nDataIndex + 1]] >> 8) & 0xFFFF) | (color << 16);
+                    pSurface[2] = (rgbTempPal[pData[nDataIndex + 3]] << 8) | ((color >> 16) & 0xFF);
+                } else {
+                    pSurface[1] = ((rgbTempPal[pData[nDataIndex + 1]] >> 8) & 0xFFFF) | (rgbTempPal[pData[nDataIndex + 2]] << 16);
+                    pSurface[2] = (rgbTempPal[pData[nDataIndex + 3]] << 8) | ((rgbTempPal[pData[nDataIndex + 2]] >> 16) & 0xFF);
+                }
+
+                pSurface += 3;
+                nDataIndex += 4;
+            }
+        }
+
+        nDataIndex += nDataJump;
+        pSurface += nSurfaceJump;
+    }
+
+    return TRUE;
 }
 
 // 0x7CE830
@@ -462,8 +837,10 @@ BOOL CVidTile::BltTile8To32(DWORD* pSurface, LONG lPitch, BYTE* pData, const CSi
 
                 x++;
                 if (x == blitSize.cx) {
-                    pSurface[1] = rgbTempPal[*pData];
+                    break;
                 }
+
+                pSurface[1] = rgbTempPal[pData[1]];
 
                 pData += 2;
                 pSurface += 2;
@@ -527,7 +904,7 @@ BOOL CVidTile::BltStencilTile8To32(DWORD* pSurface, LONG lPitch, BYTE* pData, BY
         }
 
         pSurface = reinterpret_cast<DWORD*>(reinterpret_cast<BYTE*>(pSurface) + nSurfaceJump);
-        pData += nDataJump;
+        nDataIndex += nDataJump;
     }
 
     return TRUE;

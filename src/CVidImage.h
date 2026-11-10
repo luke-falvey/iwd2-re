@@ -25,6 +25,10 @@ public:
 
     void SetPolyColor(DWORD dwFlags);
 
+    BOOL GetTint(INT& nRed, INT& nGreen, INT& nBlue, INT& nShiftBack, DWORD dwFlags);
+    BOOL GetAdd(INT& nRed, INT& nGreen, INT& nBlue, INT& nShiftBack, DWORD dwFlags);
+    BOOL GetLight(INT& nRed, INT& nGreen, INT& nBlue, DWORD dwFlags);
+
     /* 0000 */ INT m_nFxSurface;
     /* 0004 */ CVidPalette m_cPalette;
     /* 0028 */ CVIDIMG_PALETTEAFFECT m_paletteAffects;

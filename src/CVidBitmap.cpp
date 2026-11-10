@@ -167,7 +167,7 @@ void CVidBitmap::SetRes(CResBitmap* pResBmp)
     pRes = pResBmp;
 }
 
-// 0x7B3190
+/// 0x7B3190
 BOOL CVidBitmap::RenderDirect(INT nSurface, INT x, INT y, const CRect& rClip, DWORD dwFlags, BOOLEAN bDemanded)
 {
     if (g_pChitin->cVideo.Is3dAccelerated()) {
@@ -189,8 +189,10 @@ BOOL CVidBitmap::RenderDirect(INT nSurface, INT x, INT y, const CRect& rClip, DW
     BYTE* pData = pRes->GetImageData(m_bDoubleSize);
     m_nBitCount = pRes->GetBitDepth();
 
-    CSize bmpSize;
-    pRes->GetImageDimensions(bmpSize, m_bDoubleSize);
+    CSize imageSize;
+    pRes->GetImageDimensions(imageSize, m_bDoubleSize);
+
+    CSize bmpSize = imageSize;
 
     INT nBytesPerPixel;
     switch (m_nBitCount) {
@@ -207,38 +209,38 @@ BOOL CVidBitmap::RenderDirect(INT nSurface, INT x, INT y, const CRect& rClip, DW
         return FALSE;
     }
 
-    LONG nDataJump = (-((bmpSize.cx * nBytesPerPixel) & 3)) & 3;
+    LONG nDataJump = (-((imageSize.cx * nBytesPerPixel) & 3)) & 3;
 
-    CRect rSurface(CPoint(x, y), bmpSize);
+    CRect rSurface(x, y, x + imageSize.cx, y + imageSize.cy);
 
-    if (bmpSize.cy > rClip.Height()) {
-        INT nSkipBottom = y + bmpSize.cy - rClip.bottom;
+    if (imageSize.cy > rClip.Height()) {
+        SHORT nSkipBottom = static_cast<SHORT>(imageSize.cy - rClip.bottom + y);
         if (nSkipBottom > 0) {
-            pData += nSkipBottom * (nDataJump + bmpSize.cx * nBytesPerPixel);
+            pData += nSkipBottom * (nDataJump + imageSize.cx * nBytesPerPixel);
             bmpSize.cy -= nSkipBottom;
             rSurface.bottom -= nSkipBottom;
         }
 
-        INT nSkipTop = rClip.top - y;
+        SHORT nSkipTop = static_cast<SHORT>(rClip.top - y);
         if (nSkipTop > 0) {
             bmpSize.cy -= nSkipTop;
             rSurface.top += nSkipTop;
         }
     }
 
-    if (bmpSize.cx > rClip.Width()) {
-        INT nSkipRight = x + bmpSize.cx - rClip.right;
+    if (imageSize.cx > rClip.Width()) {
+        SHORT nSkipRight = static_cast<SHORT>(imageSize.cx - rClip.right + x);
         if (nSkipRight > 0) {
-            nDataJump += nBytesPerPixel * nSkipRight;
+            nDataJump += nSkipRight * nBytesPerPixel;
             bmpSize.cx -= nSkipRight;
             rSurface.right -= nSkipRight;
         }
 
-        INT nSkipLeft = rClip.left - x;
+        SHORT nSkipLeft = static_cast<SHORT>(rClip.left - x);
         if (nSkipLeft > 0) {
-            nDataJump += nBytesPerPixel * nSkipLeft;
-            pData += nBytesPerPixel * nSkipLeft;
             bmpSize.cx -= nSkipLeft;
+            nDataJump += nSkipLeft * nBytesPerPixel;
+            pData += nSkipLeft * nBytesPerPixel;
             rSurface.left += nSkipLeft;
         }
     }
@@ -246,99 +248,126 @@ BOOL CVidBitmap::RenderDirect(INT nSurface, INT x, INT y, const CRect& rClip, DW
     DDSURFACEDESC ddsd;
     ddsd.dwSize = sizeof(ddsd);
 
-    BOOL bResult = FALSE;
+    if (!g_pChitin->GetCurrentVideoMode()->LockSurface(nSurface, &ddsd, rSurface)) {
+        if (!bDemanded) {
+            pRes->Release();
+        }
+        return FALSE;
+    }
 
-    if (g_pChitin->GetCurrentVideoMode()->LockSurface(nSurface, &ddsd, rSurface)) {
-        BYTE* pSurface = reinterpret_cast<BYTE*>(ddsd.lpSurface) + 4 * (bmpSize.cy - 1) * (ddsd.lPitch / 4);
-        switch (m_nBitCount) {
-        case 8:
-            switch (g_pChitin->cVideo.m_nBpp) {
-            case 16:
-                // NOTE: Uninline.
-                bResult = BltBmp8To16(reinterpret_cast<WORD*>(pSurface),
+    // NOTE: Bitmaps are stored bottom-up, so blitting starts at the last row.
+    BYTE* pSurface = reinterpret_cast<BYTE*>(ddsd.lpSurface) + 4 * (bmpSize.cy - 1) * (ddsd.lPitch >> 2);
+
+    BOOL bResult;
+    switch (m_nBitCount) {
+    case 8:
+        switch (g_pChitin->cVideo.m_nBpp) {
+        case 16:
+            // NOTE: Uninline.
+            bResult = BltBmp8To16(reinterpret_cast<WORD*>(pSurface),
+                ddsd.lPitch,
+                pData,
+                bmpSize,
+                nDataJump,
+                dwFlags);
+            break;
+        case 24:
+            bResult = BltBmp8To24(pSurface,
+                ddsd.lPitch,
+                pData,
+                bmpSize,
+                nDataJump,
+                dwFlags);
+            break;
+        case 32:
+            bResult = BltBmp8To32(reinterpret_cast<DWORD*>(pSurface),
+                ddsd.lPitch,
+                pData,
+                bmpSize,
+                nDataJump,
+                dwFlags);
+            break;
+        default:
+            g_pChitin->GetCurrentVideoMode()->UnLockSurface(nSurface, ddsd.lpSurface);
+            if (!bDemanded) {
+                pRes->Release();
+            }
+            return FALSE;
+        }
+        break;
+    case 24:
+        switch (g_pChitin->cVideo.m_nBpp) {
+        case 16:
+            if ((dwFlags & 0xFFFF0000) == 0
+                && g_pChitin->GetCurrentVideoMode()->ApplyBrightnessContrast(RGB(128, 128, 128)) == RGB(128, 128, 128)) {
+                bResult = BltBmp24To16(reinterpret_cast<WORD*>(pSurface),
                     ddsd.lPitch,
                     pData,
                     bmpSize,
                     nDataJump,
                     dwFlags);
-                break;
-            case 24:
-                bResult = BltBmp8To24(reinterpret_cast<BYTE*>(pSurface),
+            } else {
+                bResult = BltBmp24To16Tint(reinterpret_cast<WORD*>(pSurface),
                     ddsd.lPitch,
                     pData,
                     bmpSize,
                     nDataJump,
                     dwFlags);
-                break;
-            case 32:
-                bResult = BltBmp8To32(reinterpret_cast<DWORD*>(pSurface),
-                    ddsd.lPitch,
-                    pData,
-                    bmpSize,
-                    nDataJump,
-                    dwFlags);
-                break;
             }
             break;
         case 24:
-            switch (g_pChitin->cVideo.m_nBpp) {
-            case 16:
-                if (g_pChitin->GetCurrentVideoMode()->ApplyBrightnessContrast(RGB(128, 128, 128)) != RGB(128, 128, 128)) {
-                    bResult = BltBmp24To16Tint(reinterpret_cast<WORD*>(pSurface),
-                        ddsd.lPitch,
-                        pData,
-                        bmpSize,
-                        nDataJump,
-                        dwFlags);
-                } else {
-                    bResult = BltBmp24To16(reinterpret_cast<WORD*>(pSurface),
-                        ddsd.lPitch,
-                        pData,
-                        bmpSize,
-                        nDataJump,
-                        dwFlags);
-                }
-                break;
-            case 24:
-                if (g_pChitin->GetCurrentVideoMode()->ApplyBrightnessContrast(RGB(128, 128, 128)) != RGB(128, 128, 128)) {
-                    bResult = BltBmp24To24Tint(reinterpret_cast<BYTE*>(pSurface),
-                        ddsd.lPitch,
-                        pData,
-                        bmpSize,
-                        nDataJump,
-                        dwFlags);
-                } else {
-                    bResult = BltBmp24To24(reinterpret_cast<BYTE*>(pSurface),
-                        ddsd.lPitch,
-                        pData,
-                        bmpSize,
-                        nDataJump,
-                        dwFlags);
-                }
-                break;
-            case 32:
-                if (g_pChitin->GetCurrentVideoMode()->ApplyBrightnessContrast(RGB(128, 128, 128)) != RGB(128, 128, 128)) {
-                    bResult = BltBmp24To32Tint(reinterpret_cast<DWORD*>(pSurface),
-                        ddsd.lPitch,
-                        pData,
-                        bmpSize,
-                        nDataJump,
-                        dwFlags);
-                } else {
-                    bResult = BltBmp24To32(reinterpret_cast<DWORD*>(pSurface),
-                        ddsd.lPitch,
-                        pData,
-                        bmpSize,
-                        nDataJump,
-                        dwFlags);
-                }
-                break;
+            if ((dwFlags & 0xFFFF0000) == 0
+                && g_pChitin->GetCurrentVideoMode()->ApplyBrightnessContrast(RGB(128, 128, 128)) == RGB(128, 128, 128)) {
+                bResult = BltBmp24To24(pSurface,
+                    ddsd.lPitch,
+                    pData,
+                    bmpSize,
+                    nDataJump,
+                    dwFlags);
+            } else {
+                bResult = BltBmp24To24Tint(pSurface,
+                    ddsd.lPitch,
+                    pData,
+                    bmpSize,
+                    nDataJump,
+                    dwFlags);
             }
             break;
+        case 32:
+            if ((dwFlags & 0xFFFF0000) == 0
+                && g_pChitin->GetCurrentVideoMode()->ApplyBrightnessContrast(RGB(128, 128, 128)) == RGB(128, 128, 128)) {
+                bResult = BltBmp24To32(reinterpret_cast<DWORD*>(pSurface),
+                    ddsd.lPitch,
+                    pData,
+                    bmpSize,
+                    nDataJump,
+                    dwFlags);
+            } else {
+                bResult = BltBmp24To32Tint(reinterpret_cast<DWORD*>(pSurface),
+                    ddsd.lPitch,
+                    pData,
+                    bmpSize,
+                    nDataJump,
+                    dwFlags);
+            }
+            break;
+        default:
+            g_pChitin->GetCurrentVideoMode()->UnLockSurface(nSurface, ddsd.lpSurface);
+            if (!bDemanded) {
+                pRes->Release();
+            }
+            return FALSE;
         }
-
+        break;
+    default:
         g_pChitin->GetCurrentVideoMode()->UnLockSurface(nSurface, ddsd.lpSurface);
+        if (!bDemanded) {
+            pRes->Release();
+        }
+        return FALSE;
     }
+
+    g_pChitin->GetCurrentVideoMode()->UnLockSurface(nSurface, ddsd.lpSurface);
 
     if (!bDemanded) {
         pRes->Release();
@@ -347,52 +376,543 @@ BOOL CVidBitmap::RenderDirect(INT nSurface, INT x, INT y, const CRect& rClip, DW
     return bResult;
 }
 
-// NOTE: Inlined.
+// NOTE: Inlined in `CVidBitmap::RenderDirect`. The original is inline
+// assembly which writes two pixels at once whenever it can.
 BOOL CVidBitmap::BltBmp8To16(WORD* pSurface, LONG lPitch, BYTE* pData, const CSize& bmpSize, LONG nDataJump, DWORD dwFlags)
 {
-    // TODO: Incomplete.
+    m_cPalette.SetPalette(pRes->GetColorTable(), pRes->GetColorCount(), CVidPalette::TYPE_RESOURCE);
+    m_cPalette.Realize(rgbTempPal, 16, dwFlags | 0x800000, &m_paletteAffects, 255);
 
-    return FALSE;
+    BYTE* pDest = reinterpret_cast<BYTE*>(pSurface);
+    LONG nSurfaceJump = lPitch + 2 * bmpSize.cx;
+
+    if ((bmpSize.cx & 0xFFFE) == 0) {
+        for (LONG y = 0; y < bmpSize.cy; y++) {
+            *reinterpret_cast<WORD*>(pDest) = static_cast<WORD>(rgbTempPal[*pData++]);
+            pDest += 2;
+
+            pDest -= nSurfaceJump;
+            pData += nDataJump;
+        }
+    } else if ((bmpSize.cx & 1) == 0) {
+        // FIXME: The original halves only the low byte of the width
+        // (`shr byte ptr`), so even widths of 256 or more get too many pairs.
+        LONG nPairs = (bmpSize.cx & ~0xFF) | ((bmpSize.cx & 0xFF) >> 1);
+        for (LONG y = 0; y < bmpSize.cy; y++) {
+            for (LONG x = 0; x < nPairs; x++) {
+                *reinterpret_cast<DWORD*>(pDest) = (static_cast<WORD>(rgbTempPal[pData[1]]) << 16) | static_cast<WORD>(rgbTempPal[pData[0]]);
+                pData += 2;
+                pDest += 4;
+            }
+
+            pDest -= nSurfaceJump;
+            pData += nDataJump;
+        }
+    } else {
+        LONG nPairs = bmpSize.cx >> 1;
+        for (LONG y = 0; y < bmpSize.cy; y++) {
+            *reinterpret_cast<WORD*>(pDest) = static_cast<WORD>(rgbTempPal[*pData++]);
+            pDest += 2;
+
+            for (LONG x = 0; x < nPairs; x++) {
+                *reinterpret_cast<DWORD*>(pDest) = (static_cast<WORD>(rgbTempPal[pData[1]]) << 16) | static_cast<WORD>(rgbTempPal[pData[0]]);
+                pData += 2;
+                pDest += 4;
+            }
+
+            pDest -= nSurfaceJump;
+            pData += nDataJump;
+        }
+    }
+
+    return TRUE;
 }
 
+// NOTE: The non-transparent path of the original is inline assembly which
+// writes two pixels at once whenever it can.
+//
 // 0x7B37A0
 BOOL CVidBitmap::BltBmp24To16(WORD* pSurface, LONG lPitch, BYTE* pData, const CSize& bmpSize, LONG nDataJump, DWORD dwFlags)
 {
-    // TODO: Incomplete.
+    CVidMode* pVidMode = g_pChitin->GetCurrentVideoMode();
 
-    return FALSE;
+    BYTE nRDown = static_cast<BYTE>(pVidMode->field_C2);
+    BYTE nGDown = static_cast<BYTE>(pVidMode->field_C6);
+    BYTE nBDown = static_cast<BYTE>(pVidMode->field_CA);
+    BYTE nRShift = static_cast<BYTE>(pVidMode->m_dwRBitShift);
+    BYTE nGShift = static_cast<BYTE>(pVidMode->m_dwGBitShift);
+    BYTE nBShift = static_cast<BYTE>(pVidMode->m_dwBBitShift);
+
+    if ((dwFlags & 0x1) != 0) {
+        DWORD dwRBitMask = g_pChitin->GetCurrentVideoMode()->m_dwRBitMask;
+        DWORD dwGBitMask = g_pChitin->GetCurrentVideoMode()->m_dwGBitMask;
+        DWORD dwBBitMask = g_pChitin->GetCurrentVideoMode()->m_dwBBitMask;
+        LONG nSurfaceJump = (lPitch >> 1) + bmpSize.cx;
+        INT nDataIndex = 0;
+
+        for (LONG y = 0; y < bmpSize.cy; y++) {
+            for (LONG x = 0; x < bmpSize.cx; x++) {
+                BYTE r = pData[nDataIndex + 2];
+                BYTE g = pData[nDataIndex + 1];
+                BYTE b = pData[nDataIndex];
+
+                if (r != 0 || g != 255 || b != 0) {
+                    if ((dwFlags & 0x4) != 0 && r == 0 && g == 0 && b == 0) {
+                        WORD nColor = *pSurface;
+                        r = static_cast<BYTE>(static_cast<INT>(((dwRBitMask & 0xFFFF) & nColor) >> nRShift << nRDown) >> 1);
+                        g = static_cast<BYTE>(static_cast<INT>(((dwGBitMask & 0xFFFF) & nColor) >> nGShift << nGDown) >> 1);
+                        b = static_cast<BYTE>(static_cast<INT>(((dwBBitMask & 0xFFFF) & nColor) >> nBShift << nBDown) >> 1);
+                    }
+
+                    *pSurface = static_cast<WORD>(((b >> nBDown) << nBShift)
+                        | ((g >> nGDown) << nGShift)
+                        | ((r >> nRDown) << nRShift));
+                }
+
+                pSurface++;
+                nDataIndex += 3;
+            }
+
+            pSurface -= nSurfaceJump;
+            nDataIndex += nDataJump;
+        }
+    } else {
+        BYTE* pDest = reinterpret_cast<BYTE*>(pSurface);
+        LONG nSurfaceJump = lPitch + 2 * bmpSize.cx;
+
+        for (LONG y = 0; y < bmpSize.cy; y++) {
+            for (LONG x = 0; x < bmpSize.cx; x++) {
+                *reinterpret_cast<WORD*>(pDest) = static_cast<WORD>(((pData[2] >> nRDown) << nRShift)
+                    | ((pData[1] >> nGDown) << nGShift)
+                    | ((pData[0] >> nBDown) << nBShift));
+                pData += 3;
+                pDest += 2;
+            }
+
+            pDest -= nSurfaceJump;
+            pData += nDataJump;
+        }
+    }
+
+    return TRUE;
 }
 
-// 0x0x7B3B70
+// NOTE: Locals shared by `BltBmp24To16Tint`, `BltBmp24To24Tint` and
+// `BltBmp24To32Tint`.
+typedef struct {
+    BOOL bTint;
+    INT nTintRed;
+    INT nTintGreen;
+    INT nTintBlue;
+    INT nTintShift;
+    BOOL bAdd;
+    INT nAddRed;
+    INT nAddGreen;
+    INT nAddBlue;
+    INT nAddShift;
+    BOOL bLight;
+    INT nLightRed;
+    INT nLightGreen;
+    INT nLightBlue;
+} CVidBitmapEffects;
+
+// NOTE: Per-pixel effects of the inline assembly in the non-transparent paths
+// of `BltBmp24To16Tint` (a local subroutine at 0x7B3F66), `BltBmp24To24Tint`
+// and `BltBmp24To32Tint`. Channels are 32-bit registers whose upper bits are
+// not cleared between steps.
+static void BltBmpApplyEffects(DWORD& r, DWORD& g, DWORD& b, DWORD dwFlags, const CVidBitmapEffects& effects)
+{
+    if ((dwFlags & 0x80000) != 0) {
+        r = (r + g + b) >> 2;
+        g = r;
+        b = r;
+    }
+
+    if (effects.bTint) {
+        r = r * effects.nTintRed >> effects.nTintShift;
+        g = g * effects.nTintGreen >> effects.nTintShift;
+        b = b * effects.nTintBlue >> effects.nTintShift;
+    }
+
+    if (effects.bAdd) {
+        r = ((r ^ 0xFF) * effects.nAddRed >> effects.nAddShift) ^ 0xFF;
+        g = ((g ^ 0xFF) * effects.nAddGreen >> effects.nAddShift) ^ 0xFF;
+        b = ((b ^ 0xFF) * effects.nAddBlue >> effects.nAddShift) ^ 0xFF;
+    }
+
+    if (effects.bLight) {
+        r = r * effects.nLightRed >> 3;
+        g = g * effects.nLightGreen >> 3;
+        b = b * effects.nLightBlue >> 3;
+
+        // NOTE: Only the low byte is saturated.
+        if ((r & 0xFF00) != 0) {
+            r |= 0xFF;
+        }
+        if ((g & 0xFF00) != 0) {
+            g |= 0xFF;
+        }
+        if ((b & 0xFF00) != 0) {
+            b |= 0xFF;
+        }
+    }
+}
+
+// NOTE: Per-pixel effects of the transparent paths of `BltBmp24To16Tint`,
+// `BltBmp24To24Tint` and `BltBmp24To32Tint`.
+static void BltBmpApplyEffects(BYTE& r, BYTE& g, BYTE& b, DWORD dwFlags, const CVidBitmapEffects& effects)
+{
+    if ((dwFlags & 0x80000) != 0) {
+        BYTE v = static_cast<BYTE>((r + g + b) / 4);
+        r = v;
+        g = v;
+        b = v;
+    }
+
+    if (effects.bTint) {
+        r = static_cast<BYTE>((r * effects.nTintRed) >> effects.nTintShift);
+        g = static_cast<BYTE>((g * effects.nTintGreen) >> effects.nTintShift);
+        b = static_cast<BYTE>((b * effects.nTintBlue) >> effects.nTintShift);
+    }
+
+    if (effects.bAdd) {
+        r = ~static_cast<BYTE>((static_cast<DWORD>(static_cast<BYTE>(~r)) * effects.nAddRed) >> effects.nAddShift);
+        g = ~static_cast<BYTE>((static_cast<DWORD>(static_cast<BYTE>(~g)) * effects.nAddGreen) >> effects.nAddShift);
+        b = ~static_cast<BYTE>((static_cast<DWORD>(static_cast<BYTE>(~b)) * effects.nAddBlue) >> effects.nAddShift);
+    }
+
+    if (effects.bLight) {
+        INT nRed = (r * effects.nLightRed) >> CVidPalette::LIGHT_SCALE;
+        r = nRed > 255 ? 255 : static_cast<BYTE>(nRed);
+
+        INT nGreen = (g * effects.nLightGreen) >> CVidPalette::LIGHT_SCALE;
+        g = nGreen > 255 ? 255 : static_cast<BYTE>(nGreen);
+
+        INT nBlue = (b * effects.nLightBlue) >> CVidPalette::LIGHT_SCALE;
+        b = nBlue > 255 ? 255 : static_cast<BYTE>(nBlue);
+
+        // Keep the result away from the transparent color.
+        if (r == 0 && g == 255 && b == 0) {
+            g = 254;
+        }
+    }
+}
+
+// NOTE: Inlined in `BltBmp24To16Tint`, `BltBmp24To24Tint` and
+// `BltBmp24To32Tint`.
+static void BltBmpGetEffects(CVidImage* pImage, CVidBitmapEffects& effects, DWORD dwFlags)
+{
+    effects.nTintRed = 255;
+    effects.nTintGreen = 255;
+    effects.nTintBlue = 255;
+    effects.nTintShift = 0;
+    effects.nAddRed = 1;
+    effects.nAddGreen = 1;
+    effects.nAddBlue = 1;
+    effects.nAddShift = 0;
+    effects.nLightRed = 1 << CVidPalette::LIGHT_SCALE;
+    effects.nLightGreen = 1 << CVidPalette::LIGHT_SCALE;
+    effects.nLightBlue = 1 << CVidPalette::LIGHT_SCALE;
+
+    effects.bTint = pImage->GetTint(effects.nTintRed, effects.nTintGreen, effects.nTintBlue, effects.nTintShift, dwFlags);
+    effects.bAdd = pImage->GetAdd(effects.nAddRed, effects.nAddGreen, effects.nAddBlue, effects.nAddShift, dwFlags);
+    effects.bLight = pImage->GetLight(effects.nLightRed, effects.nLightGreen, effects.nLightBlue, dwFlags);
+}
+
+// NOTE: The non-transparent path of the original is inline assembly which
+// writes two pixels at once whenever it can.
+//
+// 0x7B3B70
 BOOL CVidBitmap::BltBmp24To16Tint(WORD* pSurface, LONG lPitch, BYTE* pData, const CSize& bmpSize, LONG nDataJump, DWORD dwFlags)
 {
-    // TODO: Incomplete.
+    CVidMode* pVidMode = g_pChitin->GetCurrentVideoMode();
 
-    return FALSE;
+    BYTE nRDown = static_cast<BYTE>(pVidMode->field_C2);
+    BYTE nGDown = static_cast<BYTE>(pVidMode->field_C6);
+    BYTE nBDown = static_cast<BYTE>(pVidMode->field_CA);
+    BYTE nRShift = static_cast<BYTE>(pVidMode->m_dwRBitShift);
+    BYTE nGShift = static_cast<BYTE>(pVidMode->m_dwGBitShift);
+    BYTE nBShift = static_cast<BYTE>(pVidMode->m_dwBBitShift);
+
+    // NOTE: Uninline.
+    CVidBitmapEffects effects;
+    BltBmpGetEffects(this, effects, dwFlags);
+
+    if ((dwFlags & 0x1) != 0) {
+        COLORREF rgbShadow = pVidMode->ApplyBrightnessContrast(RGB(0, 0, 0));
+        DWORD dwRBitMask = g_pChitin->GetCurrentVideoMode()->m_dwRBitMask;
+        DWORD dwGBitMask = g_pChitin->GetCurrentVideoMode()->m_dwGBitMask;
+        DWORD dwBBitMask = g_pChitin->GetCurrentVideoMode()->m_dwBBitMask;
+        LONG nSurfaceJump = (lPitch >> 1) + bmpSize.cx;
+        INT nDataIndex = 0;
+
+        for (LONG y = 0; y < bmpSize.cy; y++) {
+            for (LONG x = 0; x < bmpSize.cx; x++) {
+                BYTE r = pData[nDataIndex + 2];
+                BYTE g = pData[nDataIndex + 1];
+                BYTE b = pData[nDataIndex];
+
+                if (r != 0 || g != 255 || b != 0) {
+                    if ((dwFlags & 0x4) != 0 && r == 0 && g == 0 && b == 0) {
+                        // Blend the shadow with what's already there.
+                        WORD nColor = *pSurface;
+                        r = static_cast<BYTE>(static_cast<INT>(((((dwRBitMask & 0xFFFF) & nColor) >> nRShift) << nRDown) + GetRValue(rgbShadow)) * 128 >> 8);
+                        g = static_cast<BYTE>(static_cast<INT>(((((dwGBitMask & 0xFFFF) & nColor) >> nGShift) << nGDown) + GetGValue(rgbShadow)) * 128 >> 8);
+                        b = static_cast<BYTE>(static_cast<INT>(((((dwBBitMask & 0xFFFF) & nColor) >> nBShift) << nBDown) + GetBValue(rgbShadow)) * 128 >> 8);
+                    } else {
+                        BltBmpApplyEffects(r, g, b, dwFlags, effects);
+                    }
+
+                    *pSurface = static_cast<WORD>(((b >> nBDown) << nBShift)
+                        | ((g >> nGDown) << nGShift)
+                        | ((r >> nRDown) << nRShift));
+                }
+
+                pSurface++;
+                nDataIndex += 3;
+            }
+
+            pSurface -= nSurfaceJump;
+            nDataIndex += nDataJump;
+        }
+    } else {
+        BYTE* pDest = reinterpret_cast<BYTE*>(pSurface);
+        LONG nSurfaceJump = lPitch + 2 * bmpSize.cx;
+
+        for (LONG y = 0; y < bmpSize.cy; y++) {
+            for (LONG x = 0; x < bmpSize.cx; x++) {
+                DWORD r = pData[2];
+                DWORD g = pData[1];
+                DWORD b = pData[0];
+                BltBmpApplyEffects(r, g, b, dwFlags, effects);
+
+                // NOTE: Only the low byte is shifted down but the whole low
+                // word is shifted up.
+                *reinterpret_cast<WORD*>(pDest) = static_cast<WORD>(((r & 0xFF00) | (static_cast<BYTE>(r) >> nRDown)) << nRShift)
+                    | static_cast<WORD>(((g & 0xFF00) | (static_cast<BYTE>(g) >> nGDown)) << nGShift)
+                    | static_cast<WORD>(((b & 0xFF00) | (static_cast<BYTE>(b) >> nBDown)) << nBShift);
+
+                pData += 3;
+                pDest += 2;
+            }
+
+            pDest -= nSurfaceJump;
+            pData += nDataJump;
+        }
+    }
+
+    return TRUE;
 }
 
+// NOTE: The original is inline assembly. Every pixel but the last in a row is
+// written as a DWORD.
+//
 // 0x7CCB20
 BOOL CVidBitmap::BltBmp8To24(BYTE* pSurface, LONG lPitch, BYTE* pData, const CSize& bmpSize, LONG nDataJump, DWORD dwFlags)
 {
-    // TODO: Incomplete.
+    m_cPalette.SetPalette(pRes->GetColorTable(), pRes->GetColorCount(), CVidPalette::TYPE_RESOURCE);
+    m_cPalette.Realize(rgbTempPal, 24, dwFlags | 0x800000, &m_paletteAffects, 255);
 
-    return FALSE;
+    LONG nSurfaceJump = lPitch + 3 * bmpSize.cx;
+
+    for (LONG y = 0; y < bmpSize.cy; y++) {
+        for (LONG x = 0; x < bmpSize.cx - 1; x++) {
+            *reinterpret_cast<DWORD*>(pSurface) = rgbTempPal[*pData++];
+            pSurface += 3;
+        }
+
+        DWORD color = rgbTempPal[*pData++];
+        *reinterpret_cast<WORD*>(pSurface) = static_cast<WORD>(color);
+        pSurface[2] = static_cast<BYTE>(color >> 16);
+        pSurface += 3;
+
+        pSurface -= nSurfaceJump;
+        pData += nDataJump;
+    }
+
+    return TRUE;
 }
 
+// NOTE: The non-transparent path of the original is inline assembly. Every
+// pixel but the last in a row is written as a DWORD.
+//
 // 0x7CCBF0
 BOOL CVidBitmap::BltBmp24To24(BYTE* pSurface, LONG lPitch, BYTE* pData, const CSize& bmpSize, LONG nDataJump, DWORD dwFlags)
 {
-    // TODO: Incomplete.
+    CVidMode* pVidMode = g_pChitin->GetCurrentVideoMode();
 
-    return FALSE;
+    BYTE nRShift = static_cast<BYTE>(pVidMode->m_dwRBitShift);
+    BYTE nGShift = static_cast<BYTE>(pVidMode->m_dwGBitShift);
+    BYTE nBShift = static_cast<BYTE>(pVidMode->m_dwBBitShift);
+
+    LONG nSurfaceJump = lPitch + 3 * bmpSize.cx;
+
+    if ((dwFlags & 0x1) != 0) {
+        INT nDataIndex = 0;
+
+        for (LONG y = 0; y < bmpSize.cy; y++) {
+            for (LONG x = 0; x < bmpSize.cx - 1; x++) {
+                BYTE r = pData[nDataIndex + 2];
+                BYTE g = pData[nDataIndex + 1];
+                BYTE b = pData[nDataIndex];
+
+                if (r != 0 || g != 255 || b != 0) {
+                    if ((dwFlags & 0x4) != 0 && r == 0 && g == 0 && b == 0) {
+                        DWORD nColor = *reinterpret_cast<DWORD*>(pSurface);
+                        r = static_cast<BYTE>((nColor >> nRShift) >> 1) & 0x7F;
+                        g = static_cast<BYTE>((nColor >> nGShift) >> 1) & 0x7F;
+                        b = static_cast<BYTE>((nColor >> nBShift) >> 1) & 0x7F;
+                    }
+
+                    *reinterpret_cast<DWORD*>(pSurface) = (b << nBShift) | (g << nGShift) | (r << nRShift);
+                }
+
+                pSurface += 3;
+                nDataIndex += 3;
+            }
+
+            BYTE r = pData[nDataIndex + 2];
+            BYTE g = pData[nDataIndex + 1];
+            BYTE b = pData[nDataIndex];
+
+            if (r != 0 || g != 255 || b != 0) {
+                if ((dwFlags & 0x4) != 0 && r == 0 && g == 0 && b == 0) {
+                    // NOTE: Assumes blue is the high byte.
+                    DWORD nColor = *reinterpret_cast<WORD*>(pSurface);
+                    r = static_cast<BYTE>((nColor >> nRShift) >> 1) & 0x7F;
+                    g = static_cast<BYTE>((nColor >> nGShift) >> 1) & 0x7F;
+                    b = pSurface[2] >> 1;
+                }
+
+                DWORD color = (b << nBShift) | (g << nGShift) | (r << nRShift);
+                *reinterpret_cast<WORD*>(pSurface) = static_cast<WORD>(color);
+                pSurface[2] = static_cast<BYTE>(color >> 16);
+            }
+
+            nDataIndex += 3 + nDataJump;
+            pSurface += 3 - nSurfaceJump;
+        }
+    } else {
+        for (LONG y = 0; y < bmpSize.cy; y++) {
+            for (LONG x = 0; x < bmpSize.cx - 1; x++) {
+                *reinterpret_cast<DWORD*>(pSurface) = (pData[2] << nRShift) | (pData[1] << nGShift) | (pData[0] << nBShift);
+                pData += 3;
+                pSurface += 3;
+            }
+
+            DWORD color = (pData[2] << nRShift) | (pData[1] << nGShift) | (pData[0] << nBShift);
+            *reinterpret_cast<WORD*>(pSurface) = static_cast<WORD>(color);
+            pSurface[2] = static_cast<BYTE>(color >> 16);
+            pData += 3;
+            pSurface += 3;
+
+            pSurface -= nSurfaceJump;
+            pData += nDataJump;
+        }
+    }
+
+    return TRUE;
 }
 
+// NOTE: The non-transparent path of the original is inline assembly. Every
+// pixel but the last in a row is written as a DWORD.
+//
 // 0x7CCE80
 BOOL CVidBitmap::BltBmp24To24Tint(BYTE* pSurface, LONG lPitch, BYTE* pData, const CSize& bmpSize, LONG nDataJump, DWORD dwFlags)
 {
-    // TODO: Incomplete.
+    CVidMode* pVidMode = g_pChitin->GetCurrentVideoMode();
 
-    return FALSE;
+    BYTE nRShift = static_cast<BYTE>(pVidMode->m_dwRBitShift);
+    BYTE nGShift = static_cast<BYTE>(pVidMode->m_dwGBitShift);
+    BYTE nBShift = static_cast<BYTE>(pVidMode->m_dwBBitShift);
+
+    // NOTE: Uninline.
+    CVidBitmapEffects effects;
+    BltBmpGetEffects(this, effects, dwFlags);
+
+    LONG nSurfaceJump = lPitch + 3 * bmpSize.cx;
+
+    if ((dwFlags & 0x1) != 0) {
+        COLORREF rgbShadow = pVidMode->ApplyBrightnessContrast(RGB(0, 0, 0));
+        INT nDataIndex = 0;
+
+        for (LONG y = 0; y < bmpSize.cy; y++) {
+            for (LONG x = 0; x < bmpSize.cx - 1; x++) {
+                BYTE r = pData[nDataIndex + 2];
+                BYTE g = pData[nDataIndex + 1];
+                BYTE b = pData[nDataIndex];
+
+                if (r != 0 || g != 255 || b != 0) {
+                    if ((dwFlags & 0x4) != 0 && r == 0 && g == 0 && b == 0) {
+                        // Blend the shadow with what's already there.
+                        DWORD nColor = *reinterpret_cast<DWORD*>(pSurface);
+                        r = static_cast<BYTE>((((nColor >> nRShift) & 0xFF) + GetRValue(rgbShadow)) * 128 >> 8);
+                        g = static_cast<BYTE>((((nColor >> nGShift) & 0xFF) + GetGValue(rgbShadow)) * 128 >> 8);
+                        b = static_cast<BYTE>((((nColor >> nBShift) & 0xFF) + GetBValue(rgbShadow)) * 128 >> 8);
+                    } else {
+                        BltBmpApplyEffects(r, g, b, dwFlags, effects);
+                    }
+
+                    *reinterpret_cast<DWORD*>(pSurface) = (b << nBShift) | (g << nGShift) | (r << nRShift);
+                }
+
+                pSurface += 3;
+                nDataIndex += 3;
+            }
+
+            BYTE r = pData[nDataIndex + 2];
+            BYTE g = pData[nDataIndex + 1];
+            BYTE b = pData[nDataIndex];
+
+            if (r != 0 || g != 255 || b != 0) {
+                if ((dwFlags & 0x4) != 0 && r == 0 && g == 0 && b == 0) {
+                    // NOTE: Assumes blue is the high byte.
+                    DWORD nColor = *reinterpret_cast<WORD*>(pSurface);
+                    r = static_cast<BYTE>((((nColor >> nRShift) & 0xFF) + GetRValue(rgbShadow)) * 128 >> 8);
+                    g = static_cast<BYTE>((((nColor >> nGShift) & 0xFF) + GetGValue(rgbShadow)) * 128 >> 8);
+                    b = static_cast<BYTE>((pSurface[2] + GetBValue(rgbShadow)) * 128 >> 8);
+                } else {
+                    BltBmpApplyEffects(r, g, b, dwFlags, effects);
+                }
+
+                DWORD color = (b << nBShift) | (g << nGShift) | (r << nRShift);
+                *reinterpret_cast<WORD*>(pSurface) = static_cast<WORD>(color);
+                pSurface[2] = static_cast<BYTE>(color >> 16);
+            }
+
+            nDataIndex += 3 + nDataJump;
+            pSurface += 3 - nSurfaceJump;
+        }
+    } else {
+        for (LONG y = 0; y < bmpSize.cy; y++) {
+            for (LONG x = 0; x < bmpSize.cx - 1; x++) {
+                DWORD r = pData[2];
+                DWORD g = pData[1];
+                DWORD b = pData[0];
+                BltBmpApplyEffects(r, g, b, dwFlags, effects);
+
+                *reinterpret_cast<DWORD*>(pSurface) = (r << nRShift) | (g << nGShift) | (b << nBShift);
+                pData += 3;
+                pSurface += 3;
+            }
+
+            DWORD r = pData[2];
+            DWORD g = pData[1];
+            DWORD b = pData[0];
+            BltBmpApplyEffects(r, g, b, dwFlags, effects);
+
+            DWORD color = (r << nRShift) | (g << nGShift) | (b << nBShift);
+            *reinterpret_cast<WORD*>(pSurface) = static_cast<WORD>(color);
+            pSurface[2] = static_cast<BYTE>(color >> 16);
+            pData += 3;
+            pSurface += 3;
+
+            pSurface -= nSurfaceJump;
+            pData += nDataJump;
+        }
+    }
+
+    return TRUE;
 }
 
 // 0x7CD5E0
@@ -465,12 +985,75 @@ BOOL CVidBitmap::BltBmp24To32(DWORD* pSurface, LONG lPitch, BYTE* pData, const C
     return TRUE;
 }
 
+/// NOTE: The non-transparent path of the original is inline assembly.
+//
 // 0x7CD870
 BOOL CVidBitmap::BltBmp24To32Tint(DWORD* pSurface, LONG lPitch, BYTE* pData, const CSize& bmpSize, LONG nDataJump, DWORD dwFlags)
 {
-    // TODO: Incomplete.
+    CVidMode* pVidMode = g_pChitin->GetCurrentVideoMode();
 
-    return FALSE;
+    BYTE nRShift = static_cast<BYTE>(pVidMode->m_dwRBitShift);
+    BYTE nGShift = static_cast<BYTE>(pVidMode->m_dwGBitShift);
+    BYTE nBShift = static_cast<BYTE>(pVidMode->m_dwBBitShift);
+
+    // NOTE: Uninline.
+    CVidBitmapEffects effects;
+    BltBmpGetEffects(this, effects, dwFlags);
+
+    if ((dwFlags & 0x1) != 0) {
+        COLORREF rgbShadow = pVidMode->ApplyBrightnessContrast(RGB(0, 0, 0));
+        LONG nSurfaceJump = (lPitch >> 2) + bmpSize.cx;
+        INT nDataIndex = 0;
+
+        for (LONG y = 0; y < bmpSize.cy; y++) {
+            for (LONG x = 0; x < bmpSize.cx; x++) {
+                BYTE r = pData[nDataIndex + 2];
+                BYTE g = pData[nDataIndex + 1];
+                BYTE b = pData[nDataIndex];
+
+                if (r != 0 || g != 255 || b != 0) {
+                    BYTE a;
+                    if ((dwFlags & 0x4) != 0 && r == 0 && g == 0 && b == 0) {
+                        // Blend the shadow with what's already there.
+                        a = 128;
+
+                        DWORD nColor = *pSurface;
+                        r = static_cast<BYTE>((((nColor >> nRShift) & 0xFF) + GetRValue(rgbShadow)) * 128 >> 8);
+                        g = static_cast<BYTE>((((nColor >> nGShift) & 0xFF) + GetGValue(rgbShadow)) * 128 >> 8);
+                        b = static_cast<BYTE>((((nColor >> nBShift) & 0xFF) + GetBValue(rgbShadow)) * 128 >> 8);
+                    } else {
+                        a = 255;
+                        BltBmpApplyEffects(r, g, b, dwFlags, effects);
+                    }
+
+                    *pSurface = (b << nBShift) | (g << nGShift) | (r << nRShift) | (a << 24);
+                }
+
+                pSurface++;
+                nDataIndex += 3;
+            }
+
+            pSurface -= nSurfaceJump;
+            nDataIndex += nDataJump;
+        }
+    } else {
+        for (LONG y = 0; y < bmpSize.cy; y++) {
+            for (LONG x = 0; x < bmpSize.cx; x++) {
+                DWORD r = pData[2];
+                DWORD g = pData[1];
+                DWORD b = pData[0];
+                BltBmpApplyEffects(r, g, b, dwFlags, effects);
+
+                *pSurface++ = (r << nRShift) | (g << nGShift) | (b << nBShift);
+                pData += 3;
+            }
+
+            pSurface = reinterpret_cast<DWORD*>(reinterpret_cast<BYTE*>(pSurface) - (lPitch + 4 * bmpSize.cx));
+            pData += nDataJump;
+        }
+    }
+
+    return TRUE;
 }
 
 // 0x7C6800

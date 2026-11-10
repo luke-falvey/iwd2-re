@@ -884,7 +884,20 @@ void CVidPalette::RealizeRange(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, CVI
 
     INT nEntry;
     if (nBpp == 16) {
-        // TODO: Incomplete.
+        nEntry = 0;
+        while (nEntry < 4) {
+            if (nEntry == 1) {
+                COLORREF rgb = pVidMode->ApplyBrightnessContrast(RGB(0, 0, 0));
+                *reinterpret_cast<WORD*>(&(pDestPalette[1])) = static_cast<WORD>(((GetRValue(rgb) >> pVidMode->field_C2) << pVidMode->m_dwRBitShift)
+                    | ((GetGValue(rgb) >> pVidMode->field_C6) << pVidMode->m_dwGBitShift)
+                    | ((GetBValue(rgb) >> pVidMode->field_CA) << pVidMode->m_dwBBitShift));
+            } else {
+                *reinterpret_cast<WORD*>(&(pDestPalette[nEntry])) = static_cast<WORD>(((m_pPalette[nEntry].rgbRed >> pVidMode->field_C2) << pVidMode->m_dwRBitShift)
+                    | ((m_pPalette[nEntry].rgbGreen >> pVidMode->field_C6) << pVidMode->m_dwGBitShift)
+                    | ((m_pPalette[nEntry].rgbBlue >> pVidMode->field_CA) << pVidMode->m_dwBBitShift));
+            }
+            nEntry++;
+        }
     } else {
         if ((dwFlags & 0x1) != 0) {
             pDestPalette[0] &= ~0xFF000000;
@@ -918,7 +931,7 @@ void CVidPalette::RealizeRange(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, CVI
                 rgbRangeTint.rgbGreen = GetGValue(*pAffectArgs->pRangeTints[range]);
                 rgbRangeTint.rgbBlue = GetBValue(*pAffectArgs->pRangeTints[range]);
             } else {
-                nTintPercentage = m_nAUCounter % (2 * pAffectArgs->aRangeTintPeriods[range]);
+                nTintPercentage = (m_nAUCounter + (1 << range)) % (2 * pAffectArgs->aRangeTintPeriods[range]);
                 if (nTintPercentage > pAffectArgs->aRangeTintPeriods[range]) {
                     nTintPercentage = 2 * pAffectArgs->aRangeTintPeriods[range] - nTintPercentage;
                 }
@@ -935,8 +948,9 @@ void CVidPalette::RealizeRange(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, CVI
                 rgbRangeInv.rgbRed = ~GetRValue(*pAffectArgs->pRangeAdds[range]);
                 rgbRangeInv.rgbGreen = ~GetGValue(*pAffectArgs->pRangeAdds[range]);
                 rgbRangeInv.rgbBlue = ~GetBValue(*pAffectArgs->pRangeAdds[range]);
+                nAddPercentage = pAffectArgs->aRangeAddPeriods[range];
             } else {
-                nAddPercentage = m_nAUCounter % (2 * pAffectArgs->aRangeAddPeriods[range]);
+                nAddPercentage = (m_nAUCounter + (1 << range)) % (2 * pAffectArgs->aRangeAddPeriods[range]);
                 if (nAddPercentage > pAffectArgs->aRangeAddPeriods[range]) {
                     nAddPercentage = 2 * pAffectArgs->aRangeAddPeriods[range] - nAddPercentage;
                 }
@@ -955,17 +969,15 @@ void CVidPalette::RealizeRange(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, CVI
                 rgbRangeLight.rgbBlue = GetBValue(*pAffectArgs->pRangeLights[range]);
                 nLightPercentage = 1;
             } else {
-                nLightPercentage = m_nAUCounter % (2 * pAffectArgs->aRangeLightPeriods[range]);
+                nLightPercentage = (m_nAUCounter + (1 << range)) % (2 * pAffectArgs->aRangeLightPeriods[range]);
                 if (nLightPercentage > pAffectArgs->aRangeLightPeriods[range]) {
                     nLightPercentage = 2 * pAffectArgs->aRangeLightPeriods[range] - nLightPercentage;
                 }
 
-                rgbRangeLight.rgbRed = nLightPercentage * GetRValue(*pAffectArgs->pRangeLights[range]) / pAffectArgs->aRangeLightPeriods[range];
-                rgbRangeLight.rgbGreen = nLightPercentage * GetGValue(*pAffectArgs->pRangeLights[range]) / pAffectArgs->aRangeLightPeriods[range];
-                rgbRangeLight.rgbBlue = nLightPercentage * GetBValue(*pAffectArgs->pRangeLights[range]) / pAffectArgs->aRangeLightPeriods[range];
+                rgbRangeLight.rgbRed = nLightPercentage * GetRValue(*pAffectArgs->pRangeLights[range]) / pAffectArgs->aRangeLightPeriods[range] + 8;
+                rgbRangeLight.rgbGreen = nLightPercentage * GetGValue(*pAffectArgs->pRangeLights[range]) / pAffectArgs->aRangeLightPeriods[range] + 8;
+                rgbRangeLight.rgbBlue = nLightPercentage * GetBValue(*pAffectArgs->pRangeLights[range]) / pAffectArgs->aRangeLightPeriods[range] + 8;
             }
-        } else {
-            nLightPercentage = 0;
         }
 
         CVIDPALETTE_COLOR* pCurrTint;
@@ -973,13 +985,13 @@ void CVidPalette::RealizeRange(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, CVI
         if ((pAffectArgs->suppressTints & CVidPalette::m_SuppressTintMasks[range]) != 0
             && (nLightPercentage != 0 || nAddPercentage != 0)) {
             if (nLightPercentage > nAddPercentage) {
-                rgbRangeTintRatio.rgbRed += nLightPercentage * (nTintMax - rgbTint.rgbRed) / pAffectArgs->aRangeLightPeriods[range];
-                rgbRangeTintRatio.rgbGreen += nLightPercentage * (nTintMax - rgbTint.rgbGreen) / pAffectArgs->aRangeLightPeriods[range];
-                rgbRangeTintRatio.rgbBlue += nLightPercentage * (nTintMax - rgbTint.rgbBlue) / pAffectArgs->aRangeLightPeriods[range];
+                rgbRangeTintRatio.rgbRed = rgbTint.rgbRed + nLightPercentage * (nTintMax - rgbTint.rgbRed) / pAffectArgs->aRangeLightPeriods[range];
+                rgbRangeTintRatio.rgbGreen = rgbTint.rgbGreen + nLightPercentage * (nTintMax - rgbTint.rgbGreen) / pAffectArgs->aRangeLightPeriods[range];
+                rgbRangeTintRatio.rgbBlue = rgbTint.rgbBlue + nLightPercentage * (nTintMax - rgbTint.rgbBlue) / pAffectArgs->aRangeLightPeriods[range];
             } else {
-                rgbRangeTintRatio.rgbRed += nAddPercentage * (nTintMax - rgbTint.rgbRed) / pAffectArgs->aRangeAddPeriods[range];
-                rgbRangeTintRatio.rgbGreen += nAddPercentage * (nTintMax - rgbTint.rgbGreen) / pAffectArgs->aRangeAddPeriods[range];
-                rgbRangeTintRatio.rgbBlue += nAddPercentage * (nTintMax - rgbTint.rgbBlue) / pAffectArgs->aRangeAddPeriods[range];
+                rgbRangeTintRatio.rgbRed = rgbTint.rgbRed + nAddPercentage * (nTintMax - rgbTint.rgbRed) / pAffectArgs->aRangeAddPeriods[range];
+                rgbRangeTintRatio.rgbGreen = rgbTint.rgbGreen + nAddPercentage * (nTintMax - rgbTint.rgbGreen) / pAffectArgs->aRangeAddPeriods[range];
+                rgbRangeTintRatio.rgbBlue = rgbTint.rgbBlue + nAddPercentage * (nTintMax - rgbTint.rgbBlue) / pAffectArgs->aRangeAddPeriods[range];
             }
 
             if (pVidMode->m_nFade != CVidMode::NUM_FADE_FRAMES) {
@@ -1071,7 +1083,16 @@ void CVidPalette::RealizeRange(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, CVI
     }
 
     if (nBpp == 16) {
-        // TODO: Incomplete.
+        WORD nGreenMax = static_cast<WORD>((255 >> pVidMode->field_C6) << pVidMode->m_dwGBitShift);
+        for (int index = 4; index < m_nEntries; index++) {
+            WORD color = static_cast<WORD>(((cTmpPalette.m_pPalette[index].rgbRed >> pVidMode->field_C2) << pVidMode->m_dwRBitShift)
+                | ((cTmpPalette.m_pPalette[index].rgbGreen >> pVidMode->field_C6) << pVidMode->m_dwGBitShift)
+                | ((cTmpPalette.m_pPalette[index].rgbBlue >> pVidMode->field_CA) << pVidMode->m_dwBBitShift));
+            if (color == nGreenMax) {
+                color = static_cast<WORD>(((255 >> pVidMode->field_C6) - 1) << pVidMode->m_dwGBitShift);
+            }
+            *reinterpret_cast<WORD*>(&(pDestPalette[index])) = color;
+        }
     } else {
         for (int index = 4; index < m_nEntries; index++) {
             DWORD color = nTransVal
