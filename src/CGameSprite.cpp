@@ -16152,6 +16152,18 @@ void CGameSprite::sub_726810(BYTE nWeaponSet)
     // TODO: Incomplete.
 }
 
+// 0x727B80
+BOOL CGameSprite::IsVisibleToCaller(BOOL bSeeInvisible)
+{
+    if (!bSeeInvisible
+        && (m_derivedStats.m_generalState & STATE_INVISIBLE) != 0
+        && (m_baseStats.field_2FC & 0x1) == 0) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 // 0x58FEE0
 BYTE CGameSprite::GetLastSong()
 {

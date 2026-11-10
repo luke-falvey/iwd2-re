@@ -165,7 +165,7 @@ public:
     BOOL CheckLOS(const CPoint& start, const CPoint& goal, const BYTE* terrainTable, BOOLEAN bCheckIfExplored);
     BOOL CheckWalkable(const CPoint& start, const CPoint& goal, const BYTE* terrainTable, BYTE personalSpace, BOOLEAN bCheckIfExplored);
     LONG GetGroundPile(const CPoint& ptPos);
-    LONG GetNearest(LONG startObject, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BOOL ignoreSleeping, BYTE nNearest, BOOL ignoreDead);
+    LONG GetNearest(LONG startObject, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BOOL ignoreSleeping, BOOL farthest, BOOL summonedOnly);
     LONG GetNearestDialogMatch(LONG startObject, CResRef dialog, LONG range);
     void GetAllInRange(POSITION posVertList, const CPoint& center, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOL lineOfSight, BOOL checkForNonSprites);
     void GetAllInRange(const CPoint& center, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOL lineOfSight, BOOL checkForNonSprites);
@@ -173,7 +173,7 @@ public:
     int GetCountInPoly(const CRect& rBounding, const CAIObjectType& type);
     void GetAllInRangeBack(const CPoint& center, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOL lineOfSight, BOOL ignoreDead, BOOL checkForNonSprites);
     void GetAllInPoly(const CRect& rBounding, CPoint* pPoly, SHORT nPoly, const CAIObjectType& type, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOLEAN checkBackList);
-    LONG sub_46DAE0(INT x, INT y, const CAIObjectType& type, int a4, const BYTE* terrainTable, int a6, int a7, int a8, int a9);
+    LONG sub_46DAE0(INT x, INT y, const CAIObjectType& type, int range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BOOL farthest, BOOL summonedOnly);
     BOOLEAN CanSaveGame(STRREF& strError);
     void AIUpdate();
     void CompressTime(DWORD deltaTime);
