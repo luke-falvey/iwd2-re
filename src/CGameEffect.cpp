@@ -6343,6 +6343,74 @@ CGameEffect* CGameEffectStoneToFlesh::Copy()
     return copy;
 }
 
+// 0x4B2070
+BOOL CGameEffectStoneToFlesh::ApplyEffect(CGameSprite* pSprite)
+{
+    if ((pSprite->GetDerivedStats()->m_generalState & STATE_STONE_DEATH) == 0) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+        || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+        ITEM_EFFECT* effect = new ITEM_EFFECT;
+        CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_RESURRECT);
+        effect->dwFlags = 0x2B;
+        effect->durationType = 1;
+
+        CGameEffect* pEffect = CGameEffect::DecodeEffect(effect,
+            pSprite->GetPos(),
+            pSprite->GetId(),
+            CPoint(-1, -1));
+
+        CMessage* message = new CMessageAddEffect(pEffect->Copy(),
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        if (pEffect != NULL) {
+            delete pEffect;
+        }
+
+        delete effect;
+    }
+
+    pSprite->GetBaseStats()->m_hitPoints = 1;
+
+    pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_PORTRAITICON,
+        pSprite->GetEquipedEffectList()->GetPosCurrent(),
+        71);
+    pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_PORTRAITICON,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        71);
+
+    if ((pSprite->GetBaseStats()->m_flags & 0x800) != 0) {
+        CResRef dialog("MULTIJ");
+        pSprite->m_dialog = dialog;
+
+        if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+            || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+            CMessage* message = new CMessageSetDialogResRef(dialog,
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+            CMessage* message = new CMessageVisibilityMapMove(TRUE,
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    }
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -7840,6 +7908,94 @@ CGameEffect* CGameEffectSexChange::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4B4D00
+BOOL CGameEffectSexChange::ApplyEffect(CGameSprite* pSprite)
+{
+    pSprite->field_5640 = TRUE;
+
+    WORD animationId = pSprite->GetBaseStats()->m_animationType;
+
+    CAIObjectType typeAI(pSprite->GetAIType());
+    CAIObjectType liveTypeAI(pSprite->m_liveTypeAI);
+    // NOTE: Copies the live type, not `m_startTypeAI`.
+    CAIObjectType startTypeAI(pSprite->m_liveTypeAI);
+
+    switch (m_dwFlags) {
+    case 0:
+        animationId ^= 0x10;
+
+        if (typeAI.m_nGender == CAIObjectType::SEX_MALE) {
+            typeAI.m_nGender = CAIObjectType::SEX_FEMALE;
+        } else if (typeAI.m_nGender == CAIObjectType::SEX_FEMALE) {
+            typeAI.m_nGender = CAIObjectType::SEX_MALE;
+        }
+
+        if (liveTypeAI.m_nGender == CAIObjectType::SEX_MALE) {
+            liveTypeAI.m_nGender = CAIObjectType::SEX_FEMALE;
+        } else if (liveTypeAI.m_nGender == CAIObjectType::SEX_FEMALE) {
+            liveTypeAI.m_nGender = CAIObjectType::SEX_MALE;
+        }
+
+        if (m_durationType == 1) {
+            if (startTypeAI.m_nGender == CAIObjectType::SEX_MALE) {
+                startTypeAI.m_nGender = CAIObjectType::SEX_FEMALE;
+            } else if (typeAI.m_nGender == CAIObjectType::SEX_FEMALE) {
+                // FIXME: Checks `typeAI` instead of `startTypeAI`.
+                startTypeAI.m_nGender = CAIObjectType::SEX_MALE;
+            }
+
+            // NOTE: The original stores a DWORD (`m_animationType` and the
+            // following `field_22`).
+            *reinterpret_cast<DWORD*>(&(pSprite->GetBaseStats()->m_animationType)) = animationId;
+            m_done = TRUE;
+        }
+        break;
+    case 1:
+        if (m_effectAmount == CAIObjectType::SEX_MALE) {
+            animationId &= ~0x10;
+        } else if (m_effectAmount == CAIObjectType::SEX_FEMALE) {
+            animationId |= 0x10;
+        }
+
+        typeAI.m_nGender = static_cast<BYTE>(m_effectAmount);
+        liveTypeAI.m_nGender = static_cast<BYTE>(m_effectAmount);
+
+        if (m_durationType == 1) {
+            startTypeAI.m_nGender = static_cast<BYTE>(m_effectAmount);
+
+            // NOTE: The original stores a DWORD (`m_animationType` and the
+            // following `field_22`).
+            *reinterpret_cast<DWORD*>(&(pSprite->GetBaseStats()->m_animationType)) = animationId;
+            m_done = TRUE;
+        }
+        break;
+    }
+
+    pSprite->SetAIType(typeAI, FALSE, FALSE);
+    pSprite->m_liveTypeAI.Set(liveTypeAI);
+    pSprite->m_startTypeAI.Set(startTypeAI);
+
+    pSprite->UnequipAll(TRUE);
+
+    pSprite->GetAnimation()->SetAnimationType(animationId,
+        pSprite->GetBaseStats()->m_colors,
+        pSprite->GetDirection());
+
+    if (pSprite->m_nSequence == CGameSprite::SEQ_DIE) {
+        pSprite->SetSequence(CGameSprite::SEQ_READY);
+        pSprite->SetSequence(CGameSprite::SEQ_DIE);
+    }
+
+    pSprite->EquipAll(TRUE);
+
+    CMessage* message = new CMessageAnimationChange(animationId,
+        pSprite->GetId(),
+        pSprite->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
