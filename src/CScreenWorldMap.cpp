@@ -1222,6 +1222,12 @@ void CScreenWorldMap::InvalidateArea(DWORD nArea)
     }
 }
 
+// 0x69D0F0
+void CScreenWorldMap::sub_69D0F0(CResRef& cResArea, CString sText, WORD wArg3, BYTE nArg4, DWORD dwArg5)
+{
+    // TODO: Incomplete.
+}
+
 // 0x69FFC0
 void CScreenWorldMap::GetMarkerPosition(CPoint& ptMarker)
 {
