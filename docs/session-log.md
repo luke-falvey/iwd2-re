@@ -2,6 +2,34 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-11 (evening): cheaper translation pipeline
+
+Branch `phase-a/stubs-and-layout` (local only).
+
+**Why:** `fork` subagents were 56% of usage. `fork` is built in and always runs on the session's model, so translation moved to Sonnet agents defined in the repo.
+
+**Done**
+- `tools/packet.py 0xADDR` prints everything a translator used to look up: callees with `RET n`, constants, vtable → class, member offsets → names, and asm with stack slots renamed to `[argN]`/`[loc_X]`.
+- `tools/worklist.py` assigns every unfinished function to one batch per file and tags large and switch functions.
+- Skills `translate-function` and `verify-against-asm`, agents `iwd2-translator` and `iwd2-verifier` (both Sonnet, no forks) in `.claude/`.
+- First batch through the pipeline: `CGameArea::sub_46C9E0`, `sub_46E130`, `Icewind586B70::sub_5872C0`, `CGameSprite::EquipMostDamagingMelee`. About 27k tokens per function to translate and build, 20k to verify. The verifier found one difference (a byte compare on a WORD field).
+- S4 play test committed (passes on the original, flaky on the rebuild).
+
+**Measured while tuning the skill** (15 read-only runs on three functions)
+- The packet cuts Sonnet from about 49k to 40k tokens and from 14 to 5 tool calls per function.
+- Tool-call caps and "don't look things up" produced invented member names.
+- Reading `[ESP+n]` after pushes was the main source of wrong-variable bugs. Renaming the slots by script removed them.
+- Haiku still costs twice Sonnet's tokens and made behavioural errors in half its runs.
+
+**Next**
+1. Second batch for the shapes not yet tried: a function over 3 KB, a switch function in chunks, a class from a vtable.
+2. Gates in `tools/check.ps1`: vtable comparison, pitfall scan, no `// DBGTRACE`.
+3. Finish or discard the unspliced work in the `wip/spells` worktree.
+4. The intermittent hard pause after the chapter screen (S4).
+
+**Notes**
+- New agent types in `.claude/agents` only load when a session starts. Until then, run a general-purpose agent with `model: sonnet` and tell it to read the agent and skill files.
+
 ## 2026-11-11 (later): scripts, sprites and the chapter screen
 
 Branch `phase-a/stubs-and-layout` (local only).
