@@ -2864,9 +2864,284 @@ BOOLEAN CBaldurMessage::sub_42E1B0(CString& sPlayerName, SHORT nCharacterSlot, B
 // 0x42E630
 BOOLEAN CBaldurMessage::sub_42E630(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    // NOTE: The following two locals are never used.
+    CResRef cResRef;
+    CString sUnused;
+    STR_RES strRes;
+    POSITION posVertList = NULL;
+    SHORT nCanBeSeen = 0;
 
-    return FALSE;
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return FALSE;
+    }
+
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    SHORT nCharacterSlot = *reinterpret_cast<SHORT*>(pMessage + cnt);
+    cnt += sizeof(SHORT);
+
+    BOOLEAN bHasCharacter = pMessage[cnt];
+    cnt += sizeof(BYTE);
+
+    BYTE nSavedField70F2 = 0;
+
+    if (bHasCharacter == TRUE) {
+        LONG nCharacterId;
+        if (nCharacterSlot >= 6) {
+            nCharacterId = CGameObjectArray::INVALID_INDEX;
+        } else {
+            nCharacterId = g_pBaldurChitin->GetObjectGame()->m_characters[nCharacterSlot];
+        }
+
+        CGameSprite* pSprite;
+        BYTE rc;
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        BOOLEAN bHadSprite = FALSE;
+        BOOLEAN bWasSelected;
+        LONG remoteObjectID;
+        DWORD remotePlayerID;
+        CGameArea* pOldArea;
+        CPoint ptPos;
+        LONG posZ;
+        BYTE listType;
+        SHORT nSequence;
+        INT nHitPoints;
+        SHORT nDirection;
+        BOOLEAN bInfravisionOn;
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            nSavedField70F2 = pSprite->field_70F2;
+            pSprite->sub_723BF0(FALSE, FALSE);
+
+            bWasSelected = pSprite->m_bSelected;
+            if (bWasSelected) {
+                pSprite->Unselect();
+            }
+
+            remoteObjectID = pSprite->m_remoteObjectID;
+            remotePlayerID = pSprite->m_remotePlayerID;
+            pOldArea = pSprite->m_pArea;
+            ptPos = pSprite->GetPos();
+            posZ = pSprite->m_posZ;
+            listType = pSprite->GetVertListType();
+            posVertList = pSprite->GetVertListPos();
+            nSequence = pSprite->m_nSequence;
+            nHitPoints = pSprite->m_baseStats.m_hitPoints;
+            nDirection = pSprite->m_nDirection;
+            bInfravisionOn = pSprite->m_bInfravisionOn;
+            nCanBeSeen = pSprite->m_canBeSeen;
+
+            if (pOldArea != NULL) {
+                pSprite->RemoveReplacementFromArea();
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            bHadSprite = TRUE;
+        }
+
+        m_bInOnObjectAdd = TRUE;
+
+        BYTE* pStats = pMessage + cnt;
+        cnt += 0x188;
+
+        USHORT nAnimationId = *reinterpret_cast<USHORT*>(pMessage + cnt);
+        SHORT nPortraitIcons = *reinterpret_cast<SHORT*>(pMessage + cnt + sizeof(USHORT));
+        cnt += sizeof(USHORT) + sizeof(SHORT);
+
+        INT aPortraitIcons[128];
+
+        if (nPortraitIcons > 0) {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\CBaldurMessage.cpp
+            // __LINE__: 4263
+            UTIL_ASSERT(nPortraitIcons < 128);
+
+            // NOTE: Redundant check, `nPortraitIcons` was just tested above.
+            if (nPortraitIcons > 0) {
+                memcpy(aPortraitIcons, pMessage + cnt, nPortraitIcons * sizeof(INT));
+                cnt += nPortraitIcons * sizeof(INT);
+            }
+        }
+
+        CSavedGamePartyCreature* pPartyCreature = reinterpret_cast<CSavedGamePartyCreature*>(pMessage + cnt);
+        DWORD dwBioPos = pPartyCreature->m_creatureSize + cnt + sizeof(CSavedGamePartyCreature);
+
+        pPartyCreature->m_creatureOffset += CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+        INT bHasPortrait = g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(nCharacterId) != -1;
+
+        CGameSprite* pNewSprite = new CGameSprite(pMessage + pPartyCreature->m_creatureOffset,
+            pPartyCreature->m_creatureSize,
+            bHasPortrait,
+            0,
+            -1,
+            0,
+            0,
+            0x7FFFFFFF,
+            CPoint(-1, -1),
+            0);
+
+        if (pNewSprite == NULL) {
+            return FALSE;
+        }
+
+        BOOLEAN bUpdateStatus = TRUE;
+
+        if (g_pBaldurChitin->pActiveEngine == g_pBaldurChitin->m_pEngineStore
+            && !static_cast<CBaldurEngine*>(g_pBaldurChitin->pActiveEngine)->GetManager()->GetPanel(1)->GetControl(nCharacterSlot)->m_bActive) {
+            bUpdateStatus = FALSE;
+        } else {
+            g_pBaldurChitin->GetObjectGame()->EnablePortrait(static_cast<BYTE>(nCharacterSlot), TRUE);
+        }
+
+        pNewSprite->Unmarshal(pPartyCreature, TRUE, FALSE);
+        pNewSprite->sub_723BF0(nSavedField70F2, FALSE);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(pNewSprite->m_id,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+
+        m_bInOnObjectAdd = FALSE;
+
+        pSprite = NULL;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ChangeEntry(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            pNewSprite,
+            INFINITE);
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            pSprite->m_derivedStats.Unmarshal(pStats, 0x188);
+            pSprite->UnequipAll(TRUE);
+
+            if (pSprite->m_pArea != NULL
+                && pSprite->m_animation.GetListType() != CGameObject::LIST_FLIGHT) {
+                pSprite->m_pArea->m_search.RemoveObject(CPoint(pSprite->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX,
+                                                            pSprite->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY),
+                    pSprite->GetAIType().m_nEnemyAlly,
+                    pSprite->m_animation.GetPersonalSpace(),
+                    pSprite->field_54A8,
+                    pSprite->field_7430);
+            }
+
+            WORD nNewDirection = pSprite->m_nDirection;
+            pSprite->m_animation.SetAnimationType(nAnimationId,
+                pSprite->m_baseStats.m_colors,
+                nNewDirection);
+
+            if (pSprite->m_pArea != NULL
+                && pSprite->m_animation.GetListType() != CGameObject::LIST_FLIGHT) {
+                pSprite->m_pArea->m_search.AddObject(CPoint(pSprite->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX,
+                                                         pSprite->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY),
+                    pSprite->GetAIType().m_nEnemyAlly,
+                    pSprite->m_animation.GetPersonalSpace(),
+                    pSprite->field_54A8,
+                    pSprite->field_7430);
+            }
+
+            pSprite->EquipAll(TRUE);
+
+            if (pSprite->m_pArea != NULL) {
+                pSprite->JumpToPoint(pSprite->GetPos(), TRUE);
+            }
+
+            CAIObjectType liveTypeAI(pSprite->m_liveTypeAI);
+            CAIObjectType startTypeAI(pSprite->m_liveTypeAI);
+
+            liveTypeAI.m_nInstance = nCharacterId;
+            startTypeAI.m_nInstance = nCharacterId;
+
+            pSprite->m_liveTypeAI.Set(liveTypeAI);
+            pSprite->m_startTypeAI.Set(startTypeAI);
+
+            pSprite->m_canBeSeen = nCanBeSeen;
+            pSprite->m_id = nCharacterId;
+
+            if (bHadSprite == TRUE) {
+                pSprite->m_remoteObjectID = remoteObjectID;
+                pSprite->m_remotePlayerID = remotePlayerID;
+
+                if (pOldArea != NULL) {
+                    m_bInOnObjectAdd = TRUE;
+                    pSprite->sub_6F3B80(pOldArea,
+                        ptPos,
+                        posZ,
+                        listType,
+                        posVertList,
+                        bInfravisionOn);
+                    m_bInOnObjectAdd = FALSE;
+
+                    if (nSequence != CGameSprite::SEQ_WALK) {
+                        BYTE nNewSequence = static_cast<BYTE>(nSequence);
+                        pSprite->CheckSequence(nNewSequence);
+                        pSprite->SetSequence(nNewSequence);
+                        pSprite->SetDirection(nDirection);
+                    }
+
+                    INT nOldCellY = ptPos.y / CPathSearch::GRID_SQUARE_SIZEY;
+                    INT nOldCellX = ptPos.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+                    if (pSprite->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX != nOldCellX
+                        || pSprite->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY != nOldCellY) {
+                        if (nHitPoints > 0) {
+                            pSprite->JumpToPoint(ptPos, FALSE);
+                        }
+                    }
+                }
+
+                if (bWasSelected) {
+                    pSprite->Select();
+                }
+
+                pSprite->m_baseStats.m_hitPoints = nHitPoints;
+            }
+
+            pSprite->m_portraitIcons.RemoveAll();
+
+            for (INT nIcon = 0; nIcon < nPortraitIcons; nIcon++) {
+                pSprite->m_portraitIcons.AddTail(reinterpret_cast<int*>(aPortraitIcons[nIcon]));
+            }
+
+            DWORD nCustomBio = *reinterpret_cast<DWORD*>(pMessage + dwBioPos);
+            if (nCustomBio != 0) {
+                CString sBio(reinterpret_cast<char*>(pMessage + dwBioPos + sizeof(DWORD)), nCustomBio);
+
+                if (g_pBaldurChitin->GetTlkTable().m_override.Fetch(pSprite->m_baseStats.m_biography, strRes)) {
+                    g_pBaldurChitin->GetTlkTable().m_override.Remove(pSprite->m_baseStats.m_biography);
+                }
+
+                strRes.szText = sBio;
+                g_pBaldurChitin->GetTlkTable().m_override.AddUserEntry(pSprite->m_baseStats.m_biography, strRes);
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            if (bUpdateStatus) {
+                static_cast<CBaldurEngine*>(g_pBaldurChitin->pActiveEngine)->UpdateCharacterStatus(nCharacterId);
+            }
+        }
+    }
+
+    return TRUE;
 }
 
 // 0x42F100

@@ -487,6 +487,7 @@ public:
     /* 00C8 */ virtual void ProcessPendingTriggers();
 
     void AddBlood(SHORT nHeight, SHORT nDirection, SHORT nType);
+    void sub_6F3B80(CGameArea* pNewArea, CPoint pos, LONG posZ, BYTE listType, POSITION posVertList, BOOLEAN bInfravisionOn);
     void sub_6F5330();
     void Shatter(BYTE nType);
     void RemoveReplacementFromArea();
