@@ -133,7 +133,23 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
 
     m_damageReduction.clear();
 
-    // TODO: Incomplete.
+    if (pCreature->field_1B4 != 0) {
+        LONG nAmount = pCreature->field_1B4 * 5;
+        DWORD nEnchantment = pCreature->field_1B4;
+        if (pCreature->field_1B4 == 6) {
+            nAmount = 15;
+            nEnchantment = 1;
+        }
+
+        CDamageReduction damageReduction(nAmount, nEnchantment);
+        damageReduction.m_damageTypes.insert(0);
+        damageReduction.m_damageTypes.insert(0x100000);
+        damageReduction.m_damageTypes.insert(0x1000000);
+        damageReduction.m_damageTypes.insert(0x2000000);
+        damageReduction.m_damageTypes.insert(0x4000000);
+        damageReduction.m_damageTypes.insert(0x8000000);
+        m_damageReduction.insert(m_damageReduction.end(), 1, damageReduction);
+    }
 
     m_nCriticalHitBonus = 0;
     m_nTHAC0 = 0;
@@ -210,6 +226,7 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
     m_visualEffects.reset();
     m_bCasterHold = FALSE;
     m_nEncumberance = 0;
+    m_nMissileTHAC0Bonus = 0;
     m_nMagicDamageResistance = pCreature->m_resistMagicDamageBase;
     m_nResistPoison = 0;
     m_bDoNotJump = FALSE;
@@ -257,25 +274,37 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
     m_cImmunitiesItemTypeEquip.ClearAll();
     field_290.ClearAll();
     field_2AC.ClearAll();
+    m_appliedColorRanges.ClearAll();
+    m_appliedColorEffects.ClearAll();
     m_cBounceProjectile.RemoveAll();
     m_cBounceEffect.ClearAll();
+    field_300.ClearAll();
+    field_328.ClearAll();
+    field_378.ClearAll();
     field_3C8.RemoveAll();
     field_3E4.RemoveAll();
     field_400.RemoveAll();
     field_41C.RemoveAll();
     m_cImmunitiesItemUse.ClearAll();
     m_cImmunitiesItemTypeUse.ClearAll();
-    m_appliedColorRanges.ClearAll();
-    m_appliedColorEffects.ClearAll();
-
-    // TODO: Incomplete. The original also clears the lists at 0x300, 0x328,
-    // 0x378, 0x4AC-0x538 and 0x554 here.
 
     m_spellImmunities.clear();
     m_naturalImmunities.clear();
     m_lWhenStruck.clear();
 
-    // TODO: Incomplete.
+    field_4AC.ClearAll();
+    field_4C8.ClearAll();
+    field_4E4.ClearAll();
+    field_500.ClearAll();
+    field_51C.ClearAll();
+    field_538.ClearAll();
+    m_cRegeneratedPersistantEffectList.ClearAll();
+
+    if (pSpells != NULL) {
+        m_spells = *pSpells;
+    }
+
+    field_CAC = *pDomainSpells;
 
     for (int buttonIndex = 0; buttonIndex < 40; buttonIndex++) {
         m_disabledButtons[buttonIndex] = FALSE;
@@ -362,15 +391,16 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
             BOOL bQualifies = FALSE;
 
             CItem* pItem = pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon];
-            ITEM_ABILITY* pAbility = NULL;
+            ITEM_ABILITY* pAbility;
             if (pItem != NULL) {
                 pItem->Demand();
                 pAbility = pItem->GetAbility(pSprite->m_equipment.m_selectedWeaponAbility);
+            } else {
+                pAbility = NULL;
             }
 
             // NOTE: The original dereferences `pAbility` without a check.
-            if (pAbility != NULL
-                && ((pAbility->type & 0xFF) == 4 || (pAbility->type & 0xFF) == 2)) {
+            if ((pAbility->type & 0xFF) == 4 || (pAbility->type & 0xFF) == 2) {
                 bQualifies = TRUE;
             }
 
