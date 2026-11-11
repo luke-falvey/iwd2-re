@@ -459,17 +459,22 @@ BYTE CGameObjectArray::Delete(LONG index, BYTE threadNum, CGameObject** ptr, DWO
         }
     }
 
-    // TODO: Incomplete.
+    if (g_pChitin->cNetwork.m_bConnectionEstablished
+        && !g_pBaldurChitin->m_cBaldurMessage.m_bInOnObjectDelete) {
+        g_pBaldurChitin->m_cBaldurMessage.sub_430DC0(index);
+    }
 
     if (ptr != NULL) {
         *ptr = m_pArray[arrayIndex].m_objectPtr;
     }
 
-    m_pArray[arrayIndex].m_nextDeletedArrayIndex = m_deletedListHead;
+    m_pArray[arrayIndex].m_objectId = -1;
+    m_pArray[arrayIndex].m_objectIntPtr = m_deletedListHead;
     m_deletedListHead = arrayIndex;
 
-    // TODO: Incomplete.
+    g_pBaldurChitin->GetObjectGame()->m_cRemoteObjectArray.Delete(index);
 
+    lock.Unlock();
     return SUCCESS;
 }
 

@@ -1,10 +1,18 @@
 #include "CGameObject.h"
 
 #include "CBaldurChitin.h"
+#include "CGameAIBase.h"
+#include "CGameContainer.h"
 #include "CGameArea.h"
 #include "CGameObjectArray.h"
+#include "CGameSprite.h"
+#include "CGameSpriteEquipment.h"
+#include "CGameText.h"
+#include "CGameTrigger.h"
 #include "CInfCursor.h"
 #include "CInfGame.h"
+#include "CItem.h"
+#include "CMessage.h"
 #include "CScreenWorld.h"
 #include "CTimerWorld.h"
 #include "CUtil.h"
@@ -411,16 +419,208 @@ void CGameObject::SetCursor(LONG nToolTip)
 // 0x4C80E0
 void CGameObject::FloatText(STRREF strRef, int a2, int a3)
 {
-    // TODO: Incomplete.
+    if (m_pos.x == -1 && m_pos.y == -1) {
+        return;
+    }
+
+    STR_RES strRes;
+
+    CGameObjectArray* pObjectArray = g_pBaldurChitin->GetObjectGame()->GetObjectArray();
+
+    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL
+        && !g_pChitin->cNetwork.m_bIsHost) {
+        Sleep(25);
+    }
+
+    if (field_1C != 0) {
+        CGameObject* pObject;
+        BYTE rc;
+        do {
+            rc = pObjectArray->GetShare(field_1C,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            // NOTE: No `ReleaseShare` - the text object deletes itself.
+            pObject->RemoveFromArea();
+        }
+    }
+
+    if (strRef == 0) {
+        field_1C = 0;
+        return;
+    }
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    if (pGame->m_gameAreas[pGame->m_visibleArea] != m_pArea) {
+        return;
+    }
+
+    g_pBaldurChitin->GetTlkTable().Fetch(strRef, strRes);
+    if (strRes.szText.IsEmpty()) {
+        return;
+    }
+
+    strRes.szText.TrimLeft();
+
+    CPoint pt;
+    if (GetObjectType() == TYPE_TRIGGER) {
+        pt = static_cast<CGameTrigger*>(this)->m_posTrapOrigin;
+    } else {
+        pt = m_pos;
+    }
+
+    CGameText* pText = new CGameText(m_pArea,
+        pt,
+        static_cast<BYTE>(a2),
+        static_cast<BYTE>(a3),
+        strRes.szText);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetOptions()->m_bDuplicateFloatingText
+        && pText->sub_4CB9B0()) {
+        CString sName;
+        if (GetObjectType() == TYPE_SPRITE) {
+            sName = static_cast<CGameSprite*>(this)->GetName();
+        } else {
+            sName = "";
+        }
+
+        g_pBaldurChitin->m_pEngineWorld->DisplayText(sName,
+            strRes.szText,
+            RGB(215, 215, 190),
+            RGB(215, 215, 190),
+            -1,
+            FALSE);
+    }
+
+    pText->field_1C = m_id;
+    field_1C = pText->m_id;
+
+    if (GetObjectType() == TYPE_TRIGGER) {
+        CPoint ptText;
+        ptText.x = static_cast<CGameTrigger*>(this)->m_posTrapOrigin.x;
+        ptText.y = static_cast<CGameTrigger*>(this)->m_posTrapOrigin.y
+            + 5 * (-3 - static_cast<BYTE>(pText->m_nLines));
+        pText->sub_4CB820(ptText);
+    }
 }
 
 // 0x4C83F0
 SHORT CGameObject::TransferInventory(CGameObject* pTarget)
 {
-    // TODO: Incomplete.
+    SHORT actionReturn = CGameAIBase::ACTION_DONE;
 
-    // NOTE: `CGameAIBase::ACTION_ERROR`.
-    return -2;
+    if (m_objectType == TYPE_CONTAINER) {
+        CGameContainer* pContainer = static_cast<CGameContainer*>(this);
+        INT nItems = pContainer->m_lstItems.GetCount();
+
+        switch (pTarget->GetObjectType()) {
+        case TYPE_CONTAINER:
+            for (INT nIndex = 0; nIndex < nItems; nIndex++) {
+                CItem* pItem = pContainer->GetItem(0);
+                if (pItem != NULL) {
+                    // NOTE: The original inlines `CItem::operator=` here.
+                    CMessageContainerAddItem* pMessage = new CMessageContainerAddItem(*pItem,
+                        0x7FFF,
+                        FALSE,
+                        m_id,
+                        pTarget->m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                    pContainer->sub_481EB0(0);
+                }
+            }
+            break;
+        case TYPE_SPRITE:
+            for (INT nIndex = 0; nIndex < nItems; nIndex++) {
+                CItem* pItem = pContainer->GetItem(0);
+                if (pItem != NULL) {
+                    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pTarget->m_id) != -1) {
+                        g_pBaldurChitin->GetObjectGame()->FeedBack(CInfGame::FEEDBACK_ITEMGAINED, 0, TRUE);
+                    }
+
+                    // NOTE: The original inlines `CItem::operator=` here.
+                    CMessageAddInventoryItem* pMessage = new CMessageAddInventoryItem(*pItem,
+                        m_id,
+                        pTarget->m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                    pContainer->sub_481EB0(0);
+                }
+            }
+            break;
+        default:
+            actionReturn = CGameAIBase::ACTION_ERROR;
+            break;
+        }
+    } else if (m_objectType == TYPE_SPRITE) {
+        CItem** pItems = static_cast<CGameSprite*>(this)->m_equipment.m_items;
+
+        switch (pTarget->GetObjectType()) {
+        case TYPE_CONTAINER:
+            for (INT nSlot = 0; nSlot != CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+                if (nSlot != CGameSpriteEquipment::SLOT_FIST
+                    && pItems[nSlot] != NULL
+                    && (pItems[nSlot]->GetFlagsFile() & 0x4) != 0) {
+                    CItem* pItem = new CItem(*pItems[nSlot]);
+
+                    CMessageRemoveInventoryItem* pRemove = new CMessageRemoveInventoryItem(static_cast<SHORT>(nSlot),
+                        m_id,
+                        m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pRemove, FALSE);
+
+                    // NOTE: The original inlines `CItem::operator=` here.
+                    CMessageContainerAddItem* pAdd = new CMessageContainerAddItem(*pItem,
+                        0x7FFF,
+                        FALSE,
+                        m_id,
+                        pTarget->m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pAdd, FALSE);
+
+                    if (pItem != NULL) {
+                        delete pItem;
+                    }
+                }
+            }
+            break;
+        case TYPE_SPRITE:
+            for (INT nSlot = 0; nSlot != CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+                if (nSlot != CGameSpriteEquipment::SLOT_FIST
+                    && pItems[nSlot] != NULL
+                    && (pItems[nSlot]->GetFlagsFile() & 0x4) != 0) {
+                    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pTarget->m_id) != -1) {
+                        g_pBaldurChitin->GetObjectGame()->FeedBack(CInfGame::FEEDBACK_ITEMGAINED, 0, TRUE);
+                    }
+
+                    CItem* pItem = new CItem(*pItems[nSlot]);
+
+                    CMessageRemoveInventoryItem* pRemove = new CMessageRemoveInventoryItem(static_cast<SHORT>(nSlot),
+                        m_id,
+                        m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pRemove, FALSE);
+
+                    CMessageAddInventoryItem* pAdd = new CMessageAddInventoryItem(*pItem,
+                        m_id,
+                        pTarget->m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pAdd, FALSE);
+
+                    if (pItem != NULL) {
+                        delete pItem;
+                    }
+                }
+            }
+            break;
+        default:
+            actionReturn = CGameAIBase::ACTION_ERROR;
+            break;
+        }
+    } else {
+        actionReturn = CGameAIBase::ACTION_ERROR;
+    }
+
+    return actionReturn;
 }
 
 // 0x78E750

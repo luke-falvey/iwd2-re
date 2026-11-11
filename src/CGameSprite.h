@@ -558,7 +558,7 @@ public:
     CGameButtonList* sub_717250(INT a1);
     CGameButtonList* GetInternalButtonList();
     CGameButtonList* sub_717FC0(const CResRef& cResRef, INT nCount);
-    void sub_718390(const CResRef& cResRef, int a2, int a3, CButtonData& cButtonData);
+    BOOL sub_718390(const CResRef& cResRef, int a2, int a3, CButtonData& cButtonData);
     CGameButtonList* GetItemUsages(SHORT slotNum, WORD buttonType, SHORT abilityNum);
     CItem* GetLauncher(const ITEM_ABILITY* ability, SHORT& launcherSlot);
     SHORT GetLauncherSlot(SHORT slotNum, SHORT abilityNum);
@@ -728,6 +728,7 @@ public:
     void SelectWeaponAbility(unsigned char a1, unsigned char a2, unsigned char a3, unsigned char a4);
     void sub_755A70(CSpell* pSpell, SPELL_ABILITY* pAbility, const CPoint& ptTarget);
     void ApplyCastingEffectPost(CSpell* pSpell, SPELL_ABILITY* pAbility);
+    BOOL sub_7567F0(CSpell* pSpell, const CPoint& ptTarget, BYTE nClass, DWORD nSpecialization);
     void sub_756930(CItem* pItem, CItem* pLauncher);
     SHORT EquipItem();
     SHORT FindTraps();
@@ -1061,7 +1062,7 @@ public:
     /* 5694 */ CPoint m_targetPoint;
     /* 569C */ short m_targetAreaSize;
     /* 569E */ BYTE m_nTempSelectedWeapon;
-    /* 56DF */ BYTE m_nTempSelectedWeaponAbility;
+    /* 569F */ BYTE m_nTempSelectedWeaponAbility;
     /* 56A0 */ CButtonData m_currentUseButton;
     /* 56E4 */ CResRef field_56E4;
     /* 56EC */ BOOLEAN m_sequenceTest;
@@ -1164,8 +1165,8 @@ public:
     /* 752E */ BOOL m_bSendSpriteUpdate;
     /* 7532 */ int field_7532;
     /* 7536 */ int field_7536;
-    /* 753A */ int field_753A;
-    /* 753C */ int field_753C;
+    /* 753A */ BOOLEAN field_753A;
+    /* 753C */ ULONG field_753C;
     /* 7540 */ int field_7540;
     /* 7544 */ int field_7544;
     /* 7548 */ CVidCell field_7548[32];

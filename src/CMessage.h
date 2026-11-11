@@ -166,6 +166,9 @@ public:
     static const BYTE MSG_TYPE_SWAPITEM;
     static const BYTE MSG_SUBTYPE_SWAPITEM_REQUEST;
     static const BYTE MSG_SUBTYPE_SWAPITEM_REPLY;
+    static const BYTE SWAPITEM_LOCATION_GROUND;
+    static const BYTE SWAPITEM_LOCATION_PERSONAL_INVENTORY;
+    static const BYTE SWAPITEM_LOCATION_PERSONAL;
 
     static const BYTE MSG_TYPE_JOURNAL;
     static const BYTE MSG_SUBTYPE_JOURNAL_ADD_ENTRY;
@@ -315,7 +318,10 @@ public:
     BOOL ObjectControlSuggestion(PLAYER_ID playerToSuggestID, LONG localObjectID);
     BOOL ObjectControlRequest(LONG localObjectID);
     BOOL ObjectControl();
+    BOOLEAN sub_430DC0(LONG nObjectId);
+    BOOLEAN SwapItemRequest(BYTE nLocation, LONG nObjectId, SHORT nSlotNum, CItem*& pItem, STRREF& strError, WORD wCount);
     BOOLEAN OnSwapItemRequest(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN OnSwapItemReply(BYTE* pMessage, DWORD dwSize, CItem*& pItem, STRREF& strError);
     BOOLEAN CharacterPartyOrderRequest();
     BOOLEAN SendChatMessage(CString& sChatMessage);
     BOOLEAN OnChatMessage(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);

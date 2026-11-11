@@ -1,6 +1,8 @@
 #ifndef CSPELL_H_
 #define CSPELL_H_
 
+#include <list>
+
 #include "CResSpell.h"
 
 class CGameAIBase;
@@ -29,5 +31,6 @@ public:
     DWORD GetItemFlags() const;
     BYTE GetSchool() const;
 };
+
 
 #endif /* CSPELL_H_ */

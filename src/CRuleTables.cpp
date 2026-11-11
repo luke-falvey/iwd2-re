@@ -6,6 +6,7 @@
 #include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CItem.h"
+#include "CSpell.h"
 #include "CTimerWorld.h"
 #include "CUtil.h"
 
@@ -3507,6 +3508,69 @@ INT CRuleTables::GetHatedRaceBonus(BYTE& nRace, const CCreatureFileHeader& BStat
     }
 
     return nCnt - nFavoredEnemyIndex;
+}
+
+// 0x5468B0
+BOOLEAN CRuleTables::sub_5468B0(CGameSprite* pSprite, CItem* pItem) const
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CRuleTables.cpp
+    // __LINE__: 6656
+    UTIL_ASSERT(pSprite != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CRuleTables.cpp
+    // __LINE__: 6657
+    UTIL_ASSERT(pItem != NULL);
+
+    INT nSkill = static_cast<char>(pSprite->m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE]);
+    BOOLEAN bSuccess = FALSE;
+
+    DWORD nSpellLevel = pItem->sub_4EA3F0();
+
+    if (pItem->GetItemType() == 11) {
+        BYTE resRef[RESREF_SIZE];
+        pItem->cResRef.GetResRef(resRef);
+
+        for (int index = 0; index < RESREF_SIZE; index++) {
+            if (resRef[index] == 'Z' || resRef[index] == 'z') {
+                resRef[index] = '\0';
+                break;
+            }
+        }
+
+        CResRef spellResRef(resRef);
+
+        CSpell cSpell;
+        cSpell.SetResRef(spellResRef, TRUE, TRUE);
+
+        if (cSpell.pRes != NULL) {
+            SHORT nLevel = cSpell.GetLevel();
+            if (nLevel != 0) {
+                nSpellLevel = nLevel;
+            }
+        }
+    }
+
+    INT nDC = nSpellLevel + 20;
+    INT nRoll = rand() % 20 + 1;
+    if (nRoll + nSkill >= nDC) {
+        bSuccess = TRUE;
+    }
+
+    // NOTE: Result is unused.
+    pSprite->GetSkillBonus(CGAMESPRITE_SKILL_USE_MAGIC_DEVICE);
+
+    // NOTE: The original sign-extends the skill into a 16-bit register
+    // (`MOVSX CX`) and adds the roll to the full 32-bit register, so a
+    // negative skill is treated as `WORD`.
+    pSprite->FeedBack(CGameSprite::FEEDBACK_ROLL,
+        static_cast<WORD>(static_cast<SHORT>(nSkill)) + nRoll,
+        nDC,
+        nSpellLevel,
+        0x9988,
+        0,
+        0);
+
+    return bSuccess;
 }
 
 // 0x546AA0

@@ -468,6 +468,15 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_SWAPITEM_REQUEST = 82;
 // 0x84CF5A
 const BYTE CBaldurMessage::MSG_SUBTYPE_SWAPITEM_REPLY = 114;
 
+// 0x84CF5B
+const BYTE CBaldurMessage::SWAPITEM_LOCATION_GROUND = 'G';
+
+// 0x84CF5C
+const BYTE CBaldurMessage::SWAPITEM_LOCATION_PERSONAL_INVENTORY = 'g';
+
+// 0x84CF5D
+const BYTE CBaldurMessage::SWAPITEM_LOCATION_PERSONAL = 'P';
+
 // 0x84CF64
 const BYTE CBaldurMessage::MSG_TYPE_JOURNAL = 106;
 
@@ -2489,12 +2498,191 @@ BOOLEAN CBaldurMessage::sub_4313E0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
     return FALSE;
 }
 
+// 0x430DC0
+BOOLEAN CBaldurMessage::sub_430DC0(LONG nObjectId)
+{
+    // TODO: Incomplete.
+    // NOTE: Tells the other players that an object was deleted. Called from
+    // `CGameObjectArray::Delete`.
+
+    return FALSE;
+}
+
+// 0x431560
+BOOLEAN CBaldurMessage::SwapItemRequest(BYTE nLocation, LONG nObjectId, SHORT nSlotNum, CItem*& pItem, STRREF& strError, WORD wCount)
+{
+    CString sHostName;
+    CResRef cResRef;
+    CString sResRef;
+    CGameObject* pObject;
+    BYTE rc;
+
+    if (g_pChitin->cNetwork.GetSessionOpen()) {
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nObjectId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            LONG nRemoteObjectID = pObject->m_remoteObjectID;
+            PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nObjectId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            INT nPlayerSlot = g_pChitin->cNetwork.FindPlayerLocationByID(remotePlayerID, FALSE);
+
+            // NOTE: Only the low byte of `m_nLocalPlayer` is compared.
+            if (nPlayerSlot != -1
+                && nPlayerSlot != static_cast<BYTE>(g_pChitin->cNetwork.m_nLocalPlayer)) {
+                g_pChitin->cNetwork.GetPlayerName(nPlayerSlot, sHostName);
+
+                BOOLEAN bHasItem;
+                BYTE nResRefLength;
+                DWORD dwSize = 14;
+                if (pItem != NULL) {
+                    cResRef = pItem->GetResRef();
+                    cResRef.CopyToString(sResRef);
+                    nResRefLength = static_cast<BYTE>(sResRef.GetLength());
+                    dwSize += nResRefLength + 13;
+                    bHasItem = TRUE;
+                } else {
+                    bHasItem = FALSE;
+                }
+
+                BYTE* pData = CreateBuffer(dwSize);
+                if (pData != NULL) {
+                    pData[0] = nLocation;
+                    *reinterpret_cast<PLAYER_ID*>(pData + 1) = remotePlayerID;
+                    *reinterpret_cast<LONG*>(pData + 5) = nRemoteObjectID;
+                    *reinterpret_cast<SHORT*>(pData + 9) = nSlotNum;
+                    *reinterpret_cast<WORD*>(pData + 11) = wCount;
+                    pData[13] = bHasItem;
+
+                    DWORD cnt = 14;
+                    if (bHasItem == TRUE) {
+                        pData[14] = nResRefLength;
+
+                        DWORD nLength = sResRef.GetLength();
+                        memcpy(pData + 15, sResRef.GetBuffer(nLength), nLength);
+                        cnt = sResRef.GetLength() + 15;
+
+                        *reinterpret_cast<WORD*>(pData + cnt) = pItem->GetUsageCount(0);
+                        cnt += sizeof(WORD);
+
+                        *reinterpret_cast<WORD*>(pData + cnt) = pItem->GetUsageCount(1);
+                        cnt += sizeof(WORD);
+
+                        *reinterpret_cast<WORD*>(pData + cnt) = pItem->GetUsageCount(2);
+                        cnt += sizeof(WORD);
+
+                        *reinterpret_cast<WORD*>(pData + cnt) = pItem->m_wear;
+                        cnt += sizeof(WORD);
+
+                        *reinterpret_cast<DWORD*>(pData + cnt) = pItem->m_flags;
+                        cnt += sizeof(DWORD);
+                    }
+
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\CBaldurMessage.cpp
+                    // __LINE__: 6606
+                    UTIL_ASSERT(cnt == dwSize);
+
+                    g_pChitin->cNetwork.SendSpecificMessage(sHostName,
+                        CNetwork::SEND_GUARANTEED,
+                        MSG_TYPE_SWAPITEM,
+                        MSG_SUBTYPE_SWAPITEM_REQUEST,
+                        pData,
+                        dwSize);
+
+                    DestroyBuffer(pData);
+
+                    while (!g_pChitin->cNetwork.PeekSpecificMessage(sHostName, MSG_TYPE_SWAPITEM, MSG_SUBTYPE_SWAPITEM_REPLY)) {
+                        if (g_pChitin->cNetwork.GetSessionOpen() != TRUE
+                            || g_pChitin->cNetwork.FindPlayerLocationByName(sHostName, FALSE) == -1) {
+                            break;
+                        }
+
+                        g_pBaldurChitin->GetBaldurMessage()->HandleBlockingMessages();
+
+                        g_pChitin->m_bDisplayStale = TRUE;
+                        SleepEx(60, FALSE);
+                    }
+
+                    if (g_pChitin->cNetwork.GetSessionOpen()
+                        && g_pChitin->cNetwork.FindPlayerLocationByName(sHostName, FALSE) != -1) {
+                        BYTE* pMessage = g_pChitin->cNetwork.FetchSpecificMessage(sHostName,
+                            MSG_TYPE_SWAPITEM,
+                            MSG_SUBTYPE_SWAPITEM_REPLY,
+                            dwSize);
+                        BOOLEAN bResult = OnSwapItemReply(pMessage, dwSize, pItem, strError);
+                        delete pMessage;
+                        return bResult;
+                    }
+
+                    strError = -1;
+                }
+            }
+        }
+    }
+
+    return FALSE;
+}
+
 // 0x4319C0
 BOOLEAN CBaldurMessage::OnSwapItemRequest(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
     // TODO: Incomplete.
 
     return FALSE;
+}
+
+// 0x431F10
+BOOLEAN CBaldurMessage::OnSwapItemReply(BYTE* pMessage, DWORD dwSize, CItem*& pItem, STRREF& strError)
+{
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    BOOLEAN bResult = pMessage[cnt++];
+    if (bResult == TRUE) {
+        BOOLEAN bHasItem = pMessage[cnt++];
+        if (bHasItem == bResult) {
+            BYTE nResRefLength = pMessage[cnt++];
+
+            char szResRef[RESREF_SIZE + 1] = { 0 };
+            memcpy(szResRef, pMessage + cnt, nResRefLength);
+            cnt += nResRefLength;
+
+            WORD nUsageCount1 = *reinterpret_cast<WORD*>(pMessage + cnt);
+            cnt += sizeof(WORD);
+
+            WORD nUsageCount2 = *reinterpret_cast<WORD*>(pMessage + cnt);
+            cnt += sizeof(WORD);
+
+            WORD nUsageCount3 = *reinterpret_cast<WORD*>(pMessage + cnt);
+            cnt += sizeof(WORD);
+
+            WORD nWear = *reinterpret_cast<WORD*>(pMessage + cnt);
+            cnt += sizeof(WORD);
+
+            DWORD dwFlags = *reinterpret_cast<DWORD*>(pMessage + cnt);
+            cnt += sizeof(DWORD);
+
+            pItem = new CItem(CResRef(szResRef),
+                nUsageCount1,
+                nUsageCount2,
+                nUsageCount3,
+                nWear,
+                dwFlags);
+        } else {
+            pItem = NULL;
+        }
+    }
+
+    strError = *reinterpret_cast<STRREF*>(pMessage + cnt);
+
+    return bResult;
 }
 
 // 0x432050

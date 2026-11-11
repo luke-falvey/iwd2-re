@@ -441,6 +441,7 @@ public:
     BOOLEAN IsHatedRace(const CAIObjectType& typeAI, const CCreatureFileHeader& BStats) const;
     BOOLEAN IsHatedRace(BYTE& nRace, const CCreatureFileHeader& BStats) const;
     INT GetHatedRaceBonus(BYTE& nRace, const CCreatureFileHeader& BStats) const;
+    BOOLEAN sub_5468B0(CGameSprite* pSprite, CItem* pItem) const;
     INT GetEncumbranceMod(CGameSprite* pSprite) const;
     void sub_546B60(CGameSprite* pSprite, int& a2, int& a3, int& a4, BOOL a5) const;
     INT sub_547020(INT nBaseAttackBonus, INT nStep, INT nAttack) const;

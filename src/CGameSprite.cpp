@@ -9624,9 +9624,11 @@ CGameButtonList* CGameSprite::sub_717FC0(const CResRef& cResRef, INT nCount)
 }
 
 // 0x718390
-void CGameSprite::sub_718390(const CResRef& cResRef, int a2, int a3, CButtonData& cButtonData)
+BOOL CGameSprite::sub_718390(const CResRef& cResRef, int a2, int a3, CButtonData& cButtonData)
 {
     // TODO: Incomplete.
+
+    return FALSE;
 }
 
 // 0x717620

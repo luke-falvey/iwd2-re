@@ -447,9 +447,20 @@ void sub_54C770()
 }
 
 // 0x54CA80
-void sub_54CA80()
+BOOL CStore::IsItemAllowed(CItem& cItem)
 {
-    // TODO: Incomplete.
+    // NOTE: Bags cannot be put into bags.
+    if (m_header.m_nStoreType == 4 && cItem.GetItemType() == 58) {
+        return FALSE;
+    }
+
+    for (DWORD nIndex = 0; nIndex < m_nBuyTypes; nIndex++) {
+        if (m_pBuyTypes[nIndex] == cItem.GetItemType()) {
+            return (cItem.GetFlagsFile() & 0x800) == 0;
+        }
+    }
+
+    return FALSE;
 }
 
 // 0x54CAF0
