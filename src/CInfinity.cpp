@@ -3493,7 +3493,80 @@ void CInfinity::CallLightning(INT xWorldPos, INT yWorldPos)
 // 0x5D1380
 void CInfinity::Scroll(CPoint ptDest, SHORT speed)
 {
-    // TODO: Incomplete.
+    // NOTE: Positions are fixed point with a factor of 10000.
+    INT nDestX = ptDest.x * 10000;
+    INT nDestY = ptDest.y * 10000;
+    INT dx = nDestX - m_ptCurrentPosExact.x;
+    INT dy = nDestY - m_ptCurrentPosExact.y;
+    INT nSpeedDiagX = speed * 30000 / 4;
+    INT nSpeedStraight = speed * 10000;
+    INT nSpeedDiagY = nSpeedStraight / 2;
+
+    DWORD nNow = GetTickCount();
+    DWORD nElapsed;
+    if (nNow < m_nLastTickCount || nNow - m_nLastTickCount > 500) {
+        nElapsed = 500;
+    } else {
+        nElapsed = nNow - m_nLastTickCount;
+    }
+
+    m_nLastTickCount = nNow;
+
+    INT nStepStraight = nElapsed * nSpeedStraight / 50;
+    INT nStepDiagX = nElapsed * nSpeedDiagX / 50;
+
+    if (speed == 0) {
+        SetViewPosition(ptDest.x, ptDest.y, TRUE);
+        m_ptScrollDest.x = -1;
+        m_ptScrollDest.y = -1;
+        return;
+    }
+
+    if (dx <= nStepStraight && dx >= -nStepStraight) {
+        if (dy <= nStepDiagX && dy >= -nStepDiagX) {
+            m_ptCurrentPosExact.y = nDestY;
+            m_ptCurrentPosExact.x = nDestX;
+            SetViewPosition(nDestX / 10000, nDestY / 10000, FALSE);
+            m_ptScrollDest.x = -1;
+            m_ptScrollDest.y = -1;
+        } else if (dy > 0) {
+            m_ptCurrentPosExact.y += nStepDiagX;
+            m_ptCurrentPosExact.x = nDestX;
+            SetViewPosition(nDestX / 10000, m_ptCurrentPosExact.y / 10000, FALSE);
+        } else if (dy < 0) {
+            m_ptCurrentPosExact.y -= nStepDiagX;
+            m_ptCurrentPosExact.x = nDestX;
+            SetViewPosition(nDestX / 10000, m_ptCurrentPosExact.y / 10000, FALSE);
+        }
+
+        return;
+    }
+
+    if (dx > 0 && dy <= 6 && dy >= -nStepDiagX) {
+        m_ptCurrentPosExact.x += nStepStraight;
+        m_ptCurrentPosExact.y = nDestY;
+        SetViewPosition(m_ptCurrentPosExact.x / 10000, nDestY / 10000, FALSE);
+    } else if (dx < 0 && dy <= 6 && dy >= -nStepDiagX) {
+        m_ptCurrentPosExact.x -= nStepStraight;
+        m_ptCurrentPosExact.y = nDestY;
+        SetViewPosition(m_ptCurrentPosExact.x / 10000, nDestY / 10000, FALSE);
+    } else if (dx > 0 && dy > 0) {
+        m_ptCurrentPosExact.x += nStepDiagX;
+        m_ptCurrentPosExact.y += nElapsed * nSpeedDiagY / 50;
+        SetViewPosition(m_ptCurrentPosExact.x / 10000, m_ptCurrentPosExact.y / 10000, FALSE);
+    } else if (dx < 0 && dy > 0) {
+        m_ptCurrentPosExact.x -= nStepDiagX;
+        m_ptCurrentPosExact.y += nElapsed * nSpeedDiagY / 50;
+        SetViewPosition(m_ptCurrentPosExact.x / 10000, m_ptCurrentPosExact.y / 10000, FALSE);
+    } else if (dx > 0 && dy < 0) {
+        m_ptCurrentPosExact.x += nStepDiagX;
+        m_ptCurrentPosExact.y -= nElapsed * nSpeedDiagY / 50;
+        SetViewPosition(m_ptCurrentPosExact.x / 10000, m_ptCurrentPosExact.y / 10000, FALSE);
+    } else if (dx < 0 && dy < 0) {
+        m_ptCurrentPosExact.x -= nStepDiagX;
+        m_ptCurrentPosExact.y -= nElapsed * nSpeedDiagY / 50;
+        SetViewPosition(m_ptCurrentPosExact.x / 10000, m_ptCurrentPosExact.y / 10000, FALSE);
+    }
 }
 
 // 0x5D1750
