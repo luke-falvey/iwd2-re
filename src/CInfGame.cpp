@@ -4721,6 +4721,7 @@ void CInfGame::NewGame(BOOLEAN bProgressBarRequired, BOOLEAN bProgressBarInPlace
 
     CVariable chapter;
     chapter.SetName(CHAPTER_GLOBAL);
+    chapter.m_intValue = -1;
     m_variables.AddKey(chapter);
 
     m_bFromNewGame = TRUE;
