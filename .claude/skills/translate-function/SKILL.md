@@ -55,7 +55,11 @@ only when the packet leaves a name unresolved:
    byte/word/dword) and from the declared C++ type. Comparing with all-ones: write `-1` when
    the C++ type is signed (SHORT, char, int, LONG), and `0xFF` / `0xFFFF` / `0xFFFFFFFF` when
    it's unsigned (BYTE, WORD, DWORD). Never `x == 0xFFFF` for a SHORT or `x == -1` for a
-   BYTE/WORD.
+   BYTE/WORD. When the asm compares a narrower width than the member's declared type
+   (`CMP byte ptr [EAX],0x4` on a WORD field such as `ITEM_ABILITY::type`), cast:
+   `static_cast<BYTE>(p->type) == 4`, with a `// NOTE:`.
+   String literals: read every pushed string address in the packet's DATA section and copy
+   it exactly. `"\n"`, `"\r\n"` and `"\n\r"` are three different constants.
 4. **Names.** Use repo names from the packet. No raw pointer arithmetic, no raw vtable stores,
    no invented `field_XXXX` when a header has the member. Take a member from the class the
    register holds, not from another struct that has a field with the same name. If a header
