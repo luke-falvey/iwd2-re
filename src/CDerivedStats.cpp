@@ -41,6 +41,8 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
     m_nACPiercingMod = pCreature->m_armorClassPiercingAdjustment;
     m_nACSlashingMod = pCreature->m_armorClassSlashingAdjustment;
 
+    m_damageReduction.clear();
+
     // TODO: Incomplete.
 
     m_nCriticalHitBonus = 0;
@@ -156,7 +158,9 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
 
     // TODO: Incomplete.
 
+    m_spellImmunities.clear();
     m_naturalImmunities.clear();
+    m_whenStruckList.clear();
 
     // TODO: Incomplete.
 
@@ -206,6 +210,17 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
             m_naturalImmunities.insert(CGAMEEFFECT_POISON);
         }
 
+        if (pSprite->m_derivedStats.m_monkLevel >= 20) {
+            CDamageReduction damageReduction(20, 1);
+            damageReduction.m_damageTypes.insert(0);
+            damageReduction.m_damageTypes.insert(0x100000);
+            damageReduction.m_damageTypes.insert(0x1000000);
+            damageReduction.m_damageTypes.insert(0x2000000);
+            damageReduction.m_damageTypes.insert(0x4000000);
+            damageReduction.m_damageTypes.insert(0x8000000);
+            m_damageReduction.insert(m_damageReduction.end(), 1, damageReduction);
+        }
+
         // TODO: Incomplete.
     }
 }
@@ -224,7 +239,7 @@ CDerivedStats& CDerivedStats::operator=(const CDerivedStats& other)
     m_nACPiercingMod = other.m_nACPiercingMod;
     m_nACSlashingMod = other.m_nACSlashingMod;
 
-    // TODO: Incomplete (copying unknown STL container).
+    m_damageReduction = other.m_damageReduction;
 
     m_nCriticalHitBonus = other.m_nCriticalHitBonus;
     m_nTHAC0 = other.m_nTHAC0;
@@ -325,11 +340,9 @@ CDerivedStats& CDerivedStats::operator=(const CDerivedStats& other)
     m_cImmunitiesItemUse = other.m_cImmunitiesItemUse;
     m_cImmunitiesItemTypeUse = other.m_cImmunitiesItemTypeUse;
 
-    // TODO: Incomplete (copying unknown STL container).
-
+    m_spellImmunities = other.m_spellImmunities;
     m_naturalImmunities = other.m_naturalImmunities;
-
-    // TODO: Incomplete (copying unknown STL container).
+    m_whenStruckList = other.m_whenStruckList;
 
     // field_4AC = other.field_4AC;
     // field_4C8 = other.field_4C8;
@@ -376,6 +389,8 @@ void CDerivedStats::BonusInit()
     m_nACPiercingMod = 0;
 
     // TODO: Incomplete.
+
+    m_damageReduction.clear();
 
     m_nCriticalHitBonus = 0;
     m_nTHAC0 = 0;
@@ -475,6 +490,12 @@ void CDerivedStats::BonusInit()
     field_13C = 0;
     m_nMirrorImages = 0;
     m_bPreventAISlowDown = FALSE;
+
+    // TODO: Incomplete.
+
+    m_spellImmunities.clear();
+    m_naturalImmunities.clear();
+    m_whenStruckList.clear();
 
     // TODO: Incomplete.
 
@@ -1114,4 +1135,81 @@ CGameSpriteGroupedSpellList* CDerivedStats::sub_447B00(const BYTE& nClass)
     UTIL_ASSERT(nClassIndex < CSPELLLIST_NUM_CLASSES);
 
     return &(m_spells.m_spellsByClass[nClassIndex]);
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x447C20
+LONG CDamageReduction::Absorb(LONG nDamage)
+{
+    LONG nRemaining;
+
+    if (m_pAmountLeft == NULL) {
+        nRemaining = nDamage - m_nAmount;
+    } else if (*m_pAmountLeft >= nDamage) {
+        LONG nAbsorbed = nDamage < m_nAmount ? nDamage : m_nAmount;
+        nRemaining = nDamage - nAbsorbed;
+        *m_pAmountLeft -= nAbsorbed;
+    } else {
+        nRemaining = nDamage - *m_pAmountLeft;
+        *m_pAmountLeft = 0;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CDerivedStats.cpp
+        // __LINE__: 2206
+        UTIL_ASSERT(m_sourceCreaturePtr != 0);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CDerivedStats.cpp
+        // __LINE__: 2207
+        UTIL_ASSERT(m_sourceEffectPtr != 0);
+
+        m_sourceCreaturePtr->GetEquipedEffectList()->RemoveMatchingEffect(m_sourceEffectPtr);
+        m_sourceCreaturePtr->GetTimedEffectList()->RemoveMatchingEffect(m_sourceEffectPtr);
+    }
+
+    if (nRemaining < 0) {
+        return 0;
+    }
+
+    return nRemaining;
+}
+
+// 0x447F10
+void CDamageReduction::SetSource(LONG* pAmountLeft, CGameSprite* pSourceCreature, CGameEffect* pSourceEffect)
+{
+    m_pAmountLeft = pAmountLeft;
+    m_sourceCreaturePtr = pSourceCreature;
+    m_sourceEffectPtr = pSourceEffect;
+}
+
+// 0x448250
+LONG CDamageReductionList::Apply(LONG nDamage, LONG nEnchantment, DWORD nDamageType)
+{
+    CDamageReduction* pBest = NULL;
+
+    for (iterator it = begin(); it != end(); it++) {
+        if (nEnchantment < static_cast<LONG>(it->m_nEnchantment)) {
+            if (it->m_damageTypes.size() == 0
+                || it->m_damageTypes.find(nDamageType) != it->m_damageTypes.end()) {
+                if (pBest == NULL) {
+                    pBest = &(*it);
+                } else {
+                    LONG nAmount = it->m_pAmountLeft != NULL
+                        ? min(*it->m_pAmountLeft, it->m_nAmount)
+                        : it->m_nAmount;
+                    LONG nBestAmount = pBest->m_pAmountLeft != NULL
+                        ? min(*pBest->m_pAmountLeft, pBest->m_nAmount)
+                        : pBest->m_nAmount;
+                    if (nAmount > nBestAmount) {
+                        pBest = &(*it);
+                    }
+                }
+            }
+        }
+    }
+
+    if (pBest != NULL) {
+        return pBest->Absorb(nDamage);
+    }
+
+    return nDamage;
 }

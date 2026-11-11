@@ -3936,10 +3936,9 @@ BOOL CGameEffectDamage::ApplyEffect(CGameSprite* pSprite)
         }
 
         if (m_special != -1) {
-            // TODO: Incomplete. The original passes the damage through the
-            // damage reduction list at `m_derivedStats + 0x49C` here
-            // (0x448250, `amount = list.sub_448250(amount, m_special,
-            // nDamageType)`), which is not translated yet.
+            m_effectAmount = pSprite->GetDerivedStats()->m_damageReduction.Apply(m_effectAmount,
+                m_special,
+                nDamageType);
         }
 
         if (m_effectAmount < 0) {
@@ -17563,13 +17562,17 @@ BOOL CGameEffectStoneSkins::ApplyEffect(CGameSprite* pSprite)
             m_effectAmount2 = min(static_cast<BYTE>(m_casterLevel) * 10, 150);
         }
 
-        // TODO: Incomplete. The original builds a temporary damage
-        // reduction entry (0x447B60, ctor args 10, 5), adds damage types 0,
-        // 0x100000, 0x1000000, 0x2000000, 0x4000000 and 0x8000000 to it
-        // (0x447E50), binds it to `&m_effectAmount2`, `pSprite` and `this`
-        // (0x447F10), appends it to the container at `CDerivedStats` + 0x49C
-        // (0x447F30) and destroys the temporary (0x448470). That container
-        // is not declared yet.
+        {
+            CDamageReduction damageReduction(10, 5);
+            damageReduction.m_damageTypes.insert(0);
+            damageReduction.m_damageTypes.insert(0x100000);
+            damageReduction.m_damageTypes.insert(0x1000000);
+            damageReduction.m_damageTypes.insert(0x2000000);
+            damageReduction.m_damageTypes.insert(0x4000000);
+            damageReduction.m_damageTypes.insert(0x8000000);
+            damageReduction.SetSource(&m_effectAmount2, pSprite, this);
+            pSprite->GetDerivedStats()->m_damageReduction.push_back(damageReduction);
+        }
         break;
     case 1:
         if (m_secondaryType != 0) {
