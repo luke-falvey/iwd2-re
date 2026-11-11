@@ -11812,7 +11812,189 @@ void CGameSprite::PlayDialogSound(CGameSprite* pNPC)
 // 0x71E240
 void CGameSprite::UpdateFeats(CCreatureFileHeader* pOldBaseStats, CDerivedStats* pDerivedStats)
 {
-    // TODO: Incomplete.
+    // Aegis of Rime
+    if ((pOldBaseStats->m_feats[0] & 0x1) == 0 && (m_baseStats.m_feats[0] & 0x1) != 0) {
+        m_baseStats.m_resistColdBase += 5;
+        if (m_baseStats.m_resistColdBase < 0) {
+            m_baseStats.m_resistColdBase = 0;
+        } else if (m_baseStats.m_resistColdBase > 100) {
+            m_baseStats.m_resistColdBase = 100;
+        }
+    }
+
+    // Aqua Mortis
+    if ((pOldBaseStats->m_feats[0] & 0x4) == 0 && (m_baseStats.m_feats[0] & 0x4) != 0) {
+        m_baseStats.m_resistAcidBase += 5;
+        if (m_baseStats.m_resistAcidBase < 0) {
+            m_baseStats.m_resistAcidBase = 0;
+        } else if (m_baseStats.m_resistAcidBase > 100) {
+            m_baseStats.m_resistAcidBase = 100;
+        }
+    }
+
+    // Bullheaded
+    if ((pOldBaseStats->m_feats[0] & 0x80) == 0 && (m_baseStats.m_feats[0] & 0x80) != 0) {
+        m_baseStats.m_saveVSWillBase++;
+    }
+
+    // Discipline
+    if ((pOldBaseStats->m_feats[0] & 0x8000) == 0 && (m_baseStats.m_feats[0] & 0x8000) != 0) {
+        m_baseStats.m_saveVSWillBase++;
+    }
+
+    // Great Fortitude
+    if ((pOldBaseStats->m_feats[0] & 0x4000000) == 0 && (m_baseStats.m_feats[0] & 0x4000000) != 0) {
+        m_baseStats.m_saveVSFortitudeBase += 2;
+    }
+
+    // Iron Will
+    if ((pOldBaseStats->m_feats[1] & 0x4) == 0 && (m_baseStats.m_feats[1] & 0x4) != 0) {
+        m_baseStats.m_saveVSWillBase += 2;
+    }
+
+    // Lightning Reflexes
+    if ((pOldBaseStats->m_feats[1] & 0x8) == 0 && (m_baseStats.m_feats[1] & 0x8) != 0) {
+        m_baseStats.m_saveVSReflexBase += 2;
+    }
+
+    // Luck of Heroes
+    if ((pOldBaseStats->m_feats[1] & 0x20) == 0 && (m_baseStats.m_feats[1] & 0x20) != 0) {
+        m_baseStats.m_saveVSReflexBase++;
+        m_baseStats.m_saveVSFortitudeBase++;
+        m_baseStats.m_saveVSWillBase++;
+    }
+
+    // Scion of Storms
+    if ((pOldBaseStats->m_feats[1] & 0x80000) == 0 && (m_baseStats.m_feats[1] & 0x80000) != 0) {
+        m_baseStats.m_resistElectricityBase += 5;
+        if (m_baseStats.m_resistElectricityBase < 0) {
+            m_baseStats.m_resistElectricityBase = 0;
+        } else if (m_baseStats.m_resistElectricityBase > 100) {
+            m_baseStats.m_resistElectricityBase = 100;
+        }
+    }
+
+    // Snake Blood
+    if ((pOldBaseStats->m_feats[1] & 0x8000000) == 0 && (m_baseStats.m_feats[1] & 0x8000000) != 0) {
+        m_baseStats.m_saveVSReflexBase++;
+    }
+
+    // Spirit of Flame
+    if ((pOldBaseStats->m_feats[2] & 0x2) == 0 && (m_baseStats.m_feats[2] & 0x2) != 0) {
+        m_baseStats.m_resistFireBase += 5;
+        if (m_baseStats.m_resistFireBase < 0) {
+            m_baseStats.m_resistFireBase = 0;
+        } else if (m_baseStats.m_resistFireBase > 100) {
+            m_baseStats.m_resistFireBase = 100;
+        }
+    }
+
+    if ((pOldBaseStats->m_feats[0] & 0x20000) == 0 && (m_baseStats.m_feats[0] & 0x20000) != 0) {
+        AddSpecialAbility(SPIN231, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[1] & 0x2000) == 0 && (m_baseStats.m_feats[1] & 0x2000) != 0) {
+        AddSpecialAbility(SPIN197, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[2] & 0x100) == 0 && (m_baseStats.m_feats[2] & 0x100) != 0) {
+        AddSpecialAbility(SPIN111, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[2] & 0x200) == 0 && (m_baseStats.m_feats[2] & 0x200) != 0) {
+        AddSpecialAbility(SPIN245, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[2] & 0x400) == 0 && (m_baseStats.m_feats[2] & 0x400) != 0) {
+        AddSpecialAbility(SPIN246, FALSE);
+    }
+
+    // Stunning Fist
+    if (sub_763150(CGAMESPRITE_FEAT_STUNNING_FIST) == TRUE) {
+        INT nNewLevel = m_derivedStats.GetClassMaskLevel(0xFFF);
+
+        INT nOldLevel;
+        if ((pOldBaseStats->m_feats[2] & 0x8) == 0 && (m_baseStats.m_feats[2] & 0x8) != 0) {
+            nOldLevel = 1;
+        } else {
+            nOldLevel = pDerivedStats->GetClassMaskLevel(0xFFF);
+        }
+
+        for (INT nLevel = nOldLevel; nLevel <= nNewLevel; nLevel++) {
+            if (nLevel % 4 == 0) {
+                AddSpecialAbility(SPIN232, FALSE);
+            }
+        }
+    }
+
+    if ((pOldBaseStats->m_feats[1] & 0x8000) == 0 && (m_baseStats.m_feats[1] & 0x8000) != 0) {
+        AddSpecialAbility(SPIN275, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[0] & 0x80000) == 0 && (m_baseStats.m_feats[0] & 0x80000) != 0) {
+        AddSpecialAbility(SPIN276, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[0] & 0x20) == 0 && (m_baseStats.m_feats[0] & 0x20) != 0) {
+        AddSpecialAbility(SPIN277, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[0] & 0x8000000) == 0 && (m_baseStats.m_feats[0] & 0x8000000) != 0) {
+        AddSpecialAbility(SPIN278, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[1] & 0x20000) == 0 && (m_baseStats.m_feats[1] & 0x20000) != 0) {
+        AddSpecialAbility(SPIN279, FALSE);
+    }
+
+    // Toughness
+    if ((m_baseStats.m_feats[2] & 0x20) != 0) {
+        INT nDiff = m_baseStats.m_featToughness - pOldBaseStats->m_featToughness;
+        if (nDiff != 0) {
+            nDiff *= 3;
+            m_baseStats.m_hitPoints += nDiff;
+            m_baseStats.m_maxHitPointsBase += nDiff;
+        }
+    }
+
+    // Extra Rage
+    if ((m_baseStats.m_feats[0] & 0x100000) != 0) {
+        INT nDiff = m_baseStats.m_featExtraRage - pOldBaseStats->m_featExtraRage;
+        if (nDiff != 0) {
+            CResRef cResSpell;
+            if (m_derivedStats.GetClassLevel(1) >= 15 && pDerivedStats->GetClassLevel(1) < 15) {
+                cResSpell = SPIN260;
+            } else {
+                cResSpell = SPIN236;
+            }
+
+            if (nDiff > 0) {
+                do {
+                    AddSpecialAbility(cResSpell, FALSE);
+                } while (--nDiff != 0);
+            }
+        }
+    }
+
+    // Extra Smiting
+    if ((m_baseStats.m_feats[0] & 0x400000) != 0) {
+        INT nDiff = m_baseStats.m_featExtraSmiting - pOldBaseStats->m_featExtraSmiting;
+        if (nDiff != 0 && nDiff > 0) {
+            do {
+                AddSpecialAbility(SPIN152, FALSE);
+            } while (--nDiff != 0);
+        }
+    }
+
+    // Extra Turning
+    if ((m_baseStats.m_feats[0] & 0x800000) != 0) {
+        INT nDiff = m_baseStats.m_featExtraTurning - pOldBaseStats->m_featExtraTurning;
+        if (nDiff != 0 && nDiff > 0) {
+            do {
+                AddSpecialAbility(SPIN970, FALSE);
+            } while (--nDiff != 0);
+        }
+    }
 }
 
 // 0x71E9F0
