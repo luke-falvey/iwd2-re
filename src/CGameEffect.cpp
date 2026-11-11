@@ -3141,6 +3141,12 @@ CGameEffect* CGameEffectSlipperyMind::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectSlipperyMind::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // 0x4A5EF0
 void CGameEffectSlipperyMind::OnRemove(CGameSprite* pSprite)
 {
@@ -6256,6 +6262,11 @@ CGameEffect* CGameEffectInvisible::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4A51D0
+void CGameEffectInvisible::OnAdd(CGameSprite* pSprite)
+{
 }
 
 // 0x4AED10
@@ -12631,6 +12642,12 @@ CGameEffect* CGameEffectEquipWeapon::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectEquipWeapon::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -12647,6 +12664,12 @@ CGameEffect* CGameEffectDither::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectDither::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -12736,6 +12759,12 @@ CGameEffect* CGameEffectShowCreatures::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectShowCreatures::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -12924,6 +12953,12 @@ CGameEffect* CGameEffectVisualAnimationEffect::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectVisualAnimationEffect::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -16676,6 +16711,12 @@ CGameEffect* CGameEffectBounceProjectile::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectBounceProjectile::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -16692,6 +16733,12 @@ CGameEffect* CGameEffectBounceEffect::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectBounceEffect::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -16712,6 +16759,12 @@ CGameEffect* CGameEffectBounceLevel::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectBounceLevel::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -16728,6 +16781,12 @@ CGameEffect* CGameEffectBounceLevelDecrement::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectBounceLevelDecrement::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -16774,6 +16833,12 @@ CGameEffect* CGameEffectBounceSchool::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectBounceSchool::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -16790,6 +16855,12 @@ CGameEffect* CGameEffectBounceSecondaryType::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectBounceSecondaryType::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17181,6 +17252,12 @@ CGameEffect* CGameEffectBounceSpell::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectBounceSpell::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49C1E0
@@ -17333,6 +17410,11 @@ CGameEffect* CGameEffectMaze::Copy()
     return copy;
 }
 
+// 0x4A51D0
+void CGameEffectMaze::OnAdd(CGameSprite* pSprite)
+{
+}
+
 // 0x4C01F0
 BOOL CGameEffectMaze::ApplyEffect(CGameSprite* pSprite)
 {
@@ -17359,6 +17441,12 @@ CGameEffect* CGameEffectSecondaryCastList::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectSecondaryCastList::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49C870
@@ -17377,6 +17465,12 @@ CGameEffect* CGameEffectVisualEffect::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectVisualEffect::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49C960
@@ -17393,6 +17487,17 @@ CGameEffect* CGameEffectLevelDrain::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4A51D0
+void CGameEffectLevelDrain::OnAdd(CGameSprite* pSprite)
+{
+}
+
+// 0x799C90
+BOOL CGameEffectLevelDrain::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17548,6 +17653,12 @@ CGameEffect* CGameEffectDispelSchool::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectDispelSchool::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49CE10
@@ -17566,6 +17677,12 @@ CGameEffect* CGameEffectDispelSecondaryType::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectDispelSecondaryType::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49CF00
@@ -17582,6 +17699,12 @@ CGameEffect* CGameEffectRandomTeleport::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectRandomTeleport::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17626,6 +17749,12 @@ CGameEffect* CGameEffectLevelRestoration::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectLevelRestoration::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
