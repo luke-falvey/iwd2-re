@@ -1281,7 +1281,7 @@ void CGameSprite::AddToArea(CGameArea* pNewArea, const CPoint& pos, LONG posZ, B
             pNewArea->m_visibility.AddCharacter(m_posLastVisMapEntry,
                 m_id,
                 m_visibleTerrainTable);
-            if (pNewArea->m_nCharacters != -1) {
+            if (pNewArea->m_nCharacters != 0xFF) {
                 pNewArea->m_nCharacters++;
             } else {
                 pNewArea->m_nCharacters = 1;
@@ -1372,7 +1372,7 @@ void CGameSprite::RemoveReplacementFromArea()
                         m_visibleTerrainTable);
                 }
 
-                if (m_pArea->m_nCharacters != -1) {
+                if (m_pArea->m_nCharacters != 0xFF) {
                     m_pArea->m_nCharacters--;
                 }
             }
@@ -1502,7 +1502,7 @@ void CGameSprite::RemoveFromArea()
                         m_visibleTerrainTable);
                 }
 
-                if (m_pArea->m_nCharacters != -1) {
+                if (m_pArea->m_nCharacters != 0xFF) {
                     m_pArea->m_nCharacters--;
                 }
             }
@@ -5292,7 +5292,7 @@ void CGameSprite::SetCursor(LONG nToolTip)
             }
             break;
         case 1:
-            if (pGame->GetIconIndex() != -1) {
+            if (pGame->GetIconIndex() != 0xFF) {
                 g_pBaldurChitin->GetObjectCursor()->SetCursor(pGame->GetIconIndex(), FALSE);
             } else {
                 g_pBaldurChitin->GetObjectCursor()->SetCursor(20, FALSE);
@@ -7106,8 +7106,8 @@ void CGameSprite::Unmarshal(CSavedGamePartyCreature* pCreature, BOOLEAN bPartyMe
         }
 
         CPoint pos;
-        pos.x = pCreature->m_posX != -1 ? pCreature->m_posX : -1;
-        pos.y = pCreature->m_posY != -1 ? pCreature->m_posY : -1;
+        pos.x = pCreature->m_posX != 0xFFFF ? pCreature->m_posX : -1;
+        pos.y = pCreature->m_posY != 0xFFFF ? pCreature->m_posY : -1;
 
         if ((pCreature->m_wFlags & 0x8000) == 0) {
             if ((m_baseStats.m_generalState & STATE_DEAD) != 0
@@ -7276,11 +7276,11 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
     // __LINE__: 12846
     UTIL_ASSERT(creatureSize > 0);
 
-    if (m_baseStats.m_subrace == -1) {
+    if (m_baseStats.m_subrace == 0xFF) {
         m_baseStats.m_subrace = 0;
     }
 
-    if (offsets->m_class == 0 || offsets->m_class == -1) {
+    if (offsets->m_class == 0 || offsets->m_class == 0xFF) {
         offsets->m_class = CAIOBJECTTYPE_C_FIGHTER;
         offsets->m_avClass = CAIOBJECTTYPE_C_FIGHTER;
         offsets->m_classMask = CLASSMASK_FIGHTER;

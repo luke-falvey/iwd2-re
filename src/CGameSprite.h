@@ -914,7 +914,7 @@ public:
     /* 532C */ double m_fCircleChange;
     /* 5334 */ double m_fCurrCircleChange;
     /* 533C */ SHORT m_radius;
-    /* 533E */ BYTE m_circleFacing;
+    /* 533E */ signed char m_circleFacing;
     /* 533F */ BOOLEAN m_bVisibilityUpdated;
     /* 5340 */ double m_fDirectionOffset;
     /* 5348 */ SHORT m_nSequence;

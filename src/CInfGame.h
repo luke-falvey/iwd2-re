@@ -172,7 +172,7 @@ public:
     void Unmarshal(BYTE* pGame, LONG nGame, BOOLEAN bProgressBarInPlace);
     void ProgressBarCallback(DWORD dwSize, BOOLEAN bInitialize);
     char sub_5A9780(BYTE nKey);
-    BYTE sub_5A97D0(char ch);
+    INT sub_5A97D0(char ch);
     BYTE sub_5A9830(int index);
     void LoadKeymap();
     void LoadKey(const CString& sKey, SHORT index);

@@ -383,14 +383,14 @@ void CGameObject::SetCursor(LONG nToolTip)
         }
         break;
     case 1:
-        if (pGame->GetIconIndex() != -1) {
+        if (pGame->GetIconIndex() != 0xFF) {
             g_pBaldurChitin->GetObjectCursor()->SetCursor(pGame->GetIconIndex(), FALSE);
         } else {
             g_pBaldurChitin->GetObjectCursor()->SetCursor(20, FALSE);
         }
         break;
     case 2:
-        if (pGame->GetIconIndex() != -1) {
+        if (pGame->GetIconIndex() != 0xFF) {
             g_pBaldurChitin->GetObjectCursor()->SetCursor(pGame->GetIconIndex(), FALSE);
             g_pBaldurChitin->GetObjectCursor()->SetGreyScale(TRUE);
         } else {

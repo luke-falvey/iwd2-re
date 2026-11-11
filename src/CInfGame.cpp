@@ -1815,7 +1815,7 @@ CGameArea* CInfGame::LoadArea(CString areaName, BYTE nTravelScreenImageToUse, BO
         return NULL;
     }
 
-    if (nTravelScreenImageToUse != -1) {
+    if (nTravelScreenImageToUse != 0xFF) {
         m_nTravelScreenImageToUse = nTravelScreenImageToUse;
     } else {
         m_nTravelScreenImageToUse = rand() % 5;
@@ -3776,7 +3776,7 @@ char CInfGame::sub_5A9780(BYTE nKey)
 }
 
 // 0x5A97D0
-BYTE CInfGame::sub_5A97D0(char ch)
+INT CInfGame::sub_5A97D0(char ch)
 {
     if (ch >= 'a' && ch <= 'z') {
         return static_cast<BYTE>(ch - 32);
@@ -3811,7 +3811,7 @@ BYTE CInfGame::sub_5A9830(int index)
     }
 
     // NOTE: Uninline.
-    return sub_5A97D0(off_8AFD24[index][0]);
+    return static_cast<BYTE>(sub_5A97D0(off_8AFD24[index][0]));
 }
 
 // 0x5A98F0
@@ -7560,7 +7560,7 @@ BOOL CInfGame::ClearCharacterSlot(INT nCharacterSlot)
             pSprite->GetId(),
             pSprite->GetTerrainTable());
 
-        if (pSprite->GetArea()->m_nCharacters != -1) {
+        if (pSprite->GetArea()->m_nCharacters != 0xFF) {
             pSprite->GetArea()->m_nCharacters--;
         }
 

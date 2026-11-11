@@ -1732,7 +1732,7 @@ void CGameArea::AIUpdate()
                                             break;
                                         case 1:
                                         case 2:
-                                            if (g_pBaldurChitin->GetObjectGame()->GetIconIndex() != -1) {
+                                            if (g_pBaldurChitin->GetObjectGame()->GetIconIndex() != 0xFF) {
                                                 g_pBaldurChitin->GetObjectCursor()->SetCursor(6, FALSE);
                                             } else {
                                                 g_pBaldurChitin->GetObjectCursor()->SetCursor(102, FALSE);
@@ -1753,14 +1753,14 @@ void CGameArea::AIUpdate()
                                             g_pBaldurChitin->GetObjectCursor()->SetCursor(4, FALSE);
                                             break;
                                         case 1:
-                                            if (g_pBaldurChitin->GetObjectGame()->GetIconIndex() != -1) {
+                                            if (g_pBaldurChitin->GetObjectGame()->GetIconIndex() != 0xFF) {
                                                 g_pBaldurChitin->GetObjectCursor()->SetCursor(g_pBaldurChitin->GetObjectGame()->GetIconIndex(), FALSE);
                                             } else {
                                                 g_pBaldurChitin->GetObjectCursor()->SetCursor(20, FALSE);
                                             }
                                             break;
                                         case 2:
-                                            if (g_pBaldurChitin->GetObjectGame()->GetIconIndex() != -1) {
+                                            if (g_pBaldurChitin->GetObjectGame()->GetIconIndex() != 0xFF) {
                                                 g_pBaldurChitin->GetObjectCursor()->SetCursor(g_pBaldurChitin->GetObjectGame()->GetIconIndex(), FALSE);
                                                 g_pBaldurChitin->GetObjectCursor()->SetGreyScale(TRUE);
                                             } else {
@@ -4544,7 +4544,7 @@ void CGameArea::OnActionButtonClickGround(const CPoint& pt)
 
         if (m_search.GetLOSCost(CPoint(pt.x / CPathSearch::GRID_SQUARE_SIZEX, pt.y / CPathSearch::GRID_SQUARE_SIZEY), m_terrainTable, nTableIndex, FALSE) != CPathSearch::COST_IMPASSABLE) {
             BYTE nIconIndex = pGame->GetIconIndex();
-            if (nIconIndex != 20 && nIconIndex != -1) {
+            if (nIconIndex != 20 && nIconIndex != 0xFF) {
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
                 // __LINE__: 6200
                 UTIL_ASSERT(FALSE);
@@ -5369,7 +5369,7 @@ void CGameArea::SetDawn(BYTE nIntensity, BOOLEAN bPlayDayNightMovie)
     }
 
     if (nIntensity == CInfinity::TRUE_DAWNDUSK_INTENSITY) {
-        BYTE nSong = GetSong(0);
+        signed char nSong = GetSong(0);
         g_pBaldurChitin->RemoveMusicPosition(m_resRef, nSong);
         PlaySong(0, 0x4 | 0x2);
     }
@@ -5829,7 +5829,7 @@ BOOL CGameArea::SetSong(SHORT slot, BYTE song)
 }
 
 // 0x479DB0
-BYTE CGameArea::GetSong(SHORT slot)
+signed char CGameArea::GetSong(SHORT slot)
 {
     if (slot > 256) {
         return -1;
@@ -5837,7 +5837,9 @@ BYTE CGameArea::GetSong(SHORT slot)
 
     // TODO: Check casts.
 
-    BYTE song;
+    // NOTE: Signed, both callers sign-extend the result (`MOVSX`) and compare
+    // it with -1.
+    signed char song;
     if (slot != 256) {
         switch (slot) {
         case 0:
