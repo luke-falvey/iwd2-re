@@ -1957,9 +1957,45 @@ INT CRuleTables::GetHPCONBonusTotal(const CAIObjectType& typeAI, CDerivedStats& 
 // 0x542A90
 INT CRuleTables::sub_542A90(INT nSides, INT nRolls, INT nLevel, INT a4, INT nModifier) const
 {
-    // TODO: Incomplete.
+    INT nTotal = 0;
 
-    return 0;
+    // __FILE__: C:\Projects\Icewind2\src\Baldur    // __LINE__: 2294
+    UTIL_ASSERT(nSides != 0);
+
+    if (nLevel > 1) {
+        if (nRolls > 0) {
+            for (INT nRoll = nRolls; nRoll != 0; nRoll--) {
+                rand();
+                rand();
+                INT nValue = rand() % nSides + 1;
+
+                if (a4 > nValue) {
+                    nValue = a4;
+                } else {
+                    rand();
+                    rand();
+                    nValue = rand() % nSides + 1;
+                }
+
+                nTotal += nValue;
+            }
+        }
+    } else {
+        nTotal = nSides * nRolls;
+    }
+
+    // NOTE: The modifier is only added when `nRolls` is zero.
+    if (nRolls == 0) {
+        nTotal += nModifier;
+    }
+
+    return nTotal;
+}
+
+// 0x5456C0
+INT CRuleTables::GetIntModMaxAllowedSpellLevel(CDerivedStats* pDStats) const
+{
+    return atol(m_tIntelligenceMod.GetAt(CPoint(1, pDStats->m_nINT)));
 }
 
 // 0x542B40

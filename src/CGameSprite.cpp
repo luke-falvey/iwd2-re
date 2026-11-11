@@ -32449,7 +32449,18 @@ void CGameSprite::sub_726570()
 // 0x723830
 void CGameSprite::sub_723830()
 {
-    // TODO: Incomplete.
+    GetAIType();
+
+    INT v1 = 0;
+    INT v2 = 0;
+    INT v3 = 0;
+    g_pBaldurChitin->GetObjectGame()->GetRuleTables().sub_546B60(this, v1, v2, v3, FALSE);
+
+    m_baseStats.m_numberOfAttacksBase = static_cast<BYTE>(v2);
+
+    if (m_baseStats.m_numberOfAttacksBase > 5) {
+        m_baseStats.m_numberOfAttacksBase = 5;
+    }
 }
 
 // 0x726800
