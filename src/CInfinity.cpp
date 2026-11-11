@@ -9,6 +9,7 @@
 #include "CTiledObject.h"
 #include "CUtil.h"
 #include "CVidInf.h"
+#include "CVidPoly.h"
 #include "CVideo3d.h"
 #include "CVisibility.h"
 
@@ -1902,9 +1903,167 @@ BOOL CInfinity::FXRender(CVidCell* pVidCell, INT nRefPointX, INT nRefPointY, DWO
 // 0x5CE350
 BOOL CInfinity::FXRenderClippingPolys(INT nPosX, INT nPosY, INT nPosZ, const CPoint& ptRef, const CRect& rGCBounds, BOOLEAN bDithered, DWORD dwBlitFlags)
 {
-    // TODO: Incomplete.
+    // NOTE: Uninline.
+    if (g_pChitin->GetCurrentVideoMode()->m_nFade == 0) {
+        return TRUE;
+    }
 
-    return FALSE;
+    CVidPoly vidPoly;
+    BOOLEAN bRendered = FALSE;
+    INT nUsed = 0;
+    LONG aUsed[5];
+
+    if (pResWED == NULL) {
+        return FALSE;
+    }
+
+    DWORD dwFillFlags = bDithered ? 2 : 1;
+
+    if ((dwBlitFlags & 0x10) != 0) {
+        dwFillFlags |= 0x4;
+    }
+
+    if ((dwBlitFlags & 0x20) != 0) {
+        dwFillFlags |= 0x8;
+    }
+
+    WORD* pScreenPolyData = pResWED->GetScreenPolyData();
+    if (pScreenPolyData == NULL) {
+        return FALSE;
+    }
+
+    INT nScreensX = nAreaX / 640;
+    if (nAreaX % 640 != 0) {
+        nScreensX++;
+    }
+
+    INT nScreensY = nAreaY / 480;
+    if (nAreaY % 480 != 0) {
+        nScreensY++;
+    }
+
+    for (INT k = 0; k < 5; k++) {
+        aUsed[k] = -1;
+    }
+
+    INT nScreenLeft = rGCBounds.left / 640;
+    INT nScreenTop = rGCBounds.top / 480;
+    INT nScreenRight = rGCBounds.right / 640;
+    INT nScreenBottom = rGCBounds.bottom / 480;
+
+    INT nRowOffset = nScreenTop * nScreensX;
+    for (INT nScreenY = nScreenTop; nScreenY <= nScreenBottom && nScreenY < nScreensY; nScreenY++, nRowOffset += nScreensX) {
+        for (INT nScreenX = nScreenLeft; nScreenX <= nScreenRight && nScreenX < nScreensX; nScreenX++) {
+            INT nSection = nRowOffset + nScreenX;
+            WED_SCREENSECTIONLIST* pSection = &pResWED->m_pScreenSectionList[nSection];
+
+            for (INT nPoly = 0; nPoly < pSection->nNumPolys; nPoly++) {
+                WORD nPolyIndex = pScreenPolyData[pSection->nStartingPoly + nPoly];
+                WED_POLYLIST* pPoly = &pResWED->m_pPolyList[nPolyIndex];
+
+                if ((pPoly->nType & 0x2) != 0) {
+                    continue;
+                }
+
+                WED_POLYPOINT* pPoint1 = &pResWED->m_pPolyPoints[pPoly->nStartingPoint];
+                WED_POLYPOINT* pPoint2 = &pResWED->m_pPolyPoints[pPoly->nStartingPoint + 1];
+                if (pPoint1->x > pPoint2->x) {
+                    WED_POLYPOINT* pTemp = pPoint1;
+                    pPoint1 = pPoint2;
+                    pPoint2 = pTemp;
+                }
+
+                CRect rPoly(pPoly->nLeft, pPoly->nTop, pPoly->nRight, pPoly->nBottom);
+                CRect rIntersect;
+                if (!rIntersect.IntersectRect(&rPoly, &rGCBounds)) {
+                    continue;
+                }
+
+                if ((pPoly->nType & 0x1) != 0) {
+                    if ((dwBlitFlags & 0x400) != 0) {
+                        continue;
+                    }
+
+                    if (pPoint1->y == pPoint2->y) {
+                        if (nPosY >= pPoint1->y) {
+                            continue;
+                        }
+                    } else {
+                        if (pPoint1->x == pPoint2->x) {
+                            continue;
+                        }
+
+                        INT nCross = (nPosX - pPoint1->x) * (pPoint2->y - pPoint1->y)
+                            + (nPosY - pPoint1->y) * (pPoint1->x - pPoint2->x);
+                        if (nCross < 0) {
+                            continue;
+                        }
+                    }
+                }
+
+                // NOTE: Only the first entry of `aUsed` is ever compared, and
+                // it is never `-1`, so a polygon is never detected as a duplicate.
+                BOOL bFound = FALSE;
+                for (INT i = 0; i < nUsed; i++) {
+                    if (aUsed[i] != -1) {
+                        break;
+                    }
+
+                    if (aUsed[i] == nPolyIndex) {
+                        bFound = TRUE;
+                    }
+                }
+
+                if (bFound) {
+                    continue;
+                }
+
+                if (nUsed < 5) {
+                    aUsed[nUsed] = nPolyIndex;
+                    nUsed++;
+                }
+
+                if ((pPoly->nType & 0x4) != 0) {
+                    vidPoly.SetPoly(reinterpret_cast<WORD*>(&pResWED->m_pPolyPoints[pPoly->nStartingPoint + 2]),
+                        static_cast<WORD>(pPoly->nNumPoints - 2));
+                } else {
+                    vidPoly.SetPoly(reinterpret_cast<WORD*>(&pResWED->m_pPolyPoints[pPoly->nStartingPoint]),
+                        static_cast<WORD>(pPoly->nNumPoints));
+                }
+
+                CRect rClip(rGCBounds.left,
+                    rGCBounds.top + nPosZ,
+                    rGCBounds.right,
+                    rGCBounds.bottom + nPosZ);
+
+                if ((pPoly->nType & 0x8) != 0) {
+                    CPoint ptDest(ptRef.x + nPosX, ptRef.y + nPosY);
+
+                    // NOTE: Uninline (both).
+                    vidPoly.FillConvexPoly(static_cast<WORD*>(static_cast<CVidInf*>(g_pChitin->GetCurrentVideoMode())->GetLockedSurface()),
+                        static_cast<CVidInf*>(g_pChitin->GetCurrentVideoMode())->GetSurfacePitch(),
+                        rClip,
+                        pVidMode->field_24,
+                        dwFillFlags,
+                        ptDest);
+                } else {
+                    CPoint ptDest(ptRef.x + nPosX, ptRef.y + nPosY);
+
+                    // NOTE: Uninline (both).
+                    vidPoly.FillPoly(static_cast<WORD*>(static_cast<CVidInf*>(g_pChitin->GetCurrentVideoMode())->GetLockedSurface()),
+                        static_cast<CVidInf*>(g_pChitin->GetCurrentVideoMode())->GetSurfacePitch(),
+                        rClip,
+                        pVidMode->field_24,
+                        dwFillFlags,
+                        ptDest);
+                }
+
+                bRendered = TRUE;
+            }
+        }
+    }
+
+    return bRendered;
 }
 
 // 0x5CE930
