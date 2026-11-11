@@ -6851,7 +6851,143 @@ void CGameSprite::RenderSpriteCover(CVidMode* pVidMode, INT nSurface, CVidCell* 
 // 0x708FC0
 void CGameSprite::RenderDamageArrow(CGameArea* pArea, CVidMode* pVidMode, INT nSurface)
 {
-    // TODO: Incomplete.
+    DWORD nLocatorFeedbackLevel = g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nLocatorFeedbackLevel;
+
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) == -1) {
+        return;
+    }
+
+    switch (nLocatorFeedbackLevel) {
+    case 2:
+        if (!(m_bBloodFlashOn
+                && m_nDamageLocatorTime != 0
+                && g_pBaldurChitin->nAUCounter % CMarker::PICKED_FLASH_PERIOD >= (CMarker::PICKED_FLASH_PERIOD >> 1))) {
+            return;
+        }
+        // FALLTHROUGH
+    case 3:
+        if (!(m_bBloodFlashOn
+                && m_nDamageLocatorTime != 0
+                && g_pBaldurChitin->nAUCounter % CMarker::PICKED_FLASH_PERIOD >= (CMarker::PICKED_FLASH_PERIOD >> 1))
+            && m_id != pArea->m_iPicked) {
+            return;
+        }
+        // FALLTHROUGH
+    case 4:
+    case 5:
+        break;
+    default:
+        return;
+    }
+
+    if (!m_active || !m_activeAI || !m_activeImprisonment) {
+        return;
+    }
+
+    if (m_baseStats.field_294 == TRUE) {
+        return;
+    }
+
+    if ((m_derivedStats.m_generalState & STATE_DEAD) != 0) {
+        return;
+    }
+
+    if (m_pArea != pArea) {
+        return;
+    }
+
+    CInfinity* pInfinity = &(m_pArea->m_cInfinity);
+
+    CRect rView;
+    rView.left = pInfinity->nCurrentX;
+    rView.top = pInfinity->nCurrentY;
+    rView.right = pInfinity->rViewPort.right - pInfinity->rViewPort.left + pInfinity->nCurrentX;
+    rView.bottom = pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + pInfinity->nCurrentY;
+
+    CPoint pos = m_pos;
+    pos.y += m_pArea->GetHeightOffset(m_pos, m_listType);
+
+    CRect rFx;
+    CPoint ptReference;
+    m_animation.CalculateFxRect(rFx, ptReference, m_posZ);
+
+    CRect rGCBounds;
+    m_animation.CalculateGCBoundsRect(rGCBounds,
+        pos,
+        ptReference,
+        m_posZ,
+        rFx.Width(),
+        rFx.Height());
+
+    if (!(rView & rGCBounds).IsRectEmpty()) {
+        return;
+    }
+
+    INT x;
+    INT y;
+    SHORT nSequence;
+
+    if (pos.x < rView.left) {
+        if (m_posZ + pos.y < rView.top) {
+            x = m_pArea->m_cInfinity.rViewPort.left;
+            y = m_pArea->m_cInfinity.rViewPort.top;
+            nSequence = 3;
+        } else if (m_posZ + pos.y > rView.bottom) {
+            x = m_pArea->m_cInfinity.rViewPort.left;
+            y = m_pArea->m_cInfinity.rViewPort.bottom;
+            nSequence = 5;
+        } else {
+            x = m_pArea->m_cInfinity.rViewPort.left;
+            y = m_pArea->m_cInfinity.rViewPort.top - rView.top + pos.y;
+            nSequence = 4;
+        }
+    } else if (pos.x > rView.right) {
+        if (m_posZ + pos.y < rView.top) {
+            x = m_pArea->m_cInfinity.rViewPort.right;
+            y = m_pArea->m_cInfinity.rViewPort.top;
+            nSequence = 1;
+        } else if (m_posZ + pos.y > rView.bottom) {
+            x = m_pArea->m_cInfinity.rViewPort.right;
+            y = m_pArea->m_cInfinity.rViewPort.bottom;
+            nSequence = 7;
+        } else {
+            x = m_pArea->m_cInfinity.rViewPort.right;
+            y = m_pArea->m_cInfinity.rViewPort.top - rView.top + pos.y;
+            nSequence = 0;
+        }
+    } else {
+        if (m_posZ + pos.y < rView.top) {
+            x = m_pArea->m_cInfinity.rViewPort.left - rView.left + pos.x;
+            y = m_pArea->m_cInfinity.rViewPort.top;
+            nSequence = 2;
+        } else if (m_posZ + pos.y > rView.bottom) {
+            x = m_pArea->m_cInfinity.rViewPort.left - rView.left + pos.x;
+            y = m_pArea->m_cInfinity.rViewPort.bottom;
+            nSequence = 6;
+        } else {
+            return;
+        }
+    }
+
+    g_pBaldurChitin->GetObjectGame()->m_vcLocator.SequenceSet(nSequence);
+    g_pBaldurChitin->GetObjectGame()->m_vcLocator.FrameSet(0);
+
+    COLORREF rgbColor;
+    if (m_bBloodFlashOn && m_nDamageLocatorTime > 0) {
+        rgbColor = m_nDamageLocatorColor;
+    } else {
+        rgbColor = m_marker.m_rgbColor;
+    }
+
+    g_pBaldurChitin->GetObjectGame()->m_vcLocator.SetTintColor(g_pChitin->GetCurrentVideoMode()->ApplyFadeAmount(rgbColor));
+    g_pBaldurChitin->GetObjectGame()->m_vcLocator.Render(nSurface,
+        x,
+        y,
+        m_pArea->m_cInfinity.rViewPort,
+        NULL,
+        0,
+        0x20000,
+        -1);
 }
 
 // 0x7093E0
