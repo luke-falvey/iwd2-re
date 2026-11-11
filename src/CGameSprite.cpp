@@ -13226,9 +13226,19 @@ CString CGameSprite::GetRaceString(BYTE nRace)
 // bags). See STREF #26585.
 //
 // 0x722740
-CItem* CGameSprite::sub_722740(const CString& sName)
+CItem* CGameSprite::sub_722740(CString sName)
 {
-    // TODO: Incomplete.
+    sName.MakeUpper();
+
+    for (INT nSlot = 0; nSlot < 51; nSlot++) {
+        CItem* pItem = m_equipment.m_items[nSlot];
+        if (pItem != NULL && pItem->GetItemType() == 58) {
+            CItem* pRemoved = g_pBaldurChitin->GetObjectGame()->RemoveItemFromBag(pItem->GetResRef(), CResRef(sName));
+            if (pRemoved != NULL) {
+                return pRemoved;
+            }
+        }
+    }
 
     return NULL;
 }
@@ -26772,17 +26782,178 @@ SHORT CGameSprite::Interact(CGameSprite* pTarget)
 // 0x754D70
 SHORT CGameSprite::DropItem(SHORT slotNum)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
-    return ACTION_ERROR;
+    if (slotNum == -1) {
+        return ACTION_ERROR;
+    }
+
+    LONG iContainer = pGame->GetGroundPile(m_id);
+    if (iContainer == CGameObjectArray::INVALID_INDEX) {
+        return ACTION_ERROR;
+    }
+
+    CGameContainer* pContainer;
+
+    BYTE rc = pGame->GetObjectArray()->GetDeny(iContainer,
+        CGameObjectArray::THREAD_ASYNCH,
+        reinterpret_cast<CGameObject**>(&pContainer),
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return ACTION_ERROR;
+    }
+
+    if (slotNum != CGameSpriteEquipment::SLOT_FIST) {
+        CItem* pItem = m_equipment.m_items[slotNum];
+        if (pItem != NULL && (pItem->GetFlagsFile() & 0x4) != 0) {
+            pContainer->PlaceItemInBlankSlot(pItem, TRUE, 0x7FFF);
+            pItem->Demand();
+
+            if (slotNum == m_equipment.m_selectedWeapon) {
+                SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 0, 1);
+            } else if (m_equipment.m_selectedWeapon >= CGameSpriteEquipment::SLOT_AMMO
+                && m_equipment.m_selectedWeapon < CGameSpriteEquipment::SLOT_AMMO + 3
+                && (pItem->GetAbility(0)->type & 0xFF) == 4) {
+                SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 0, 1);
+            }
+
+            pItem->ReleaseAll();
+            Unequip(slotNum);
+            m_equipment.m_items[slotNum] = NULL;
+        }
+    }
+
+    pGame->GetObjectArray()->ReleaseDeny(iContainer,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return ACTION_DONE;
 }
 
 // 0x754EE0
 SHORT CGameSprite::DropInventory(BOOLEAN a1, CString a2)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CGameContainer* pContainer;
+    LONG iContainer;
+    BOOLEAN bHaveContainer = FALSE;
+    CMessage* message;
+    BYTE rc;
 
-    return ACTION_ERROR;
+    if (m_pArea == NULL) {
+        return ACTION_DONE;
+    }
+
+    for (SHORT nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+        if (nSlot == CGameSpriteEquipment::SLOT_FIST) {
+            continue;
+        }
+
+        CItem* pItem = m_equipment.m_items[nSlot];
+        if (pItem == NULL) {
+            continue;
+        }
+
+        if ((pItem->GetFlagsFile() & 0x4) != 0
+            && (!a1 || (pItem->GetFlagsFile() & 0x1) != 0)) {
+            if (!bHaveContainer) {
+                iContainer = pGame->GetGroundPile(m_id);
+                if (iContainer == CGameObjectArray::INVALID_INDEX) {
+                    return ACTION_ERROR;
+                }
+
+                rc = pGame->GetObjectArray()->GetDeny(iContainer,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pContainer),
+                    INFINITE);
+                if (rc != CGameObjectArray::SUCCESS) {
+                    return ACTION_ERROR;
+                }
+
+                bHaveContainer = TRUE;
+            }
+
+            if (pItem->GetResRef() != a2) {
+                Unequip(nSlot);
+                pContainer->PlaceItemInBlankSlot(pItem, TRUE, 0x7FFF);
+                m_equipment.m_items[nSlot] = NULL;
+            }
+        } else {
+            if (a1) {
+                Unequip(nSlot);
+            }
+        }
+    }
+
+    SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 0, 1);
+
+    if (m_baseStats.m_gold != 0) {
+        CItem* pGold = new CItem(CResRef("MISC07"), static_cast<WORD>(m_baseStats.m_gold), 0, 0, 0, 0);
+        if (pGold != NULL) {
+            if (!bHaveContainer) {
+                iContainer = pGame->GetGroundPile(m_id);
+                if (iContainer == CGameObjectArray::INVALID_INDEX) {
+                    return ACTION_ERROR;
+                }
+
+                rc = pGame->GetObjectArray()->GetDeny(iContainer,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pContainer),
+                    INFINITE);
+                if (rc != CGameObjectArray::SUCCESS) {
+                    return ACTION_ERROR;
+                }
+
+                bHaveContainer = TRUE;
+            }
+
+            pContainer->PlaceItemInBlankSlot(pGold, TRUE, 0x7FFF);
+            m_baseStats.m_gold = 0;
+        }
+    }
+
+    if (!bHaveContainer) {
+        return ACTION_DONE;
+    }
+
+    if ((g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+            || g_pChitin->cNetwork.m_idLocalPlayer == m_remotePlayerID)
+        && g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
+        message = new CMessageSpriteEquipment(this, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    for (BYTE buttonNum = 0; buttonNum < CGAMESAVECHARACTER_NUM_QUICK_WEAPONS22; buttonNum++) {
+        CButtonData buttonData;
+
+        // __FILE__: .\Include\ObjCreature.h
+        // __LINE__: 2030
+        UTIL_ASSERT(buttonNum < CGAMESAVECHARACTER_NUM_QUICK_WEAPONS22);
+
+        m_quickWeapons[buttonNum] = buttonData;
+
+        // __FILE__: .\Include\ObjCreature.h
+        // __LINE__: 2031
+        UTIL_ASSERT(buttonNum < CGAMESAVECHARACTER_NUM_QUICK_WEAPONS22);
+
+        field_3D3A[buttonNum] = 0;
+    }
+
+    for (BYTE buttonNum = 0; buttonNum < CGAMESAVECHARACTER_NUM_QUICK_ITEMS22; buttonNum++) {
+        CButtonData buttonData;
+
+        // __FILE__: .\Include\ObjCreature.h
+        // __LINE__: 2032
+        UTIL_ASSERT(buttonNum < CGAMESAVECHARACTER_NUM_QUICK_ITEMS22);
+
+        m_quickItems[buttonNum] = buttonData;
+    }
+
+    pGame->GetObjectArray()->ReleaseDeny(iContainer,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return ACTION_DONE;
 }
 
 // 0x7555F0
