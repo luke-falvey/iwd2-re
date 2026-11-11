@@ -12,6 +12,7 @@ class CGameAIBase;
 class CGameEffect;
 class CGameObject;
 class CGameSprite;
+class CResRef;
 
 // NOTE: The name is obviously wrong and misleading, but at least it matches
 // file name (which is seen via assertions).

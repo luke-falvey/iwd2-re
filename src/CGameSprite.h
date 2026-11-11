@@ -797,7 +797,6 @@ public:
     INT GetNextHatedRacesSlot();
     void ResetQuickSlots();
     BOOL sub_724690(SHORT a1);
-    void sub_6F50A0();
 
     // NOTE: See `CGameSpriteSpells` for explanation of the overall ugliness of
     // the following functions.

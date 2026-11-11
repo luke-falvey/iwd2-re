@@ -4122,13 +4122,6 @@ BOOL CGameEffectDamage::CheckSave(CGameSprite* pSprite, BYTE& roll1, BYTE& roll2
     return bResult;
 }
 
-// 0x6F50A0
-void CGameSprite::sub_6F50A0()
-{
-    // TODO: Incomplete. Declared by the effect translation (caller
-    // `CGameEffectDamage::OnAdd`); belongs in `CGameSprite.cpp`.
-}
-
 // 0x4AA6D0
 void CGameEffectDamage::sub_4AA6D0(CGameSprite* pSprite, LONG nResisted)
 {
