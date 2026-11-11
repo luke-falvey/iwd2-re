@@ -2537,9 +2537,12 @@ BOOL CUIControlButtonSpellbookSpell::Render(BOOL bForce)
 
                 vidPoly.SetPoly(vertices, 4);
 
-                // TODO: Incomplete. Missing call to 0x79D680 on `pVidInf`
-                // (RET 0x18, six arguments: `&vidPoly`, `&rFXRect`,
-                // `pVidInf->field_24`, 2, `&ptZero` (0, 0), 0).
+                pVidInf->FXRender(&vidPoly,
+                    rFXRect,
+                    pVidInf->field_24,
+                    2,
+                    CPoint(0, 0),
+                    FALSE);
             }
 
         }

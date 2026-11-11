@@ -1954,12 +1954,56 @@ INT CRuleTables::GetHPCONBonusTotal(const CAIObjectType& typeAI, CDerivedStats& 
     return DStats.m_nLevel * static_cast<INT>((fCON - 10.0f) / 2.0f);
 }
 
-// 0x542B40
-INT CRuleTables::sub_542B40(const C2DArray* pTable, BYTE nLevelFrom, BYTE nLevelTo, INT a4, INT a5, INT a6, INT a7) const
+// 0x542A90
+INT CRuleTables::sub_542A90(INT nSides, INT nRolls, INT nLevel, INT a4, INT nModifier) const
 {
     // TODO: Incomplete.
 
     return 0;
+}
+
+// 0x542B40
+INT CRuleTables::sub_542B40(const C2DArray* pTable, BYTE nLevelFrom, BYTE nLevelTo, INT a4, INT a5, INT a6, INT a7) const
+{
+    INT nTotal = 0;
+    CString sLevel;
+
+    for (INT nLevel = nLevelFrom + 1; nLevel <= nLevelTo; nLevel++) {
+        sLevel.Format("%d", nLevel);
+
+        INT nSides = atol(pTable->GetAt(SIDES, sLevel));
+        INT nRolls = atol(pTable->GetAt(ROLLS, sLevel));
+        INT nModifier = atol(pTable->GetAt(MODIFIER, sLevel));
+
+        if (a6 != 0) {
+            nSides = a7;
+        }
+
+        INT nHP;
+        if (g_pBaldurChitin->GetObjectGame()->m_cOptions.m_bMaxHP) {
+            nHP = nModifier;
+            if (nRolls != 0) {
+                nHP = nRolls * nSides;
+            }
+        } else {
+            nHP = sub_542A90(nSides, nRolls, nLevel, a4, nModifier);
+        }
+
+        nHP /= a5;
+        if (nHP < 1) {
+            nHP = 1;
+        }
+
+        nTotal += nHP;
+    }
+
+    if (nLevelTo > nLevelFrom) {
+        if (nTotal < 1) {
+            nTotal = 1;
+        }
+    }
+
+    return nTotal;
 }
 
 // 0x542CB0

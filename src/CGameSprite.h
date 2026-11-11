@@ -852,6 +852,7 @@ public:
     void sub_726330(UINT nFeatNumber, INT nValue);
     void sub_726570();
     INT sub_726800();
+    void sub_723830();
     void sub_726810(BYTE nWeaponSet);
     void sub_726F20();
     BYTE GetLastSong();

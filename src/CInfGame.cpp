@@ -6971,9 +6971,843 @@ SHORT CInfGame::GetNumQuickWeaponSlots(SHORT nPortrait)
 // 0x5B81C0
 BOOL CInfGame::SwapItemPersonal(SHORT nPortraitNum, SHORT nSlotNum, CItem*& pNewItem, STRREF& errorCode, WORD wCount, BOOLEAN bFromServer)
 {
-    // TODO: Incomplete.
+    CGameSprite* pSprite;
+    CItem* pOldItem;
+    CMessage* message;
+    CGameEffect* pEffect = NULL;
+    STRREF strError;
 
-    return FALSE;
+    LONG nCharacterId = nPortraitNum < m_nCharacters
+        ? m_characterPortraits[nPortraitNum]
+        : CGameObjectArray::INVALID_INDEX;
+
+    BOOL bResult = TRUE;
+    BOOL bEquip = TRUE;
+    BOOL bQuickItem = FALSE;
+    INT nSlot;
+
+    CItem* pItem = pNewItem;
+
+    // NOTE: Uninitialized in the original when `pNewItem` is NULL.
+    WORD nItemType = 0;
+    if (pItem != NULL) {
+        nItemType = pItem->GetItemType();
+    }
+
+    errorCode = -1;
+
+    if (nSlotNum >= CGameSpriteEquipment::NUM_SLOT) {
+        errorCode = 9374;
+        return FALSE;
+    }
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        errorCode = 9373;
+        return FALSE;
+    }
+
+    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL
+        && g_pChitin->cNetwork.m_idLocalPlayer != pSprite->m_remotePlayerID) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        errorCode = 20695;
+        return FALSE;
+    }
+
+    CAIObjectType typeAI;
+    typeAI.Set(pSprite->GetAIType());
+
+    if (pNewItem != NULL) {
+        DWORD dwNotUsableBy = pNewItem->GetNotUsableBy();
+
+        // NOTE: Uninline.
+        if (!g_pBaldurChitin->GetObjectGame()->GetRuleTables().IsUsableByAlignment(dwNotUsableBy, typeAI.m_nAlignment)) {
+            bResult = FALSE;
+            errorCode = 9382;
+        }
+
+        if ((dwNotUsableBy & 0x800000) != 0 && typeAI.m_nRace == CAIObjectType::R_ELF) {
+            bResult = FALSE;
+            errorCode = 9382;
+        }
+
+        if ((dwNotUsableBy & 0x1000000) != 0 && typeAI.m_nRace == CAIObjectType::R_DWARF) {
+            bResult = FALSE;
+            errorCode = 9382;
+        }
+
+        if ((dwNotUsableBy & 0x2000000) != 0 && typeAI.m_nRace == CAIObjectType::R_HALF_ELF) {
+            bResult = FALSE;
+            errorCode = 9382;
+        }
+
+        if ((dwNotUsableBy & 0x4000000) != 0 && typeAI.m_nRace == CAIObjectType::R_HALFLING) {
+            bResult = FALSE;
+            errorCode = 9382;
+        }
+
+        if ((dwNotUsableBy & 0x8000000) != 0 && typeAI.m_nRace == CAIObjectType::R_HUMAN) {
+            bResult = FALSE;
+            errorCode = 9382;
+        }
+
+        if ((dwNotUsableBy & 0x10000000) != 0 && typeAI.m_nRace == CAIObjectType::R_GNOME) {
+            bResult = FALSE;
+            errorCode = 9382;
+        }
+
+        if ((dwNotUsableBy & 0x20000000) != 0 && typeAI.m_nRace == CAIObjectType::R_HALF_ORC) {
+            bResult = FALSE;
+            errorCode = 9382;
+        }
+
+        if (!bResult) {
+            goto END;
+        }
+
+        if (g_pBaldurChitin->GetObjectGame()->GetRuleTables().ShouldCheckItemRequirements(pNewItem)) {
+            // NOTE: Unsigned compare.
+            if (pSprite->m_derivedStats.m_nLevel < pNewItem->GetMinLevelRequired()) {
+                bResult = FALSE;
+                errorCode = 9382;
+            }
+
+            if (pSprite->m_derivedStats.m_nSTR < static_cast<SHORT>(pNewItem->GetMinSTRRequired())) {
+                bResult = FALSE;
+                errorCode = 9382;
+            }
+
+            if (pSprite->m_derivedStats.m_nINT < static_cast<SHORT>(pNewItem->GetMinINTRequired())) {
+                bResult = FALSE;
+                errorCode = 9382;
+            }
+
+            if (pSprite->m_derivedStats.m_nDEX < static_cast<SHORT>(pNewItem->GetMinDEXRequired())) {
+                bResult = FALSE;
+                errorCode = 9382;
+            }
+
+            if (pSprite->m_derivedStats.m_nWIS < static_cast<SHORT>(pNewItem->GetMinWISRequired())) {
+                bResult = FALSE;
+                errorCode = 9382;
+            }
+
+            if (pSprite->m_derivedStats.m_nCON < static_cast<SHORT>(pNewItem->GetMinCONRequired())) {
+                bResult = FALSE;
+                errorCode = 9382;
+            }
+
+            if (pSprite->m_derivedStats.m_nCHR < static_cast<SHORT>(pNewItem->GetMinCHRRequired())) {
+                bResult = FALSE;
+                errorCode = 9382;
+                goto END;
+            }
+        }
+
+        if (!bResult) {
+            goto END;
+        }
+    }
+
+    nSlot = nSlotNum;
+
+    switch (nSlot) {
+    case 0:
+        // SLOT_AMULET
+        if (pNewItem != NULL && nItemType != 1 && nItemType != 70) {
+            errorCode = 9375;
+            bResult = FALSE;
+            goto END;
+        }
+        break;
+    case 1:
+        // SLOT_ARMOR
+        if (pNewItem != NULL
+            && nItemType != 60
+            && nItemType != 61
+            && nItemType != 66
+            && nItemType != 62
+            && nItemType != 63
+            && nItemType != 64
+            && nItemType != 65
+            && nItemType != 67
+            && nItemType != 68) {
+            errorCode = 9375;
+            bResult = FALSE;
+            goto END;
+        }
+        break;
+    case 2:
+        // SLOT_BELT
+        if (pNewItem != NULL && nItemType != 3) {
+            errorCode = 9375;
+            bResult = FALSE;
+            goto END;
+        }
+        break;
+    case 3:
+        // SLOT_BOOTS
+        if (pNewItem != NULL && nItemType != 4) {
+            errorCode = 9375;
+            bResult = FALSE;
+            goto END;
+        }
+        break;
+    case 4:
+        // SLOT_CLOAK
+        if (pNewItem != NULL && nItemType != 32) {
+            errorCode = 9375;
+            bResult = FALSE;
+            goto END;
+        }
+        break;
+    case 5:
+        // SLOT_GAUNTLETS
+        if (pNewItem != NULL && nItemType != 6 && nItemType != 73) {
+            errorCode = 9375;
+            bResult = FALSE;
+            goto END;
+        }
+        break;
+    case 6:
+        // SLOT_HELMET
+        if (pNewItem != NULL && nItemType != 7 && nItemType != 72) {
+            errorCode = 9375;
+            bResult = FALSE;
+            goto END;
+        }
+        break;
+    case 7:
+        // SLOT_RING_LEFT
+    case 8:
+        // SLOT_RING_RIGHT
+        if (pNewItem != NULL && nItemType != 10) {
+            errorCode = 9375;
+            bResult = FALSE;
+            goto END;
+        }
+        break;
+    case 10:
+        // SLOT_FIST
+        errorCode = 9375;
+        bResult = FALSE;
+        goto END;
+    case 11:
+    case 12:
+    case 13:
+    case 14:
+        // SLOT_AMMO
+        if (pNewItem != NULL && nItemType != 5 && nItemType != 31 && nItemType != 14) {
+            bResult = FALSE;
+            errorCode = 9375;
+        }
+        bEquip = FALSE;
+        break;
+    case 15:
+    case 16:
+    case 17:
+        // SLOT_MISC
+        bQuickItem = TRUE;
+
+        if (pNewItem != NULL) {
+            if (nItemType == 0
+                || nItemType == 8
+                || nItemType == 9
+                || nItemType == 11
+                || nItemType == 35
+                || nItemType == 71) {
+                if (pNewItem->GetResRef() == "SPWI110Z") {
+                    errorCode = 9375;
+                    bResult = FALSE;
+                } else if (pNewItem->GetResRef() == "MISC86") {
+                    errorCode = 9375;
+                    bResult = FALSE;
+                } else if (pNewItem->GetAbilityCount() == 0) {
+                    errorCode = 9375;
+                    bResult = FALSE;
+                } else if (!g_pBaldurChitin->GetObjectGame()->CheckItemUsable(pSprite, pNewItem)) {
+                    errorCode = 9382;
+                    bResult = FALSE;
+                }
+            } else {
+                errorCode = 9375;
+                bResult = FALSE;
+            }
+        }
+
+        bEquip = FALSE;
+        break;
+    case 43:
+    case 45:
+    case 47:
+    case 49: {
+        // SLOT_WEAPON
+        BYTE nWeaponSet = pSprite->m_nWeaponSet;
+        if (nWeaponSet != (nSlot - 43) / 2) {
+            bEquip = FALSE;
+        }
+
+        if (pNewItem != NULL && nItemType != 15) {
+            if (nItemType != 16
+                && nItemType != 17
+                && nItemType != 44
+                && nItemType != 18
+                && nItemType != 19
+                && nItemType != 20
+                && nItemType != 57
+                && nItemType != 69
+                && nItemType != 21
+                && nItemType != 22
+                && nItemType != 23
+                && nItemType != 24
+                && nItemType != 25
+                && nItemType != 26
+                && nItemType != 27
+                && nItemType != 29
+                && nItemType != 30) {
+                bResult = FALSE;
+                errorCode = 9375;
+            }
+        }
+
+        if (nItemType == 15 || nItemType == 27 || nItemType == 18) {
+            // Launcher.
+            if (pSprite->m_equipment.m_items[nSlot + 1] != NULL) {
+                // FIXME: Calls `GetItemType` four times.
+                if (pSprite->m_equipment.m_items[nSlot + 1]->GetItemType() != 47
+                    && pSprite->m_equipment.m_items[nSlot + 1]->GetItemType() != 53
+                    && pSprite->m_equipment.m_items[nSlot + 1]->GetItemType() != 49
+                    && pSprite->m_equipment.m_items[nSlot + 1]->GetItemType() != 41) {
+                    errorCode = 28765;
+                    bResult = FALSE;
+                    goto END;
+                }
+
+                if (nItemType != 18) {
+                    bResult = FALSE;
+                    errorCode = 9380;
+                }
+            }
+
+            bEquip = FALSE;
+            break;
+        }
+
+        // FIXME: Calls `GetItemType` four times.
+        if (pSprite->m_equipment.m_items[nSlot + 1] != NULL
+            && pSprite->m_equipment.m_items[nSlot + 1]->GetItemType() != 47
+            && pSprite->m_equipment.m_items[nSlot + 1]->GetItemType() != 53
+            && pSprite->m_equipment.m_items[nSlot + 1]->GetItemType() != 49
+            && pSprite->m_equipment.m_items[nSlot + 1]->GetItemType() != 41
+            && pNewItem != NULL) {
+            pNewItem->Demand();
+
+            for (INT nAbility = 0; nAbility < pNewItem->GetAbilityCount(); nAbility++) {
+                if (!bResult) {
+                    break;
+                }
+
+                ITEM_ABILITY* pAbility = pNewItem->GetAbility(nAbility);
+                if (pAbility != NULL) {
+                    // NOTE: Only the low byte of `type` is tested.
+                    if (static_cast<BYTE>(pAbility->type) == 2) {
+                        errorCode = 28765;
+                        bResult = FALSE;
+                    } else if (static_cast<BYTE>(pAbility->type) == 4) {
+                        errorCode = 28766;
+                        bResult = FALSE;
+                    }
+                }
+            }
+
+            pNewItem->Release();
+
+            if (!bResult) {
+                goto END;
+            }
+        }
+
+        if (pNewItem != NULL
+            && (pNewItem->GetFlagsFile() & 0x2) != 0
+            && pSprite->m_equipment.m_items[nSlot + 1] != NULL) {
+            // FIXME: Calls `GetItemType` four times.
+            if (pSprite->m_equipment.m_items[nSlot + 1]->GetItemType() == 47
+                || pSprite->m_equipment.m_items[nSlot + 1]->GetItemType() == 53
+                || pSprite->m_equipment.m_items[nSlot + 1]->GetItemType() == 49
+                || pSprite->m_equipment.m_items[nSlot + 1]->GetItemType() == 41) {
+                errorCode = 9380;
+            } else {
+                errorCode = 28758;
+            }
+
+            bResult = FALSE;
+            goto END;
+        }
+
+        break;
+    }
+    case 44:
+    case 46:
+    case 48:
+    case 50: {
+        // SLOT_WEAPON
+        BYTE nWeaponSet = pSprite->m_nWeaponSet;
+        if (nWeaponSet != (nSlot - 43) / 2) {
+            bEquip = FALSE;
+        }
+
+        if (pNewItem != NULL) {
+            if (nItemType == 16
+                || nItemType == 17
+                || nItemType == 44
+                || nItemType == 18
+                || nItemType == 19
+                || nItemType == 20
+                || nItemType == 69
+                || nItemType == 57
+                || nItemType == 21
+                || nItemType == 22
+                || nItemType == 23
+                || nItemType == 24
+                || nItemType == 25
+                || nItemType == 26
+                || nItemType == 27
+                || nItemType == 29
+                || nItemType == 30) {
+                if ((pNewItem->GetFlagsFile() & 0x2) != 0) {
+                    errorCode = 26342;
+                    bResult = FALSE;
+                    goto END;
+                }
+
+                pNewItem->Demand();
+
+                for (INT nAbility = 0; nAbility < pNewItem->GetAbilityCount(); nAbility++) {
+                    if (!bResult) {
+                        break;
+                    }
+
+                    ITEM_ABILITY* pAbility = pNewItem->GetAbility(nAbility);
+                    if (pAbility != NULL) {
+                        // NOTE: Only the low byte of `type` is tested.
+                        if (static_cast<BYTE>(pAbility->type) == 2
+                            || static_cast<BYTE>(pAbility->type) == 4) {
+                            errorCode = 1314;
+                            bResult = FALSE;
+                        }
+                    }
+                }
+
+                pNewItem->Release();
+            } else if (nItemType != 47
+                && nItemType != 49
+                && nItemType != 53
+                && nItemType != 41) {
+                errorCode = 9375;
+                bResult = FALSE;
+                goto END;
+            }
+        }
+
+        if (pSprite->m_equipment.m_items[42] != NULL
+            && (pSprite->m_equipment.m_items[42]->GetFlagsFile() & 0x2) != 0
+            && pNewItem != NULL) {
+            errorCode = 9381;
+            bResult = FALSE;
+            goto END;
+        }
+
+        CItem* pWeapon = pSprite->m_equipment.m_items[nSlot - 1];
+        if (pWeapon != NULL && pNewItem != NULL) {
+            if ((pWeapon->GetFlagsFile() & 0x2) != 0
+                && pWeapon != pSprite->m_equipment.m_items[10]) {
+                errorCode = 9381;
+                bResult = FALSE;
+                goto END;
+            }
+
+            if (nItemType != 47
+                && nItemType != 53
+                && nItemType != 49
+                && nItemType != 41) {
+                pWeapon->Demand();
+
+                for (INT nAbility = 0; nAbility < pWeapon->GetAbilityCount(); nAbility++) {
+                    if (!bResult) {
+                        break;
+                    }
+
+                    ITEM_ABILITY* pAbility = pWeapon->GetAbility(nAbility);
+                    if (pAbility != NULL) {
+                        // NOTE: Only the low byte of `type` is tested.
+                        if (static_cast<BYTE>(pAbility->type) == 2) {
+                            errorCode = 1310;
+                            bResult = FALSE;
+                        } else if (static_cast<BYTE>(pAbility->type) == 4) {
+                            errorCode = 1311;
+                            bResult = FALSE;
+                        }
+                    }
+                }
+
+                pWeapon->Release();
+            }
+        }
+
+        break;
+    }
+    default:
+        bEquip = FALSE;
+        break;
+    }
+
+    if (!bResult) {
+        goto END;
+    }
+
+    if (pItem != NULL) {
+        if (pSprite->m_derivedStats.m_cImmunitiesItemEquip.OnList(pItem->GetResRef(), strError, pEffect)) {
+            bResult = FALSE;
+            errorCode = strError;
+
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+
+            goto END;
+        }
+    }
+
+    if (pItem != NULL) {
+        if (pSprite->m_derivedStats.m_cImmunitiesItemTypeEquip.OnList(pItem->GetItemType(), strError, pEffect)) {
+            bResult = FALSE;
+            errorCode = strError;
+
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+
+            goto END;
+        }
+    }
+
+    if (pSprite->m_equipment.m_items[42] != NULL
+        && (nSlotNum == 43
+            || nSlotNum == 44
+            || nSlotNum == 45
+            || nSlotNum == 46
+            || nSlotNum == 47
+            || nSlotNum == 48
+            || nSlotNum == 49
+            || nSlotNum == 50
+            || nSlotNum == 11
+            || nSlotNum == 12
+            || nSlotNum == 13
+            || nSlotNum == 14)) {
+        errorCode = 10141;
+        bResult = FALSE;
+        goto END;
+    }
+
+    if (pNewItem != NULL) {
+        if (IsItemExclusive(pSprite, nSlot, pNewItem, errorCode)) {
+            bResult = FALSE;
+            goto END;
+        }
+    }
+
+    if (pSprite->m_equipment.m_items[nSlot] != NULL) {
+        CString sScriptName(pSprite->m_scriptName);
+
+        if (sScriptName == "MINSC" && pSprite->m_equipment.m_items[nSlot]->GetResRef() == "MISC84") {
+            errorCode = 10218;
+            bResult = FALSE;
+        } else if (sScriptName == "ALORA" && pSprite->m_equipment.m_items[nSlot]->GetResRef() == "MISC88") {
+            errorCode = 10219;
+            bResult = FALSE;
+        } else if (sScriptName == "EDWIN" && pSprite->m_equipment.m_items[nSlot]->GetResRef() == "MISC89") {
+            errorCode = 10222;
+            bResult = FALSE;
+        }
+    }
+
+    if (!bResult) {
+        goto END;
+    }
+
+    if (pSprite->m_equipment.m_items[nSlot] != NULL) {
+        DWORD dwFlags = pSprite->m_equipment.m_items[nSlot]->GetFlagsFile();
+
+        if ((dwFlags & 0x10) != 0) {
+            pSprite->m_equipment.m_items[nSlot]->m_flags |= 0x1;
+            bResult = FALSE;
+            errorCode = 16304;
+        }
+
+        if ((dwFlags & 0x4) == 0) {
+            errorCode = 25697;
+            pSprite->m_equipment.m_items[nSlot]->m_flags |= 0x1;
+            bResult = FALSE;
+            goto END;
+        }
+    }
+
+    if (!bResult) {
+        goto END;
+    }
+
+    if (bQuickItem && pNewItem != NULL) {
+        pNewItem->Demand();
+
+        ITEM_ABILITY* pAbility = pNewItem->GetAbility(0);
+        if (pAbility == NULL) {
+            errorCode = 17317;
+            bResult = FALSE;
+        } else {
+            // NOTE: Tests the high byte of `type`.
+            if ((((pNewItem->m_flags & 0x1) == 0) && (pAbility->type & 0x100) != 0)
+                || (((pNewItem->m_flags & 0x1) != 0) && (pAbility->type & 0x200) != 0)) {
+                errorCode = 17316;
+                bResult = FALSE;
+            }
+        }
+
+        pNewItem->Release();
+    }
+
+    if (!bResult) {
+        goto END;
+    }
+
+    if (pNewItem != NULL && (pNewItem->GetFlagsFile() & 0x10) != 0) {
+        pNewItem->m_flags |= 0x1;
+        errorCode = 16304;
+        bEquip = TRUE;
+    }
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        errorCode = 9373;
+        return FALSE;
+    }
+
+    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL
+        && g_pChitin->cNetwork.m_idLocalPlayer != pSprite->m_remotePlayerID
+        && g_pChitin->cNetwork.GetSessionOpen() == TRUE
+        && !bFromServer) {
+        BOOLEAN bRequestResult = g_pBaldurChitin->GetBaldurMessage()->SwapItemRequest(CBaldurMessage::SWAPITEM_LOCATION_PERSONAL,
+            nCharacterId,
+            nSlotNum,
+            pNewItem,
+            errorCode,
+            wCount);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        return bRequestResult;
+    }
+
+    pOldItem = pSprite->m_equipment.m_items[nSlot];
+
+    if (pOldItem != NULL
+        && pNewItem == NULL
+        && pOldItem->GetMaxStackable() > 1
+        && wCount < pOldItem->GetUsageCount(0)) {
+        // Split stack.
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 13383
+        UTIL_ASSERT(wCount != 0);
+
+        pOldItem->SetUsageCount(0, static_cast<WORD>(pOldItem->GetUsageCount(0) - wCount));
+
+        pNewItem = new CItem(pOldItem->GetResRef(), 0, 0, 0, 0, 0);
+        pNewItem->SetUsageCount(0, wCount);
+        pNewItem->m_flags = (pNewItem->m_flags & ~0x1) | (pOldItem->m_flags & 0x1);
+
+        goto UPDATE;
+    }
+
+    if (pOldItem != NULL
+        && pNewItem != NULL
+        && pOldItem->GetMaxStackable() > 1
+        && pNewItem->GetResRef() == pOldItem->GetResRef()
+        && ((pNewItem->m_flags ^ pOldItem->m_flags) & 0x1) == 0) {
+        // Merge stacks.
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 13393
+        UTIL_ASSERT(wCount != 0);
+
+        INT nCount = wCount;
+        INT nSpace = pOldItem->GetMaxStackable() - pOldItem->GetUsageCount(0);
+        if (nCount >= (pNewItem->GetUsageCount(0) < nSpace ? pNewItem->GetUsageCount(0) : nSpace)) {
+            nSpace = pOldItem->GetMaxStackable() - pOldItem->GetUsageCount(0);
+            nCount = pNewItem->GetUsageCount(0) < nSpace ? pNewItem->GetUsageCount(0) : nSpace;
+        }
+
+        pOldItem->SetUsageCount(0, static_cast<WORD>(pOldItem->GetUsageCount(0) + nCount));
+
+        if (pNewItem->GetUsageCount(0) == static_cast<WORD>(nCount)) {
+            // NOTE: Uninline.
+            AddDisposableItem(pNewItem);
+            pNewItem = NULL;
+        } else {
+            pNewItem->SetUsageCount(0, static_cast<WORD>(pNewItem->GetUsageCount(0) - nCount));
+        }
+
+        goto UPDATE;
+    }
+
+    if (pSprite->m_equipment.m_selectedWeapon == nSlotNum) {
+        pSprite->m_equipment.m_selectedWeapon = CGameSpriteEquipment::SLOT_FIST;
+        pSprite->m_equipment.m_selectedWeaponAbility = 0;
+
+        if (!bEquip) {
+            if (pSprite->m_equipment.m_items[nSlot] != NULL) {
+                if (nSlotNum >= 43 && nSlotNum <= 50) {
+                    CButtonData buttonData;
+                    pSprite->SetQuickWeapon(static_cast<BYTE>(nSlotNum - 43), buttonData);
+                    pSprite->SetQuickWeapon(static_cast<BYTE>(nSlotNum - 43), 0);
+                }
+
+                pSprite->m_equipment.m_items[nSlot]->Demand();
+                pSprite->m_equipment.m_items[nSlot]->Unequip(pSprite, nSlot, TRUE, FALSE);
+
+                ITEM_ABILITY* pAbility = pSprite->m_equipment.m_items[nSlot]->GetAbility(pSprite->m_equipment.m_selectedWeaponAbility);
+                if (pAbility != NULL) {
+                    SHORT nLauncherSlot;
+                    CItem* pLauncher = pSprite->GetLauncher(pAbility, nLauncherSlot);
+                    if (pLauncher != NULL) {
+                        pLauncher->Unequip(pSprite, nLauncherSlot, TRUE, FALSE);
+                    }
+                }
+
+                pSprite->m_equipment.m_items[nSlot]->Release();
+            }
+        }
+    } else {
+        INT nSelectedWeapon = pSprite->m_equipment.m_selectedWeapon;
+
+        pSprite->m_equipment.m_items[nSelectedWeapon]->Demand();
+
+        ITEM_ABILITY* pAbility = pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon]->GetAbility(pSprite->m_equipment.m_selectedWeaponAbility);
+        if (pAbility != NULL) {
+            SHORT nLauncherSlot;
+            CItem* pLauncher = pSprite->GetLauncher(pAbility, nLauncherSlot);
+            if (pLauncher != NULL) {
+                if (pLauncher == pSprite->m_equipment.m_items[nSlot]) {
+                    pSprite->m_equipment.m_items[nSlot]->Unequip(pSprite, nSlot, TRUE, FALSE);
+                    pSprite->m_equipment.m_items[nSlot] = NULL;
+
+                    pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon]->Unequip(pSprite,
+                        pSprite->m_equipment.m_selectedWeapon,
+                        TRUE,
+                        FALSE);
+
+                    pSprite->m_equipment.m_selectedWeapon = CGameSpriteEquipment::SLOT_FIST;
+                    pSprite->m_equipment.m_selectedWeaponAbility = 0;
+                }
+            }
+        }
+
+        pSprite->m_equipment.m_items[nSelectedWeapon]->Release();
+    }
+
+    if (bEquip) {
+        if (pSprite->m_equipment.m_items[nSlot] != NULL) {
+            pSprite->m_equipment.m_items[nSlot]->Unequip(pSprite, nSlot, TRUE, FALSE);
+            pSprite->m_equipment.m_items[nSlot] = NULL;
+        }
+
+        if (pNewItem != NULL) {
+            pNewItem->Equip(pSprite, nSlot, FALSE);
+        }
+    }
+
+    pSprite->m_equipment.m_items[nSlot] = pNewItem;
+    pNewItem = pOldItem;
+
+    if (nSlotNum == 43
+        || nSlotNum == 44
+        || nSlotNum == 45
+        || nSlotNum == 46
+        || nSlotNum == 47
+        || nSlotNum == 48
+        || nSlotNum == 49
+        || nSlotNum == 50) {
+        if (bEquip != TRUE) {
+            BYTE nWeaponSet = pSprite->m_nWeaponSet;
+            if (nWeaponSet != (nSlot - 43) / 2) {
+                pSprite->sub_726F20();
+                goto UPDATE;
+            }
+        }
+
+        BOOL bShield = nSlotNum == 44
+            || nSlotNum == 46
+            || nSlotNum == 48
+            || nSlotNum == 50;
+
+        if (pOldItem != NULL) {
+            if (!pSprite->sub_737910(bShield)) {
+                bResult = FALSE;
+                goto UPDATE;
+            }
+        }
+
+        bResult = TRUE;
+        pSprite->sub_726810(static_cast<BYTE>((nSlot - 43) / 2));
+    }
+
+UPDATE:
+    g_pBaldurChitin->GetActiveEngine()->UpdatePersonalItemStatus(pSprite->m_id);
+
+    if ((g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+            || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID)
+        && g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
+        message = new CMessageSpriteEquipment(pSprite, nCharacterId, nCharacterId);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    pSprite->sub_723830();
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+END:
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return bResult;
 }
 
 // 0x5BAD70

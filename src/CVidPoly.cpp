@@ -27,6 +27,12 @@ const BYTE CVidPoly::m_aDitherMask[] = {
     // clang-format on
 };
 
+// 0xA07B20
+CVidPolyEdge CVidPoly::m_aEdges[CVPOLY_MAX_VERTICIES];
+
+// 0xA09F20
+CVidPolyCache CVidPoly::m_cCache;
+
 // 0x7C0DB0
 CVidPoly::CVidPoly()
 {
@@ -287,11 +293,164 @@ BOOL CVidPoly::FillConvexPoly(WORD* pSurface, LONG lPitch, const CRect& rClipRec
 }
 
 // 0x7C13A0
-BOOL CVidPoly::FillPoly(WORD* pSurface, LONG lPitch, const CRect& rClip, DWORD dwColor, DWORD dwFlags, const CPoint& ptRef)
+BOOL CVidPoly::FillPoly(WORD* pSurface, LONG lPitch, const CRect& rClipRect, DWORD dwColor, DWORD dwFlags, const CPoint& ptRef)
+{
+    CRect rClip;
+    CPoint ptRefAdjusted;
+    SHORT nY;
+
+    ptRefAdjusted.x = ptRef.x;
+    ptRefAdjusted.y = ptRef.y;
+
+    rClip.left = rClipRect.left;
+    rClip.top = rClipRect.top;
+    rClip.right = rClipRect.right - 1;
+    rClip.bottom = rClipRect.bottom - 1;
+
+    LONG lStride = lPitch;
+
+    if (m_nVertices < 3) {
+        return FALSE;
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidPoly.cpp
+    // __LINE__: 546
+    UTIL_ASSERT_MSG(m_nVertices < CVPOLY_MAX_VERTICIES, "Excessive poly vertex count");
+
+    if (m_nVertices >= CVPOLY_MAX_VERTICIES) {
+        return FALSE;
+    }
+
+    SetHLineFunction(dwFlags);
+
+    if ((dwFlags & 0x2) == 0) {
+        if (!m_cCache.sub_7C1DE0(this)) {
+            sub_7C1970(m_aEdges);
+            m_cCache.sub_7C1EC0(this);
+        }
+    } else {
+        sub_7C1970(m_aEdges);
+    }
+
+    field_10 = NULL;
+
+    nY = static_cast<SHORT>(field_C->y);
+
+    if ((dwFlags & 0x8) != 0) {
+        pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(pSurface) + (rClip.bottom - nY) * lPitch);
+        lStride = -lPitch;
+    } else {
+        pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(pSurface) + (nY - rClip.top) * lPitch);
+    }
+
+    ptRefAdjusted.y += nY - rClip.top;
+
+    while (field_C != NULL || field_10 != NULL) {
+        CVidPolyEdge** ppLink = &field_10;
+        CVidPolyEdge* pActive = field_10;
+
+        while (field_C != NULL && field_C->y == nY) {
+            CVidPolyEdge* pPending = field_C;
+            SHORT nPendingX = static_cast<SHORT>(pPending->x);
+
+            while (pActive != NULL && pActive->x < nPendingX) {
+                ppLink = &pActive->pNext;
+                pActive = pActive->pNext;
+            }
+
+            *ppLink = pPending;
+            field_C = field_C->pNext;
+            (*ppLink)->pNext = pActive;
+
+            ppLink = &(*ppLink)->pNext;
+        }
+
+        if (nY >= rClip.top && nY <= rClip.bottom && field_10 != NULL) {
+            CVidPolyEdge* pEdge = field_10;
+            do {
+                INT xMin;
+                if (pEdge->x > rClip.left) {
+                    xMin = pEdge->x - rClip.left;
+                } else {
+                    xMin = 0;
+                }
+
+                CVidPolyEdge* pEdgeEnd = pEdge->pNext;
+
+                INT xMax;
+                if (pEdgeEnd->x < rClip.right) {
+                    xMax = pEdgeEnd->x - rClip.left;
+                } else {
+                    xMax = rClip.right - rClip.left;
+                }
+
+                (this->*m_pDrawHLineFunction)(pSurface,
+                    xMin,
+                    xMax,
+                    dwColor,
+                    rClip,
+                    ptRefAdjusted);
+
+                pEdge = pEdgeEnd->pNext;
+            } while (pEdge != NULL);
+        }
+
+        sub_7C18F0();
+
+        if (field_10 != NULL) {
+            BOOL bSwapped;
+            do {
+                CVidPolyEdge* pEdge = field_10;
+                CVidPolyEdge** ppEdgeLink = &field_10;
+                bSwapped = FALSE;
+
+                while (pEdge->pNext != NULL) {
+                    CVidPolyEdge* pEdgeNext = pEdge->pNext;
+                    if (pEdge->x > pEdgeNext->x) {
+                        *ppEdgeLink = pEdgeNext;
+                        bSwapped = TRUE;
+                        pEdge->pNext = pEdgeNext->pNext;
+                        (*ppEdgeLink)->pNext = pEdge;
+                    }
+
+                    ppEdgeLink = &(*ppEdgeLink)->pNext;
+                    pEdge = *ppEdgeLink;
+                }
+            } while (bSwapped);
+        }
+
+        nY++;
+        ptRefAdjusted.y++;
+        pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(pSurface) + lStride);
+    }
+
+    return TRUE;
+}
+
+// 0x7C18F0
+void CVidPoly::sub_7C18F0()
+{
+    // TODO: Incomplete.
+}
+
+// 0x7C1970
+void CVidPoly::sub_7C1970(CVidPolyEdge* pEdges)
+{
+    // TODO: Incomplete.
+}
+
+// 0x7C1DE0
+BOOL CVidPolyCache::sub_7C1DE0(CVidPoly* pPoly)
 {
     // TODO: Incomplete.
 
     return FALSE;
+}
+
+// 0x7C1EC0
+void CVidPolyCache::sub_7C1EC0(CVidPoly* pPoly)
+{
+    // TODO: Incomplete.
 }
 
 // 0x7C15F0

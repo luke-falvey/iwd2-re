@@ -10,11 +10,35 @@ typedef struct {
     WORD y;
 } CVIDPOLY_VERTEX;
 
+class CVidPoly;
+
+// Edge of the polygon's edge list (36 bytes).
+class CVidPolyEdge {
+public:
+    /* 0000 */ CVidPolyEdge* pNext;
+    /* 0004 */ INT x;
+    /* 0008 */ INT y;
+    /* 000C */ int field_C;
+    /* 0010 */ int field_10;
+    /* 0014 */ int field_14;
+    /* 0018 */ int field_18;
+    /* 001C */ int field_1C;
+    /* 0020 */ int field_20;
+};
+
+class CVidPolyCache {
+public:
+    BOOL sub_7C1DE0(CVidPoly* pPoly);
+    void sub_7C1EC0(CVidPoly* pPoly);
+};
+
 class CVidPoly {
 public:
     typedef void (CVidPoly::*DrawHLineFunc)(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef);
 
     static const BYTE m_aDitherMask[];
+    static CVidPolyEdge m_aEdges[CVPOLY_MAX_VERTICIES];
+    static CVidPolyCache m_cCache;
 
     CVidPoly();
 
@@ -30,6 +54,8 @@ public:
     void DrawHLineDithered16(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef);
     void DrawHLineDitheredMirrored16(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef);
     void SetHLineFunction(DWORD dwFlags);
+    void sub_7C18F0();
+    void sub_7C1970(CVidPolyEdge* pEdges);
 
     void DrawHLineShaded16(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef);
     void DrawHLineShadedMirrored16(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef);
@@ -50,8 +76,8 @@ public:
     int field_0;
     CVIDPOLY_VERTEX* m_pVertices;
     INT m_nVertices;
-    int field_C;
-    int field_10;
+    CVidPolyEdge* field_C;
+    CVidPolyEdge* field_10;
     DrawHLineFunc m_pDrawHLineFunction;
 };
 
