@@ -21459,9 +21459,118 @@ SHORT CGameSprite::RemoveSpell()
 // 0x75CBD0
 SHORT CGameSprite::BashDoor(CGameAIBase* pTarget)
 {
-    // TODO: Incomplete.
+    CMessage* message;
+    SHORT actionReturn = ACTION_DONE;
 
-    return ACTION_ERROR;
+    if (pTarget == NULL) {
+        return ACTION_ERROR;
+    }
+
+    if (pTarget->GetObjectType() != TYPE_DOOR
+        && pTarget->GetObjectType() != TYPE_CONTAINER) {
+        return ACTION_ERROR;
+    }
+
+    message = new CMessageSetForceActionPick(TRUE, m_id, pTarget->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    LONG nMyY = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+    LONG nMyX = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+    const CPoint& ptTarget = pTarget->GetPos();
+    LONG nTargetY = ptTarget.y / CPathSearch::GRID_SQUARE_SIZEY;
+    LONG nTargetX = ptTarget.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+    if ((nTargetX - nMyX) * (nTargetX - nMyX) + (nTargetY - nMyY) * (nTargetY - nMyY) > 9) {
+        m_curAction.m_dest = pTarget->GetPos();
+        actionReturn = sub_73FEC0(pTarget->GetPos(), 0);
+    }
+
+    if (actionReturn != ACTION_DONE) {
+        return actionReturn;
+    }
+
+    INT nStrengthBonus = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetAbilityScoreModifier(m_derivedStats.m_nSTR);
+    INT nRoll = rand() % 20 + 1;
+
+    CAITrigger trigger(CAITrigger::NO_TRIGGER, 0);
+
+    if (pTarget->GetObjectType() == TYPE_DOOR) {
+        CGameDoor* pDoor = static_cast<CGameDoor*>(pTarget);
+        INT nDifficulty = pDoor->m_lockDifficulty / 6 + 9;
+
+        if ((pDoor->m_dwFlags & 0x2) != 0) {
+            // NOTE: The comparison is done on `SHORT`s.
+            if (static_cast<SHORT>(nRoll) + static_cast<SHORT>(nStrengthBonus) > static_cast<SHORT>(nDifficulty)
+                && pDoor->m_lockDifficulty != 100) {
+                trigger = CAITrigger(CAITrigger::UNLOCKED, m_typeAI, 0);
+
+                message = new CMessageSetTrigger(trigger, m_id, pTarget->GetId());
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                pDoor->m_dwFlags = (pDoor->m_dwFlags & ~0x2) | 0x10;
+
+                FeedBack(24, 0, 0, 0, -1, 0, 0);
+
+                message = new CMessageUnlock(pDoor->m_dwFlags, m_id, pTarget->GetId());
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                if ((pDoor->m_dwFlags & 0x1) == 0) {
+                    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL
+                        && g_pChitin->cNetwork.m_idLocalPlayer != pDoor->m_remotePlayerID) {
+                        message = new CMessageDoorOpen((pDoor->m_dwFlags & 0x1) != 1, m_id, pTarget->GetId());
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                    } else {
+                        pDoor->ToggleDoor(m_typeAI, FALSE);
+                    }
+                }
+            } else {
+                FeedBack(25, 0, 0, 0, -1, 0, 0);
+            }
+
+            if (pDoor->m_lockDifficulty != 100) {
+                FeedBack(83, nRoll, nStrengthBonus, nDifficulty, 20460, 0, 0);
+            }
+        } else {
+            FeedBack(24, 0, 0, 0, -1, 0, 0);
+        }
+    }
+
+    if (pTarget->GetObjectType() == TYPE_CONTAINER) {
+        CGameContainer* pContainer = static_cast<CGameContainer*>(pTarget);
+        INT nDifficulty = pContainer->m_lockDifficulty / 6 + 9;
+
+        if ((pContainer->m_dwFlags & 0x1) != 0) {
+            // NOTE: The comparison is done on `SHORT`s.
+            if (static_cast<SHORT>(nRoll) + static_cast<SHORT>(nStrengthBonus) > static_cast<SHORT>(nDifficulty)
+                && pContainer->m_lockDifficulty != 100) {
+                FeedBack(26, 0, 0, 0, -1, 0, 0);
+
+                trigger = CAITrigger(CAITrigger::UNLOCKED, m_typeAI, 0);
+
+                message = new CMessageSetTrigger(trigger, m_id, pTarget->GetId());
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                message = new CMessageUnlock(pContainer->m_dwFlags & ~0x1, m_id, pTarget->GetId());
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            } else {
+                // NOTE: The original reads `CAITrigger::PICKLOCKFAILED` (0x847E58).
+                trigger = CAITrigger(CAITRIGGER_PICKLOCKFAILED, m_typeAI, 0);
+
+                message = new CMessageSetTrigger(trigger, m_id, pTarget->GetId());
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                FeedBack(27, 0, 0, 0, -1, 0, 0);
+            }
+
+            if (pContainer->m_lockDifficulty != 100) {
+                FeedBack(83, nRoll, nStrengthBonus, nDifficulty, 20460, 0, 0);
+            }
+        } else {
+            FeedBack(26, 0, 0, 0, -1, 0, 0);
+        }
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x75DFD0
