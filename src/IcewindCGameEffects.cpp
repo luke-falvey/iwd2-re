@@ -1783,6 +1783,29 @@ CGameEffect* IcewindCGameEffectDeathWard::Copy()
     return copy;
 }
 
+// 0x569090
+BOOL IcewindCGameEffectDeathWard::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_secondaryType) {
+        DisplayStringRef(pSprite, 1309); // "Death Ward"
+    }
+
+    if (pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_DEATH_WARD]) {
+        return TRUE;
+    }
+
+    pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_DEATH_WARD] = true;
+
+    // NOTE: Uninline.
+    AddPortraitIcon(pSprite, 87);
+
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(ICEWIND_CGAMEEFFECT_MAGIC_DEATH);
+
+    m_done = FALSE;
+
+    return TRUE;
+}
+
 // 0x4BAF90
 void IcewindCGameEffectDeathWard::OnRemove(CGameSprite* pSprite)
 {
@@ -1852,7 +1875,7 @@ CGameEffect* IcewindCGameEffectVisualEffect::Copy()
     return copy;
 }
 
-// 0x569320
+// 0x5692D0
 BOOL IcewindCGameEffectVisualEffect::ApplyEffect(CGameSprite* pSprite)
 {
     // NOTE: Using `set` (with bounds check).
@@ -2697,6 +2720,114 @@ CGameEffect* IcewindCGameEffectRestoration::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x56B240
+BOOL IcewindCGameEffectRestoration::ApplyEffect(CGameSprite* pSprite)
+{
+    if ((pSprite->GetDerivedStats()->m_generalState & STATE_DISEASED) != 0) {
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 13);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 14);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 15);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 4);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 5);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 6);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 7);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 8);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 9);
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+    // __LINE__: 7075
+    UTIL_ASSERT(pSprite != NULL);
+
+    POSITION pos = pSprite->GetTimedEffectList()->GetHeadPosition();
+    while (pos != NULL) {
+        CGameEffect* pEffect = pSprite->GetTimedEffectList()->GetNext(pos);
+        if (IsAbilityDrain(pEffect, pSprite) == TRUE) {
+            pSprite->GetTimedEffectList()->RemoveMatchingEffect(pEffect);
+        }
+    }
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    pGame->UpdatePortrait(pGame->GetCharacterPortraitNum(pSprite->GetId()), 1);
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
+// 0x56B340
+BOOLEAN IcewindCGameEffectRestoration::IsAbilityDrain(CGameEffect* pEffect, CGameSprite* pSprite)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+    // __LINE__: 7096
+    UTIL_ASSERT(pEffect != NULL);
+
+    if (pEffect->m_effectID == CGAMEEFFECT_STR
+        || pEffect->m_effectID == CGAMEEFFECT_DEX
+        || pEffect->m_effectID == CGAMEEFFECT_CON
+        || pEffect->m_effectID == CGAMEEFFECT_INT
+        || pEffect->m_effectID == CGAMEEFFECT_WIS
+        || pEffect->m_effectID == CGAMEEFFECT_CHR) {
+        LONG nStat;
+
+        switch (pEffect->m_dwFlags) {
+        case 0:
+            if (pEffect->m_effectAmount < 0) {
+                return TRUE;
+            }
+            // FALLTHROUGH
+        case 1:
+            switch (pEffect->m_effectID) {
+            case CGAMEEFFECT_STR:
+                nStat = pSprite->m_tempStats.m_nSTR;
+                break;
+            case CGAMEEFFECT_DEX:
+                nStat = pSprite->m_tempStats.m_nDEX;
+                break;
+            case CGAMEEFFECT_CON:
+                nStat = pSprite->m_tempStats.m_nCON;
+                break;
+            case CGAMEEFFECT_INT:
+                nStat = pSprite->m_tempStats.m_nINT;
+                break;
+            case CGAMEEFFECT_WIS:
+                nStat = pSprite->m_tempStats.m_nWIS;
+                break;
+            case CGAMEEFFECT_CHR:
+                nStat = pSprite->m_tempStats.m_nCHR;
+                break;
+            default:
+                // NOTE: The original compares with garbage after the
+                // assertion.
+                nStat = 0;
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+                // __LINE__: 7123
+                UTIL_ASSERT(FALSE);
+            }
+
+            if (pEffect->m_effectAmount < nStat) {
+                return TRUE;
+            }
+            // FALLTHROUGH
+        case 2:
+            if (pEffect->m_effectAmount < 100) {
+                return TRUE;
+            }
+            // FALLTHROUGH
+        default:
+            // NOTE: Also reached by the cases above when the effect is not
+            // a drain (original behaviour).
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+            // __LINE__: 7133
+            UTIL_ASSERT(FALSE);
+        }
+    }
+
+    return FALSE;
 }
 
 // -----------------------------------------------------------------------------

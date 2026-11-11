@@ -511,6 +511,7 @@ class IcewindCGameEffectDeathWard : public CGameEffect {
 public:
     IcewindCGameEffectDeathWard(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
     void OnRemove(CGameSprite* pSprite) override;
 };
 
@@ -678,6 +679,8 @@ class IcewindCGameEffectRestoration : public CGameEffect {
 public:
     IcewindCGameEffectRestoration(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    BOOLEAN IsAbilityDrain(CGameEffect* pEffect, CGameSprite* pSprite);
 };
 
 class IcewindCGameEffectAlicornLanceGlow : public CGameEffect {
