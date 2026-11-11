@@ -238,6 +238,10 @@ public:
     static const BYTE MSG_SUBTYPE_PLAYERCHAR_70;
     static const BYTE MSG_SUBTYPE_PLAYERCHAR_102;
 
+    static const BYTE MSG_TYPE_PARTYORDER;
+    static const BYTE MSG_SUBTYPE_PARTYORDER_REQUEST;
+    static const BYTE MSG_SUBTYPE_PARTYORDER_ANNOUNCE;
+
     static const BYTE MSG_TYPE_PAUSING;
     static const BYTE MSG_SUBTYPE_PAUSING_PERMIT_REQUEST;
     static const BYTE MSG_SUBTYPE_PAUSING_ANNOUNCE;
@@ -334,8 +338,10 @@ public:
     BOOLEAN sub_430DC0(LONG nObjectId);
     BOOLEAN SwapItemRequest(BYTE nLocation, LONG nObjectId, SHORT nSlotNum, CItem*& pItem, STRREF& strError, WORD wCount);
     BOOLEAN OnSwapItemRequest(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_431CA0(INT nPlayerNumber, BOOLEAN bResult, CItem* pItem, STRREF strError);
     BOOLEAN OnSwapItemReply(BYTE* pMessage, DWORD dwSize, CItem*& pItem, STRREF& strError);
     BOOLEAN CharacterPartyOrderRequest();
+    BOOLEAN sub_432610();
     BOOLEAN SendChatMessage(CString& sChatMessage);
     BOOLEAN OnChatMessage(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     void SetSignalDefaultSecondsToTimeout();

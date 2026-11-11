@@ -9459,6 +9459,12 @@ LONG CInfGame::GetCharacterSlot(INT nCharacterSlot)
     return m_characters[nCharacterSlot];
 }
 
+// 0x5AE020
+void CInfGame::sub_5AE020(LONG* pCharacterIds, SHORT nOverflowCount, LONG* pOverflowIds)
+{
+    // TODO: Incomplete.
+}
+
 // 0x5BD690
 INT CInfGame::GetCharacterSlotFromId(LONG nCharacterId)
 {
