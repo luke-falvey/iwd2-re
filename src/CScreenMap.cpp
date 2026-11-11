@@ -765,12 +765,10 @@ void CScreenMap::UpdateMainPanel()
     CGameSprite* pSprite;
 
     BYTE rc;
-    do {
-        rc = pGame->GetObjectArray()->GetShare(nCharacterId,
-            CGameObjectArray::THREAD_ASYNCH,
-            reinterpret_cast<CGameObject**>(&pSprite),
-            INFINITE);
-    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+    rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        reinterpret_cast<CGameObject**>(&pSprite),
+        INFINITE);
 
     if (rc != CGameObjectArray::SUCCESS) {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMap.cpp
@@ -1712,7 +1710,7 @@ void CUIControlButtonMapAreaMap::RenderCharacters(const CRect& rClip)
                     CGameObjectArray::THREAD_ASYNCH,
                     reinterpret_cast<CGameObject**>(&pSprite),
                     INFINITE);
-            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+            } while (rc == CGameObjectArray::DENIED);
 
             if (rc == CGameObjectArray::SUCCESS) {
                 pSprite->RenderToMapScreen(rClip, m_charPositions[index].ptPos);
@@ -1851,7 +1849,7 @@ void CUIControlButtonMapAreaMap::SetMap(CGameArea* pArea)
                     CGameObjectArray::THREAD_ASYNCH,
                     reinterpret_cast<CGameObject**>(&pSprite),
                     INFINITE);
-            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+            } while (rc == CGameObjectArray::DENIED);
 
             if (rc == CGameObjectArray::SUCCESS) {
                 if (pSprite->GetArea() == pArea) {
@@ -1926,7 +1924,7 @@ void CUIControlButtonMapAreaMap::TimerAsynchronousUpdate(BOOLEAN bInside)
                     CGameObjectArray::THREAD_ASYNCH,
                     reinterpret_cast<CGameObject**>(&pSprite),
                     INFINITE);
-            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+            } while (rc == CGameObjectArray::DENIED);
 
             if (rc != CGameObjectArray::SUCCESS) {
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMap.cpp

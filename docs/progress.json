@@ -6,8 +6,8 @@
   ],
   "functions_total": 9831,
   "functions_done": 7698,
-  "functions_complete": 7288,
-  "incomplete_markers": 442,
+  "functions_complete": 7294,
+  "incomplete_markers": 436,
   "incomplete_by_file": {
     "src/CMessage.cpp": 85,
     "src/CGameSprite.cpp": 38,
@@ -19,7 +19,6 @@
     "src/CStore.cpp": 15,
     "src/CInfGame.cpp": 13,
     "src/CScreenInventory.cpp": 12,
-    "src/CScreenStore.cpp": 12,
     "src/CDerivedStats.cpp": 9,
     "src/CProjectilePart2.cpp": 9,
     "src/CProjectilePart4.cpp": 9,
@@ -27,6 +26,7 @@
     "src/CScreenCreateChar.cpp": 7,
     "src/CVidPoly.cpp": 7,
     "src/CParticle.cpp": 6,
+    "src/CScreenStore.cpp": 6,
     "src/CUIControlEditMultiLine.cpp": 6,
     "src/CAIGroup.cpp": 5,
     "src/CGameAIBase.cpp": 5,
@@ -3808,7 +3808,7 @@
   ],
   "bytes_total": 3846937,
   "bytes_done": 3410549,
-  "bytes_complete": 2941171,
+  "bytes_complete": 2948570,
   "largest_stubs": [
     {
       "addr": "0x4DB160",

@@ -360,12 +360,10 @@ BYTE CInfButtonArray::GetSelectedModalMode()
         CGameSprite* pSprite;
 
         BYTE rc;
-        do {
-            rc = pGame->GetObjectArray()->GetShare(nCharacterId,
-                CGameObjectArray::THREAD_ASYNCH,
-                reinterpret_cast<CGameObject**>(&pSprite),
-                INFINITE);
-        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+        rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
 
         if (rc == CGameObjectArray::SUCCESS) {
             modalState = pSprite->GetModalState();

@@ -9540,12 +9540,10 @@ BOOLEAN CInfGame::GetGameSpyCharacterInformation(INT nCharacterSlot, CString& sN
     CGameSprite* pSprite;
 
     BYTE rc;
-    do {
-        rc = m_cObjectArray.GetDeny(nCharacterId,
-            CGameObjectArray::THREAD_ASYNCH,
-            reinterpret_cast<CGameObject**>(&pSprite),
-            INFINITE);
-    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+    rc = m_cObjectArray.GetDeny(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        reinterpret_cast<CGameObject**>(&pSprite),
+        INFINITE);
 
     if (rc != CGameObjectArray::SUCCESS) {
         return FALSE;
