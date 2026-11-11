@@ -1241,6 +1241,40 @@ CGameEffect* IcewindCGameEffectShroudOfFlame::Copy()
     return copy;
 }
 
+// 0x565CB0
+BOOL IcewindCGameEffectShroudOfFlame::ApplyEffect(CGameSprite* pSprite)
+{
+    if (IcewindMisc::IsDead(pSprite) == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if (pSprite->GetDerivedStats()->m_spellStates.test(SPLSTATE_SHROUD_OF_FLAME) == true) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if (m_secondaryType != 0) {
+        m_special = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+        DisplayStringRef(pSprite, 7879);
+    }
+
+    pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_SHROUD_OF_FLAME, true);
+    pSprite->GetDerivedStats()->m_visualEffects.set(IWD_VFX_SHROUD_OF_FLAME, true);
+
+    // NOTE: Uninline.
+    AddPortraitIcon(pSprite, 98);
+
+    AddColorEffect(pSprite, 160, 0, 0, 1);
+
+    CPersistantEffect84C4D4* pEffect = new CPersistantEffect84C4D4(100, 105, m_special, m_duration);
+    pEffect->m_sourceID = m_sourceID;
+    strcpy(reinterpret_cast<char*>(pEffect->field_29), m_sourceRes.GetResRefStr());
+    pSprite->m_persistantEffects.AddTail(pEffect);
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49F970
