@@ -15,6 +15,7 @@
 #include "CScreenWorld.h"
 #include "CSevenEyes.h"
 #include "CSpell.h"
+#include "CUIPanel.h"
 #include "CUtil.h"
 #include "CVidPalette.h"
 #include "Icewind586B70.h"
@@ -5787,6 +5788,293 @@ CGameEffect* CGameEffectResurrect::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4B0490
+BOOL CGameEffectResurrect::ApplyEffect(CGameSprite* pSprite)
+{
+    if ((pSprite->m_tempStats.m_generalState & STATE_STONE_DEATH) != 0
+        && m_dwFlags != 0x2B) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    WORD nGenderBits;
+    switch (pSprite->GetAIType().m_nGender) {
+    case 1:
+        nGenderBits = 0;
+        break;
+    case 2:
+        nGenderBits = 0x10;
+        break;
+    default:
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    WORD nRaceBits;
+    switch (pSprite->GetAIType().m_nRace) {
+    case 1:
+        nRaceBits = 0;
+        break;
+    case 2:
+    case 3:
+        nRaceBits = 1;
+        break;
+    case 4:
+        nRaceBits = 2;
+        break;
+    case 5:
+        nRaceBits = 3;
+        break;
+    case 6:
+        nRaceBits = 4;
+        break;
+    case 7:
+        nRaceBits = 5;
+        break;
+    default:
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    WORD nClassBits;
+    switch (pSprite->GetDerivedStats()->GetBestClass()) {
+    case 3:
+    case 4:
+        nClassBits = 0;
+        break;
+    case 1:
+    case 5:
+    case 6:
+    case 7:
+    case 8:
+        nClassBits = 0x100;
+        break;
+    case 10:
+    case 11:
+        nClassBits = 0x200;
+        break;
+    case 2:
+    case 9:
+        nClassBits = 0x300;
+        break;
+    default:
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    USHORT nAnimationId = nClassBits | nRaceBits | nGenderBits | 0x6000;
+
+    if ((pSprite->m_tempStats.m_generalState & STATE_DEAD) != 0) {
+        pSprite->GetBaseStats()->field_294 = FALSE;
+
+        LONG nProtagonistId = m_sourceID;
+        CGameSprite* pProtagonist;
+
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nProtagonistId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pProtagonist),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            BOOLEAN bDead = IcewindMisc::IsDead(pProtagonist);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nProtagonistId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            if (bDead == TRUE) {
+                nProtagonistId = g_pBaldurChitin->GetObjectGame()->GetProtagonist();
+            }
+        } else {
+            nProtagonistId = g_pBaldurChitin->GetObjectGame()->GetProtagonist();
+        }
+
+        if ((pSprite->m_tempStats.m_generalState & STATE_STONE_DEATH) != 0) {
+            pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+                CGAMEEFFECT_PORTRAITICON,
+                pSprite->GetEquipedEffectList()->GetPosCurrent(),
+                71);
+            pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+                CGAMEEFFECT_PORTRAITICON,
+                pSprite->GetTimedEffectList()->GetPosCurrent(),
+                71);
+        }
+
+        // NOTE: The original stores a DWORD (`m_animationType` and the
+        // following `field_22`).
+        *reinterpret_cast<DWORD*>(&(pSprite->GetBaseStats()->m_animationType)) = nAnimationId;
+
+        pSprite->GetBaseStats()->m_generalState &= ~STATE_DEAD;
+        pSprite->GetDerivedStats()->m_generalState &= ~STATE_DEAD;
+        pSprite->GetBaseStats()->m_generalState &= ~STATE_ACID_DEATH;
+        pSprite->GetDerivedStats()->m_generalState &= ~STATE_ACID_DEATH;
+        pSprite->GetBaseStats()->m_generalState &= ~STATE_FLAME_DEATH;
+        pSprite->GetDerivedStats()->m_generalState &= ~STATE_FLAME_DEATH;
+        pSprite->GetBaseStats()->m_generalState &= ~STATE_EXPLODING_DEATH;
+        pSprite->GetDerivedStats()->m_generalState &= ~STATE_EXPLODING_DEATH;
+        pSprite->GetBaseStats()->m_generalState &= ~STATE_STONE_DEATH;
+        pSprite->GetDerivedStats()->m_generalState &= ~STATE_STONE_DEATH;
+        pSprite->GetBaseStats()->m_generalState &= ~STATE_FROZEN_DEATH;
+        pSprite->GetDerivedStats()->m_generalState &= ~STATE_FROZEN_DEATH;
+
+        pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+            ICEWIND_CGAMEEFFECT_BLEEDINGWOUNDS,
+            pSprite->GetEquipedEffectList()->GetPosCurrent(),
+            -1);
+        pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+            ICEWIND_CGAMEEFFECT_BLEEDINGWOUNDS,
+            pSprite->GetTimedEffectList()->GetPosCurrent(),
+            -1);
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nProtagonistId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pProtagonist),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            return FALSE;
+        }
+
+        CGameArea* pArea = pProtagonist->GetArea();
+        pSprite->ResetAITypeLive();
+
+        if (pArea == pSprite->GetArea()
+            && (pSprite->GetArea() != NULL
+                || g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) == -1)) {
+            pSprite->m_hasColorEffects = TRUE;
+
+            for (INT nRange = 0; nRange < 7; nRange++) {
+                pSprite->GetAnimation()->SetColorRange(static_cast<BYTE>(nRange),
+                    pSprite->GetBaseStats()->m_colors[nRange]);
+            }
+
+            // NOTE: The original stores a DWORD (`m_animationType` and the
+            // following `field_22`).
+            *reinterpret_cast<DWORD*>(&(pSprite->GetBaseStats()->m_animationType)) = nAnimationId;
+
+            pSprite->GetAnimation()->SetAnimationType(nAnimationId,
+                pSprite->GetBaseStats()->m_colors,
+                0);
+
+            pSprite->MoveToFront();
+            pSprite->SetSequence(CGAMESPRITE_SEQ_READY);
+            pSprite->m_posZ = 0;
+
+            CAIObjectType typeAI(pSprite->GetAIType());
+            typeAI.m_nGeneral = CAIObjectType::G_HUMANOID;
+            pSprite->SetAIType(typeAI, FALSE, FALSE);
+
+            typeAI.Set(pSprite->m_startTypeAI);
+            typeAI.m_nGeneral = CAIObjectType::G_HUMANOID;
+            pSprite->m_startTypeAI.Set(typeAI);
+
+            if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+                || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+                CMessage* message = new CMessageVisibilityMapMove(TRUE,
+                    pSprite->GetId(),
+                    pSprite->GetId());
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            // FIXME: The share of `nProtagonistId` is never released on this
+            // path.
+        } else {
+            if (pSprite->GetArea() != NULL) {
+                pSprite->RemoveFromArea();
+            }
+
+            CPoint pos(pProtagonist->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX,
+                pProtagonist->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY);
+
+            // NOTE: When `field_294` is set the position stays in search map
+            // units (original behaviour).
+            if (!pSprite->GetBaseStats()->field_294) {
+                BYTE nPersonalSpace = pSprite->GetAnimation()->GetPersonalSpace();
+                pos = pArea->m_search.GetNearestOpenSquare(pos,
+                    pSprite->GetTerrainTable(),
+                    nPersonalSpace,
+                    -1);
+                pos.x = pos.x * CPathSearch::GRID_SQUARE_SIZEX + CPathSearch::GRID_SQUARE_SIZEX / 2;
+                pos.y = pos.y * CPathSearch::GRID_SQUARE_SIZEY + CPathSearch::GRID_SQUARE_SIZEY / 2;
+            }
+
+            g_pBaldurChitin->GetObjectGame()->m_bInAreaTransition = TRUE;
+            pSprite->AddToArea(pArea, pos, 0, CGameObject::LIST_FRONT);
+            g_pBaldurChitin->GetObjectGame()->m_bInAreaTransition = FALSE;
+
+            pSprite->m_hasColorEffects = TRUE;
+
+            for (INT nRange = 0; nRange < 7; nRange++) {
+                pSprite->GetAnimation()->SetColorRange(static_cast<BYTE>(nRange),
+                    pSprite->GetBaseStats()->m_colors[nRange]);
+            }
+
+            // NOTE: The original stores a DWORD (`m_animationType` and the
+            // following `field_22`).
+            *reinterpret_cast<DWORD*>(&(pSprite->GetBaseStats()->m_animationType)) = nAnimationId;
+
+            pSprite->GetAnimation()->SetAnimationType(nAnimationId,
+                pSprite->GetBaseStats()->m_colors,
+                0);
+
+            pSprite->SetSequence(CGAMESPRITE_SEQ_READY);
+            pSprite->m_posZ = 0;
+            pSprite->SetFacing(pSprite->GetDirection(pProtagonist->GetPos()));
+
+            CAIObjectType typeAI(pSprite->GetAIType());
+            typeAI.m_nGeneral = CAIObjectType::G_HUMANOID;
+            pSprite->SetAIType(typeAI, FALSE, FALSE);
+
+            typeAI.Set(pSprite->m_startTypeAI);
+            typeAI.m_nGeneral = CAIObjectType::G_HUMANOID;
+            pSprite->m_startTypeAI.Set(typeAI);
+
+            if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+                || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+                CMessage* message = new CMessageVisibilityMapMove(TRUE,
+                    pSprite->GetId(),
+                    pSprite->GetId());
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nProtagonistId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        pSprite->GetBaseStats()->m_hitPoints = 1;
+    }
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    pGame->UpdatePortrait(pGame->GetCharacterPortraitNum(pSprite->GetId()), 1);
+
+    pSprite->UnequipAll(TRUE);
+    CGameEffect::sub_4B8730(pSprite, 42);
+    pSprite->EquipAll(TRUE);
+
+    if (g_pBaldurChitin->GetActiveEngine() != NULL) {
+        CUIPanel* pPanel = g_pBaldurChitin->GetActiveEngine()->GetManager()->GetPanel(1);
+        if (pPanel != NULL) {
+            pPanel->InvalidateRect(NULL);
+        }
+    }
+
+    if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+        || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+        pSprite->m_cLastSpriteUpdate.m_bFullUpdateRequired = TRUE;
+        pSprite->m_bSendSpriteUpdate = TRUE;
+    }
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
