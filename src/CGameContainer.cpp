@@ -717,7 +717,68 @@ void CGameContainer::SetItem(SHORT nSlotNum, CItem* pItem)
 // 0x480480
 void CGameContainer::sub_480480(SHORT nSlotNum, CItem* pItem)
 {
-    // TODO: Incomplete.
+    // 0x8D3968
+    static CResRef stru_8D3968("60HEART");
+
+    // 0x8D3990
+    static CString str_8D3990("HCx");
+
+    // 0x8D2558
+    static int dword_8D2558 = str_8D3990.GetLength() - 1;
+
+    if (pItem == NULL) {
+        POSITION pos = m_lstItems.FindIndex(nSlotNum);
+        if (pos != NULL) {
+            CItem* pOldItem = m_lstItems.GetAt(pos);
+            if (pOldItem != NULL) {
+                BYTE resRef[RESREF_SIZE];
+                pOldItem->cResRef.GetResRef(resRef);
+
+                // NOTE: The last character is the heart number.
+                BYTE nNumber = resRef[7];
+                resRef[7] = 0;
+
+                if (stru_8D3968 == CResRef(resRef)) {
+                    CVariable var;
+
+                    str_8D3990.SetAt(dword_8D2558, nNumber);
+
+                    CNamedCreatureVariableHash* pNamedCreatures = &m_pArea->m_namedCreatures;
+
+                    CVariable* pVar = pNamedCreatures->FindKey(str_8D3990);
+                    if (pVar != NULL) {
+                        if (pVar->m_intValue == m_id) {
+                            pNamedCreatures->RemoveKey(str_8D3990, FALSE, 0);
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        BYTE resRef[RESREF_SIZE];
+        pItem->cResRef.GetResRef(resRef);
+
+        // NOTE: The last character is the heart number.
+        BYTE nNumber = resRef[7];
+        resRef[7] = 0;
+
+        if (CResRef(resRef) == stru_8D3968) {
+            CVariable var;
+
+            str_8D3990.SetAt(dword_8D2558, nNumber);
+
+            CNamedCreatureVariableHash* pNamedCreatures = &m_pArea->m_namedCreatures;
+
+            CVariable* pVar = pNamedCreatures->FindKey(str_8D3990);
+            if (pVar != NULL) {
+                pVar->m_intValue = m_id;
+            } else {
+                var.SetName(str_8D3990);
+                var.m_intValue = m_id;
+                pNamedCreatures->AddKey(var);
+            }
+        }
+    }
 }
 
 // 0x480760

@@ -1,6 +1,7 @@
 #include "CScreenCreateChar.h"
 
 #include "CBaldurChitin.h"
+#include "CCharacterFile.h"
 #include "CCreatureFile.h"
 #include "CGameAnimationType.h"
 #include "CGameArea.h"
@@ -4012,7 +4013,205 @@ void CScreenCreateChar::OnCharacterImportItemSelect(INT nItem)
 // 0x610DC0
 void CScreenCreateChar::UpdateCharacterSummary(const CString& sCharacter, CUIControlTextDisplay* pText)
 {
-    // TODO: Incomplete.
+    CCharacterFile cCharacterData;
+    BOOLEAN bTemporaryKey = FALSE;
+    CString sCharactersDir;
+
+    pText->RemoveAll();
+
+    sCharactersDir = g_pBaldurChitin->GetObjectGame()->GetDirCharacters();
+
+    cCharacterData.SetResRef(CResRef(sCharacter), TRUE, TRUE);
+
+    if (cCharacterData.GetResRef() == "") {
+        // Not in the resource index yet, add the file from the characters
+        // folder.
+        bTemporaryKey = TRUE;
+        g_pChitin->cDimm.AddTemporaryKey(sCharactersDir, CResRef(sCharacter), 1018);
+
+        cCharacterData.SetResRef(CResRef(sCharacter), TRUE, TRUE);
+    }
+
+    BYTE* pData = cCharacterData.GetData();
+    DWORD nSize = cCharacterData.GetDataSize();
+
+    if (pData != NULL && memcmp(pData, "CHR V2.2", 8) == 0) {
+        EXPORT_CHARACTER_HEADER* pHeader = reinterpret_cast<EXPORT_CHARACTER_HEADER*>(pData);
+
+        LONG nCharData = nSize - sizeof(EXPORT_CHARACTER_HEADER);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCreateChar.cpp
+        // __LINE__: 6322
+        UTIL_ASSERT(nCharData > 0);
+
+        nCharData -= pHeader->nCreatureSize;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCreateChar.cpp
+        // __LINE__: 6325
+        UTIL_ASSERT(nCharData >= 0);
+
+        // NOTE: The sprite is never freed.
+        CGameSprite* pSprite = new CGameSprite(pData + pHeader->nCreatureOffset,
+            pHeader->nCreatureSize,
+            0,
+            0,
+            -1,
+            0,
+            0,
+            INT_MAX,
+            CPoint(-1, -1),
+            0);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCreateChar.cpp
+        // __LINE__: 6330
+        UTIL_ASSERT(pSprite != NULL);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCreateChar.cpp
+        // __LINE__: 6331
+        UTIL_ASSERT(nCharData == 0);
+
+        if (bTemporaryKey == TRUE) {
+            g_pChitin->cDimm.RemoveTemporaryKey(sCharactersDir, CResRef(sCharacter), 1018);
+        }
+
+        CString sTemp;
+
+        UpdateTextForceColor(pText,
+            RGB(200, 200, 0),
+            "%s",
+            FetchString(1047));
+
+        if (pSprite->m_baseStats.m_name == 0xFFFFFFFF) {
+            UpdateText(pText, "%s", pHeader->szName);
+        } else {
+            UpdateText(pText, "%s", FetchString(pSprite->m_baseStats.m_name));
+        }
+
+        UpdateText(pText, "");
+
+        UpdateTextForceColor(pText,
+            RGB(200, 200, 0),
+            "%s",
+            FetchString(1048));
+
+        g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetRaceStringMixed(pSprite->m_startTypeAI.m_nRace,
+            sTemp,
+            pSprite->m_startTypeAI.m_nSubRace);
+
+        UpdateText(pText, "%s", sTemp);
+
+        UpdateText(pText, "");
+
+        CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+        CTlkTable* pTlkTable = &g_pBaldurChitin->m_cTlkTable;
+
+        UpdateTextForceColor(pText,
+            RGB(200, 200, 0),
+            "%s",
+            FetchString(12136));
+
+        for (INT nClass = 1; nClass <= 11; nClass++) {
+            INT nLevel = pSprite->GetClassLevel(nClass);
+            if (nLevel > 0) {
+                pGame->GetRuleTables().GetClassStringMixed(nClass,
+                    pSprite->GetSpecialization(),
+                    pSprite->m_baseStats.m_flags,
+                    sTemp,
+                    pSprite->m_startTypeAI.m_nGender != CAIOBJECTTYPE_SEX_FEMALE);
+
+                pTlkTable->m_mapTokens[CRuleTables::TOKEN_CLASS] = static_cast<LPCTSTR>(sTemp);
+
+                sTemp.Format("%d", nLevel);
+
+                pTlkTable->m_mapTokens[CRuleTables::TOKEN_LEVEL] = static_cast<LPCTSTR>(sTemp);
+
+                UpdateText(pText, "%s", FetchString(16480));
+            }
+        }
+
+        UpdateText(pText, "");
+
+        UpdateTextForceColor(pText,
+            RGB(200, 200, 0),
+            "%s",
+            FetchString(1049));
+
+        pGame->GetRuleTables().GetAlignmentStringMixed(pSprite->m_startTypeAI.m_nAlignment, sTemp);
+
+        UpdateText(pText, "%s", sTemp);
+
+        UpdateText(pText, "");
+
+        UpdateTextForceColor(pText,
+            RGB(200, 200, 0),
+            "%s",
+            FetchString(17088));
+
+        UpdateText(pText,
+            "%s: %d  (%+d)",
+            FetchString(1145),
+            pSprite->m_baseStats.m_STRBase,
+            pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_STRBase));
+
+        UpdateText(pText,
+            "%s: %d  (%+d)",
+            FetchString(1151),
+            pSprite->m_baseStats.m_INTBase,
+            pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_INTBase));
+
+        UpdateText(pText,
+            "%s: %d  (%+d)",
+            FetchString(1178),
+            pSprite->m_baseStats.m_WISBase,
+            pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_WISBase));
+
+        UpdateText(pText,
+            "%s: %d  (%+d)",
+            FetchString(1179),
+            pSprite->m_baseStats.m_DEXBase,
+            pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_DEXBase));
+
+        UpdateText(pText,
+            "%s: %d  (%+d)",
+            FetchString(1180),
+            pSprite->m_baseStats.m_CONBase,
+            pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_CONBase));
+
+        UpdateText(pText,
+            "%s: %d  (%+d)",
+            FetchString(1181),
+            pSprite->m_baseStats.m_CHRBase,
+            pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_CHRBase));
+
+        UpdateText(pText, "");
+
+        CUIPanel* pPanel = m_cUIManager.GetPanel(0);
+        if (pPanel != NULL) {
+            CUIControlButtonCharGenPortrait* pPortrait = static_cast<CUIControlButtonCharGenPortrait*>(pPanel->GetControl(12));
+            if (pPortrait != NULL) {
+                pPortrait->SetPortrait(CResRef(pSprite->m_baseStats.m_portraitLarge));
+                pPortrait->InvalidateRect();
+            }
+        }
+
+        cCharacterData.pRes->dwFlags |= 0x100;
+        cCharacterData.ReleaseData();
+    } else {
+        cCharacterData.ReleaseData();
+
+        if (bTemporaryKey) {
+            g_pChitin->cDimm.RemoveTemporaryKey(sCharactersDir, CResRef(sCharacter), 1018);
+            cCharacterData.ReleaseData();
+        }
+
+        pText->DisplayString(CString(""),
+            FetchString(39695),
+            pText->m_rgbLabelColor,
+            pText->m_rgbTextColor,
+            -1,
+            FALSE,
+            TRUE);
+    }
 }
 
 // 0x611900
