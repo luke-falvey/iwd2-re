@@ -3416,6 +3416,49 @@ void CRuleTables::sub_546B60(CGameSprite* pSprite, int& a2, int& a3, int& a4, BO
     // TODO: Incomplete.
 }
 
+// 0x547040
+INT CRuleTables::sub_547040(CGameSprite* pSprite, const CResRef& resRef, INT a3, BYTE nClass, DWORD nSpecialization, INT a6) const
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CRuleTables.cpp
+    // __LINE__: 6961
+    UTIL_ASSERT(pSprite != NULL);
+
+    INT nStat = 0;
+
+    pSprite->GetAIType();
+
+    switch (nClass) {
+    case CAIOBJECTTYPE_C_BARD:
+    case CAIOBJECTTYPE_C_SORCERER:
+        nStat = pSprite->GetDerivedStats()->m_nCHR;
+        break;
+    case CAIOBJECTTYPE_C_CLERIC:
+    case CAIOBJECTTYPE_C_DRUID:
+    case CAIOBJECTTYPE_C_PALADIN:
+    case CAIOBJECTTYPE_C_RANGER:
+        nStat = pSprite->GetDerivedStats()->m_nWIS;
+        break;
+    case CAIOBJECTTYPE_C_WIZARD:
+        nStat = pSprite->GetDerivedStats()->m_nINT;
+        break;
+    }
+
+    INT nMod;
+    if (nStat >= 10) {
+        nMod = static_cast<INT>((static_cast<float>(nStat) - 10.0f) / 2.0f);
+    } else {
+        nMod = static_cast<INT>((static_cast<float>(nStat) - 1.0f - 10.0f) / 2.0f);
+    }
+
+    if (nClass == CAIOBJECTTYPE_C_CLERIC
+        && nSpecialization == 0x200000
+        && a3 == 16) {
+        nMod++;
+    }
+
+    return nMod;
+}
+
 // FIXME: For unknown reason `nClass` and `nLevel` params are passed as
 // pointers.
 //

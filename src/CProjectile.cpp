@@ -4,11 +4,65 @@
 #include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
+#include "CTimerWorld.h"
+#include "CUtil.h"
 
 // 0x6A3130
 BOOLEAN CProjectile::IsProjectile()
 {
     return TRUE;
+}
+
+// 0x529490
+CProjectile::CProjectile()
+{
+    field_186 = 0;
+    m_projectileType = 0;
+    m_speed = 0;
+    m_sourceId = 0;
+    m_targetId = 0;
+    field_9A = 0;
+    field_E0 = 0;
+    field_E6 = 0;
+    field_EA = NULL;
+    field_16C = 0;
+    field_16E = 0;
+    field_170 = 0;
+    field_17C = 0;
+    m_callBackProjectile = CGameObjectArray::INVALID_INDEX;
+    m_bHasHeight = FALSE;
+    field_C4 = 0;
+    field_E2 = 0;
+    m_fireSoundRef = "";
+    m_loopFireSound = FALSE;
+    m_arrivalSoundRef = "";
+    m_loopArrivalSound = FALSE;
+    field_182 = CGameObjectArray::INVALID_INDEX;
+}
+
+// 0x51E9B0
+CProjectile::~CProjectile()
+{
+    // NOTE: Uninline.
+    ClearEffects();
+}
+
+// 0x536F40
+BOOLEAN CProjectile::CompressTime(DWORD deltaTime)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CProjectile.cpp
+    // __LINE__: 10139
+    UTIL_ASSERT(deltaTime > static_cast<DWORD>(CTimerWorld::TIMESCALE_MSEC_PER_SEC * CTimerWorld::TIMESCALE_SEC_PER_MIN));
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+        CGameObjectArray::THREAD_ASYNCH,
+        NULL,
+        INFINITE);
+    if (rc == CGameObjectArray::SUCCESS) {
+        delete this;
+    }
+
+    return FALSE;
 }
 
 // 0x5551B0
@@ -159,7 +213,7 @@ void CProjectile::PlaySound(CResRef resRef, BOOL loop, BOOL fireAndForget)
         if (fireAndForget) {
             m_sound.SetFireForget(TRUE);
         }
-        m_sound.SetChannel(15, reinterpret_cast<DWORD>(m_pArea));
+        m_sound.SetChannel(15, reinterpret_cast<DWORD>(field_EA));
         m_sound.Play(m_pos.x, m_pos.y, 0, FALSE);
     }
 }

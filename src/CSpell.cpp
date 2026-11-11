@@ -1,7 +1,9 @@
 #include "CSpell.h"
 
+#include "CBaldurChitin.h"
 #include "CGameEffect.h"
 #include "CGameSprite.h"
+#include "CInfGame.h"
 #include "CUtil.h"
 
 // NOTE: Inlined.
@@ -109,9 +111,160 @@ SPELL_ABILITY* CSpell::GetAbility(LONG abilityNum) const
 // 0x54A510
 CGameEffect* CSpell::DecodeEffect(LONG nAbility, LONG nEffect, CGameAIBase* pCaster, DWORD a4, DWORD a5, BYTE casterLevel)
 {
-    // TODO: Incomplete.
+    CGameEffect* pEffect = NULL;
 
-    return NULL;
+    if (GetResRef() == "") {
+        return NULL;
+    }
+
+    if (pRes == NULL) {
+        return NULL;
+    }
+
+    pRes->Demand();
+
+    if (pRes == NULL) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CSpell.cpp
+        // __LINE__: 310
+        UTIL_ASSERT(FALSE);
+
+        return NULL;
+    }
+
+    if (nEffect >= pRes->GetAbilityEffectNo(nAbility)) {
+        pRes->Release();
+        return NULL;
+    }
+
+    if (casterLevel == 0) {
+        if (pCaster != NULL && pCaster->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            casterLevel = static_cast<BYTE>(static_cast<CGameSprite*>(pCaster)->GetCasterLevel(this, static_cast<BYTE>(a4), a5));
+        } else {
+            casterLevel = 10;
+        }
+    }
+
+    CPoint source(-1, -1);
+    CPoint target(-1, -1);
+    pEffect = CGameEffect::DecodeEffect(pRes->GetAbilityEffect(nAbility, nEffect, casterLevel),
+        source,
+        -1,
+        target);
+
+    if (pEffect != NULL) {
+        pEffect->m_school = pRes->m_pHeader->school;
+        pEffect->m_sourceType = 1;
+        pEffect->field_48 = pRes->m_pHeader->secondaryType;
+        pEffect->m_sourceRes = GetResRef();
+        pEffect->m_sourceFlags = pRes->m_pHeader->itemFlags;
+
+        if (pCaster != NULL) {
+            if (pCaster->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                CGameSprite* pSprite = static_cast<CGameSprite*>(pCaster);
+                const CRuleTables& ruleTables = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
+
+                if (pEffect->m_school != 0) {
+                    BYTE nSchool = ruleTables.MapCharacterSpecializationToSchool(pSprite->m_baseStats.m_specialization);
+
+                    UINT nFeatNumber = 0;
+                    switch (pEffect->m_school) {
+                    case 4:
+                        nFeatNumber = CGAMESPRITE_FEAT_SPELL_FOCUS_ENCHANTMENT;
+                        break;
+                    case 6:
+                        nFeatNumber = CGAMESPRITE_FEAT_SPELL_FOCUS_EVOCATION;
+                        break;
+                    case 7:
+                        nFeatNumber = CGAMESPRITE_FEAT_SPELL_FOCUS_NECROMANCY;
+                        break;
+                    case 8:
+                        nFeatNumber = CGAMESPRITE_FEAT_SPELL_FOCUS_TRANSMUTE;
+                        break;
+                    }
+
+                    if (nFeatNumber != 0) {
+                        if (pSprite->sub_763150(nFeatNumber)) {
+                            pEffect->m_saveMod += 2 * pSprite->GetFeatValue(nFeatNumber);
+                        }
+                    }
+
+                    if (nSchool == pEffect->m_school) {
+                        pEffect->m_saveMod += 2;
+                    }
+                }
+
+                if (GetResRef() == "SPIN126"
+                    || GetResRef() == "SPIN127"
+                    || GetResRef() == "SPIN128"
+                    || GetResRef() == "SPIN129"
+                    || GetResRef() == "SPIN130"
+                    || GetResRef() == "SPIN131"
+                    || GetResRef() == "SPIN132") {
+                    UINT nTotal = 0;
+                    UINT nCount = 0;
+
+                    if (pSprite->HasClassLevel(CAIOBJECTTYPE_C_WIZARD)) {
+                        DWORD dwClassMask = 0x400;
+                        if (pSprite->sub_725330(CResRef("SPWI710"), dwClassMask, 9, FALSE) == TRUE) {
+                            nTotal = ruleTables.sub_547040(pSprite,
+                                GetResRef(),
+                                0,
+                                CAIOBJECTTYPE_C_WIZARD,
+                                0,
+                                casterLevel);
+                            nCount = 1;
+                        }
+                    }
+
+                    if (pSprite->HasClassLevel(CAIOBJECTTYPE_C_SORCERER)) {
+                        DWORD dwClassMask = 0x200;
+                        if (pSprite->sub_725330(CResRef("SPWI710"), dwClassMask, 9, FALSE) == TRUE) {
+                            nTotal += ruleTables.sub_547040(pSprite,
+                                GetResRef(),
+                                0,
+                                CAIOBJECTTYPE_C_SORCERER,
+                                0,
+                                casterLevel);
+                            nCount++;
+                        }
+                    }
+
+                    if (pSprite->HasClassLevel(CAIOBJECTTYPE_C_CLERIC)
+                        && (pSprite->m_baseStats.m_specialization & 0xFF8000) == 0x40000) {
+                        UINT nLevel = 9;
+                        if (pSprite->sub_7256B0(CResRef("SPWI710"), nLevel, FALSE) == TRUE) {
+                            nTotal += ruleTables.sub_547040(pSprite,
+                                GetResRef(),
+                                0,
+                                CAIOBJECTTYPE_C_CLERIC,
+                                0x40000,
+                                casterLevel);
+                            nCount++;
+                        }
+                    }
+
+                    if (nCount > 0) {
+                        pEffect->m_saveMod += nTotal / nCount;
+                    }
+                }
+
+                pEffect->m_casterLevel = casterLevel;
+                pEffect->m_firstCall = 2 * pSprite->GetFeatValue(CGAMESPRITE_FEAT_SPELL_PENETRATION);
+            } else {
+                pEffect->m_casterLevel = 1;
+            }
+
+            pEffect->m_casterLevel |= (a4 & 0xFF) << 8;
+
+            if (static_cast<BYTE>(a4) == CAIOBJECTTYPE_C_CLERIC) {
+                pEffect->m_casterLevel |= g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetSpecializationIndex(CAIOBJECTTYPE_C_CLERIC, a5) << 16;
+            }
+        }
+    }
+
+    pRes->Release();
+
+    return pEffect;
 }
 
 // 0x54A970
