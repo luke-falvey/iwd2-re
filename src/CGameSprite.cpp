@@ -8243,6 +8243,66 @@ BOOLEAN CGameSprite::CanCast(BYTE nClass, DWORD nSpecialization, CSpell* pSpell)
     return nLevel < CSPELLLIST_MAX_LEVELS && nValue >= nLevel + 11;
 }
 
+// 0x714F70
+CGameButtonList* CGameSprite::sub_714F70(const BYTE& nClass)
+{
+    // TODO: Incomplete.
+
+    return NULL;
+}
+
+// 0x7155C0
+CGameButtonList* CGameSprite::sub_7155C0(const BYTE& nClass, DWORD a2)
+{
+    // TODO: Incomplete.
+
+    return NULL;
+}
+
+// 0x715BD0
+CGameButtonList* CGameSprite::sub_715BD0()
+{
+    // TODO: Incomplete.
+
+    return NULL;
+}
+
+// 0x716770
+void CGameSprite::sub_716770(CButtonData& cButtonData)
+{
+    // TODO: Incomplete.
+}
+
+// 0x716E80
+CGameButtonList* CGameSprite::sub_716E80(INT a1)
+{
+    // TODO: Incomplete.
+
+    return NULL;
+}
+
+// 0x717250
+CGameButtonList* CGameSprite::sub_717250(INT a1)
+{
+    // TODO: Incomplete.
+
+    return NULL;
+}
+
+// 0x717FC0
+CGameButtonList* CGameSprite::sub_717FC0(const CResRef& cResRef, INT nCount)
+{
+    // TODO: Incomplete.
+
+    return NULL;
+}
+
+// 0x718390
+void CGameSprite::sub_718390(const CResRef& cResRef, int a2, int a3, CButtonData& cButtonData)
+{
+    // TODO: Incomplete.
+}
+
 // 0x717620
 CGameButtonList* CGameSprite::GetInternalButtonList()
 {

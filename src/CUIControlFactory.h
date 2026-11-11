@@ -221,6 +221,7 @@ public:
     ~CUIControlButtonAction() override;
     void OnLButtonClick(CPoint pt) override;
     void OnRButtonClick(CPoint pt) override;
+    BOOL Render(BOOL bForce) override;
 };
 
 class CUIControlButton85C3BC : public CUIControlButton {

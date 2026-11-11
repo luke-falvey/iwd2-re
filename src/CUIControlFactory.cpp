@@ -4265,6 +4265,58 @@ void CUIControlButtonAction::OnRButtonClick(CPoint pt)
     g_pBaldurChitin->GetObjectGame()->GetButtonArray()->OnRButtonPressed(m_nID - 6);
 }
 
+// 0x77B530
+BOOL CUIControlButtonAction::Render(BOOL bForce)
+{
+    if (!m_bActive && !m_bInactiveRender) {
+        return FALSE;
+    }
+
+    if (m_nRenderCount == 0 && !bForce) {
+        return FALSE;
+    }
+
+    CInfButtonArray* pButtonArray = g_pBaldurChitin->GetObjectGame()->GetButtonArray();
+
+    field_64C = pButtonArray->m_buttonArray[m_nID - 6].m_bGreyOut;
+
+    // NOTE: Never true, `pButtonArray` is an address of a member.
+    if (pButtonArray == NULL) {
+        return CUIControlButton::Render(bForce);
+    }
+
+    CPoint pt = m_pPanel->m_ptOrigin + m_ptOrigin;
+
+    BOOL bRenderCountChanged = FALSE;
+    if (m_nRenderCount != 0) {
+        CSingleLock renderLock(&(m_pPanel->m_pManager->field_56), FALSE);
+        renderLock.Lock(INFINITE);
+        m_nRenderCount--;
+        renderLock.Unlock();
+
+        bRenderCountChanged = TRUE;
+    }
+
+    if (!pButtonArray->PreRender(pt, m_rDirty, m_bPressed, m_nID - 6)) {
+        // Let the base class do the rendering, which will decrement render
+        // count on its own.
+        if (bRenderCountChanged) {
+            CSingleLock renderLock(&(m_pPanel->m_pManager->field_56), FALSE);
+            renderLock.Lock(INFINITE);
+            m_nRenderCount++;
+            renderLock.Unlock();
+        }
+
+        if (!CUIControlButton::Render(bForce)) {
+            return FALSE;
+        }
+    }
+
+    pButtonArray->PostRender(pt, m_rDirty, m_bPressed, m_nID - 6);
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.

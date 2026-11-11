@@ -36,6 +36,7 @@ public:
     CGameSpriteSpellListEntry* Get(UINT nIndex);
 
     void Clear();
+    unsigned int sub_58FE70();
 
     /* 0000 */ std::vector<CGameSpriteSpellListEntry> m_List;
     /* 0010 */ unsigned int field_10;
