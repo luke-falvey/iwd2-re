@@ -6,32 +6,32 @@
   ],
   "functions_total": 9831,
   "functions_done": 7714,
-  "functions_complete": 7381,
-  "incomplete_markers": 362,
+  "functions_complete": 7392,
+  "incomplete_markers": 353,
   "incomplete_by_file": {
     "src/CMessage.cpp": 85,
     "src/CProjectilePart6.cpp": 35,
-    "src/CGameSprite.cpp": 21,
     "src/CProjectilePart3.cpp": 20,
     "src/CProjectilePart5.cpp": 19,
+    "src/CGameSprite.cpp": 18,
     "src/CProjectilePart1.cpp": 16,
-    "src/CScreenCharacter.cpp": 14,
+    "src/CScreenCharacter.cpp": 11,
     "src/CDerivedStats.cpp": 9,
     "src/CInfGame.cpp": 9,
     "src/CProjectilePart2.cpp": 9,
     "src/CProjectilePart4.cpp": 9,
     "src/CBaldurProjector.cpp": 7,
-    "src/CScreenCreateChar.cpp": 7,
     "src/CParticle.cpp": 6,
+    "src/CScreenCreateChar.cpp": 6,
     "src/CVidPoly.cpp": 6,
     "src/CAIGroup.cpp": 5,
-    "src/CScreenStore.cpp": 5,
     "src/CUIControlEdit.cpp": 5,
     "src/CBlood.cpp": 4,
     "src/CGameSpy.cpp": 4,
     "src/CProjectileArea.cpp": 4,
     "src/CProjectileBAM.cpp": 4,
     "src/CProjectileSingleTarget.cpp": 4,
+    "src/CScreenStore.cpp": 4,
     "src/CChitin.cpp": 3,
     "src/CGameEffect.cpp": 3,
     "src/CScreenConnection.cpp": 3,
@@ -51,7 +51,6 @@
     "src/CBaldurEngine.cpp": 1,
     "src/CGameAnimationTypeMonsterAnkheg.cpp": 1,
     "src/CGameAnimationTypeMonsterLayeredSpell.cpp": 1,
-    "src/CGameContainer.cpp": 1,
     "src/CGameSpawning.cpp": 1,
     "src/CInfinity.cpp": 1,
     "src/CMoveList.cpp": 1,
@@ -3789,7 +3788,7 @@
   ],
   "bytes_total": 3846937,
   "bytes_done": 3421875,
-  "bytes_complete": 3029105,
+  "bytes_complete": 3042858,
   "largest_stubs": [
     {
       "addr": "0x4DB160",
@@ -3962,11 +3961,6 @@
       "size": 2911
     },
     {
-      "addr": "0x610DC0",
-      "name": "FUN_00610dc0",
-      "size": 2867
-    },
-    {
       "addr": "0x69ACF0",
       "name": "FUN_0069acf0",
       "size": 2811
@@ -3990,6 +3984,11 @@
       "addr": "0x5A1AB0",
       "name": "CInfGame_CharacterExport",
       "size": 2577
+    },
+    {
+      "addr": "0x755A70",
+      "name": "CGameSprite_B3AUTO_00755a70",
+      "size": 2462
     }
   ],
   "next": [

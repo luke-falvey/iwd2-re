@@ -932,26 +932,26 @@ void CScreenCreateChar::UpdateMainPanel(CGameSprite* pSprite)
             UpdateText(pText,
                 "%s: %d  (%+d)",
                 (LPCSTR)FetchString(1151),
-                pSprite->m_baseStats.m_DEXBase,
-                ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_DEXBase));
-
-            UpdateText(pText,
-                "%s: %d  (%+d)",
-                (LPCSTR)FetchString(1178),
-                pSprite->m_baseStats.m_CONBase,
-                ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_CONBase));
-
-            UpdateText(pText,
-                "%s: %d  (%+d)",
-                (LPCSTR)FetchString(1179),
                 pSprite->m_baseStats.m_INTBase,
                 ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_INTBase));
 
             UpdateText(pText,
                 "%s: %d  (%+d)",
-                (LPCSTR)FetchString(1180),
+                (LPCSTR)FetchString(1178),
                 pSprite->m_baseStats.m_WISBase,
                 ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_WISBase));
+
+            UpdateText(pText,
+                "%s: %d  (%+d)",
+                (LPCSTR)FetchString(1179),
+                pSprite->m_baseStats.m_DEXBase,
+                ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_DEXBase));
+
+            UpdateText(pText,
+                "%s: %d  (%+d)",
+                (LPCSTR)FetchString(1180),
+                pSprite->m_baseStats.m_CONBase,
+                ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_CONBase));
 
             UpdateText(pText,
                 "%s: %d  (%+d)",
@@ -2016,42 +2016,10 @@ void CScreenCreateChar::ResetAbilities(CGameSprite* pSprite)
                 CRuleTables::MIN_DEX,
                 CRuleTables::MAX_DEX,
                 CRuleTables::MOD_DEX,
-                pSprite->m_baseStats.m_DEXBase,
+                pSprite->m_baseStats.m_INTBase,
                 m_nMinDEX,
                 m_nMaxDEX,
                 m_nModDEX,
-                TRUE);
-            if (bResult) {
-                break;
-            }
-        }
-        nTotal += pSprite->m_baseStats.m_DEXBase;
-
-        while (1) {
-            BOOL bResult = ResetAbility(pSprite,
-                CRuleTables::MIN_CON,
-                CRuleTables::MAX_CON,
-                CRuleTables::MOD_CON,
-                pSprite->m_baseStats.m_CONBase,
-                m_nMinCON,
-                m_nMaxCON,
-                m_nModCON,
-                TRUE);
-            if (bResult) {
-                break;
-            }
-        }
-        nTotal += pSprite->m_baseStats.m_CONBase;
-
-        while (1) {
-            BOOL bResult = ResetAbility(pSprite,
-                CRuleTables::MIN_INT,
-                CRuleTables::MAX_INT,
-                CRuleTables::MOD_INT,
-                pSprite->m_baseStats.m_INTBase,
-                m_nMinINT,
-                m_nMaxINT,
-                m_nModINT,
                 TRUE);
             if (bResult) {
                 break;
@@ -2061,10 +2029,42 @@ void CScreenCreateChar::ResetAbilities(CGameSprite* pSprite)
 
         while (1) {
             BOOL bResult = ResetAbility(pSprite,
+                CRuleTables::MIN_CON,
+                CRuleTables::MAX_CON,
+                CRuleTables::MOD_CON,
+                pSprite->m_baseStats.m_WISBase,
+                m_nMinCON,
+                m_nMaxCON,
+                m_nModCON,
+                TRUE);
+            if (bResult) {
+                break;
+            }
+        }
+        nTotal += pSprite->m_baseStats.m_WISBase;
+
+        while (1) {
+            BOOL bResult = ResetAbility(pSprite,
+                CRuleTables::MIN_INT,
+                CRuleTables::MAX_INT,
+                CRuleTables::MOD_INT,
+                pSprite->m_baseStats.m_DEXBase,
+                m_nMinINT,
+                m_nMaxINT,
+                m_nModINT,
+                TRUE);
+            if (bResult) {
+                break;
+            }
+        }
+        nTotal += pSprite->m_baseStats.m_DEXBase;
+
+        while (1) {
+            BOOL bResult = ResetAbility(pSprite,
                 CRuleTables::MIN_WIS,
                 CRuleTables::MAX_WIS,
                 CRuleTables::MOD_WIS,
-                pSprite->m_baseStats.m_WISBase,
+                pSprite->m_baseStats.m_CONBase,
                 m_nMinWIS,
                 m_nMaxWIS,
                 m_nModWIS,
@@ -2073,7 +2073,7 @@ void CScreenCreateChar::ResetAbilities(CGameSprite* pSprite)
                 break;
             }
         }
-        nTotal += pSprite->m_baseStats.m_WISBase;
+        nTotal += pSprite->m_baseStats.m_CONBase;
 
         while (1) {
             BOOL bResult = ResetAbility(pSprite,
@@ -2116,7 +2116,7 @@ void CScreenCreateChar::AllocateAbilities(CGameSprite* pSprite)
         CRuleTables::MIN_DEX,
         CRuleTables::MAX_DEX,
         CRuleTables::MOD_DEX,
-        pSprite->m_baseStats.m_DEXBase,
+        pSprite->m_baseStats.m_INTBase,
         m_nMinDEX,
         m_nMaxDEX,
         m_nModDEX,
@@ -2127,7 +2127,7 @@ void CScreenCreateChar::AllocateAbilities(CGameSprite* pSprite)
         CRuleTables::MIN_CON,
         CRuleTables::MAX_CON,
         CRuleTables::MOD_CON,
-        pSprite->m_baseStats.m_CONBase,
+        pSprite->m_baseStats.m_WISBase,
         m_nMinCON,
         m_nMaxCON,
         m_nModCON,
@@ -2138,7 +2138,7 @@ void CScreenCreateChar::AllocateAbilities(CGameSprite* pSprite)
         CRuleTables::MIN_INT,
         CRuleTables::MAX_INT,
         CRuleTables::MOD_INT,
-        pSprite->m_baseStats.m_INTBase,
+        pSprite->m_baseStats.m_DEXBase,
         m_nMinINT,
         m_nMaxINT,
         m_nModINT,
@@ -2149,7 +2149,7 @@ void CScreenCreateChar::AllocateAbilities(CGameSprite* pSprite)
         CRuleTables::MIN_WIS,
         CRuleTables::MAX_WIS,
         CRuleTables::MOD_WIS,
-        pSprite->m_baseStats.m_WISBase,
+        pSprite->m_baseStats.m_CONBase,
         m_nMinWIS,
         m_nMaxWIS,
         m_nModWIS,
@@ -3004,57 +3004,57 @@ void CScreenCreateChar::UpdateAbilitiesPanel(CUIPanel* pPanel, CGameSprite* pSpr
     UpdateLabel(pPanel,
         0x10000004,
         "%d",
-        pSprite->m_baseStats.m_DEXBase);
+        pSprite->m_baseStats.m_INTBase);
     UpdateLabel(pPanel,
         0x10000025,
         "%+d",
-        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_DEXBase));
+        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_INTBase));
     HighlightLabel(pPanel,
         0x10000025,
-        pSprite->m_baseStats.m_DEXBase != 10 && pSprite->m_baseStats.m_DEXBase != 11,
-        pSprite->m_baseStats.m_DEXBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
+        pSprite->m_baseStats.m_INTBase != 10 && pSprite->m_baseStats.m_INTBase != 11,
+        pSprite->m_baseStats.m_INTBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
 
     // CON
     UpdateLabel(pPanel,
         0x10000005,
         "%d",
-        pSprite->m_baseStats.m_CONBase);
+        pSprite->m_baseStats.m_WISBase);
     UpdateLabel(pPanel,
         0x10000026,
         "%+d",
-        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_CONBase));
+        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_WISBase));
     HighlightLabel(pPanel,
         0x10000026,
-        pSprite->m_baseStats.m_CONBase != 10 && pSprite->m_baseStats.m_CONBase != 11,
-        pSprite->m_baseStats.m_CONBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
+        pSprite->m_baseStats.m_WISBase != 10 && pSprite->m_baseStats.m_WISBase != 11,
+        pSprite->m_baseStats.m_WISBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
 
     // INT
     UpdateLabel(pPanel,
         0x10000006,
         "%d",
-        pSprite->m_baseStats.m_INTBase);
+        pSprite->m_baseStats.m_DEXBase);
     UpdateLabel(pPanel,
         0x10000027,
         "%+d",
-        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_INTBase));
+        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_DEXBase));
     HighlightLabel(pPanel,
         0x10000027,
-        pSprite->m_baseStats.m_INTBase != 10 && pSprite->m_baseStats.m_INTBase != 11,
-        pSprite->m_baseStats.m_INTBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
+        pSprite->m_baseStats.m_DEXBase != 10 && pSprite->m_baseStats.m_DEXBase != 11,
+        pSprite->m_baseStats.m_DEXBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
 
     // WIS
     UpdateLabel(pPanel,
         0x10000007,
         "%d",
-        pSprite->m_baseStats.m_WISBase);
+        pSprite->m_baseStats.m_CONBase);
     UpdateLabel(pPanel,
         0x10000028,
         "%+d",
-        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_WISBase));
+        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_CONBase));
     HighlightLabel(pPanel,
         0x10000028,
-        pSprite->m_baseStats.m_WISBase != 10 && pSprite->m_baseStats.m_WISBase != 11,
-        pSprite->m_baseStats.m_WISBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
+        pSprite->m_baseStats.m_CONBase != 10 && pSprite->m_baseStats.m_CONBase != 11,
+        pSprite->m_baseStats.m_CONBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
 
     // CHR
     UpdateLabel(pPanel,
@@ -4156,26 +4156,26 @@ void CScreenCreateChar::UpdateCharacterSummary(const CString& sCharacter, CUICon
         UpdateText(pText,
             "%s: %d  (%+d)",
             FetchString(1151),
-            pSprite->m_baseStats.m_INTBase,
-            pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_INTBase));
-
-        UpdateText(pText,
-            "%s: %d  (%+d)",
-            FetchString(1178),
-            pSprite->m_baseStats.m_WISBase,
-            pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_WISBase));
-
-        UpdateText(pText,
-            "%s: %d  (%+d)",
-            FetchString(1179),
             pSprite->m_baseStats.m_DEXBase,
             pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_DEXBase));
 
         UpdateText(pText,
             "%s: %d  (%+d)",
-            FetchString(1180),
+            FetchString(1178),
             pSprite->m_baseStats.m_CONBase,
             pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_CONBase));
+
+        UpdateText(pText,
+            "%s: %d  (%+d)",
+            FetchString(1179),
+            pSprite->m_baseStats.m_INTBase,
+            pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_INTBase));
+
+        UpdateText(pText,
+            "%s: %d  (%+d)",
+            FetchString(1180),
+            pSprite->m_baseStats.m_WISBase,
+            pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_WISBase));
 
         UpdateText(pText,
             "%s: %d  (%+d)",
@@ -4502,12 +4502,10 @@ void CScreenCreateChar::CompleteCharacterAbilities(CGameSprite* pSprite)
     pSprite->field_562C = 1;
     pSprite->ProcessEffectList();
 
-    // NOTE: The original passes the byte at base stats +0x262, which this repo
-    // names `m_WISBase`. The callee never reads it.
     INT nHitPoints = ruleTables.GetStartingHitPoints(typeAI,
         DStats,
         *pSprite->GetDerivedStats(),
-        pSprite->GetBaseStats()->m_WISBase);
+        pSprite->GetBaseStats()->m_CONBase);
 
     pSprite->GetBaseStats()->m_maxHitPointsBase = nHitPoints;
     pSprite->GetBaseStats()->m_hitPoints = nHitPoints;
@@ -4516,15 +4514,15 @@ void CScreenCreateChar::CompleteCharacterAbilities(CGameSprite* pSprite)
 
     pSprite->GetBaseStats()->m_saveVSFortitudeBase = ruleTables.GetSavingThrow(typeAI,
         *pSprite->GetDerivedStats(),
-        pSprite->GetBaseStats()->m_CONBase,
+        pSprite->GetBaseStats()->m_WISBase,
         CRuleTables::FORTITUDE);
     pSprite->GetBaseStats()->m_saveVSReflexBase = ruleTables.GetSavingThrow(typeAI,
         *pSprite->GetDerivedStats(),
-        pSprite->GetBaseStats()->m_CONBase,
+        pSprite->GetBaseStats()->m_WISBase,
         CRuleTables::REFLEX);
     pSprite->GetBaseStats()->m_saveVSWillBase = ruleTables.GetSavingThrow(typeAI,
         *pSprite->GetDerivedStats(),
-        pSprite->GetBaseStats()->m_CONBase,
+        pSprite->GetBaseStats()->m_WISBase,
         CRuleTables::WILL);
 
     pSprite->m_innateSpells.Clear();
@@ -6623,28 +6621,28 @@ void CUIControlButtonCharGenAbilitiesPlusMinus::AdjustValue()
         case 19:
             nMin = pCreateChar->m_nMinDEX;
             nMax = pCreateChar->m_nMaxDEX;
-            pValue = &(pSprite->m_baseStats.m_DEXBase);
+            pValue = &(pSprite->m_baseStats.m_INTBase);
             bInc = m_nID == 18;
             break;
         case 20:
         case 21:
             nMin = pCreateChar->m_nMinCON;
             nMax = pCreateChar->m_nMaxCON;
-            pValue = &(pSprite->m_baseStats.m_CONBase);
+            pValue = &(pSprite->m_baseStats.m_WISBase);
             bInc = m_nID == 20;
             break;
         case 22:
         case 23:
             nMin = pCreateChar->m_nMinINT;
             nMax = pCreateChar->m_nMaxINT;
-            pValue = &(pSprite->m_baseStats.m_INTBase);
+            pValue = &(pSprite->m_baseStats.m_DEXBase);
             bInc = m_nID == 22;
             break;
         case 24:
         case 25:
             nMin = pCreateChar->m_nMinWIS;
             nMax = pCreateChar->m_nMaxWIS;
-            pValue = &(pSprite->m_baseStats.m_WISBase);
+            pValue = &(pSprite->m_baseStats.m_CONBase);
             bInc = m_nID == 24;
             break;
         case 26:
@@ -6726,10 +6724,10 @@ void CUIControlButtonCharGenAbilitiesStore::OnLButtonClick(CPoint pt)
         UTIL_ASSERT(pBStats != NULL);
 
         pCreateChar->m_nMemorySTR = pBStats->m_STRBase;
-        pCreateChar->m_nMemoryDEX = pBStats->m_DEXBase;
-        pCreateChar->m_nMemoryCON = pBStats->m_CONBase;
-        pCreateChar->m_nMemoryINT = pBStats->m_INTBase;
-        pCreateChar->m_nMemoryWIS = pBStats->m_WISBase;
+        pCreateChar->m_nMemoryDEX = pBStats->m_INTBase;
+        pCreateChar->m_nMemoryCON = pBStats->m_WISBase;
+        pCreateChar->m_nMemoryINT = pBStats->m_DEXBase;
+        pCreateChar->m_nMemoryWIS = pBStats->m_CONBase;
         pCreateChar->m_nMemoryCHR = pBStats->m_CHRBase;
         pCreateChar->m_nMemoryExtra = pCreateChar->m_nExtraAbilityPoints;
 
@@ -6789,10 +6787,10 @@ void CUIControlButtonCharGenAbilitiesRecall::OnLButtonClick(CPoint pt)
 
             INT nExtra;
             pCreateChar->RecallMemoryAbilities(pBStats->m_STRBase,
-                pBStats->m_DEXBase,
-                pBStats->m_CONBase,
                 pBStats->m_INTBase,
                 pBStats->m_WISBase,
+                pBStats->m_DEXBase,
+                pBStats->m_CONBase,
                 pBStats->m_CHRBase,
                 nExtra);
             pCreateChar->m_nExtraAbilityPoints = nExtra;

@@ -9096,10 +9096,10 @@ void CGameSprite::Unmarshal(BYTE* pCreature, LONG creatureSize, WORD facing, int
             }
 
             m_baseStats.m_STRBase += 10;
-            m_baseStats.m_INTBase += 10;
-            m_baseStats.m_WISBase += 10;
             m_baseStats.m_DEXBase += 10;
             m_baseStats.m_CONBase += 10;
+            m_baseStats.m_INTBase += 10;
+            m_baseStats.m_WISBase += 10;
             m_baseStats.m_CHRBase += 10;
             m_baseStats.field_252 += 10;
             m_baseStats.field_2FB |= 0x1;
@@ -19255,15 +19255,15 @@ void CGameSprite::CheckReputation()
     // NOTE: The original passes WIS, INT and CON (in this order).
     INT nOldFortitude = pObjectGame->GetRuleTables().GetSavingThrow(m_startTypeAI,
         m_derivedStats,
-        m_baseStats.m_WISBase,
+        m_baseStats.m_CONBase,
         CRuleTables::FORTITUDE);
     INT nOldReflex = pObjectGame->GetRuleTables().GetSavingThrow(m_startTypeAI,
         m_derivedStats,
-        m_baseStats.m_INTBase,
+        m_baseStats.m_DEXBase,
         CRuleTables::REFLEX);
     INT nOldWill = pObjectGame->GetRuleTables().GetSavingThrow(m_startTypeAI,
         m_derivedStats,
-        m_baseStats.m_CONBase,
+        m_baseStats.m_WISBase,
         CRuleTables::WILL);
 
     // NOTE: `70` is `0x85BCAE`.
@@ -19346,15 +19346,15 @@ void CGameSprite::CheckReputation()
 
     INT nNewFortitude = pObjectGame->GetRuleTables().GetSavingThrow(m_startTypeAI,
         m_derivedStats,
-        m_baseStats.m_WISBase,
+        m_baseStats.m_CONBase,
         CRuleTables::FORTITUDE);
     INT nNewReflex = pObjectGame->GetRuleTables().GetSavingThrow(m_startTypeAI,
         m_derivedStats,
-        m_baseStats.m_INTBase,
+        m_baseStats.m_DEXBase,
         CRuleTables::REFLEX);
     INT nNewWill = pObjectGame->GetRuleTables().GetSavingThrow(m_startTypeAI,
         m_derivedStats,
-        m_baseStats.m_CONBase,
+        m_baseStats.m_WISBase,
         CRuleTables::WILL);
 
     m_baseStats.m_saveVSFortitudeBase += static_cast<signed char>(max(nNewFortitude - nOldFortitude, 0));
@@ -30337,37 +30337,37 @@ SHORT CGameSprite::SetAtOffset(DWORD stat, DWORD value, BOOL modify)
         UTIL_ASSERT(FALSE);
     case STAT_INT:
         if (modify == TRUE) {
-            m_baseStats.m_INTBase += static_cast<BYTE>(value);
+            m_baseStats.m_DEXBase += static_cast<BYTE>(value);
             m_derivedStats.m_nINT += static_cast<SHORT>(value);
         } else {
-            m_baseStats.m_INTBase = static_cast<BYTE>(value);
+            m_baseStats.m_DEXBase = static_cast<BYTE>(value);
             m_derivedStats.m_nINT = static_cast<SHORT>(value);
         }
         return 1;
     case STAT_WIS:
         if (modify == TRUE) {
-            m_baseStats.m_WISBase += static_cast<BYTE>(value);
+            m_baseStats.m_CONBase += static_cast<BYTE>(value);
             m_derivedStats.m_nWIS += static_cast<SHORT>(value);
         } else {
-            m_baseStats.m_WISBase = static_cast<BYTE>(value);
+            m_baseStats.m_CONBase = static_cast<BYTE>(value);
             m_derivedStats.m_nWIS = static_cast<SHORT>(value);
         }
         return 1;
     case STAT_DEX:
         if (modify == TRUE) {
-            m_baseStats.m_DEXBase += static_cast<BYTE>(value);
+            m_baseStats.m_INTBase += static_cast<BYTE>(value);
             m_derivedStats.m_nDEX += static_cast<SHORT>(value);
         } else {
-            m_baseStats.m_DEXBase = static_cast<BYTE>(value);
+            m_baseStats.m_INTBase = static_cast<BYTE>(value);
             m_derivedStats.m_nDEX = static_cast<SHORT>(value);
         }
         return 1;
     case STAT_CON:
         if (modify == TRUE) {
-            m_baseStats.m_CONBase += static_cast<BYTE>(value);
+            m_baseStats.m_WISBase += static_cast<BYTE>(value);
             m_derivedStats.m_nCON += static_cast<SHORT>(value);
         } else {
-            m_baseStats.m_CONBase = static_cast<BYTE>(value);
+            m_baseStats.m_WISBase = static_cast<BYTE>(value);
             m_derivedStats.m_nCON = static_cast<SHORT>(value);
         }
         return 1;
@@ -31668,9 +31668,9 @@ BOOL CGameSprite::sub_763200(UINT nFeatNumber, INT a2)
 
     if (a2 == 1) {
         nSTR = m_baseStats.m_STRBase;
-        nDEX = m_baseStats.m_DEXBase;
-        nINT = m_baseStats.m_INTBase;
-        nWIS = m_baseStats.m_WISBase;
+        nDEX = m_baseStats.m_INTBase;
+        nINT = m_baseStats.m_DEXBase;
+        nWIS = m_baseStats.m_CONBase;
     }
 
     switch (nFeatNumber) {
@@ -32041,7 +32041,7 @@ int CGameSprite::GetExtraSkillPoints(BYTE nClass)
 
     int sp = atol(ruleTables.m_tSkillPoints.GetAt(CPoint(nClass - 1, 0)));
 
-    sp += ruleTables.GetAbilityScoreModifier(m_baseStats.m_INTBase);
+    sp += ruleTables.GetAbilityScoreModifier(m_baseStats.m_DEXBase);
 
     if (sp < 1) {
         sp = 1;

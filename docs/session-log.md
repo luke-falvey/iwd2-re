@@ -22,7 +22,7 @@ Branch `phase-a/stubs-and-layout` (local only). 7,355 of 9,831 functions without
 3. The 2,117 functions that are not in the repo at all. `tools/worklist.py` can't place about 250 KB of them in a file because nothing translated calls them yet.
 
 **Notes**
-- Unverified: the ability-score members in `FileFormat.h` may be mislabelled (the byte called `m_WISBase`, at base stats +0x262, sits where the creature format usually has Constitution). Code is translated by offset, so behaviour isn't affected.
+- The ability-score members in `FileFormat.h` were mislabelled and are now renamed. The real order at base stats +0x25E is STR, INT, WIS, DEX, CON, CHR (confirmed from the labels the import-character summary prints beside each offset). Offsets and behaviour did not change.
 - Unverified: `UpdateLabel` is declared static in the repo, but the original pushes `this` as a stack argument (cdecl member). Callers and callee agree with each other.
 - Several callees are declared with `const unsigned int&` where the original reads a byte through the pointer (`sub_725270`, `sub_725110`, `sub_724FD0`, `RemoveDomainSpell`, `RemoveKnownSpell`). Value-equivalent; `const BOOLEAN&` would be faithful.
 - `CGameSprite::sub_726F20` ends with an inlined copy of `sub_723830`.

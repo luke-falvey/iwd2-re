@@ -3444,7 +3444,7 @@ BOOL CGameEffectCON::ApplyEffect(CGameSprite* pSprite)
     switch (m_dwFlags) {
     case 0:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_CONBase = min(max(pSprite->GetBaseStats()->m_CONBase + static_cast<SHORT>(m_effectAmount), 1), 40);
+            pSprite->GetBaseStats()->m_WISBase = min(max(pSprite->GetBaseStats()->m_WISBase + static_cast<SHORT>(m_effectAmount), 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
@@ -3455,7 +3455,7 @@ BOOL CGameEffectCON::ApplyEffect(CGameSprite* pSprite)
         break;
     case 1:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_CONBase = min(max(static_cast<SHORT>(m_effectAmount), 1), 40);
+            pSprite->GetBaseStats()->m_WISBase = min(max(static_cast<SHORT>(m_effectAmount), 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
@@ -3465,11 +3465,11 @@ BOOL CGameEffectCON::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_CONBase = min(max(pSprite->GetBaseStats()->m_CONBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetBaseStats()->m_WISBase = min(max(pSprite->GetBaseStats()->m_WISBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->GetDerivedStats()->m_nCON = min(max(pSprite->GetBaseStats()->m_CONBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetDerivedStats()->m_nCON = min(max(pSprite->GetBaseStats()->m_WISBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
             m_done = FALSE;
         }
         break;
@@ -5680,7 +5680,7 @@ BOOL CGameEffectDEX::ApplyEffect(CGameSprite* pSprite)
     switch (m_dwFlags) {
     case 0:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_DEXBase = min(max(pSprite->GetBaseStats()->m_DEXBase + static_cast<SHORT>(m_effectAmount), 1), 40);
+            pSprite->GetBaseStats()->m_INTBase = min(max(pSprite->GetBaseStats()->m_INTBase + static_cast<SHORT>(m_effectAmount), 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
@@ -5691,7 +5691,7 @@ BOOL CGameEffectDEX::ApplyEffect(CGameSprite* pSprite)
         break;
     case 1:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_DEXBase = min(max(static_cast<SHORT>(m_effectAmount), 1), 40);
+            pSprite->GetBaseStats()->m_INTBase = min(max(static_cast<SHORT>(m_effectAmount), 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
@@ -5701,11 +5701,11 @@ BOOL CGameEffectDEX::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_DEXBase = min(max(pSprite->GetBaseStats()->m_DEXBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetBaseStats()->m_INTBase = min(max(pSprite->GetBaseStats()->m_INTBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->GetDerivedStats()->m_nDEX = min(max(pSprite->GetBaseStats()->m_DEXBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetDerivedStats()->m_nDEX = min(max(pSprite->GetBaseStats()->m_INTBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
             m_done = FALSE;
         }
         break;
@@ -6170,7 +6170,7 @@ BOOL CGameEffectINT::ApplyEffect(CGameSprite* pSprite)
     switch (m_dwFlags) {
     case 0:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_INTBase = min(max(pSprite->GetBaseStats()->m_INTBase + static_cast<SHORT>(m_effectAmount), 1), 40);
+            pSprite->GetBaseStats()->m_DEXBase = min(max(pSprite->GetBaseStats()->m_DEXBase + static_cast<SHORT>(m_effectAmount), 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
@@ -6181,7 +6181,7 @@ BOOL CGameEffectINT::ApplyEffect(CGameSprite* pSprite)
         break;
     case 1:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_INTBase = min(max(static_cast<SHORT>(m_effectAmount), 1), 40);
+            pSprite->GetBaseStats()->m_DEXBase = min(max(static_cast<SHORT>(m_effectAmount), 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
@@ -6191,11 +6191,11 @@ BOOL CGameEffectINT::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_INTBase = min(max(pSprite->GetBaseStats()->m_INTBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetBaseStats()->m_DEXBase = min(max(pSprite->GetBaseStats()->m_DEXBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->GetDerivedStats()->m_nINT = min(max(pSprite->GetBaseStats()->m_INTBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetDerivedStats()->m_nINT = min(max(pSprite->GetBaseStats()->m_DEXBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
             m_done = FALSE;
         }
         break;
@@ -8564,7 +8564,7 @@ BOOL CGameEffectWIS::ApplyEffect(CGameSprite* pSprite)
     switch (m_dwFlags) {
     case 0:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_WISBase = min(max(pSprite->GetBaseStats()->m_WISBase + static_cast<SHORT>(m_effectAmount), 1), 40);
+            pSprite->GetBaseStats()->m_CONBase = min(max(pSprite->GetBaseStats()->m_CONBase + static_cast<SHORT>(m_effectAmount), 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
@@ -8575,7 +8575,7 @@ BOOL CGameEffectWIS::ApplyEffect(CGameSprite* pSprite)
         break;
     case 1:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_WISBase = min(max(static_cast<SHORT>(m_effectAmount), 1), 40);
+            pSprite->GetBaseStats()->m_CONBase = min(max(static_cast<SHORT>(m_effectAmount), 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
@@ -8585,11 +8585,11 @@ BOOL CGameEffectWIS::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_WISBase = min(max(pSprite->GetBaseStats()->m_WISBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetBaseStats()->m_CONBase = min(max(pSprite->GetBaseStats()->m_CONBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->GetDerivedStats()->m_nWIS = min(max(pSprite->GetBaseStats()->m_WISBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetDerivedStats()->m_nWIS = min(max(pSprite->GetBaseStats()->m_CONBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
             m_done = FALSE;
         }
         break;

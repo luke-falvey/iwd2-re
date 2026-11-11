@@ -86,10 +86,10 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
     m_nSex = pCreature->m_sex;
 
     m_nSTR = pCreature->m_STRBase;
-    m_nINT = pCreature->m_INTBase;
-    m_nWIS = pCreature->m_WISBase;
-    m_nDEX = pCreature->m_DEXBase;
-    m_nCON = pCreature->m_CONBase;
+    m_nINT = pCreature->m_DEXBase;
+    m_nWIS = pCreature->m_CONBase;
+    m_nDEX = pCreature->m_INTBase;
+    m_nCON = pCreature->m_WISBase;
     m_nCHR = pCreature->m_CHRBase;
 
     m_nXPValue = pCreature->m_xpValue;
