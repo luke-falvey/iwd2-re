@@ -3164,7 +3164,35 @@ BOOL CScreenCharacter::OnCancelButtonClick()
 // 0x5E4560
 void CScreenCharacter::sub_5E4560()
 {
-    // TODO: Incomplete.
+    // NOTE: Returned by value from `FUN_005effd0` (hidden return pointer plus
+    // one `BOOLEAN&` argument).
+    CString sName;
+    BOOLEAN bFlag = FALSE;
+
+    // TODO: Incomplete. `sName = FUN_005effd0(bFlag)` (0x5EFFD0, 26092 bytes,
+    // RET 0x8, thiscall on `this`) is not translated.
+
+    STR_RES strRes;
+
+    if (bFlag) {
+        g_pBaldurChitin->GetTlkTable().Fetch(0x41A1, strRes);
+
+        g_pBaldurChitin->m_pEngineWorld->DisplayText(sName,
+            strRes.szText,
+            RGB(200, 255, 200),
+            RGB(200, 255, 200),
+            -1,
+            FALSE);
+    } else {
+        g_pBaldurChitin->GetTlkTable().Fetch(0x41A2, strRes);
+
+        g_pBaldurChitin->m_pEngineWorld->DisplayText(sName,
+            strRes.szText,
+            RGB(255, 0, 0),
+            RGB(255, 0, 0),
+            -1,
+            FALSE);
+    }
 }
 
 // 0x5E46C0
