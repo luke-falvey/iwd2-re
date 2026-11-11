@@ -6,6 +6,7 @@
 #include "CInfGame.h"
 #include "CMessage.h"
 #include "CProjectileArea.h"
+#include "CProjectilePart5.h"
 #include "CProjectilePart6.h"
 #include "CScreenWorld.h"
 #include "CUtil.h"
@@ -814,6 +815,65 @@ CGameEffect* IcewindCGameEffectCloakOfFear::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x5651A0
+BOOL IcewindCGameEffectCloakOfFear::ApplyEffect(CGameSprite* pSprite)
+{
+    if (IcewindMisc::IsDead(pSprite) == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if (m_effectAmount > 0) {
+        DWORD nDuration = 3;
+        for (INT nIndex = 1; nIndex < m_effectAmount; nIndex++) {
+            CGameEffect* pCopy = Copy();
+            pCopy->m_duration = nDuration;
+            pCopy->m_effectAmount = 0;
+            // NOTE: Original reads it from a constant at 0x8491B0.
+            pCopy->m_durationType = 4;
+            pSprite->AddEffect(pCopy, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+            nDuration += 3;
+        }
+    }
+
+    CGameObject* pObject;
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE)
+        != CGameObjectArray::SUCCESS) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    // NOTE: The argument is the value of the global at 0x84F1BC.
+    CProjectileArea8504BC* pProjectile = new CProjectileArea8504BC(256);
+    pProjectile->field_2AE = 75;
+
+    std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(pSprite,
+        reinterpret_cast<const char*>(m_res.GetResRef()),
+        1);
+    for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+        (*it)->m_sourceRes = m_sourceRes;
+        pProjectile->AddEffect(*it);
+    }
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pSprite->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        0,
+        0);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
