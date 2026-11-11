@@ -2,6 +2,30 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-12 (later): batches 13–18
+
+Branch `phase-a/stubs-and-layout` (local only). 7,396 of 9,831 functions without a TODO (75.2%); 79.4% of bytes. S1–S4 pass on the rebuild.
+
+**Done**
+- Sprite: quick-slot button lists, feats update, drop/give item, use container, casting sounds and effects (`sub_755A70`, `SpellCastEffect`), `UseItemPoint`, `ChangeAnimation`, `StartStore`, weapon swing sounds, `AddSpecialAbility`, `sub_727720`.
+- Game and area: `SwapCharacters`, `ReputationAdjustment`, nearest-object searches, `GetGlobalVariable`, `MoveCursor`.
+- Renderer: `FXRenderClippingPolys` (wall polygons over sprites), `ScrollingRequestRect`, `Scroll`.
+- Screens: character (`CheckDropSlot`, help lists), store spell button, import-character summary.
+- Renamed the mislabelled ability-score members in `CCreatureFileHeader` (real order STR, INT, WIS, DEX, CON, CHR).
+
+**Verifier findings that were real** (all fixed): `ChangeAnimation` swapped source and target in three effect messages; `StartStore` didn't fall through to the local path; `sub_722740` takes a `CString` reference; a 16-bit field needed zero-extending.
+
+**Waiting on classes that don't exist yet**
+- `CGameSprite::Shatter` needs `CGameChunk` (ctor 0x70F4F0).
+- `CGameEffectSparkle::ApplyEffect` needs the particle-cluster class (ctor 0x51AE40, 5 KB).
+- `CScreenCharacter::sub_5E4560` needs 0x5EFFD0 (26 KB).
+- `CGameSprite::HandleEffects` needs `CVisualEffect::SetAllDelete` (0x555200).
+
+**Notes**
+- One translator run handles about 10 KB of original code. Functions over 2 KB with jump tables go two per batch.
+- Translators are told to commit after each group that builds, so a rate-limit interruption loses nothing. Interrupted agents resume with SendMessage.
+- `CResHelper::SetResRef` in `CRes.h` is behaviourally right; the original tests `== ""` first with the branches swapped.
+
 ## 2026-11-12: batches 5–12
 
 Branch `phase-a/stubs-and-layout` (local only). 7,355 of 9,831 functions without a TODO (74.8%); 78.1% of bytes. S1–S4 pass on the rebuild.
