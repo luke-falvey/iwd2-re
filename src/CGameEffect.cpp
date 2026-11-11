@@ -1928,17 +1928,72 @@ void CGameSprite::sub_6F50A0()
 // 0x765830
 void CGameSprite::DisplaySaveString(DWORD dwSaveType, BYTE bSaved, INT nRoll, INT nBonus, const CString& sSpellName)
 {
-    // TODO: Incomplete.
-}
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    if ((pGame->GetOptions()->m_nEffectTextLevel & 0x1) == 0) {
+        return;
+    }
 
-// TODO: Move to IcewindMisc.cpp.
-//
-// 0x5864F0
-CString IcewindMisc::sub_5864F0(const CResRef& resRef)
-{
-    // TODO: Incomplete.
+    CString sRoll;
+    COLORREF rgbNameColor = CVidPalette::RANGE_COLORS[GetBaseStats()->m_colors[2]];
+    CString sTemp;
 
-    return CString();
+    sTemp.Format("%d", nRoll);
+    sRoll += sTemp;
+
+    if (nBonus >= 0) {
+        sTemp.Format(" + %d", nBonus);
+    } else {
+        sTemp.Format(" - %d", -nBonus);
+    }
+    sRoll += sTemp;
+
+    sTemp.Format(" = %d", nRoll + nBonus);
+    sRoll += sTemp;
+
+    STRREF strSave;
+    switch (dwSaveType) {
+    case 4:
+        strSave = 14009;
+        break;
+    case 8:
+        strSave = 14006;
+        break;
+    case 16:
+        strSave = 14005;
+        break;
+    default:
+        // NOTE: The original leaves the strref uninitialized here.
+        strSave = -1;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+        // __LINE__: 31452
+        UTIL_ASSERT(FALSE);
+    }
+
+    STR_RES strRes;
+    g_pBaldurChitin->m_cTlkTable.Fetch(strSave, strRes);
+
+    CString sText(strRes.szText);
+
+    if (sSpellName.GetLength() != 0) {
+        sText += " (" + sSpellName + ')';
+    }
+
+    if ((pGame->GetOptions()->m_nEffectTextLevel & 0x8) != 0) {
+        sText += " : " + sRoll;
+    }
+
+    STR_RES strResult;
+    g_pBaldurChitin->m_cTlkTable.Fetch(bSaved == 1 ? 33753 : 33752, strResult);
+    sText += " : " + strResult.szText;
+
+    g_pBaldurChitin->GetBaldurMessage()->DisplayText(GetName(),
+        sText,
+        rgbNameColor,
+        RGB(0xD7, 0xD7, 0xBE),
+        -1,
+        m_id,
+        m_id);
 }
 
 // 0x78E6E0
@@ -3141,6 +3196,12 @@ CGameEffect* CGameEffectSlipperyMind::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectSlipperyMind::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // 0x4A5EF0
 void CGameEffectSlipperyMind::OnRemove(CGameSprite* pSprite)
 {
@@ -3930,10 +3991,9 @@ BOOL CGameEffectDamage::ApplyEffect(CGameSprite* pSprite)
         }
 
         if (m_special != -1) {
-            // TODO: Incomplete. The original passes the damage through the
-            // damage reduction list at `m_derivedStats + 0x49C` here
-            // (0x448250, `amount = list.sub_448250(amount, m_special,
-            // nDamageType)`), which is not translated yet.
+            m_effectAmount = pSprite->GetDerivedStats()->m_damageReduction.Apply(m_effectAmount,
+                m_special,
+                nDamageType);
         }
 
         if (m_effectAmount < 0) {
@@ -6256,6 +6316,11 @@ CGameEffect* CGameEffectInvisible::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4A51D0
+void CGameEffectInvisible::OnAdd(CGameSprite* pSprite)
+{
 }
 
 // 0x4AED10
@@ -12631,6 +12696,12 @@ CGameEffect* CGameEffectEquipWeapon::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectEquipWeapon::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -12647,6 +12718,12 @@ CGameEffect* CGameEffectDither::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectDither::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -12736,6 +12813,12 @@ CGameEffect* CGameEffectShowCreatures::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectShowCreatures::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -12924,6 +13007,12 @@ CGameEffect* CGameEffectVisualAnimationEffect::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectVisualAnimationEffect::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -16676,6 +16765,12 @@ CGameEffect* CGameEffectBounceProjectile::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectBounceProjectile::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -16692,6 +16787,12 @@ CGameEffect* CGameEffectBounceEffect::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectBounceEffect::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -16712,6 +16813,12 @@ CGameEffect* CGameEffectBounceLevel::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectBounceLevel::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -16728,6 +16835,12 @@ CGameEffect* CGameEffectBounceLevelDecrement::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectBounceLevelDecrement::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -16774,6 +16887,12 @@ CGameEffect* CGameEffectBounceSchool::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectBounceSchool::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -16790,6 +16909,12 @@ CGameEffect* CGameEffectBounceSecondaryType::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectBounceSecondaryType::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17181,6 +17306,12 @@ CGameEffect* CGameEffectBounceSpell::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectBounceSpell::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49C1E0
@@ -17333,6 +17464,11 @@ CGameEffect* CGameEffectMaze::Copy()
     return copy;
 }
 
+// 0x4A51D0
+void CGameEffectMaze::OnAdd(CGameSprite* pSprite)
+{
+}
+
 // 0x4C01F0
 BOOL CGameEffectMaze::ApplyEffect(CGameSprite* pSprite)
 {
@@ -17359,6 +17495,12 @@ CGameEffect* CGameEffectSecondaryCastList::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectSecondaryCastList::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49C870
@@ -17377,6 +17519,12 @@ CGameEffect* CGameEffectVisualEffect::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectVisualEffect::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49C960
@@ -17393,6 +17541,17 @@ CGameEffect* CGameEffectLevelDrain::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4A51D0
+void CGameEffectLevelDrain::OnAdd(CGameSprite* pSprite)
+{
+}
+
+// 0x799C90
+BOOL CGameEffectLevelDrain::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17458,13 +17617,17 @@ BOOL CGameEffectStoneSkins::ApplyEffect(CGameSprite* pSprite)
             m_effectAmount2 = min(static_cast<BYTE>(m_casterLevel) * 10, 150);
         }
 
-        // TODO: Incomplete. The original builds a temporary damage
-        // reduction entry (0x447B60, ctor args 10, 5), adds damage types 0,
-        // 0x100000, 0x1000000, 0x2000000, 0x4000000 and 0x8000000 to it
-        // (0x447E50), binds it to `&m_effectAmount2`, `pSprite` and `this`
-        // (0x447F10), appends it to the container at `CDerivedStats` + 0x49C
-        // (0x447F30) and destroys the temporary (0x448470). That container
-        // is not declared yet.
+        {
+            CDamageReduction damageReduction(10, 5);
+            damageReduction.m_damageTypes.insert(0);
+            damageReduction.m_damageTypes.insert(0x100000);
+            damageReduction.m_damageTypes.insert(0x1000000);
+            damageReduction.m_damageTypes.insert(0x2000000);
+            damageReduction.m_damageTypes.insert(0x4000000);
+            damageReduction.m_damageTypes.insert(0x8000000);
+            damageReduction.SetSource(&m_effectAmount2, pSprite, this);
+            pSprite->GetDerivedStats()->m_damageReduction.push_back(damageReduction);
+        }
         break;
     case 1:
         if (m_secondaryType != 0) {
@@ -17548,6 +17711,12 @@ CGameEffect* CGameEffectDispelSchool::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectDispelSchool::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49CE10
@@ -17566,6 +17735,12 @@ CGameEffect* CGameEffectDispelSecondaryType::Copy()
     return copy;
 }
 
+// 0x799C90
+BOOL CGameEffectDispelSecondaryType::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49CF00
@@ -17582,6 +17757,12 @@ CGameEffect* CGameEffectRandomTeleport::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectRandomTeleport::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17626,6 +17807,12 @@ CGameEffect* CGameEffectLevelRestoration::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x799C90
+BOOL CGameEffectLevelRestoration::ApplyEffect(CGameSprite* pSprite)
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------

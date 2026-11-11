@@ -386,6 +386,7 @@
 #define IWD_VFX_DEATH_ARMOR 31
 
 class CCreatureFileHeader;
+class CGameEffect;
 class CGameSprite;
 class CGameSpriteGroupedSpellList;
 class CGameSpriteSpells;
@@ -537,18 +538,26 @@ public:
     CDamageReduction(LONG nAmount, DWORD nEnchantment)
         : m_nAmount(nAmount)
         , m_nEnchantment(nEnchantment)
-        , field_18(0)
-        , field_1C(0)
-        , field_20(0)
+        , m_pAmountLeft(NULL)
+        , m_sourceCreaturePtr(NULL)
+        , m_sourceEffectPtr(NULL)
     {
     }
+
+    void SetSource(LONG* pAmountLeft, CGameSprite* pSourceCreature, CGameEffect* pSourceEffect);
+    LONG Absorb(LONG nDamage);
 
     LONG m_nAmount;
     DWORD m_nEnchantment;
     std::set<int> m_damageTypes;
-    int field_18;
-    int field_1C;
-    int field_20;
+    LONG* m_pAmountLeft;
+    CGameSprite* m_sourceCreaturePtr;
+    CGameEffect* m_sourceEffectPtr;
+};
+
+class CDamageReductionList : public std::vector<CDamageReduction> {
+public:
+    LONG Apply(LONG nDamage, LONG nEnchantment, DWORD nDamageType);
 };
 
 class CPersistantEffectListRegenerated : public CTypedPtrList<CPtrList, CPersistantEffect*> {
@@ -614,7 +623,7 @@ public:
     // NOTE: At 0x0490 in the original (STL layout differs).
     std::list<CWhenStruck> m_whenStruckList;
     // NOTE: At 0x049C in the original (STL layout differs).
-    std::vector<CDamageReduction> m_damageReduction;
+    CDamageReductionList m_damageReduction;
     /* 04C8 */ CPtrList field_4C8;
     /* 04E4 */ CPtrList field_4E4;
     /* 0500 */ CPtrList field_500;
