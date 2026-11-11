@@ -386,6 +386,7 @@ public:
     INT GetSavingThrow(const CAIObjectType& typeAI, CDerivedStats& DStats, BYTE nCON, const CString& sSavingThrow) const;
     INT GetHPCONBonusTotal(const CAIObjectType& typeAI, CDerivedStats& DStats, BYTE nCON) const;
     INT sub_542A90(INT nSides, INT nRolls, INT nLevel, INT a4, INT nModifier) const;
+    INT GetIntModMaxAllowedSpellLevel(CDerivedStats* pDStats) const;
     INT sub_542B40(const C2DArray* pTable, BYTE nLevelFrom, BYTE nLevelTo, INT a4, INT a5, INT a6, INT a7) const;
     INT sub_542CB0(INT nClass, CDerivedStats& DStatsOld, CDerivedStats& DStats, INT a4, INT a5) const;
     INT GetStartingHitPoints(const CAIObjectType& typeAI, CDerivedStats& DStatsOld, CDerivedStats& DStats, BYTE nCON) const;

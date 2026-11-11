@@ -2339,9 +2339,7 @@ BOOL CScreenInventory::IsUseButtonActive()
                                     INT nSpellLevel = g_pBaldurChitin->GetObjectGame()->GetSpellLevel(CResRef(pEffect->m_res), 11, 0);
 
                                     if (nSpellLevel < 9) {
-                                        // TODO: Incomplete. Call `GetIntModMaxAllowedSpellLevel` (0x5456C0, RET 0x4)
-                                        // with `&pSprite->m_derivedStats`.
-                                        INT nMaxAllowedSpellLevel = 0;
+                                        INT nMaxAllowedSpellLevel = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetIntModMaxAllowedSpellLevel(&pSprite->m_derivedStats);
 
                                         if (nSpellLevel < nMaxAllowedSpellLevel) {
                                             UINT nID = 0;
@@ -5290,10 +5288,7 @@ BOOL CScreenInventory::SwapWithPortrait(INT nButtonId, BOOL bShowError)
         strError = 0x4652;
         nSlot = 0x7FFF;
     } else {
-        // TODO: Incomplete. Call `FindEmptyItemPersonalInventory` (0x5BE840,
-        // RET 0x4) with `nPortrait`; it returns the slot number as a SHORT, or
-        // -1 if there is no empty slot.
-        nSlot = -1;
+        nSlot = pGame->FindEmptyItemPersonalInventory(nPortrait);
 
         if (nSlot == -1) {
             bAllowed = FALSE;

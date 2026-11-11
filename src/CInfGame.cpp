@@ -7810,6 +7810,44 @@ END:
     return bResult;
 }
 
+// 0x5BE840
+SHORT CInfGame::FindEmptyItemPersonalInventory(SHORT nPortraitNum)
+{
+    CGameSprite* pSprite;
+
+    LONG nCharacterId = nPortraitNum < m_nCharacters
+        ? m_characterPortraits[nPortraitNum]
+        : CGameObjectArray::INVALID_INDEX;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return -1;
+    }
+
+    for (SHORT nIndex = 0; nIndex < CScreenInventory::PERSONAL_INVENTORY_SIZE; nIndex++) {
+        if (pSprite->m_equipment.m_items[18 + nIndex] == NULL) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            return nIndex + 18;
+        }
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return -1;
+}
+
 // 0x5BAD70
 BOOL CInfGame::SwapItemPersonalInventory(SHORT nPortraitNum, CItem*& pNewItem, SHORT nSlotNum, STRREF& errorCode, WORD wCount, BOOLEAN bFromServer, BOOL bAutoStacking)
 {
