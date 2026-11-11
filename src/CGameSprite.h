@@ -611,9 +611,10 @@ public:
     CGameObject* sub_733340();
     SHORT Attack(CGameSprite* pTarget);
     SHORT AttackReevaluate();
+    SHORT Swing(CGameSprite* pTarget);
     SHORT sub_73EA80(CGameSprite* pTarget);
     SHORT MoveToObject(CGameAIBase* pTarget);
-    SHORT sub_73FEC0(const CPoint& dest, BOOL a2);
+    SHORT sub_73FEC0(const CPoint& dest, LONG range);
     SHORT Spell(CGameAIBase* pTarget);
     SHORT SpellPoint();
     SHORT RunAwayFrom(CGameSprite* pTarget);

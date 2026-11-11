@@ -1,5 +1,7 @@
 #include "CAIGroup.h"
 
+#include <math.h>
+
 #include "CAITrigger.h"
 #include "CBaldurChitin.h"
 #include "CGameObjectArray.h"
@@ -454,6 +456,188 @@ void CAIGroup::SetGroupTriggerId(LONG triggerId)
                 CGameObjectArray::THREAD_ASYNCH,
                 INFINITE);
         }
+    }
+}
+
+// 0x405370
+CPoint* CAIGroup::GetOffsets(SHORT formationType, SHORT direction, BOOLEAN bMinSix)
+{
+    BYTE nOffsets;
+    if (bMinSix) {
+        nOffsets = m_memberList.GetCount() > 6 ? static_cast<BYTE>(m_memberList.GetCount()) : 6;
+    } else {
+        nOffsets = m_memberList.GetCount() > 1 ? static_cast<BYTE>(m_memberList.GetCount()) : 1;
+    }
+
+    CPoint* pOffsets = new CPoint[nOffsets];
+    LONG* pMembers = NULL;
+    CPoint ptLeader(-1, -1);
+
+    for (int index = 0; index < nOffsets; index++) {
+        pOffsets[index].x = 0;
+        pOffsets[index].y = 0;
+    }
+
+    if (nOffsets == 1) {
+        return pOffsets;
+    }
+
+    if (m_memberList.GetHeadPosition() != NULL) {
+        LONG leaderId = reinterpret_cast<LONG>(m_memberList.GetHead());
+
+        CGameObject* pLeader;
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(leaderId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pLeader,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            return pOffsets;
+        }
+
+        ptLeader = pLeader->GetPos();
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pLeader->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    if (nOffsets > CAIGROUP_FORMATION_MAX_SIZE) {
+        pMembers = new LONG[m_memberList.GetCount()];
+
+        LONG* pMember = pMembers;
+        POSITION pos = m_memberList.GetHeadPosition();
+        while (pos != NULL) {
+            *pMember++ = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        }
+    }
+
+    if (formationType == FORMATION_NONE) {
+        if (pMembers != NULL) {
+            delete[] pMembers;
+        }
+
+        if (m_memberList.GetCount() == 0) {
+            return pOffsets;
+        }
+
+        pMembers = new LONG[m_memberList.GetCount()];
+
+        LONG* pMember = pMembers;
+        POSITION pos = m_memberList.GetHeadPosition();
+        while (pos != NULL) {
+            *pMember++ = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        }
+    }
+
+    pOffsets[0].x = 0;
+    pOffsets[0].y = 0;
+
+    // NOTE: For `FORMATION_NONE` (and members beyond the formation tables)
+    // the member list is indexed up to `nOffsets`, which can exceed the
+    // number of members when `bMinSix` is set.
+    for (int index = 0; index < nOffsets; index++) {
+        if (index >= CAIGROUP_FORMATION_MAX_SIZE || formationType == FORMATION_NONE) {
+            CGameObject* pMember;
+            BYTE rc;
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(pMembers[index],
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pMember,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                continue;
+            }
+
+            pOffsets[index].x = (pMember->GetPos().x - ptLeader.x) / CPathSearch::GRID_SQUARE_SIZEX;
+            pOffsets[index].y = (pMember->GetPos().y - ptLeader.y) / CPathSearch::GRID_SQUARE_SIZEY;
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pMembers[index],
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        } else {
+            switch (formationType) {
+            case CAIGROUP_FORMATION_FOLLOW:
+            case CAIGROUP_FORMATION_T:
+                pOffsets[index] = FORMATION_T_OFFSETS[index];
+                break;
+            case CAIGROUP_FORMATION_GATHER:
+                pOffsets[index] = FORMATION_GATHER_OFFSETS[index];
+                break;
+            case CAIGROUP_FORMATION_4AND2:
+                pOffsets[index] = FORMATION_4AND2_OFFSETS[index];
+                break;
+            case CAIGROUP_FORMATION_3BY2:
+                pOffsets[index] = FORMATION_3BY2_OFFSETS[index];
+                break;
+            case CAIGROUP_FORMATION_PROTECT:
+                pOffsets[index] = FORMATION_PROTECT_OFFSETS[index];
+                break;
+            case CAIGROUP_FORMATION_2BY3:
+                pOffsets[index] = FORMATION_2BY3_OFFSETS[index];
+                break;
+            case CAIGROUP_FORMATION_RANK:
+                pOffsets[index] = FORMATION_RANK_OFFSETS[index];
+                break;
+            case CAIGROUP_FORMATION_V:
+                pOffsets[index] = FORMATION_V_OFFSETS[index];
+                break;
+            case CAIGROUP_FORMATION_WEDGE:
+                pOffsets[index] = FORMATION_WEDGE_OFFSETS[index];
+                break;
+            case CAIGROUP_FORMATION_S:
+                pOffsets[index] = FORMATION_S_OFFSETS[index];
+                break;
+            case CAIGROUP_FORMATION_LINE:
+                pOffsets[index] = FORMATION_LINE_OFFSETS[index];
+                break;
+            }
+        }
+
+        pOffsets[index].x *= OFFSET_MULTIPLIER;
+        pOffsets[index].y *= OFFSET_MULTIPLIER;
+    }
+
+    RotateOffsets(pOffsets, nOffsets, direction);
+
+    if (pMembers != NULL) {
+        delete[] pMembers;
+    }
+
+    return pOffsets;
+}
+
+// 0x4058E0
+void CAIGroup::RotateOffsets(CPoint* pOffsets, SHORT nOffsets, SHORT direction)
+{
+    double rotation = static_cast<double>(direction * 2) * 3.1415926535 / 360.0;
+
+    for (int index = 0; index < nOffsets; index++) {
+        LONG x = pOffsets[index].x;
+        LONG y = pOffsets[index].y;
+
+        double distance = sqrt(static_cast<double>(y * y + x * x));
+        double angle = acos(static_cast<double>(abs(x)) / distance);
+
+        if (x < 0) {
+            if (y < 0) {
+                angle = angle + 3.1415926535;
+            } else {
+                angle = 3.1415926535 - angle;
+            }
+        } else if (y < 0) {
+            angle = 6.283185307 - angle;
+        }
+
+        angle += rotation;
+
+        pOffsets[index].x = static_cast<LONG>(cos(angle) * distance);
+        pOffsets[index].y = static_cast<LONG>(sin(angle) * distance);
     }
 }
 
