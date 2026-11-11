@@ -2059,6 +2059,34 @@ void CGameEffect::DisplayStringRef(CGameSprite* pSprite, STRREF str)
     }
 }
 
+// 0x4A4D80
+void CGameEffect::DisplayHitPoints(CGameSprite* pSprite, LONG nAmount)
+{
+    if (nAmount <= 0) {
+        return;
+    }
+
+    CString sText;
+    LONG nId = pSprite->GetId();
+
+    char szBuffer[12];
+    g_pBaldurChitin->GetTlkTable().SetToken(CString("HIT_POINTS"), CString(_itoa(nAmount, szBuffer, 10)));
+
+    if (nAmount == 1) {
+        sText = CBaldurEngine::FetchString(8667);
+    } else if (nAmount > 1) {
+        sText = CBaldurEngine::FetchString(8666);
+    }
+
+    g_pBaldurChitin->GetBaldurMessage()->DisplayText(pSprite->GetName(),
+        sText,
+        CVidPalette::RANGE_COLORS[pSprite->GetBaseStats()->m_colors[2]],
+        RGB(0xD7, 0xD7, 0xBE),
+        -1,
+        nId,
+        nId);
+}
+
 // 0x4A4EF0
 void CGameEffect::AddColorEffect(CGameSprite* pSprite, BYTE r, BYTE g, BYTE b, BYTE periodLength)
 {
@@ -5328,6 +5356,170 @@ CGameEffect* CGameEffectHeal::Copy()
     return copy;
 }
 
+// 0x49FC40
+BOOL CGameEffectHeal::UsesDice()
+{
+    return TRUE;
+}
+
+// 0x4AE200
+BOOL CGameEffectHeal::ApplyEffect(CGameSprite* pSprite)
+{
+    pSprite->GetDirection(m_source);
+
+    DWORD dwFlags = m_dwFlags & 0xFFFF0000;
+    DWORD nMode = m_dwFlags & 0xFFFF;
+
+    LONG nRoll = 0;
+    for (BYTE nDie = 0; nDie < m_numDice; nDie++) {
+        nRoll += CUtil::UtilRandInt(m_diceSize, pSprite->m_tempStats.m_nLuck) + 1;
+    }
+
+    m_effectAmount += nRoll;
+
+    if (pSprite->GetBaseStats()->m_hitPoints <= 0) {
+        if (dwFlags != 0x10000) {
+            m_done = TRUE;
+            return TRUE;
+        }
+
+        ITEM_EFFECT* effect = new ITEM_EFFECT;
+        CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_RESURRECT);
+        effect->dwFlags = 43;
+
+        CGameEffect* pEffect = CGameEffect::DecodeEffect(effect,
+            CPoint(-1, -1),
+            -1,
+            CPoint(-1, -1));
+        delete effect;
+
+        pEffect->ApplyEffect(pSprite);
+
+        if (pEffect != NULL) {
+            delete pEffect;
+        }
+    }
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    SHORT nHitPoints = pSprite->GetBaseStats()->m_hitPoints;
+    LONG nAmount;
+    LONG nNewHitPoints;
+    CGameObject* pSource;
+    BYTE rc;
+
+    switch (nMode) {
+    case 0:
+        if (m_secondaryType) {
+            nAmount = m_effectAmount;
+            if (nHitPoints + nAmount > pSprite->GetDerivedStats()->m_nMaxHitPoints) {
+                nAmount = pSprite->GetDerivedStats()->m_nMaxHitPoints - nHitPoints;
+            }
+
+            if (nAmount > 0
+                && pGame->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+                DisplayHitPoints(pSprite, nAmount);
+            }
+        }
+
+        nNewHitPoints = pSprite->GetBaseStats()->m_hitPoints + m_effectAmount;
+
+        // NOTE: Unsigned comparison (negative values become 0x7FFF).
+        if (static_cast<DWORD>(nNewHitPoints) > 0x7FFF) {
+            nNewHitPoints = 0x7FFF;
+        }
+
+        pSprite->GetBaseStats()->m_hitPoints = static_cast<SHORT>(nNewHitPoints);
+        break;
+    case 1:
+        nAmount = max(min(m_effectAmount, static_cast<LONG>(pSprite->m_tempStats.m_nMaxHitPoints)), static_cast<LONG>(nHitPoints)) - nHitPoints;
+
+        if (m_secondaryType
+            && nAmount > 0
+            && pGame->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+            DisplayHitPoints(pSprite, nAmount);
+        }
+
+        pSprite->GetBaseStats()->m_hitPoints += static_cast<SHORT>(nAmount);
+        break;
+    case 2:
+        nAmount = max(pSprite->m_tempStats.m_nMaxHitPoints * m_effectAmount / 100, static_cast<LONG>(nHitPoints)) - nHitPoints;
+
+        if (m_secondaryType
+            && nAmount > 0
+            && pGame->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+            DisplayHitPoints(pSprite, nAmount);
+        }
+
+        // NOTE: Adds the full percentage, not the clamped amount displayed
+        // above.
+        pSprite->GetBaseStats()->m_hitPoints += static_cast<SHORT>(pSprite->m_tempStats.m_nMaxHitPoints * m_effectAmount / 100);
+        break;
+    case 3:
+    case 4:
+    case 5:
+        if (m_secondaryType) {
+            LONG nSourceID = m_sourceID;
+
+            do {
+                rc = pGame->GetObjectArray()->GetShare(nSourceID,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pSource,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            nAmount = 1;
+            if (rc == CGameObjectArray::SUCCESS) {
+                CGameSprite* pSourceSprite = static_cast<CGameSprite*>(pSource);
+                switch (nMode) {
+                case 3:
+                    nAmount = pGame->GetRuleTables().GetLayOnHandsAmount(pSourceSprite->GetAIType(), pSourceSprite->m_derivedStats);
+                    break;
+                case 4:
+                    nAmount = pGame->GetRuleTables().GetWholenessOfBodyAmount(pSourceSprite->GetAIType(), pSourceSprite->m_derivedStats);
+                    break;
+                case 5:
+                    nAmount = pGame->GetRuleTables().GetLathanderRenewalAmount(pSourceSprite->GetAIType(), pSourceSprite->m_derivedStats);
+                    break;
+                }
+
+                pGame->GetObjectArray()->ReleaseShare(nSourceID,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+
+                if (pSprite->GetBaseStats()->m_hitPoints + m_effectAmount > pSprite->GetDerivedStats()->m_nMaxHitPoints) {
+                    nAmount = pSprite->GetDerivedStats()->m_nMaxHitPoints - pSprite->GetBaseStats()->m_hitPoints;
+                }
+            }
+
+            if (nAmount > 0) {
+                m_effectAmount = nAmount;
+
+                if (pGame->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+                    DisplayHitPoints(pSprite, nAmount);
+                }
+            }
+        }
+
+        pSprite->GetBaseStats()->m_hitPoints += static_cast<SHORT>(m_effectAmount);
+        break;
+    }
+
+    if (pSprite->GetBaseStats()->m_hitPoints > pSprite->m_tempStats.m_nMaxHitPoints) {
+        pSprite->GetBaseStats()->m_hitPoints = pSprite->m_tempStats.m_nMaxHitPoints;
+    }
+
+    pGame->UpdatePortrait(pGame->GetCharacterPortraitNum(pSprite->GetId()), 1);
+
+    if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+        || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+        pSprite->m_bSendSpriteUpdate = TRUE;
+    }
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -5344,6 +5536,142 @@ CGameEffect* CGameEffectHitPoints::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4A51D0
+void CGameEffectHitPoints::OnAdd(CGameSprite* pSprite)
+{
+}
+
+// 0x49FC40
+BOOL CGameEffectHitPoints::UsesDice()
+{
+    return TRUE;
+}
+
+// 0x4AE7C0
+BOOL CGameEffectHitPoints::ApplyEffect(CGameSprite* pSprite)
+{
+    if (pSprite->GetBaseStats()->m_hitPoints <= 0
+        || (pSprite->m_tempStats.m_generalState & (STATE_DEAD | STATE_ACID_DEATH | STATE_FLAME_DEATH | STATE_EXPLODING_DEATH)) != 0
+        || (pSprite->m_tempStats.m_generalState & (STATE_STONE_DEATH | STATE_FROZEN_DEATH)) != 0) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    LONG nRoll = 0;
+    for (BYTE nDie = 0; nDie < m_numDice; nDie++) {
+        nRoll += CUtil::UtilRandInt(m_diceSize, pSprite->m_tempStats.m_nLuck) + 1;
+    }
+
+    m_effectAmount += nRoll;
+
+    WORD nBase;
+    SHORT nDerived;
+
+    switch (m_dwFlags) {
+    case 0:
+        // Increment.
+        if (m_durationType == 1) {
+            pSprite->GetBaseStats()->m_maxHitPointsBase += static_cast<WORD>(m_effectAmount);
+            pSprite->GetDerivedStats()->m_nMaxHitPoints += static_cast<SHORT>(m_effectAmount);
+            pSprite->GetBaseStats()->m_hitPoints += static_cast<SHORT>(m_effectAmount);
+            m_done = TRUE;
+            m_forceRepass = TRUE;
+            return TRUE;
+        }
+
+        pSprite->GetDerivedStats()->m_nMaxHitPoints += static_cast<SHORT>(m_effectAmount);
+        if (m_secondaryType) {
+            pSprite->GetBaseStats()->m_hitPoints += static_cast<SHORT>(m_effectAmount);
+        }
+        m_done = FALSE;
+        return TRUE;
+    case 1:
+    case 4:
+        // Set.
+        if (m_durationType == 1) {
+            pSprite->GetBaseStats()->m_maxHitPointsBase = static_cast<BYTE>(m_effectAmount);
+            m_forceRepass = TRUE;
+            m_done = TRUE;
+            return TRUE;
+        }
+
+        pSprite->GetDerivedStats()->m_nMaxHitPoints = static_cast<BYTE>(m_effectAmount);
+        m_done = FALSE;
+        return TRUE;
+    case 2:
+        // Percentage.
+        if (m_durationType == 1) {
+            nBase = static_cast<WORD>(pSprite->GetBaseStats()->m_maxHitPointsBase * static_cast<SHORT>(m_effectAmount) / 100);
+            pSprite->GetBaseStats()->m_maxHitPointsBase = nBase;
+            if (nBase <= 1) {
+                pSprite->GetBaseStats()->m_maxHitPointsBase = 1;
+            }
+
+            if (pSprite->GetBaseStats()->m_maxHitPointsBase - pSprite->m_tempStats.m_nMaxHitPoints > 0) {
+                pSprite->GetBaseStats()->m_hitPoints += static_cast<SHORT>(pSprite->GetBaseStats()->m_maxHitPointsBase - pSprite->m_tempStats.m_nMaxHitPoints);
+            }
+
+            m_forceRepass = TRUE;
+            m_done = TRUE;
+            return TRUE;
+        }
+
+        nDerived = static_cast<SHORT>(pSprite->GetBaseStats()->m_maxHitPointsBase * static_cast<SHORT>(m_effectAmount) / 100);
+        pSprite->GetDerivedStats()->m_nMaxHitPoints = nDerived;
+        if (nDerived <= 1) {
+            pSprite->GetDerivedStats()->m_nMaxHitPoints = 1;
+        }
+
+        if (pSprite->GetDerivedStats()->m_nMaxHitPoints - pSprite->m_tempStats.m_nMaxHitPoints > 0) {
+            pSprite->GetBaseStats()->m_hitPoints += pSprite->GetDerivedStats()->m_nMaxHitPoints - pSprite->m_tempStats.m_nMaxHitPoints;
+        }
+
+        m_done = FALSE;
+        return TRUE;
+    case 3:
+        // Increment, don't change current hit points.
+        if (m_durationType == 1) {
+            pSprite->GetBaseStats()->m_maxHitPointsBase += static_cast<WORD>(m_effectAmount);
+            pSprite->GetDerivedStats()->m_nMaxHitPoints += static_cast<SHORT>(m_effectAmount);
+            m_done = TRUE;
+            m_forceRepass = TRUE;
+            return TRUE;
+        }
+
+        pSprite->GetDerivedStats()->m_nMaxHitPoints += static_cast<SHORT>(m_effectAmount);
+        m_done = FALSE;
+        return TRUE;
+    case 5:
+        // Percentage, don't change current hit points.
+        if (m_durationType == 1) {
+            nBase = static_cast<WORD>(pSprite->GetBaseStats()->m_maxHitPointsBase * static_cast<SHORT>(m_effectAmount) / 100);
+            pSprite->GetBaseStats()->m_maxHitPointsBase = nBase;
+            if (nBase <= 1) {
+                pSprite->GetBaseStats()->m_maxHitPointsBase = 1;
+            }
+
+            m_forceRepass = TRUE;
+            m_done = TRUE;
+            return TRUE;
+        }
+
+        nDerived = static_cast<SHORT>(pSprite->GetBaseStats()->m_maxHitPointsBase * static_cast<SHORT>(m_effectAmount) / 100);
+        pSprite->GetDerivedStats()->m_nMaxHitPoints = nDerived;
+        if (nDerived <= 1) {
+            pSprite->GetDerivedStats()->m_nMaxHitPoints = 1;
+        }
+
+        m_done = FALSE;
+        return TRUE;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
+        // __LINE__: 8586
+        UTIL_ASSERT(FALSE);
+    }
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
