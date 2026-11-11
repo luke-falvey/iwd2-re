@@ -25226,7 +25226,9 @@ void CMessage51::MarshalMessage(BYTE** pData, DWORD* dwSize)
             remoteObjectID = pObject->m_remoteObjectID;
             remotePlayerID = pObject->m_remotePlayerID;
 
-            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_pSearchRequest->m_sourceId,
+            // NOTE: Original releases the message's own source id here, not
+            // the search request's source id it just shared.
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
                 CGameObjectArray::THREAD_ASYNCH,
                 INFINITE);
         } else {
