@@ -23,6 +23,8 @@ public:
     void AsynchronousUpdate();
     void UpdateDialogColors();
     void sub_482210(CResRef cResDialog, LONG a2, LONG a3);
+    void Reload(CResRef cResDialog, CGameSprite* pSprite);
+    void Unmarshal(BYTE* pDialog, LONG dialogSize, LONG a3, LONG a4);
 
     /* 0000 */ CResRef m_file;
     /* 0008 */ CTypedPtrArray<CPtrArray, CGameDialogEntry*> m_dialogEntries;
@@ -45,6 +47,15 @@ public:
 
 class CGameDialogEntry : public CTypedPtrArray<CPtrArray, CGameDialogReply*> {
 public:
+    // NOTE: Inlined in `CGameDialogSprite::Unmarshal`.
+    CGameDialogEntry()
+    {
+        m_picked = FALSE;
+        m_conditionPriority = 0;
+        m_dialogIndex = 0;
+        m_bDisplayButton = FALSE;
+    }
+
     ~CGameDialogEntry() override;
     void RemoveReplies(LONG lMarker, COLORREF rgbNameColor, const CString& sName);
     void Handle(CGameSprite* pSprite, COLORREF playerColor, int a3);
@@ -57,8 +68,35 @@ public:
     /* 0040 */ BOOLEAN m_bDisplayButton;
 };
 
+// NOTE: Name is a guess. Returned by `CGameDialogReply::Pick` (allocated with
+// `new`, 0xC bytes) and freed by `CGameDialogSprite::AsynchronousUpdate`.
+class CGameDialogTransition {
+public:
+    // NOTE: Inlined in `CGameDialogReply::Pick`.
+    CGameDialogTransition()
+    {
+        m_nextEntryIndex = 0;
+    }
+
+    /* 0000 */ CResRef m_nextDialog;
+    /* 0008 */ DWORD m_nextEntryIndex;
+};
+
 class CGameDialogReply {
 public:
+    CGameDialogTransition* Pick(CGameSprite* pSprite);
+
+    // NOTE: Inlined in `CGameDialogSprite::Unmarshal`.
+    CGameDialogReply()
+    {
+        m_flags = 0;
+        m_nextEntryIndex = 0;
+        m_displayPosition = NULL;
+        m_removeIfPicked = FALSE;
+        m_displayListId = 0xFF;
+        m_journalEntry = 0;
+    }
+
     /* 0000 */ DWORD m_flags;
     /* 0004 */ STRREF m_replyText;
     /* 0008 */ STRREF m_journalEntry;

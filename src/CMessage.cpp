@@ -510,6 +510,18 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_KICK_PLAYER_SERVER_SUPPORT = 83;
 // 0x84CF6F
 const BYTE CBaldurMessage::MSG_SUBTYPE_KICK_PLAYER_HOOFED_OUT = 72;
 
+// 0x84CF72
+const BYTE CBaldurMessage::MSG_TYPE_DELETEAREA = 107;
+
+// 0x84CF73
+const BYTE CBaldurMessage::MSG_SUBTYPE_DELETEAREA_POLL = 115;
+
+// 0x84CF74
+const BYTE CBaldurMessage::MSG_SUBTYPE_DELETEAREA_REPLY = 114;
+
+// 0x84CF75
+const BYTE CBaldurMessage::MSG_SUBTYPE_DELETEAREA_ANNOUNCE = 100;
+
 // 0x84CF76
 const BYTE CBaldurMessage::DELETEAREA_EMPTY_VOTE = 101;
 
@@ -572,6 +584,12 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_MPSETTINGS_NIGHTMAREMODE = 78;
 
 // 0x84CF8A
 const BYTE CBaldurMessage::MSG_SUBTYPE_MPSETTINGS_DEMAND_NIGHTMAREMODE = 110;
+
+// 0x84CF96
+const BYTE CBaldurMessage::byte_84CF96 = 'Y';
+
+// 0x84CF97
+const BYTE CBaldurMessage::byte_84CF97 = 'y';
 
 // 0x84CF98
 const BYTE CBaldurMessage::MSG_TYPE_OBJECT = 79;
@@ -3659,6 +3677,32 @@ BOOLEAN CBaldurMessage::sub_436B60(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
     return FALSE;
 }
 
+// 0x436C00
+BOOLEAN CBaldurMessage::sub_436C00()
+{
+    CString sHostName;
+
+    if (!g_pChitin->cNetwork.GetSessionOpen()
+        || g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
+        return FALSE;
+    }
+
+    g_pChitin->cNetwork.GetHostPlayerName(sHostName);
+
+    if (sHostName == "") {
+        return FALSE;
+    }
+
+    g_pChitin->cNetwork.SendSpecificMessage(sHostName,
+        CNetwork::SEND_GUARANTEED,
+        byte_84CF96,
+        byte_84CF97,
+        NULL,
+        0);
+
+    return TRUE;
+}
+
 // 0x436D10
 BOOLEAN CBaldurMessage::sub_436D10(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
@@ -4566,6 +4610,58 @@ BOOLEAN CBaldurMessage::OnAnnounceBiography(INT nMsgFrom, BYTE* pByteMessage, DW
     return TRUE;
 }
 
+// 0x43AE40
+BOOLEAN CBaldurMessage::SendDeleteAreaPoll(CString sAreaString, BOOLEAN bKeepVoters)
+{
+    BYTE cnt;
+    DWORD dwSize;
+    BYTE* pMessage;
+    BYTE nAreaStringLength;
+
+    if (!g_pChitin->cNetwork.GetSessionOpen()
+        || !g_pChitin->cNetwork.GetSessionHosting()) {
+        return FALSE;
+    }
+
+    if (!bKeepVoters) {
+        for (cnt = 0; cnt < CMultiplayerSettings::MAX_PLAYERS; cnt++) {
+            m_pnDeleteAreaVoters[cnt] = g_pChitin->cNetwork.GetPlayerID(cnt);
+            if (m_pnDeleteAreaVoters[cnt] != 0
+                && m_pnDeleteAreaVoters[cnt] != g_pChitin->cNetwork.m_idLocalPlayer) {
+                m_pnDeleteAreaVotes[cnt] = DELETEAREA_PENDING_VOTE;
+            } else {
+                m_pnDeleteAreaVotes[cnt] = DELETEAREA_EMPTY_VOTE;
+            }
+        }
+    }
+
+    SetDeleteAreaString(sAreaString);
+    m_bDeleteAreaPolling = TRUE;
+    m_dwDeleteAreaTimeout = GetTickCount() + 5000;
+
+    nAreaStringLength = static_cast<BYTE>(sAreaString.GetLength());
+
+    dwSize = sizeof(BYTE) + nAreaStringLength;
+    pMessage = CreateBuffer(dwSize);
+    if (pMessage == NULL) {
+        return FALSE;
+    }
+
+    *reinterpret_cast<BYTE*>(pMessage) = nAreaStringLength;
+    memcpy(pMessage + sizeof(BYTE), sAreaString.GetBuffer(nAreaStringLength), nAreaStringLength);
+
+    g_pChitin->cNetwork.SendSpecificMessage(CString(""),
+        CNetwork::SEND_ALL_PLAYERS | CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_DELETEAREA,
+        MSG_SUBTYPE_DELETEAREA_POLL,
+        pMessage,
+        dwSize);
+
+    DestroyBuffer(pMessage);
+
+    return TRUE;
+}
+
 // FIXME: `sAreaString` should be reference.
 //
 // 0x43B030
@@ -4596,6 +4692,64 @@ CString CBaldurMessage::GetDeleteAreaString()
     return m_sDeleteAreaString;
 }
 
+// 0x43B4E0
+BOOLEAN CBaldurMessage::SendDeleteAreaAnnounce(CString sAreaString, BOOLEAN bDelete)
+{
+    BYTE cnt;
+    DWORD dwSize;
+    BYTE* pMessage;
+    BYTE nAreaStringLength;
+    DWORD nMsgPtr;
+
+    if (!g_pChitin->cNetwork.GetSessionOpen()
+        || !g_pChitin->cNetwork.GetSessionHosting()) {
+        return FALSE;
+    }
+
+    // NOTE: Inlined `CancelDeleteAreaPoll`.
+    if (g_pChitin->cNetwork.GetSessionOpen()
+        && g_pChitin->cNetwork.GetSessionHosting()) {
+        m_sDeleteAreaString = "";
+        m_bDeleteAreaPolling = FALSE;
+        m_dwDeleteAreaTimeout = 0;
+
+        for (cnt = 0; cnt < 6; cnt++) {
+            m_pnDeleteAreaVoters[cnt] = 0;
+            m_pnDeleteAreaVotes[cnt] = DELETEAREA_EMPTY_VOTE;
+        }
+    }
+
+    nAreaStringLength = static_cast<BYTE>(sAreaString.GetLength());
+
+    dwSize = sizeof(BYTE) + nAreaStringLength + sizeof(BOOLEAN);
+    pMessage = CreateBuffer(dwSize);
+    if (pMessage == NULL) {
+        return FALSE;
+    }
+
+    nMsgPtr = 0;
+
+    *reinterpret_cast<BYTE*>(pMessage + nMsgPtr) = nAreaStringLength;
+    nMsgPtr += sizeof(BYTE);
+
+    memcpy(pMessage + nMsgPtr, sAreaString.GetBuffer(nAreaStringLength), nAreaStringLength);
+    nMsgPtr += nAreaStringLength;
+
+    *reinterpret_cast<BOOLEAN*>(pMessage + nMsgPtr) = bDelete;
+    nMsgPtr += sizeof(BOOLEAN);
+
+    g_pChitin->cNetwork.SendSpecificMessage(CString(""),
+        CNetwork::SEND_ALL_PLAYERS | CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_DELETEAREA,
+        MSG_SUBTYPE_DELETEAREA_ANNOUNCE,
+        pMessage,
+        nMsgPtr);
+
+    DestroyBuffer(pMessage);
+
+    return TRUE;
+}
+
 // 0x43B680
 BOOLEAN CBaldurMessage::sub_43B680(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
@@ -4610,7 +4764,7 @@ BOOLEAN CBaldurMessage::CancelDeleteAreaPoll()
     BYTE cnt;
 
     if (!g_pChitin->cNetwork.GetSessionOpen()
-        || g_pChitin->cNetwork.GetSessionHosting()) {
+        || !g_pChitin->cNetwork.GetSessionHosting()) {
         return FALSE;
     }
 
@@ -4626,13 +4780,75 @@ BOOLEAN CBaldurMessage::CancelDeleteAreaPoll()
     return TRUE;
 }
 
+// 0x43B7E0
+BOOLEAN CBaldurMessage::DeleteAreaPollComplete()
+{
+    BYTE cnt;
+
+    if (!g_pChitin->cNetwork.GetSessionOpen()
+        || !g_pChitin->cNetwork.GetSessionHosting()) {
+        return FALSE;
+    }
+
+    // Player list changed while polling.
+    for (cnt = 0; cnt < CMultiplayerSettings::MAX_PLAYERS; cnt++) {
+        if (cnt != g_pChitin->cNetwork.m_nLocalPlayer) {
+            if (m_pnDeleteAreaVoters[cnt] != g_pChitin->cNetwork.GetPlayerID(cnt)) {
+                return TRUE;
+            }
+        }
+    }
+
+    BOOLEAN bVotesPending = FALSE;
+
+    for (cnt = 0; cnt < CMultiplayerSettings::MAX_PLAYERS; cnt++) {
+        if (cnt != g_pChitin->cNetwork.m_nLocalPlayer
+            && m_pnDeleteAreaVoters[cnt] != 0
+            && m_pnDeleteAreaVotes[cnt] == DELETEAREA_PENDING_VOTE) {
+            bVotesPending = TRUE;
+        }
+    }
+
+    BOOLEAN bAliveCharacter = FALSE;
+
+    for (cnt = 0; cnt < 6; cnt++) {
+        // NOTE: Inlined.
+        LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetFixedOrderCharacterId(cnt);
+
+        CGameSprite* pSprite;
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if ((pSprite->GetBaseStats()->m_generalState & STATE_DEAD) == 0) {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                bAliveCharacter = TRUE;
+                break;
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    if (bVotesPending || !bAliveCharacter) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 // 0x43B980
 BOOLEAN CBaldurMessage::DeleteAreaBallotResult()
 {
     BYTE cnt;
 
     if (!g_pChitin->cNetwork.GetSessionOpen()
-        || g_pChitin->cNetwork.GetSessionHosting()) {
+        || !g_pChitin->cNetwork.GetSessionHosting()) {
         return FALSE;
     }
 
@@ -9514,7 +9730,7 @@ CMessageContainerAddItem::CMessageContainerAddItem(const CItem& item, SHORT slot
     //
     m_item = item;
     m_slotNum = slotNum;
-    m_bCompressContainer = m_bCompressContainer;
+    m_bCompressContainer = bCompressContainer;
 }
 
 // 0x47DFC0

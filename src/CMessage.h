@@ -184,6 +184,11 @@ public:
     static const BYTE MSG_SUBTYPE_KICK_PLAYER_SERVER_SUPPORT;
     static const BYTE MSG_SUBTYPE_KICK_PLAYER_HOOFED_OUT;
 
+    static const BYTE MSG_TYPE_DELETEAREA;
+    static const BYTE MSG_SUBTYPE_DELETEAREA_POLL;
+    static const BYTE MSG_SUBTYPE_DELETEAREA_REPLY;
+    static const BYTE MSG_SUBTYPE_DELETEAREA_ANNOUNCE;
+
     static const BYTE DELETEAREA_EMPTY_VOTE;
     static const BYTE DELETEAREA_PENDING_VOTE;
     static const BYTE DELETEAREA_YES_VOTE;
@@ -206,6 +211,9 @@ public:
     static const BYTE MSG_SUBTYPE_MPSETTINGS_RESTRICT_STORE;
     static const BYTE MSG_SUBTYPE_MPSETTINGS_NIGHTMAREMODE;
     static const BYTE MSG_SUBTYPE_MPSETTINGS_DEMAND_NIGHTMAREMODE;
+
+    static const BYTE byte_84CF96;
+    static const BYTE byte_84CF97;
 
     static const BYTE MSG_TYPE_OBJECT;
     static const BYTE MSG_SUBTYPE_OBJECT_ADD;
@@ -334,6 +342,7 @@ public:
     BOOLEAN SendMovieRequestToServer(CResRef cResMovie);
     BOOLEAN MovieAnnounceStatus(CResRef cResMovie);
     BOOLEAN SendReformPartyAnnounceStatus();
+    BOOLEAN sub_436C00();
     void WeatherBroadcast(WORD wWeatherFlags);
     void TimeSynchBroadcast(ULONG nGameTime, BOOLEAN bCompressTime);
     void TimeChangeToServer(ULONG deltaTime);
@@ -357,8 +366,11 @@ public:
     BOOLEAN OnSendBiography(INT nMsgFrom, BYTE* pByteMessage, DWORD dwSize);
     BOOLEAN AnnounceBiography(BYTE nFixedPartyId, CString szBio);
     BOOLEAN OnAnnounceBiography(INT nMsgFrom, BYTE* pByteMessage, DWORD dwSize);
+    BOOLEAN SendDeleteAreaPoll(CString sAreaString, BOOLEAN bKeepVoters);
     void SetDeleteAreaString(CString sAreaString);
     CString GetDeleteAreaString();
+    BOOLEAN SendDeleteAreaAnnounce(CString sAreaString, BOOLEAN bDelete);
+    BOOLEAN DeleteAreaPollComplete();
     BOOLEAN CancelDeleteAreaPoll();
     BOOLEAN DeleteAreaBallotResult();
     BOOLEAN MultiplayerSynchRequest();

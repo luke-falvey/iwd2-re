@@ -55,6 +55,7 @@ public:
     DWORD LocalGetResourceSize(CRes* pRes);
     int LocalReadResource(CRes* pRes, DWORD nNumberOfBytesToRead, DWORD nOffset);
     BOOL MemoryAlmostFull();
+    void sub_787400(int a1);
     void MoveRequests(int nOldPriority, int nNewPriority, int nCount);
     void PartialServiceRequest(CRes* pRes, DWORD nBytesToRead);
     void ReduceFreedList(UINT a2);

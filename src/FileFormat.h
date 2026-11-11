@@ -984,4 +984,59 @@ public:
     DWORD m_nRumorChance;
 };
 
+// NOTE: Follows the "DLG V1.0" signature and version.
+class CDialogFileHeader {
+public:
+    /* 0000 */ DWORD m_nEntries;
+    /* 0004 */ DWORD m_offsetEntries;
+    /* 0008 */ DWORD m_nReplies;
+    /* 000C */ DWORD m_offsetReplies;
+    /* 0010 */ DWORD m_offsetStartingConditions;
+    /* 0014 */ DWORD m_nStartingConditions;
+    /* 0018 */ DWORD m_offsetReplyConditions;
+    /* 001C */ DWORD m_nReplyConditions;
+    /* 0020 */ DWORD m_offsetActions;
+    /* 0024 */ DWORD m_nActions;
+};
+
+class CDialogFileEntry {
+public:
+    CDialogFileEntry()
+    {
+        memset(this, 0, sizeof(*this));
+    }
+
+    /* 0000 */ STRREF m_dialogText;
+    /* 0004 */ DWORD m_startingReply;
+    /* 0008 */ DWORD m_replyCount;
+    /* 000C */ DWORD m_StartingConditionalScript;
+};
+
+class CDialogFileReply {
+public:
+    CDialogFileReply()
+    {
+        memset(this, 0, sizeof(*this));
+    }
+
+    /* 0000 */ DWORD m_flags;
+    /* 0004 */ STRREF m_replyText;
+    /* 0008 */ STRREF m_journalEntry;
+    /* 000C */ DWORD m_conditionalScript;
+    /* 0010 */ DWORD m_actionScript;
+    /* 0014 */ RESREF m_nextDialog;
+    /* 001C */ DWORD m_nextEntryIndex;
+};
+
+class CDialogFileScript {
+public:
+    CDialogFileScript()
+    {
+        memset(this, 0, sizeof(*this));
+    }
+
+    /* 0000 */ DWORD m_offset;
+    /* 0004 */ DWORD m_length;
+};
+
 #endif /* FILEFORMAT_H_ */

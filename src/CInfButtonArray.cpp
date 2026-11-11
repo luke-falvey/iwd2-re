@@ -157,6 +157,56 @@ void CInfButtonArray::OnLButtonPressed(int buttonID)
     // TODO: Incomplete.
 }
 
+// 0x594170
+BOOL CInfButtonArray::sub_594170(INT buttonType)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (m_nState != 114) {
+        return FALSE;
+    }
+
+    // NOTE: Uninline.
+    LONG nLeaderId = pGame->m_group.GetGroupLeader();
+
+    CGameSprite* pSprite;
+    BYTE rc;
+    do {
+        rc = pGame->m_cObjectArray.GetDeny(nLeaderId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return FALSE;
+    }
+
+    switch (buttonType) {
+    case 3:
+    case 5:
+    case 10:
+    case 14:
+    case 80:
+    case 81:
+    case 82:
+        sub_594280(buttonType, pSprite);
+        break;
+    }
+
+    pGame->m_cObjectArray.ReleaseDeny(nLeaderId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return TRUE;
+}
+
+// 0x594280
+void CInfButtonArray::sub_594280(INT buttonType, CGameSprite* pSprite)
+{
+    // TODO: Incomplete.
+}
+
 // 0x594720
 void CInfButtonArray::OnRButtonPressed(int buttonID)
 {
