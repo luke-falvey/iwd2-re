@@ -189,7 +189,7 @@ typedef struct WED_PolyPoint_st {
 typedef struct WED_TileData_st {
     /* 0000 */ WORD nStartingTile;
     /* 0002 */ WORD nNumTiles;
-    /* 0004 */ WORD nSecondary;
+    /* 0004 */ SHORT nSecondary;
     /* 0006 */ BYTE bFlags;
     /* 0007 */ BYTE bAnimSpeed;
     /* 0008 */ WORD wFlags;

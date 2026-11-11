@@ -580,11 +580,11 @@ BOOL CSoundMixer::UpdateSoundList(INT nPriority)
         POSITION pos = voicePos;
         CVoice* pVoice = static_cast<CVoice*>(m_lVoices.GetNext(voicePos));
         if (pVoice->IsSoundPlaying()) {
-            if (m_nActiveArea && 0
-                && pVoice->m_pSound && NULL
-                && pVoice->m_pSound->m_nArea && 0
-                && pVoice->m_pSound->m_nArea && m_nActiveArea
-                && m_nActiveArea && -1) {
+            if (m_nActiveArea != 0
+                && pVoice->m_pSound != NULL
+                && pVoice->m_pSound->m_nArea != 0
+                && pVoice->m_pSound->m_nArea != m_nActiveArea
+                && m_nActiveArea != static_cast<DWORD>(-1)) {
                 if (pVoice->m_pSound->m_nLooping != 0) {
                     m_lWaiting.AddHead(pVoice->m_pSound);
                 }

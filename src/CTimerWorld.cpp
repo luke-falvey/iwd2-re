@@ -215,7 +215,7 @@ void CTimerWorld::CheckForTriggerEventPast()
                 if (time >= TIME_APPROACHING_DUSK) {
                     pActiveArea->SetApproachingDusk();
                 }
-            } else if (time >= TIME_NIGHT && time < TIME_DAWN) {
+            } else if (time >= TIME_NIGHT || time < TIME_DAWN) {
                 pActiveArea->SetNight();
                 m_nLastPercentage = -1;
 
@@ -231,7 +231,7 @@ void CTimerWorld::CheckForTriggerEventPast()
                 }
             } else {
                 // TODO: Figure out constants, math should be simpler.
-                BYTE nNewPercentage = -1 - ((time + 16750216) << 8) / TIMESCALE_MSEC_PER_HOUR;
+                BYTE nNewPercentage = ((time + 16750216) << 8) / TIMESCALE_MSEC_PER_HOUR;
                 if (nNewPercentage != m_nLastPercentage) {
                     pActiveArea->SetDawn(nNewPercentage, TRUE);
                     m_nLastPercentage = nNewPercentage;

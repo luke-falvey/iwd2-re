@@ -3272,7 +3272,7 @@ BOOL CGameEffectSaveVsFortitude::ApplyEffect(CGameSprite* pSprite)
     case 2:
         switch (m_durationType) {
         case 1:
-            pSprite->GetBaseStats()->m_saveVSFortitudeBase = pSprite->GetBaseStats()->m_saveVSFortitudeBase * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetBaseStats()->m_saveVSFortitudeBase = pSprite->GetBaseStats()->m_saveVSFortitudeBase * static_cast<SHORT>(m_effectAmount) / 100;
 
             if (pSprite->GetBaseStats()->m_saveVSFortitudeBase > 40) {
                 pSprite->GetBaseStats()->m_saveVSFortitudeBase = 40;
@@ -3286,7 +3286,7 @@ BOOL CGameEffectSaveVsFortitude::ApplyEffect(CGameSprite* pSprite)
             m_done = TRUE;
             break;
         default:
-            pSprite->GetDerivedStats()->m_nSaveVSFortitude = pSprite->GetBaseStats()->m_saveVSFortitudeBase * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetDerivedStats()->m_nSaveVSFortitude = pSprite->GetBaseStats()->m_saveVSFortitudeBase * static_cast<SHORT>(m_effectAmount) / 100;
 
             if (pSprite->GetDerivedStats()->m_nSaveVSFortitude > 40) {
                 pSprite->GetDerivedStats()->m_nSaveVSFortitude = 40;
@@ -3387,7 +3387,7 @@ BOOL CGameEffectSaveVsRelfex::ApplyEffect(CGameSprite* pSprite)
     case 2:
         switch (m_durationType) {
         case 1:
-            pSprite->GetBaseStats()->m_saveVSReflexBase = pSprite->GetBaseStats()->m_saveVSReflexBase * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetBaseStats()->m_saveVSReflexBase = pSprite->GetBaseStats()->m_saveVSReflexBase * static_cast<SHORT>(m_effectAmount) / 100;
 
             if (pSprite->GetBaseStats()->m_saveVSReflexBase > 40) {
                 pSprite->GetBaseStats()->m_saveVSReflexBase = 40;
@@ -3401,7 +3401,7 @@ BOOL CGameEffectSaveVsRelfex::ApplyEffect(CGameSprite* pSprite)
             m_done = TRUE;
             break;
         default:
-            pSprite->GetDerivedStats()->m_nSaveVSReflex = pSprite->GetBaseStats()->m_saveVSReflexBase * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetDerivedStats()->m_nSaveVSReflex = pSprite->GetBaseStats()->m_saveVSReflexBase * static_cast<SHORT>(m_effectAmount) / 100;
 
             if (pSprite->GetDerivedStats()->m_nSaveVSReflex > 40) {
                 pSprite->GetDerivedStats()->m_nSaveVSReflex = 40;
@@ -3502,7 +3502,7 @@ BOOL CGameEffectSaveVsWill::ApplyEffect(CGameSprite* pSprite)
     case 2:
         switch (m_durationType) {
         case 1:
-            pSprite->GetBaseStats()->m_saveVSWillBase = pSprite->GetBaseStats()->m_saveVSWillBase * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetBaseStats()->m_saveVSWillBase = pSprite->GetBaseStats()->m_saveVSWillBase * static_cast<SHORT>(m_effectAmount) / 100;
 
             if (pSprite->GetBaseStats()->m_saveVSWillBase > 40) {
                 pSprite->GetBaseStats()->m_saveVSWillBase = 40;
@@ -3516,7 +3516,7 @@ BOOL CGameEffectSaveVsWill::ApplyEffect(CGameSprite* pSprite)
             m_done = TRUE;
             break;
         default:
-            pSprite->GetDerivedStats()->m_nSaveVSWill = pSprite->GetBaseStats()->m_saveVSWillBase * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetDerivedStats()->m_nSaveVSWill = pSprite->GetBaseStats()->m_saveVSWillBase * static_cast<SHORT>(m_effectAmount) / 100;
 
             if (pSprite->GetDerivedStats()->m_nSaveVSWill > 40) {
                 pSprite->GetDerivedStats()->m_nSaveVSWill = 40;

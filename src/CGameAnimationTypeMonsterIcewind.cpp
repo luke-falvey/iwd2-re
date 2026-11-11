@@ -660,7 +660,7 @@ CGameAnimationTypeMonsterIcewind::CGameAnimationTypeMonsterIcewind(USHORT animat
         case 0x30:
         case 0x40:
         case 0x50:
-            m_resRef = "MOR" + (((animationID >> 4) & 0xF) + '0');
+            m_resRef = "MOR" + CString(static_cast<char>(((animationID >> 4) & 0xF) + '0'), 1);
             m_colorBlood = 47;
             field_1CDA = 21;
             m_nSndFreq = 9;

@@ -55,7 +55,7 @@ FRAMEENTRY* CResCell::GetFrame(WORD nSequence, WORD nFrame, BOOL bDoubleSize)
     }
 
     WORD nIndex = m_pFrameList[nFrame + m_pSequences[nSequence].nStartingFrame];
-    if (nIndex == -1) {
+    if (nIndex == 0xFFFF) {
         return NULL;
     }
 

@@ -2135,7 +2135,7 @@ BOOLEAN CNetwork::SetSerialBaudRate(UINT nBaudRate)
 // 0x7A5890
 BOOLEAN CNetwork::SetSerialPort(UINT nPort)
 {
-    if (nPort != 0 || nPort > 4) {
+    if (nPort < 1 || nPort > 4) {
         return FALSE;
     }
 

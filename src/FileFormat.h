@@ -586,9 +586,9 @@ public:
     /* 0046 */ SHORT m_armorClassSlashingAdjustment;
     /* 0048 */ BYTE m_attackBase;
     /* 0049 */ BYTE m_numberOfAttacksBase;
-    /* 004A */ BYTE m_saveVSFortitudeBase;
-    /* 004B */ BYTE m_saveVSReflexBase;
-    /* 004C */ BYTE m_saveVSWillBase;
+    /* 004A */ signed char m_saveVSFortitudeBase;
+    /* 004B */ signed char m_saveVSReflexBase;
+    /* 004C */ signed char m_saveVSWillBase;
     /* 004D */ signed char m_resistFireBase;
     /* 004E */ signed char m_resistColdBase;
     /* 004F */ signed char m_resistElectricityBase;

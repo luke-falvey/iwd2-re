@@ -607,7 +607,7 @@ int CMultiplayerSettings::sub_518560()
     int count = 0;
 
     for (int index = 0; index < 6; index++) {
-        if (field_AC[index] != -1) {
+        if (field_AC[index] != 0xFF) {
             count++;
         }
     }

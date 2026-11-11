@@ -562,10 +562,13 @@ void CScreenKeymaps::HandleKeyDown(BYTE nKey)
     } else if ((nKey >= 'A' && nKey <= 'Z') || (nKey >= '0' && nKey <= '9')) {
         nKey = nKey;
     } else {
-        nKey = g_pBaldurChitin->GetObjectGame()->sub_5A97D0(g_pBaldurChitin->GetObjectGame()->sub_5A9780(nKey));
-        if (nKey < 0) {
+        // NOTE: The original keeps the key in an `int`, so the -1 returned for
+        // unmappable keys is still negative here.
+        INT nMapped = g_pBaldurChitin->GetObjectGame()->sub_5A97D0(g_pBaldurChitin->GetObjectGame()->sub_5A9780(nKey));
+        if (nMapped < 0) {
             return;
         }
+        nKey = static_cast<BYTE>(nMapped);
     }
 
     if (m_bSystemKeyCtrl && nKey >= '0' && nKey <= '9') {

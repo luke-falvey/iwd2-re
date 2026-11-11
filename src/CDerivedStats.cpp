@@ -607,16 +607,19 @@ void CDerivedStats::CheckLimits()
     m_nSaveVSFortitude = min(max(m_nSaveVSFortitude, -40), 40);
     m_nSaveVSReflex = min(max(m_nSaveVSReflex, -40), 40);
     m_nSaveVSWill = min(max(m_nSaveVSWill, -40), 40);
-    m_nSkills[10] = min(max(m_nSkills[10], -128), 127);
-    m_nSkills[9] = min(max(m_nSkills[9], -128), 127);
-    m_nSkills[6] = min(max(m_nSkills[6], -128), 127);
-    m_nSkills[14] = min(max(m_nSkills[14], -128), 127);
-    m_nSkills[12] = min(max(m_nSkills[12], -128), 127);
-    m_nSkills[11] = min(max(m_nSkills[11], -128), 127);
-    m_nSkills[15] = min(max(m_nSkills[15], -128), 127);
+    // NOTE: The original sign-extends these bytes (`MOVSX`) before clamping
+    // to -128..127, so the clamps never change anything. Without the cast
+    // values above 127 would be cut to 127.
+    m_nSkills[10] = min(max(static_cast<signed char>(m_nSkills[10]), -128), 127);
+    m_nSkills[9] = min(max(static_cast<signed char>(m_nSkills[9]), -128), 127);
+    m_nSkills[6] = min(max(static_cast<signed char>(m_nSkills[6]), -128), 127);
+    m_nSkills[14] = min(max(static_cast<signed char>(m_nSkills[14]), -128), 127);
+    m_nSkills[12] = min(max(static_cast<signed char>(m_nSkills[12]), -128), 127);
+    m_nSkills[11] = min(max(static_cast<signed char>(m_nSkills[11]), -128), 127);
+    m_nSkills[15] = min(max(static_cast<signed char>(m_nSkills[15]), -128), 127);
     m_nFatigue = min(max(m_nFatigue, 0), 100);
     m_nIntoxication = min(max(m_nIntoxication, 0), 100);
-    m_nLuck = min(max(m_nLuck, 0), 100);
+    m_nLuck = min(max(m_nLuck, -20), 20);
     m_nLevel = min(m_nLevel, 50);
     m_nSTR = min(max(m_nSTR, 1), 40);
     m_nINT = min(max(m_nINT, 1), 40);
@@ -641,7 +644,10 @@ void CDerivedStats::CheckLimits()
     m_nTurnUndeadLevel = max(m_nTurnUndeadLevel, 0);
     m_nBackstabDamageMultiplier = max(m_nBackstabDamageMultiplier, 0);
     m_nLayOnHandsAmount = max(m_nLayOnHandsAmount, 0);
-    m_nTranslucent = min(m_nTranslucent, 255);
+    // NOTE: Unsigned compare, negative values become 255 as well.
+    if (static_cast<DWORD>(m_nTranslucent) > 255) {
+        m_nTranslucent = 255;
+    }
 }
 
 // 0x446DD0

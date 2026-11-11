@@ -3784,23 +3784,23 @@ void CScreenCreateChar::CancelCreateChar()
 // 0x610850
 void CScreenCreateChar::RecallMemoryAbilities(BYTE& nSTR, BYTE& nDEX, BYTE& nCON, BYTE& nINT, BYTE& nWIS, BYTE& nCHR, INT& nExtra)
 {
-    if (m_nMemorySTR != -1) {
+    if (m_nMemorySTR != 0xFF) {
         nSTR = m_nMemorySTR;
     }
 
-    if (m_nMemoryDEX != -1) {
+    if (m_nMemoryDEX != 0xFF) {
         nDEX = m_nMemoryDEX;
     }
 
-    if (m_nMemoryCON != -1) {
+    if (m_nMemoryCON != 0xFF) {
         nCON = m_nMemoryCON;
     }
 
-    if (m_nMemoryINT != -1) {
+    if (m_nMemoryINT != 0xFF) {
         nINT = m_nMemoryINT;
     }
 
-    if (m_nMemoryWIS != -1) {
+    if (m_nMemoryWIS != 0xFF) {
         nWIS = m_nMemoryWIS;
     }
 
@@ -6572,12 +6572,12 @@ void CUIControlButtonCharGenAbilitiesRecall::OnLButtonClick(CPoint pt)
     } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
 
     if (rc == CGameObjectArray::SUCCESS) {
-        if (pCreateChar->m_nMemorySTR != -1
-            || pCreateChar->m_nMemoryDEX != -1
-            || pCreateChar->m_nMemoryCON != -1
-            || pCreateChar->m_nMemoryINT != -1
-            || pCreateChar->m_nMemoryWIS != -1
-            || pCreateChar->m_nMemoryCHR != -1
+        if (pCreateChar->m_nMemorySTR != 0xFF
+            || pCreateChar->m_nMemoryDEX != 0xFF
+            || pCreateChar->m_nMemoryCON != 0xFF
+            || pCreateChar->m_nMemoryINT != 0xFF
+            || pCreateChar->m_nMemoryWIS != 0xFF
+            || pCreateChar->m_nMemoryCHR != 0xFF
             || pCreateChar->m_nMemoryExtra >= 0) {
             CCreatureFileHeader* pBStats = &(pSprite->m_baseStats);
 

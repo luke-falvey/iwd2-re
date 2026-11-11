@@ -2634,7 +2634,7 @@ BOOLEAN CBaldurMessage::RemoveSignalsFromQueue(BYTE signalType, BYTE signalData)
     nStartNewQueue = 0;
     nEndNewQueue = 0;
     for (cnt = 0; cnt < m_nSignalQueueSize; cnt++) {
-        if (m_pnSignalFrom[cnt] != -1) {
+        if (m_pnSignalFrom[cnt] != 0xFF) {
             if (m_pnSignalType[cnt] == signalType && m_pnSignalData[cnt] == signalData) {
                 m_pnSignalFrom[cnt] = -1;
                 m_pnSignalType[cnt] = 0;
