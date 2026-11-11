@@ -1293,6 +1293,84 @@ CGameEffect* IcewindCGameEffectAnimalRage::Copy()
     return copy;
 }
 
+// 0x565E50
+BOOL IcewindCGameEffectAnimalRage::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_dwFlags == 1) {
+        pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_ANIMAL_RAGE, true);
+        return TRUE;
+    }
+
+    if (IcewindMisc::IsDead(pSprite) == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if (pSprite->m_timedEffectList.IsTypeOnList(CGAMEEFFECT_BERSERK)) {
+        return TRUE;
+    }
+
+    pSprite->field_562C = 1;
+
+    if (pSprite->GetArea() == NULL || pSprite->GetVertListPos() == NULL) {
+        return TRUE;
+    }
+
+    CTypedPtrList<CPtrList, LONG*> targets(10);
+
+    pSprite->GetArea()->GetAllInRange(pSprite->GetVertListPos(),
+        pSprite->GetPos(),
+        CAIObjectType::ANYONE,
+        275,
+        pSprite->GetTerrainTable(),
+        targets,
+        TRUE,
+        FALSE);
+
+    pSprite->GetArea()->GetAllInRangeBack(pSprite->GetPos(),
+        CAIObjectType::ANYONE,
+        275,
+        pSprite->GetTerrainTable(),
+        targets,
+        TRUE,
+        FALSE,
+        FALSE);
+
+    POSITION pos = targets.GetHeadPosition();
+    while (pos != NULL) {
+        LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+        CGameSprite* pTarget;
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pTarget),
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS && IcewindMisc::sub_5852A0(pSprite, pTarget) == TRUE) {
+            pSprite->EquipMostDamagingMelee();
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            if (rand() % 100 < 5) {
+                pSprite->AddEffect(IcewindMisc::CreateEffectBerserk(pSprite, 21, 0, 0),
+                    CGameAIBase::EFFECT_LIST_TIMED,
+                    TRUE,
+                    TRUE);
+            }
+
+            break;
+        }
+
+        // NOTE: Released even when the share was not obtained.
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49FA60
@@ -1315,6 +1393,122 @@ CGameEffect* IcewindCGameEffectTurnUndead::Copy()
 void IcewindCGameEffectTurnUndead::OnRemove(CGameSprite* pSprite)
 {
     pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_TURNED] = false;
+}
+
+// 0x576D40
+static INT GetTurnUndeadResult(CGameSprite* pCaster)
+{
+    INT nResult = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetAbilityScoreModifier(pCaster->GetDerivedStats()->m_nCHR);
+    nResult += CUtil::UtilRandInt(20, pCaster->GetDerivedStats()->m_nLuck) + 1;
+
+    SHORT nLevel = pCaster->GetTurnUndeadLevel();
+
+    nResult -= 10;
+    if (nResult < 0) {
+        return (nResult + 1) / 3 + nLevel - 1;
+    }
+
+    return nResult / 3 + nLevel;
+}
+
+// 0x566080
+BOOL IcewindCGameEffectTurnUndead::ApplyEffect(CGameSprite* pSprite)
+{
+    CGameSprite* pCaster;
+    LONG nCasterId = m_numDice;
+
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCasterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pCaster),
+            INFINITE)
+        != CGameObjectArray::SUCCESS) {
+        return FALSE;
+    }
+
+    if (m_dwFlags == 4) {
+        LONG nLevel = pSprite->GetLevel();
+        if (nLevel > GetTurnUndeadResult(pCaster)) {
+            FeedBackImmuneToResource(pSprite, m_sourceRes);
+            m_done = TRUE;
+
+            // NOTE: The share is not released here.
+            return TRUE;
+        }
+
+        if (IcewindMisc::IsEvil(pCaster) == TRUE) {
+            m_dwFlags = static_cast<BYTE>(m_casterLevel) <= nLevel * 2;
+        } else {
+            m_dwFlags = (static_cast<BYTE>(m_casterLevel) <= nLevel * 2) + 2;
+        }
+    }
+
+    if (m_secondaryType != 0) {
+        PlaySound(CResRef("ACT_06"), pSprite);
+    }
+
+    pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_TURNED, true);
+
+    switch (m_dwFlags) {
+    case 0:
+        if (m_secondaryType != 0) {
+            DisplayStringRef(pSprite, 41023);
+
+            ITEM_EFFECT effect;
+            CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_DOMINATE);
+            effect.duration = m_duration;
+            // NOTE: Original reads it from a constant at 0x8491BC.
+            effect.durationType = 0x1000;
+            effect.dwFlags = 4;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                pCaster->GetPos(),
+                pCaster->GetId(),
+                CPoint(-1, -1));
+
+            CMessage* message = new CMessageAddEffect(pEffect,
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+        break;
+    case 1:
+        if (m_secondaryType != 0) {
+            DisplayStringRef(pSprite, 20827);
+        }
+
+        SetSpellState(pSprite, SPLSTATE_179);
+        pSprite->GetDerivedStats()->field_C -= 2;
+        break;
+    case 2: {
+        CGameEffectDeath* pDeath = new CGameEffectDeath();
+        // NOTE: The inlined constructor leaves this zero.
+        pDeath->field_18C = 0;
+        pDeath->m_effectAmount = 0;
+        pDeath->m_dwFlags = 8;
+        pDeath->m_sourceID = pCaster->GetId();
+
+        CMessage* message = new CMessageAddEffect(pDeath,
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        m_done = TRUE;
+        break;
+    }
+    case 3:
+        if (m_secondaryType != 0) {
+            DisplayStringRef(pSprite, 20828);
+        }
+
+        AddPanicEffect(pSprite);
+        break;
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCasterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
