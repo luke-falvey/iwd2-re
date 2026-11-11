@@ -2,6 +2,34 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-11 (later): scripts, sprites and the chapter screen
+
+Branch `phase-a/stubs-and-layout` (local only).
+
+**Done**
+- The seven leftover stubs and the `CCreatureFileHeader` tail (now 0x37C bytes).
+- Translated by parallel agents and merged: `CGameAIBase::ExecuteAction`/`ProcessAI`/`ProcessPendingTriggers`, `EvaluateStatusTrigger` (base and sprite), `CMessageHandler::AsynchronousUpdate` plus 26 message classes, `CGameSprite::ExecuteAction`/`ProcessAI`/`ProcessEffectList`/`HandleEffects`/`Unmarshal`, `CGameArea::Unmarshal` gaps and area queries, `CVisibilityMap`, `CVidCell`/`CVidMode`/`CVidBitmap`/`CVidTile` blits and drawing, `CAIObjectType::Decode`, all of `CScreenWorld` and `CGameDialog`.
+- Bugs found by running S2 with temporary file logging:
+  - Script conditions were parsed from the wrong string, so no script ever fired.
+  - Animation `Render` passed the FX rect to `FXUnlock` when not fading, which erased every sprite; FX blits never set `DDBLTFX::dwSize`.
+  - `SortLists` never stored the list position of back/flight objects, so area scripts never ran queued actions.
+  - `CVariableHash::Marshal` wrote every variable to slot 0; new games didn't start with `CHAPTER = -1`.
+  - `StartChapterMultiplayerHost` didn't select the chapter engine; `GetChapterText` compared a BYTE with -1.
+- `inventory.py` now reports functions and bytes without `TODO: Incomplete` separately.
+
+**State of S2 on the rebuild:** passes the Prologue chapter checkpoint, returns to the world with the party, portraits and NPCs drawn. It then times out waiting for Hedron's dialogue.
+
+**Next**
+1. Dialogue actions in `CGameSprite` (Dialog 0x752DD0, PlayerDialog, StartDialog, Interact) so the opening dialogue starts; then S2 should pass.
+2. Remaining `CGameSprite` action handlers (combat, spells, items), `CInfButtonArray` (action bar), `CProjectile::DecodeProjectile`.
+3. `CInfinity::FXRenderClippingPolys` (sprites behind walls), `CMessageSaveGame::Run`.
+
+**Notes**
+- Debugging recipe that worked: add `fopen("C:\\iwd2-play\\trace.txt", "a")` logging in a `// DBGTRACE` block, run `tests/e2e/drive.py`, read the file, never commit the block.
+- A recurring bug class: BYTE/WORD compared with -1 (always false). Check the asm for 0xFF/0xFFFF.
+- Parallel agents that share helper functions produce duplicate definitions. Give each agent its own files and name the helpers other agents own.
+- Never resolve a conflict with `git checkout --theirs` on a whole file; it drops the other side's non-conflicting changes.
+
 ## 2026-11-11: Phase 0 setup, first Phase A fixes
 
 **Done**
