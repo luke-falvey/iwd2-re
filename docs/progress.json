@@ -5,25 +5,25 @@
     "0x7DA200"
   ],
   "functions_total": 9831,
-  "functions_done": 7711,
-  "functions_complete": 7344,
-  "incomplete_markers": 396,
+  "functions_done": 7714,
+  "functions_complete": 7355,
+  "incomplete_markers": 388,
   "incomplete_by_file": {
     "src/CMessage.cpp": 85,
-    "src/CGameSprite.cpp": 36,
+    "src/CGameSprite.cpp": 35,
     "src/CProjectilePart6.cpp": 35,
     "src/CProjectilePart3.cpp": 20,
     "src/CProjectilePart5.cpp": 19,
     "src/CProjectilePart1.cpp": 16,
     "src/CScreenCharacter.cpp": 14,
     "src/CInfGame.cpp": 13,
-    "src/CVidPoly.cpp": 10,
     "src/CDerivedStats.cpp": 9,
     "src/CProjectilePart2.cpp": 9,
     "src/CProjectilePart4.cpp": 9,
     "src/CBaldurProjector.cpp": 7,
     "src/CScreenCreateChar.cpp": 7,
     "src/CParticle.cpp": 6,
+    "src/CVidPoly.cpp": 6,
     "src/CAIGroup.cpp": 5,
     "src/CGameAIBase.cpp": 5,
     "src/CScreenStore.cpp": 5,
@@ -44,7 +44,6 @@
     "src/CGameArea.cpp": 2,
     "src/CGameAreaNotes.cpp": 2,
     "src/CImm.cpp": 2,
-    "src/CScreenInventory.cpp": 2,
     "src/CScreenMultiPlayer.cpp": 2,
     "src/CSearchBitmap.cpp": 2,
     "src/CSpawn.cpp": 2,
@@ -57,7 +56,6 @@
     "src/CGameContainer.cpp": 1,
     "src/CGameSpawning.cpp": 1,
     "src/CMoveList.cpp": 1,
-    "src/CRuleTables.cpp": 1,
     "src/CScreenChapter.cpp": 1,
     "src/CScreenMap.cpp": 1,
     "src/CScreenSave.cpp": 1,
@@ -70,7 +68,7 @@
     "src/CWarp.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10249,
+  "annotations_total": 10252,
   "annotations_not_function_start": 2516,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -3791,8 +3789,8 @@
     "0xA1917C"
   ],
   "bytes_total": 3846937,
-  "bytes_done": 3421556,
-  "bytes_complete": 3000817,
+  "bytes_done": 3421875,
+  "bytes_complete": 3003971,
   "largest_stubs": [
     {
       "addr": "0x4DB160",
