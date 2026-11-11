@@ -1995,7 +1995,7 @@ void CScreenStore::UpdateGroupItems()
                 CGameObjectArray::THREAD_ASYNCH,
                 reinterpret_cast<CGameObject**>(&pSprite),
                 INFINITE);
-        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+        } while (rc == CGameObjectArray::DENIED);
 
         if (rc != CGameObjectArray::SUCCESS) {
             // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
@@ -2640,7 +2640,7 @@ void CScreenStore::UpdateIdentifyItems()
             CGameObjectArray::THREAD_ASYNCH,
             reinterpret_cast<CGameObject**>(&pSprite),
             INFINITE);
-    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+    } while (rc == CGameObjectArray::DENIED);
 
     if (rc != CGameObjectArray::SUCCESS) {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
