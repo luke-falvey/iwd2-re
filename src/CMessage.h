@@ -227,6 +227,8 @@ public:
     static const BYTE MSG_SUBTYPE_OBJECT_CONTROL;
     static const BYTE MSG_SUBTYPE_OBJECT_CONTROL_REQUEST;
     static const BYTE MSG_SUBTYPE_OBJECT_CONTROL_SUGGESTION;
+    static const BYTE MSG_SUBTYPE_OBJECT_DELETE;
+    static const BYTE MSG_SUBTYPE_OBJECT_DELETE_REQUEST;
 
     static const BYTE MSG_TYPE_PLAYERCHAR;
     static const BYTE MSG_SUBTYPE_PLAYERCHAR_UPDATE_DEMAND;
@@ -441,6 +443,7 @@ public:
     BOOLEAN sub_430BE0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_430D40(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_431020(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_431140(LONG nObjectId);
     BOOLEAN sub_4313E0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_4324E0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_432A10(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
