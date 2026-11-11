@@ -858,6 +858,10 @@
       "src/CResItem.cpp",
       "src/CResSpell.cpp"
     ],
+    "0x401B60": [
+      "src/CResItem.cpp",
+      "src/CResSpell.cpp"
+    ],
     "0x780340": [
       "src/CResMosaic.cpp",
       "src/CResMosaic.cpp"
