@@ -243,6 +243,8 @@ public:
     static const SHORT NO_TRIGGER;
     static const SHORT HEARD;
     static const SHORT ONCREATION;
+    static const SHORT JOINS;
+    static const SHORT LEAVES;
     static const SHORT RECEIVEDORDER;
     static const SHORT SEE;
     static const SHORT TIMEREXPIRED;

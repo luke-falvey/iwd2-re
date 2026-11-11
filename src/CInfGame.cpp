@@ -87,6 +87,11 @@ const DWORD CInfGame::PROGRESSBAR_REQUESTS_ADDITIONAL = 5000000;
 // 0x8518B8
 const DWORD CInfGame::PROGRESSBAR_CACHING_ADDITIONAL = 3000000;
 
+// NOTE: Travel screen image index that shows a parchment instead of a picture.
+//
+// 0x8518BC
+const BYTE CInfGame::byte_8518BC = 5;
+
 // 0x8518BE
 const SHORT CInfGame::FEEDBACK_GOLD = 1;
 

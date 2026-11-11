@@ -47,6 +47,7 @@ public:
     static const SHORT STARTDIALOG;
     static const SHORT PLAYERDIALOG;
     static const SHORT APPLYSPELL;
+    static const SHORT ESCAPEAREADESTROY;
     static const SHORT MOVETOOBJECTFOLLOW;
     static const SHORT BREAKINSTANTS;
     static const SHORT REALLYFORCESPELL;

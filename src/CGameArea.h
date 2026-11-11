@@ -169,6 +169,7 @@ public:
     LONG GetGroundPile(const CPoint& ptPos);
     LONG GetNearest(LONG startObject, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BOOL ignoreSleeping, BOOL farthest, BOOL summonedOnly);
     LONG GetNearestDialogMatch(LONG startObject, CResRef dialog, LONG range);
+    LONG sub_46C9E0(LONG startObject, SHORT range, const BYTE* terrainTable, BOOL checkLOS);
     void GetAllInRange(POSITION posVertList, const CPoint& center, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOL lineOfSight, BOOL checkForNonSprites);
     void GetAllInRange(const CPoint& center, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOL lineOfSight, BOOL checkForNonSprites);
     int GetCountInRange(const CPoint& center, SHORT range, const CAIObjectType& type);
