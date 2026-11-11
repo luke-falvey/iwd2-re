@@ -36,7 +36,8 @@ def wait_region_changes(game, region, timeout: float, threshold: float = 0.2):
     raise TimeoutError(f"region {region} never changed")
 
 
-def test_s2_new_game_premade_party(game, golden_dir):
+def new_game_to_opening_dialog(game, golden_dir):
+    """Main menu -> premade party -> Prologue -> Hedron's opening dialogue."""
     boot_to_main_menu(game)
 
     game.click(*MAIN_MENU["new_game"])
@@ -57,3 +58,7 @@ def test_s2_new_game_premade_party(game, golden_dir):
     wait_region_changes(game, DIALOG_REGION, timeout=120)
     # The world animates (water, people), so compare only the dialogue panel.
     checkpoint(game, golden_dir, "targos-opening-dialog", region=DIALOG_REGION, timeout=90, settle=2.0)
+
+
+def test_s2_new_game_premade_party(game, golden_dir):
+    new_game_to_opening_dialog(game, golden_dir)
