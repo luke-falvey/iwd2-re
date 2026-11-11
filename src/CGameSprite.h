@@ -831,6 +831,7 @@ public:
     void sub_726570();
     INT sub_726800();
     void sub_726810(BYTE nWeaponSet);
+    void sub_726F20();
     BYTE GetLastSong();
 
     void GetQuickSpell(BYTE buttonNum, CButtonData& buttonData);
