@@ -587,12 +587,14 @@ public:
     void AddKnownDivineSpells(const BYTE& nClass);
     void DisplayTextRef(STRREF nameRef, STRREF textRef, COLORREF nameColor, COLORREF textColor);
     void GetNumInventoryPersonalSlots(INT& nUsedSlots, INT& nTotalSlots);
+    char InDark();
     void SetModalState(BYTE modalState, BOOL bUpdateToolbar);
     void sub_719180(CString sSpellResRef);
     BOOL sub_7202E0();
     void CheckSequence(BYTE& sequence);
     void sub_7204C0();
     void sub_720B50(CMemINIValue* a1, CMemINIValue* a2);
+    CString GetRaceString(BYTE nRace);
     SHORT FindItemBags(const CString& sName, LONG number, BOOL checkForIdentified);
     SHORT TakeItemBags(const CString& sName, LONG number, SHORT slotNum);
     BOOL HaveUnexportableItems();

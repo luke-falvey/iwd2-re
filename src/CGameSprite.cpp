@@ -10105,6 +10105,43 @@ void CGameSprite::DisplayTextRef(STRREF nameRef, STRREF textRef, COLORREF nameCo
     }
 }
 
+// Returns how much darker the sprite's spot is than night lighting, halved.
+//
+// 0x71F480
+char CGameSprite::InDark()
+{
+    COLORREF rgbTint = m_pArea->GetTintColor(CPoint(m_pos.x, m_pos.y + m_posZ + m_pArea->GetHeightOffset(m_pos, m_listType)),
+        m_listType);
+
+    BYTE nNightLuminance = static_cast<BYTE>((299 * GetRValue(CInfinity::RGB_NIGHT_COLOR)
+                                                 + 587 * GetGValue(CInfinity::RGB_NIGHT_COLOR)
+                                                 + 114 * GetBValue(CInfinity::RGB_NIGHT_COLOR))
+        / 2550);
+
+    BYTE nLuminance;
+    if ((m_pArea->GetInfinity()->m_areaType & 0x2) != 0
+        && ((m_pArea->GetInfinity()->m_areaType & 0x40) == 0
+            || (m_pArea->GetInfinity()->m_renderDayNightCode & CInfTileSet::byte_851931) == 0)) {
+        COLORREF rgbGlobalTint = g_pBaldurChitin->GetCurrentVideoMode()->GetGlobalTintColor();
+
+        COLORREF rgbColor = RGB(GetRValue(rgbTint) * GetRValue(rgbGlobalTint) / 255,
+            GetGValue(rgbTint) * GetGValue(rgbGlobalTint) / 255,
+            GetBValue(rgbTint) * GetBValue(rgbGlobalTint) / 255);
+
+        nLuminance = static_cast<BYTE>((299 * GetRValue(rgbColor)
+                                           + 587 * GetGValue(rgbColor)
+                                           + 114 * GetBValue(rgbColor))
+            / 2550);
+    } else {
+        nLuminance = static_cast<BYTE>((299 * GetRValue(rgbTint)
+                                           + 587 * GetGValue(rgbTint)
+                                           + 114 * GetBValue(rgbTint))
+            / 2550);
+    }
+
+    return static_cast<char>((nLuminance - nNightLuminance) * 100 / (100 - nNightLuminance)) >> 1;
+}
+
 // 0x71FBA0
 void CGameSprite::GetNumInventoryPersonalSlots(INT& nUsedSlots, INT& nTotalSlots)
 {
@@ -10121,7 +10158,148 @@ void CGameSprite::GetNumInventoryPersonalSlots(INT& nUsedSlots, INT& nTotalSlots
 // 0x71FC00
 void CGameSprite::SetModalState(BYTE modalState, BOOL bUpdateToolbar)
 {
-    // TODO: Incomplete.
+    if (modalState == m_nModalState) {
+        return;
+    }
+
+    switch (m_nModalState) {
+    case 1:
+        if (sub_763150(CGAMESPRITE_FEAT_LINGERING_SONG) == TRUE) {
+            if ((m_derivedStats.m_generalState & STATE_SILENCED) == 0
+                && (m_baseStats.m_generalState & STATE_SILENCED) == 0
+                && g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_cutScene != TRUE) {
+                UINT nSongIndex = m_nLastSong;
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+                // __LINE__: 22207
+                UTIL_ASSERT_MSG(nSongIndex < g_pBaldurChitin->GetObjectGame()->GetMasterSongLookup().m_nCount, "Invalid Song Index.");
+
+                CResRef songResRef = g_pBaldurChitin->GetObjectGame()->GetMasterSongLookup().Get(nSongIndex);
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+                // __LINE__: 22209
+                UTIL_ASSERT(songResRef != "");
+
+                // NOTE: Uninline.
+                CSpell cSpell;
+                cSpell.SetResRef(songResRef, TRUE, TRUE);
+
+                cSpell.Demand();
+
+                if (cSpell.GetCasterType() != 5) {
+                    cSpell.Release();
+                } else {
+                    FeedBack(FEEDBACK_LINGERINGSONG,
+                        0,
+                        0,
+                        0,
+                        cSpell.GetGenericName(),
+                        0,
+                        0);
+
+                    SPELL_ABILITY* pAbility = cSpell.GetAbility(0);
+
+                    CTypedPtrList<CPtrList, LONG*> targets;
+
+                    m_pArea->GetAllInRange(GetVertListPos(),
+                        GetPos(),
+                        CAIObjectType::ANYONE,
+                        400,
+                        GetTerrainTable(),
+                        targets,
+                        TRUE,
+                        FALSE);
+
+                    m_pArea->GetAllInRangeBack(GetPos(),
+                        CAIObjectType::ANYONE,
+                        400,
+                        GetTerrainTable(),
+                        targets,
+                        TRUE,
+                        FALSE,
+                        FALSE);
+
+                    targets.AddTail(reinterpret_cast<LONG*>(m_id));
+
+                    POSITION pos = targets.GetHeadPosition();
+                    while (pos != NULL) {
+                        LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+                        CGameSprite* pSprite;
+                        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            reinterpret_cast<CGameObject**>(&pSprite),
+                            INFINITE);
+                        if (rc != CGameObjectArray::SUCCESS) {
+                            continue;
+                        }
+
+                        if (pSprite->GetObjectType() != CGameObject::TYPE_SPRITE
+                            || (cSpell.cResRef == "SPIN147"
+                                && (IcewindMisc::sub_585230(this, pSprite) == 1
+                                    || IcewindMisc::sud_585070(pSprite) == 1
+                                    || pSprite->m_derivedStats.m_spellStates[SPLSTATE_DEAFENED]))
+                            || !IcewindMisc::sub_585230(this, pSprite)) {
+                            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                                CGameObjectArray::THREAD_ASYNCH,
+                                INFINITE);
+                            continue;
+                        }
+
+                        std::list<CMessageAddEffect*> effects;
+
+                        for (INT nEffect = 0; nEffect < pAbility->effectCount; nEffect++) {
+                            CGameEffect* pEffect = cSpell.DecodeEffect(0, nEffect, this, 0, 0, 0);
+                            pEffect->m_source = m_pos;
+                            pEffect->m_sourceID = m_id;
+
+                            IcewindMisc::sub_5860F0(this, pEffect);
+
+                            if (pEffect->m_durationType == 0 && pEffect->m_duration == 7) {
+                                pEffect->m_durationType = 0x1000;
+                                pEffect->m_duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + 200;
+                            }
+
+                            CMessageAddEffect* pAddEffect = new CMessageAddEffect(pEffect, m_id, pSprite->m_id);
+                            effects.push_back(pAddEffect);
+                        }
+
+                        CMessage105* pMessage = new CMessage105(effects, m_id, pSprite->m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                    }
+
+                    cSpell.Release();
+                }
+            }
+        } else {
+            FeedBack(FEEDBACK_BATTLESONGEND, 0, 0, 0, -1, 0, 0);
+        }
+        break;
+    case 2:
+        FeedBack(FEEDBACK_SEARCHEND, 0, 0, 0, -1, 0, 0);
+        break;
+    case 3:
+        if (m_bHiding) {
+            FeedBack(FEEDBACK_LEAVING_SHADOWS, 0, 0, 0, -1, 0, 0);
+            m_bHiding = FALSE;
+        }
+        break;
+    case 4:
+        FeedBack(FEEDBACK_TURNUNDEADEND, 0, 0, 0, -1, 0, 0);
+        break;
+    }
+
+    m_nModalState = modalState;
+
+    if (bUpdateToolbar) {
+        if (g_pBaldurChitin->GetObjectGame()->GetGroup()->GetGroupLeader() == m_id) {
+            g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateButtons();
+        }
+    }
 }
 
 // 0x7202E0
@@ -10801,6 +10979,190 @@ SHORT CGameSprite::TakeItemBags(const CString& sName, LONG number, SHORT slotNum
         }
     }
     return numTaken;
+}
+
+// Returns the race column name used by CRELIGHT.2DA and CREHIDEM.2DA.
+//
+// 0x722090
+CString CGameSprite::GetRaceString(BYTE nRace)
+{
+    CString sRace;
+
+    switch (nRace) {
+    case CAIOBJECTTYPE_R_HUMAN:
+        sRace = "HUMAN";
+        break;
+    case CAIOBJECTTYPE_R_ELF:
+        sRace = "ELF";
+        break;
+    case CAIOBJECTTYPE_R_HALF_ELF:
+        sRace = "HALF_ELF";
+        break;
+    case CAIOBJECTTYPE_R_DWARF:
+        sRace = "DWARF";
+        break;
+    case CAIOBJECTTYPE_R_HALFLING:
+        sRace = "HALFLING";
+        break;
+    case CAIOBJECTTYPE_R_GNOME:
+        sRace = "GNOME";
+        break;
+    case CAIOBJECTTYPE_R_HALF_ORC:
+        sRace = "HALF_ORC";
+        break;
+    case CAIOBJECTTYPE_R_ANKHEG:
+        sRace = "ANKHEG";
+        break;
+    case CAIOBJECTTYPE_R_BASILISK:
+        sRace = "BASILISK";
+        break;
+    case CAIOBJECTTYPE_R_BEAR:
+        sRace = "BEAR";
+        break;
+    case CAIOBJECTTYPE_R_CARRIONCRAWLER:
+        sRace = "CARRIONCRAWLER";
+        break;
+    case CAIOBJECTTYPE_R_DOG:
+        sRace = "DOG";
+        break;
+    case CAIOBJECTTYPE_R_DOPPLEGANGER:
+        sRace = "DOPPLEGANGER";
+        break;
+    case CAIOBJECTTYPE_R_ETTERCAP:
+        sRace = "ETTERCAP";
+        break;
+    case CAIOBJECTTYPE_R_GHOUL:
+        sRace = "GHOUL";
+        break;
+    case CAIOBJECTTYPE_R_GIBBERLING:
+        sRace = "GIBBERLING";
+        break;
+    case CAIOBJECTTYPE_R_GNOLL:
+        sRace = "GNOLL";
+        break;
+    case CAIOBJECTTYPE_R_HOBGOBLIN:
+        sRace = "HOBGOBLIN";
+        break;
+    case CAIOBJECTTYPE_R_KOBOLD:
+        sRace = "KOBOLD";
+        break;
+    case CAIOBJECTTYPE_R_OGRE:
+        sRace = "OGRE";
+        break;
+    case CAIOBJECTTYPE_R_SKELETON:
+        sRace = "SKELETON";
+        break;
+    case CAIOBJECTTYPE_R_SPIDER:
+        sRace = "SPIDER";
+        break;
+    case CAIOBJECTTYPE_R_WOLF:
+        sRace = "WOLF";
+        break;
+    case CAIOBJECTTYPE_R_WYVERN:
+        sRace = "WYVERN";
+        break;
+    case CAIOBJECTTYPE_R_SLIME:
+        sRace = "SLIME";
+        break;
+    case CAIOBJECTTYPE_R_FAIRY:
+        sRace = "FAIRY";
+        break;
+    case CAIOBJECTTYPE_R_BEETLE:
+        sRace = "BEETLE";
+        break;
+    case CAIOBJECTTYPE_R_CARRION_CRAWLER:
+        sRace = "CARRION_CRAWLER";
+        break;
+    case CAIOBJECTTYPE_R_ELEMENTAL:
+        sRace = "ELEMENTAL";
+        break;
+    case CAIOBJECTTYPE_R_GIANT:
+        sRace = "GIANT";
+        break;
+    case CAIOBJECTTYPE_R_DRAKE:
+        sRace = "DRAKE";
+        break;
+    case CAIOBJECTTYPE_R_GOBLIN:
+        sRace = "GOBLIN";
+        break;
+    case CAIOBJECTTYPE_R_GOLEM:
+        sRace = "GOLEM";
+        break;
+    case CAIOBJECTTYPE_R_LIZARDMAN:
+        sRace = "LIZARDMAN";
+        break;
+    case CAIOBJECTTYPE_R_MANTICORE:
+        sRace = "MANTICORE";
+        break;
+    case CAIOBJECTTYPE_R_MYCONID:
+        sRace = "MYCONID";
+        break;
+    case CAIOBJECTTYPE_R_ORC:
+        sRace = "ORC";
+        break;
+    case CAIOBJECTTYPE_R_SALAMANDER:
+        sRace = "SALAMANDER";
+        break;
+    case CAIOBJECTTYPE_R_SHRIEKER:
+        sRace = "SHRIEKER";
+        break;
+    case CAIOBJECTTYPE_R_SVIRFNEBLIN:
+        sRace = "SVIRFNEBLIN";
+        break;
+    case CAIOBJECTTYPE_R_TANARI:
+        sRace = "TANARI";
+        break;
+    case CAIOBJECTTYPE_R_TROLL:
+        sRace = "TROLL";
+        break;
+    case CAIOBJECTTYPE_R_UMBERHULK:
+        sRace = "UMBERHULK";
+        break;
+    case CAIOBJECTTYPE_R_UNDEAD:
+        sRace = "UNDEAD";
+        break;
+    case CAIOBJECTTYPE_R_YUANTI:
+        sRace = "YUANTI";
+        break;
+    case CAIOBJECTTYPE_R_HARPY:
+        sRace = "HARPY";
+        break;
+    case CAIOBJECTTYPE_R_BEHOLDER:
+        sRace = "BEHOLDER";
+        break;
+    case 179:
+        sRace = "MINOTAUR";
+        break;
+    case CAIOBJECTTYPE_R_BUGBEAR:
+        sRace = "BUGBEAR";
+        break;
+    case CAIOBJECTTYPE_R_HOOK_HORROR:
+        sRace = "HOOKHORROR";
+        break;
+    case CAIOBJECTTYPE_R_DRIDER:
+        sRace = "DRIDER";
+        break;
+    case 183:
+        sRace = "DROW";
+        break;
+    case CAIOBJECTTYPE_R_184:
+        sRace = "MIND_FLAYER";
+        break;
+    case CAIOBJECTTYPE_R_SHAPESHIFTER:
+        sRace = "SHAPESHIFTER";
+        break;
+    case CAIOBJECTTYPE_R_WILLOWISP:
+        sRace = "WILLOWISP";
+        break;
+    case CAIOBJECTTYPE_R_OTYUGH:
+        sRace = "OTYUGH";
+        break;
+    case CAIOBJECTTYPE_R_NO_RACE:
+        sRace = "NO_RACE";
+        break;
+    }
+
+    return sRace;
 }
 
 // Returns `TRUE` if object contains quest items or containers (such as potion
@@ -13824,7 +14186,501 @@ void CGameSprite::sub_72FBF0()
 // 0x72FD20
 void CGameSprite::CheckModal()
 {
-    // TODO: Incomplete.
+    if (static_cast<DWORD>(field_44A) % 100 != static_cast<DWORD>(m_id) % 100) {
+        return;
+    }
+
+    m_modalCounter++;
+
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
+        CAITrigger trigger(CAITrigger::NO_TRIGGER, 0);
+        CTypedPtrList<CPtrList, LONG*> targets;
+
+        INT nSearch = sub_71F6E0();
+        INT nRoll = CUtil::UtilRandInt(100, -m_derivedStats.m_nLuck);
+
+        m_pArea->GetAllInRange(m_pos,
+            CAIObjectType::ANYONE,
+            GetVisualRange() >> 1,
+            GetVisibleTerrainTable(),
+            targets,
+            FALSE,
+            TRUE);
+
+        POSITION pos = targets.GetHeadPosition();
+        while (pos != NULL) {
+            LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+            CGameObject* pObject;
+
+            BYTE rc;
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nTargetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pObject,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                continue;
+            }
+
+            if (pObject->GetObjectType() != CGameObject::TYPE_DOOR) {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nTargetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                continue;
+            }
+
+            CGameDoor* pDoor = static_cast<CGameDoor*>(pObject);
+            if ((pDoor->m_dwFlags & 0x80) != 0) {
+                if ((pDoor->m_dwFlags & 0x100) == 0) {
+                    INT nDetectionDifficulty = pDoor->m_detectionDifficulty;
+                    if (nDetectionDifficulty == 0) {
+                        nDetectionDifficulty = 100;
+                    }
+
+                    if (nSearch >= nDetectionDifficulty + nRoll - 101) {
+                        PlaySound(CResRef("ACT_09"));
+                        pDoor->SetDrawPoly(400);
+                        pDoor->m_dwFlags |= 0x100;
+
+                        CMessage* message = new CMessageDoorStatus(pDoor, m_id, pDoor->m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                    }
+                } else {
+                    pDoor->SetDrawPoly(400);
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nTargetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    switch (m_nModalState) {
+    case 1:
+        if ((m_derivedStats.m_generalState & STATE_SILENCED) == 0
+            && (m_baseStats.m_generalState & STATE_SILENCED) == 0
+            && g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_cutScene != TRUE) {
+            if (!IsVisibleToCaller(FALSE)) {
+                ITEM_EFFECT effect;
+                CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+                effect.durationType = 1;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    m_pos,
+                    m_id,
+                    CPoint(-1, -1));
+
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            UINT nSongIndex = m_nLastSong;
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+            // __LINE__: 4072
+            UTIL_ASSERT_MSG(nSongIndex < g_pBaldurChitin->GetObjectGame()->GetMasterSongLookup().m_nCount, "Invalid Song Index.");
+
+            CResRef songResRef = g_pBaldurChitin->GetObjectGame()->GetMasterSongLookup().Get(nSongIndex);
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+            // __LINE__: 4074
+            UTIL_ASSERT(songResRef != "");
+
+            // NOTE: Uninline.
+            CSpell cSpell;
+            cSpell.SetResRef(songResRef, TRUE, TRUE);
+
+            cSpell.Demand();
+
+            if (cSpell.GetCasterType() != 5) {
+                cSpell.Release();
+            } else {
+                FeedBack(FEEDBACK_BATTLESONGSTART,
+                    0,
+                    0,
+                    0,
+                    cSpell.GetGenericName(),
+                    0,
+                    0);
+
+                SPELL_ABILITY* pAbility = cSpell.GetAbility(0);
+
+                CTypedPtrList<CPtrList, LONG*> targets;
+
+                m_pArea->GetAllInRange(GetVertListPos(),
+                    GetPos(),
+                    CAIObjectType::ANYONE,
+                    400,
+                    GetTerrainTable(),
+                    targets,
+                    TRUE,
+                    FALSE);
+
+                m_pArea->GetAllInRangeBack(GetPos(),
+                    CAIObjectType::ANYONE,
+                    400,
+                    GetTerrainTable(),
+                    targets,
+                    TRUE,
+                    FALSE,
+                    FALSE);
+
+                targets.AddTail(reinterpret_cast<LONG*>(m_id));
+
+                POSITION pos = targets.GetHeadPosition();
+                while (pos != NULL) {
+                    LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+                    CGameSprite* pSprite;
+                    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                    if (rc != CGameObjectArray::SUCCESS) {
+                        continue;
+                    }
+
+                    if (pSprite->GetObjectType() != CGameObject::TYPE_SPRITE) {
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                        continue;
+                    }
+
+                    std::list<CMessageAddEffect*> effects;
+
+                    for (INT nEffect = 0; nEffect < pAbility->effectCount; nEffect++) {
+                        CGameEffect* pEffect = cSpell.DecodeEffect(0, nEffect, this, 0, 0, 0);
+                        pEffect->m_source = m_pos;
+                        pEffect->m_sourceID = m_id;
+
+                        IcewindMisc::sub_5860F0(this, pEffect);
+
+                        if (pEffect->m_durationType == 0 && pEffect->m_duration == 7) {
+                            pEffect->m_durationType = 0x1000;
+                            pEffect->m_duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + 100;
+                        }
+
+                        CMessageAddEffect* pAddEffect = new CMessageAddEffect(pEffect, m_id, pSprite->m_id);
+                        effects.push_back(pAddEffect);
+                    }
+
+                    CMessage105* pMessage = new CMessage105(effects, m_id, pSprite->m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                }
+
+                cSpell.Release();
+            }
+        }
+        break;
+    case 2:
+        if (1) {
+            CAITrigger trigger(CAITrigger::NO_TRIGGER, 0);
+            CTypedPtrList<CPtrList, LONG*> targets;
+
+            m_pArea->GetAllInRange(m_pos,
+                CAIObjectType::ANYONE,
+                GetVisualRange() >> 1,
+                GetVisibleTerrainTable(),
+                targets,
+                TRUE,
+                TRUE);
+
+            m_pArea->GetAllInRangeBack(m_pos,
+                CAIObjectType::ANYONE,
+                GetVisualRange() >> 1,
+                GetVisibleTerrainTable(),
+                targets,
+                TRUE,
+                TRUE,
+                TRUE);
+
+            POSITION pos = targets.GetHeadPosition();
+            while (pos != NULL) {
+                LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+                CGameObject* pObject;
+
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        &pObject,
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    continue;
+                }
+
+                if (pObject->GetObjectType() != CGameObject::TYPE_DOOR
+                    && pObject->GetObjectType() != CGameObject::TYPE_CONTAINER
+                    && pObject->GetObjectType() != CGameObject::TYPE_TRIGGER) {
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    continue;
+                }
+
+                INT nSearchSkill = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_SEARCH]);
+
+                if (pObject->GetObjectType() == CGameObject::TYPE_DOOR) {
+                    CGameDoor* pDoor = static_cast<CGameDoor*>(pObject);
+                    if (pDoor->m_trapActivated != 0) {
+                        BOOLEAN bDetected = FALSE;
+
+                        if (pDoor->m_trapDetected == 0) {
+                            INT nDifficulty = pDoor->m_trapDetectionDifficulty;
+
+                            // NOTE: The original only sign-extends the skill
+                            // to 16 bits.
+                            FeedBack(FEEDBACK_ROLL,
+                                static_cast<WORD>(nSearchSkill),
+                                nDifficulty / 5,
+                                GetSkillBonus(CGAMESPRITE_SKILL_SEARCH),
+                                39303,
+                                0,
+                                0);
+
+                            if (7 * nSearchSkill >= nDifficulty
+                                && nDifficulty != 100
+                                && (pDoor->m_dwFlags & 0x8) != 0) {
+                                trigger = CAITrigger(CAITRIGGER_DETECTED, m_typeAI, 0);
+
+                                CMessage* message = new CMessageSetTrigger(trigger, m_id, pDoor->m_id);
+                                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                                pDoor->m_trapDetected = 1;
+                                AutoPause(0x80);
+                                bDetected = TRUE;
+                            }
+                        }
+
+                        if (pDoor->m_trapDetected != 0) {
+                            pDoor->SetDrawPoly(400);
+                        }
+
+                        if (bDetected == TRUE) {
+                            CMessage* message = new CMessageDoorStatus(pDoor, m_id, pDoor->m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                        }
+                    }
+                }
+
+                if (pObject->GetObjectType() == CGameObject::TYPE_TRIGGER) {
+                    CGameTrigger* pTrigger = static_cast<CGameTrigger*>(pObject);
+                    if (pTrigger->m_trapActivated != 0
+                        && (pTrigger->m_dwFlags & 0x100) == 0) {
+                        BOOLEAN bDetected = FALSE;
+
+                        if (pTrigger->m_trapDetected == 0) {
+                            INT nDifficulty = pTrigger->m_trapDetectionDifficulty;
+                            if (7 * nSearchSkill >= nDifficulty
+                                && nDifficulty != 100
+                                && (pTrigger->m_dwFlags & 0x8) != 0) {
+                                trigger = CAITrigger(CAITRIGGER_DETECTED, m_typeAI, 0);
+
+                                CMessage* message = new CMessageSetTrigger(trigger, m_id, pTrigger->m_id);
+                                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                                pTrigger->m_trapDetected = 1;
+                                AutoPause(0x80);
+                                bDetected = TRUE;
+                            }
+                        }
+
+                        if (pTrigger->m_trapDetected != 0) {
+                            pTrigger->SetDrawPoly(400);
+                        }
+
+                        if (bDetected == TRUE) {
+                            CMessage* message = new CMessageTriggerStatus(pTrigger->m_dwFlags,
+                                pTrigger->m_trapActivated,
+                                pTrigger->m_trapDetected,
+                                m_id,
+                                pTrigger->m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                        }
+                    }
+                }
+
+                if (pObject->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+                    CGameContainer* pContainer = static_cast<CGameContainer*>(pObject);
+                    if (pContainer->m_trapActivated != 0) {
+                        BOOLEAN bDetected = FALSE;
+
+                        if (pContainer->m_trapDetected == 0) {
+                            INT nDifficulty = pContainer->m_trapDetectionDifficulty;
+                            if (7 * nSearchSkill >= nDifficulty && nDifficulty != 100) {
+                                trigger = CAITrigger(CAITRIGGER_DETECTED, m_typeAI, 0);
+
+                                CMessage* message = new CMessageSetTrigger(trigger, m_id, pContainer->m_id);
+                                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                                pContainer->SetTrapDetected(1);
+                                pContainer->SetDrawPoly(400);
+                                AutoPause(0x80);
+                                bDetected = TRUE;
+                            }
+                        }
+
+                        if (pContainer->m_trapDetected != 0) {
+                            pContainer->SetDrawPoly(400);
+                        }
+
+                        if (bDetected == TRUE) {
+                            CMessage* message = new CMessageContainerStatus(pContainer->m_dwFlags,
+                                pContainer->m_trapActivated,
+                                pContainer->m_trapDetected,
+                                pContainer->m_id,
+                                pContainer->m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                        }
+                    }
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+        break;
+    case 3:
+        // NOTE: 3 is the dword at 0x85BD08.
+        if (m_modalCounter % 3 == 0) {
+            Hide();
+        }
+        break;
+    case 4:
+        if (1) {
+            CAIAction action;
+            CAIObjectType type(CAIObjectType::ANYONE);
+            CAITrigger trigger(CAITrigger::NO_TRIGGER, 0);
+            CTypedPtrList<CPtrList, LONG*> targets;
+
+            type.m_nGeneral = CAIObjectType::G_UNDEAD;
+            type.m_nEnemyAlly = CAIObjectType::EA_ENEMY;
+
+            m_pArea->GetAllInRange(m_pos,
+                type,
+                GetVisualRange() >> 1,
+                m_visibleTerrainTable,
+                targets,
+                TRUE,
+                FALSE);
+
+            BOOL bTurned = FALSE;
+
+            POSITION pos = targets.GetHeadPosition();
+            INT nCount = rand() % 4 + rand() % 4 + 2;
+            while (pos != NULL) {
+                if (nCount-- == 0) {
+                    break;
+                }
+
+                LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+                CGameSprite* pSprite;
+
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    continue;
+                }
+
+                if (pSprite->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                    INT nRandom = rand() % 4;
+                    if (nRandom != 4) {
+                        INT nHitDice = nRandom + pSprite->m_derivedStats.m_nLevel;
+                        if (m_derivedStats.m_nTurnUndeadLevel >= nHitDice + 5) {
+                            bTurned = TRUE;
+
+                            if (m_typeAI.m_nAlignment == CAIOBJECTTYPE_LAWFUL_EVIL
+                                || m_typeAI.m_nAlignment == CAIOBJECTTYPE_NEUTRAL_EVIL
+                                || m_typeAI.m_nAlignment == CAIOBJECTTYPE_CHAOTIC_EVIL) {
+                                ITEM_EFFECT effect;
+                                CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_DOMINATE);
+                                effect.durationType = 0;
+                                effect.dwFlags = 4;
+                                effect.duration = 60;
+
+                                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                                    m_pos,
+                                    m_id,
+                                    CPoint(-1, -1));
+
+                                CMessage* message = new CMessageAddEffect(pEffect, m_id, pSprite->m_id);
+                                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                            } else {
+                                CGameEffectDeath* pEffect = new CGameEffectDeath();
+                                // NOTE: The inlined constructor here stores 0
+                                // (the default constructor stores 1).
+                                pEffect->field_18C = 0;
+                                pEffect->m_effectAmount = 0;
+                                pEffect->m_dwFlags = 0x8;
+                                pEffect->m_sourceID = m_id;
+
+                                CMessage* message = new CMessageAddEffect(pEffect, m_id, pSprite->m_id);
+                                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                            }
+                        } else if (m_derivedStats.m_nTurnUndeadLevel >= nHitDice) {
+                            bTurned = TRUE;
+
+                            ITEM_EFFECT effect;
+                            CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_VISUALSPELLHIT);
+                            effect.dwFlags = 0;
+
+                            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                                m_pos,
+                                m_id,
+                                CPoint(-1, -1));
+
+                            CMessage* message = new CMessageAddEffect(pEffect, m_id, pSprite->m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                            trigger = CAITrigger(CAITRIGGER_TURNEDBY, m_typeAI, 0);
+
+                            message = new CMessageSetTrigger(trigger, m_id, pSprite->m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                            // 184: RunAwayFromNoInterrupt(O:Creature*,I:Time*)
+                            action = CAIAction(184,
+                                m_typeAI,
+                                100 * m_derivedStats.m_nTurnUndeadLevel,
+                                0,
+                                0);
+
+                            message = new CMessageAddAction(action, m_id, pSprite->m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                        }
+                    }
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+
+            if (bTurned) {
+                PlaySound(CResRef("ACT_06"));
+            }
+        }
+        break;
+    }
 }
 
 // 0x731B30
@@ -21409,9 +22265,255 @@ SHORT CGameSprite::FindTraps()
 // 0x757B40
 SHORT CGameSprite::Hide()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
-    return ACTION_ERROR;
+    INT nRoll = 5 * (rand() % 20) + 5;
+    if (nRoll == 100 || m_derivedStats.m_disabledButtons[0]) {
+        m_bHiding = FALSE;
+        FeedBack(FEEDBACK_HIDEFAILED, 0, 0, 0, -1, 0, 0);
+        m_nStealthGreyOut = STEALTH_GREYOUT_DURATION;
+        pGame->GetButtonArray()->m_nSelectedButton = 100;
+        SetModalState(0, TRUE);
+
+        if (g_pBaldurChitin->GetActiveEngine()->GetSelectedCharacter() == pGame->GetCharacterPortraitNum(m_id)) {
+            INT nState = pGame->GetButtonArray()->m_nState;
+            if (nState != 102
+                && nState != 101
+                && nState != 104
+                && nState != 103
+                && nState != 105
+                && nState != 112
+                && nState != 115
+                && nState != 116
+                && nState != 117
+                && nState != 118
+                && nState != 119
+                && nState != 120
+                && nState != 121
+                && nState != 122
+                && nState != 123
+                && nState != 106) {
+                pGame->GetButtonArray()->ResetState();
+            }
+        }
+
+        return ACTION_DONE;
+    }
+
+    LONG nEnemyId = m_pArea->GetNearest(m_id,
+        m_typeAI.GetEnemyOf(),
+        GetVisualRange(),
+        GetVisibleTerrainTable(),
+        TRUE,
+        TRUE,
+        TRUE,
+        FALSE,
+        FALSE);
+
+    INT nHide = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_HIDE]);
+    INT nMoveSilently = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_MOVE_SILENTLY]);
+
+    // NOTE: Uninline (0x5467E0).
+    INT nAverage = (nHide + nMoveSilently) / 2;
+
+    CString sValue;
+    CString sRace;
+
+    INT nSkillBonus = GetSkillBonus(CGAMESPRITE_SKILL_HIDE);
+
+    sRace = GetRaceString(GetAIType().m_nRace);
+    sValue = pGame->GetRuleTables().m_tCRELIGHT.GetAt(CString("LIGHTMOD"), sRace);
+
+    INT nLightMod = atol(sValue);
+    INT nHideScore = 5 * (nAverage - InDark() * nLightMod * nAverage / 10000 + 10);
+
+    BOOL bSuccess = TRUE;
+
+    if (nEnemyId != CGameObjectArray::INVALID_INDEX) {
+        CGameSprite* pEnemy;
+
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nEnemyId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pEnemy),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            INT nLevel = pEnemy->m_derivedStats.m_nLevel;
+            INT nWisBonus = pGame->GetRuleTables().GetAbilityScoreModifier(pEnemy->m_derivedStats.m_nWIS);
+            sRace = GetRaceString(pEnemy->GetAIType().m_nRace);
+
+            if (!pEnemy->m_derivedStats.m_spellStates[SPLSTATE_DEAFENED]) {
+                sValue = pGame->GetRuleTables().m_tCREHIDEM.GetAt(CString("QUIETMOD"), sRace);
+
+                INT nListen = 5 * (atol(sValue) + nWisBonus + nLevel);
+                if (nListen < 0) {
+                    nListen = 0;
+                }
+
+                // NOTE: Unlike the other checks, the original fails the
+                // attempt when move silently beats the roll.
+                STRREF strRef;
+                if (nMoveSilently > nListen + nRoll) {
+                    bSuccess = FALSE;
+                    strRef = 39297;
+                } else {
+                    strRef = 112;
+                }
+
+                FeedBack(FEEDBACK_ROLL,
+                    nMoveSilently / 5,
+                    nListen / 5,
+                    nRoll / 5,
+                    strRef,
+                    0,
+                    0);
+            }
+
+            if ((pEnemy->m_derivedStats.m_generalState & STATE_BLIND) == 0) {
+                nLevel = pEnemy->m_derivedStats.m_nLevel;
+                nWisBonus = pGame->GetRuleTables().GetAbilityScoreModifier(pEnemy->m_derivedStats.m_nWIS);
+
+                sValue = pGame->GetRuleTables().m_tCREHIDEM.GetAt(CString("HIDEMOD"), sRace);
+
+                INT nSpot = 5 * (atol(sValue) + nWisBonus + nLevel);
+                if (nSpot < 0) {
+                    nSpot = 0;
+                }
+
+                // NOTE: The original releases the enemy here and again below.
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nEnemyId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+
+                if (nHide > nSpot + nRoll) {
+                    FeedBack(FEEDBACK_ROLL,
+                        nHideScore / 5,
+                        nSpot / 5,
+                        nRoll / 5,
+                        28379,
+                        0,
+                        0);
+                } else {
+                    bSuccess = FALSE;
+                    FeedBack(FEEDBACK_ROLL,
+                        nHideScore / 5,
+                        nSpot / 5,
+                        nRoll / 5,
+                        39298,
+                        0,
+                        0);
+                }
+            }
+
+            if (pEnemy->m_derivedStats.m_spellStates[SPLSTATE_DEAFENED]
+                && (pEnemy->m_derivedStats.m_generalState & STATE_BLIND) != 0) {
+                if (nHideScore > nRoll) {
+                    FeedBack(FEEDBACK_ROLL,
+                        nHideScore / 5,
+                        nRoll / 5,
+                        nSkillBonus,
+                        39299,
+                        0,
+                        0);
+                } else {
+                    bSuccess = FALSE;
+                    FeedBack(FEEDBACK_ROLL,
+                        nHideScore / 5,
+                        nRoll / 5,
+                        nSkillBonus,
+                        39300,
+                        0,
+                        0);
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nEnemyId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    } else {
+        if (nHideScore > nRoll) {
+            FeedBack(FEEDBACK_ROLL,
+                nHideScore / 5,
+                nRoll / 5,
+                nSkillBonus,
+                39299,
+                0,
+                0);
+        } else {
+            bSuccess = FALSE;
+            FeedBack(FEEDBACK_ROLL,
+                nHideScore / 5,
+                nRoll / 5,
+                nSkillBonus,
+                39300,
+                0,
+                0);
+        }
+    }
+
+    if (bSuccess == TRUE) {
+        if (!m_bHiding) {
+            PlaySound(CResRef("ACT_07"));
+        }
+
+        FeedBack(FEEDBACK_HIDESUCCEEDED, 0, 0, 0, -1, 0, 0);
+
+        ITEM_EFFECT* effect = new ITEM_EFFECT;
+        CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_INVISIBLE);
+        effect->dwFlags = 0;
+        effect->effectAmount = 1;
+        effect->durationType = 0x1000;
+        // NOTE: 3 is the dword at 0x85BD08.
+        effect->duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + 100 * 3;
+
+        CGameEffect* pEffect = CGameEffect::DecodeEffect(effect,
+            m_pos,
+            m_id,
+            CPoint(-1, -1));
+
+        CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        delete effect;
+
+        m_bHiding = TRUE;
+        m_nModalState = 3;
+    } else {
+        m_bHiding = FALSE;
+        m_nModalState = 0;
+        FeedBack(FEEDBACK_HIDEFAILED, 0, 0, 0, -1, 0, 0);
+        m_nStealthGreyOut = STEALTH_GREYOUT_DURATION;
+        pGame->GetButtonArray()->m_nSelectedButton = 100;
+        SetModalState(0, TRUE);
+
+        if (g_pBaldurChitin->GetActiveEngine()->GetSelectedCharacter() == pGame->GetCharacterPortraitNum(m_id)) {
+            INT nState = pGame->GetButtonArray()->m_nState;
+            if (nState != 102
+                && nState != 101
+                && nState != 104
+                && nState != 103
+                && nState != 105
+                && nState != 112
+                && nState != 115
+                && nState != 116
+                && nState != 117
+                && nState != 118
+                && nState != 119
+                && nState != 120
+                && nState != 121
+                && nState != 122
+                && nState != 123
+                && nState != 106) {
+                pGame->GetButtonArray()->ResetState();
+            }
+        }
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x758440
