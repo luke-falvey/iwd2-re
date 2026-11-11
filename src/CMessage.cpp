@@ -1097,7 +1097,7 @@ BOOLEAN CBaldurMessage::sub_42ABA0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
     if (nType == 0x3F2) {
         BOOLEAN bProgressBarRequired = (dwFlags >> 8) & 1;
         g_pBaldurChitin->m_pObjectGame->field_4BD4 = TRUE;
-        g_pBaldurChitin->GetObjectGame()->LoadArea(sResName, dwFlags, bProgressBarRequired, FALSE);
+        g_pBaldurChitin->GetObjectGame()->LoadArea(sResName, static_cast<BYTE>(dwFlags), bProgressBarRequired, FALSE);
         g_pBaldurChitin->m_pObjectGame->field_4BD4 = FALSE;
     }
 
