@@ -9575,7 +9575,50 @@ BOOL CGameSprite::sub_71CFF0()
 // 0x71D0B0
 void CGameSprite::sub_71D0B0()
 {
-    // TODO: Incomplete.
+    ULONG nGameTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+    INT nFatigue = (nGameTime - field_722A) / (4 * CTimerWorld::TIMESCALE_MSEC_PER_SEC * CTimerWorld::TIMESCALE_SEC_PER_MIN * CTimerWorld::TIMESCALE_MIN_PER_HOUR);
+
+    if (nFatigue > m_baseStats.m_fatigue) {
+        ITEM_EFFECT effect;
+        CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FATIGUE);
+        // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+        effect.durationType = 1;
+        effect.dwFlags = 1;
+        effect.effectAmount = nFatigue;
+
+        CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+            m_pos,
+            m_id,
+            CPoint(-1, -1));
+
+        // NOTE: The effect is not deleted when it is rejected here.
+        if (!m_derivedStats.m_cImmunitiesEffect.OnList(pEffect)
+            && m_derivedStats.m_naturalImmunities.find(pEffect->m_effectID) == m_derivedStats.m_naturalImmunities.end()) {
+            CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            char nFatigueMod = static_cast<char>(atol(g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_tFatigueMod.GetAt(CPoint(0, nFatigue))));
+            m_derivedStats.m_nLuck += nFatigueMod;
+
+            if (nFatigueMod != 0) {
+                if (m_portraitIcons.Find(reinterpret_cast<int*>(39), NULL) == NULL) {
+                    m_portraitIcons.AddTail(reinterpret_cast<int*>(39));
+                }
+            }
+
+            if (nFatigue > 6) {
+                message = new CMessagePlaySound(3, TRUE, TRUE, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    } else if (nFatigue < m_baseStats.m_fatigue) {
+        field_722A = nGameTime - 4 * CTimerWorld::TIMESCALE_MSEC_PER_SEC * CTimerWorld::TIMESCALE_SEC_PER_MIN * CTimerWorld::TIMESCALE_MIN_PER_HOUR * m_baseStats.m_fatigue;
+
+        if (m_baseStats.m_fatigue > 6) {
+            CMessage* message = new CMessagePlaySound(3, TRUE, TRUE, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    }
 }
 
 // 0x71D310
@@ -10094,7 +10137,55 @@ BOOL CGameSprite::sub_7202E0()
 // 0x720310
 void CGameSprite::CheckSequence(BYTE& sequence)
 {
-    // TODO: Incomplete.
+    if (sequence == SEQ_SHOOT) {
+        CItem* pItem = m_equipment.m_items[m_equipment.m_selectedWeapon];
+        if (pItem == NULL) {
+            BYTE newSequence = SEQ_HEAD_TURN;
+            if (m_pArea != NULL
+                && m_pArea->m_bAreaLoaded
+                && g_pBaldurChitin->GetObjectGame()->sub_5AC0A0(m_pArea)) {
+                newSequence = SEQ_READY;
+            }
+            sequence = newSequence;
+            return;
+        }
+
+        pItem->Demand();
+        if (pItem->GetAbility(m_equipment.m_selectedWeaponAbility) == NULL) {
+            BYTE newSequence = SEQ_HEAD_TURN;
+            if (m_pArea != NULL
+                && m_pArea->m_bAreaLoaded
+                && g_pBaldurChitin->GetObjectGame()->sub_5AC0A0(m_pArea)) {
+                newSequence = SEQ_READY;
+            }
+            sequence = newSequence;
+        }
+        pItem->Release();
+    } else if (sequence == SEQ_ATTACK) {
+        CItem* pItem = m_equipment.m_items[m_equipment.m_selectedWeapon];
+        if (pItem == NULL) {
+            BYTE newSequence = SEQ_HEAD_TURN;
+            if (m_pArea != NULL
+                && m_pArea->m_bAreaLoaded
+                && g_pBaldurChitin->GetObjectGame()->sub_5AC0A0(m_pArea)) {
+                newSequence = SEQ_READY;
+            }
+            sequence = newSequence;
+            return;
+        }
+
+        pItem->Demand();
+        if (pItem->GetAbility(m_equipment.m_selectedWeaponAbility) == NULL) {
+            BYTE newSequence = SEQ_HEAD_TURN;
+            if (m_pArea != NULL
+                && m_pArea->m_bAreaLoaded
+                && g_pBaldurChitin->GetObjectGame()->sub_5AC0A0(m_pArea)) {
+                newSequence = SEQ_READY;
+            }
+            sequence = newSequence;
+        }
+        pItem->Release();
+    }
 }
 
 // 0x7204C0
@@ -13698,7 +13789,36 @@ BOOL CGameSprite::HandlePersistantEffects(LONG deltaT)
 // 0x72FBF0
 void CGameSprite::sub_72FBF0()
 {
-    // TODO: Incomplete.
+    if (!sub_7202E0()) {
+        m_berserkActive = FALSE;
+    }
+
+    if (m_derivedStats.m_spellStates[SPLSTATE_BERSERK_ALWAYS_ACTIVE]) {
+        m_berserkActive = TRUE;
+        return;
+    }
+
+    if (static_cast<DWORD>(field_44A) % 100 == static_cast<DWORD>(m_id) % 100) {
+        if (GetVertListType() == LIST_FRONT) {
+            CAIObjectType enemy = m_typeAI.GetEnemyOf();
+            LONG nEnemy = m_pArea->GetNearest(m_id,
+                enemy,
+                GetVisualRange(),
+                m_terrainTable,
+                TRUE,
+                GetCanSeeInvisible(),
+                FALSE,
+                FALSE,
+                FALSE);
+            if (nEnemy != CGameObjectArray::INVALID_INDEX) {
+                m_berserkActive = TRUE;
+            } else {
+                m_berserkActive = FALSE;
+            }
+        } else {
+            m_berserkActive = FALSE;
+        }
+    }
 }
 
 // 0x72FD20
@@ -19543,9 +19663,27 @@ SHORT CGameSprite::sub_74CDB0()
 // 0x74FF10
 SHORT CGameSprite::Help()
 {
-    // TODO: Incomplete.
+    CTypedPtrList<CPtrList, LONG*> targets;
 
-    return ACTION_ERROR;
+    m_pArea->GetAllInRange(m_pos,
+        CAIObjectType::ANYONE,
+        GetHelpRange(),
+        GetTerrainTable(),
+        targets,
+        FALSE,
+        FALSE);
+
+    CAITrigger trigger(CAITRIGGER_HELP, m_typeAI, 0);
+
+    POSITION pos = targets.GetHeadPosition();
+    while (pos != NULL) {
+        LONG nTarget = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+        CMessage* message = new CMessageSetTrigger(trigger, m_id, nTarget);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x7500F0
