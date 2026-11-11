@@ -27612,7 +27612,58 @@ BOOL CGameSprite::sub_75D450(SHORT slotNum, SHORT abilityNum)
 // 0x75DFD0
 SHORT CGameSprite::EquipMostDamagingMelee()
 {
-    return ACTION_ERROR;
+    SHORT nBestSlot = -1;
+    SHORT nBestAbility = -1;
+    SHORT nBestDamage = 0;
+
+    if (m_equipment.m_items[42] != NULL) {
+        return ACTION_ERROR;
+    }
+
+    for (INT nWeapon = 0; nWeapon < 8; nWeapon++) {
+        CItem* pItem = m_equipment.m_items[CGameSpriteEquipment::SLOT_WEAPON + nWeapon];
+        if (pItem != NULL) {
+            pItem->Demand();
+
+            for (INT nAbility = 0; nAbility < pItem->GetAbilityCount(); nAbility++) {
+                ITEM_ABILITY* pAbility = pItem->GetAbility(nAbility);
+                // NOTE: The original compares the low byte of `type` only.
+                if (pAbility != NULL && static_cast<BYTE>(pAbility->type) == 1) {
+                    SHORT nDamage = pAbility->damageDiceCount * pAbility->damageDice + pAbility->damageDiceBonus;
+                    if (nDamage >= nBestDamage) {
+                        nBestDamage = nDamage;
+                        nBestAbility = static_cast<SHORT>(nAbility);
+                        nBestSlot = CGameSpriteEquipment::SLOT_WEAPON + nWeapon;
+                    }
+                }
+            }
+
+            pItem->Release();
+        }
+    }
+
+    if (nBestSlot == -1 && nBestAbility == -1) {
+        SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 1, 1);
+    } else {
+        sub_726810((nBestSlot - CGameSpriteEquipment::SLOT_WEAPON) / 2);
+    }
+
+    if (IcewindMisc::IsPC(this) == TRUE) {
+        CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+        if (pGame->GetGroup()->m_memberList.GetCount() != 0
+            && pGame->GetGroup()->GetGroupList() != NULL) {
+            // NOTE: The list allocated by the check above is leaked.
+            LONG* pGroupList = g_pBaldurChitin->GetObjectGame()->GetGroup()->GetGroupList();
+            LONG nLeaderId = pGroupList[0];
+            delete[] pGroupList;
+
+            if (nLeaderId == m_id) {
+                g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateState();
+            }
+        }
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x75E150

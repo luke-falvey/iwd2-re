@@ -3,6 +3,7 @@
 #include "CBaldurChitin.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
+#include "CMessage.h"
 #include "IcewindMisc.h"
 
 // 0x8E6400
@@ -211,7 +212,56 @@ void Icewind586B70::Clear()
 // 0x5872C0
 void Icewind586B70::sub_5872C0(CGameSprite* sprite)
 {
-    // TODO: Incomplete.
+    CGameSprite* pSprite;
+    BYTE rc;
+
+    for (std::vector<Entry>::iterator it = mEntries.begin(); it != mEntries.end(); it++) {
+        while (it != mEntries.end() && it->field_4 != sprite->GetId()) {
+            it++;
+        }
+
+        if (it == mEntries.end()) {
+            break;
+        }
+
+        LONG nSpriteId = it->field_0;
+        if (nSpriteId == 0) {
+            continue;
+        }
+
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nSpriteId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            continue;
+        }
+
+        // NOTE: Uninline.
+        Instance()->sub_586DC0(pSprite);
+
+        CMessage* message = new CMessage89(pSprite->GetId(), pSprite->GetId(), pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        // NOTE: Uninline.
+        Icewind586B70* pInstance = Instance();
+
+        std::vector<Entry>::iterator found = pInstance->mEntries.begin();
+        while (found != pInstance->mEntries.end() && found->field_0 != pSprite->GetId()) {
+            found++;
+        }
+
+        if (found != pInstance->mEntries.end() && found->field_8) {
+            found->Clear();
+        }
+
+        message = new CMessage96(pSprite->GetId(), pSprite->GetId(), pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nSpriteId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
 }
 
 // 0x587510

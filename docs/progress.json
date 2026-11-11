@@ -6,8 +6,8 @@
   ],
   "functions_total": 9831,
   "functions_done": 7688,
-  "functions_complete": 7262,
-  "incomplete_markers": 459,
+  "functions_complete": 7265,
+  "incomplete_markers": 456,
   "incomplete_by_file": {
     "src/CMessage.cpp": 84,
     "src/CGameSprite.cpp": 39,
@@ -34,7 +34,6 @@
     "src/CInfinity.cpp": 5,
     "src/CScreenSpellbook.cpp": 5,
     "src/CUIControlEdit.cpp": 5,
-    "src/CGameArea.cpp": 4,
     "src/CGameSpy.cpp": 4,
     "src/CProjectileArea.cpp": 4,
     "src/CProjectileBAM.cpp": 4,
@@ -47,6 +46,7 @@
     "src/CSwitchCDStatus.cpp": 3,
     "src/CTiledObject.cpp": 3,
     "src/CDimm.cpp": 2,
+    "src/CGameArea.cpp": 2,
     "src/CGameAreaNotes.cpp": 2,
     "src/CGameObject.cpp": 2,
     "src/CGameObjectArray.cpp": 2,
@@ -55,7 +55,6 @@
     "src/CScreenMultiPlayer.cpp": 2,
     "src/CSearchBitmap.cpp": 2,
     "src/CVidBlitter.cpp": 2,
-    "src/Icewind586B70.cpp": 2,
     "src/BalDataTypes.h": 1,
     "src/CBaldurEngine.cpp": 1,
     "src/CGameAnimationTypeMonsterAnkheg.cpp": 1,
@@ -72,7 +71,8 @@
     "src/CUtil.cpp": 1,
     "src/CVariableHash.cpp": 1,
     "src/CVidMosaic.cpp": 1,
-    "src/CWarp.cpp": 1
+    "src/CWarp.cpp": 1,
+    "src/Icewind586B70.cpp": 1
   },
   "annotations_total": 10221,
   "annotations_not_function_start": 2511,
@@ -3807,7 +3807,7 @@
   ],
   "bytes_total": 3846937,
   "bytes_done": 3403325,
-  "bytes_complete": 2909609,
+  "bytes_complete": 2911663,
   "largest_stubs": [
     {
       "addr": "0x4DB160",

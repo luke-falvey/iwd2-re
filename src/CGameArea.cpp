@@ -6,6 +6,7 @@
 #include "CCreatureFile.h"
 #include "CGameContainer.h"
 #include "CGameDoor.h"
+#include "CGameEffect.h"
 #include "CGameObject.h"
 #include "CGameSound.h"
 #include "CGameSpawning.h"
@@ -15,6 +16,7 @@
 #include "CGameTrigger.h"
 #include "CInfCursor.h"
 #include "CInfGame.h"
+#include "CMessage.h"
 #include "CObjectMarker.h"
 #include "CPathSearch.h"
 #include "CProjectile.h"
@@ -1025,9 +1027,92 @@ LONG CGameArea::GetNearestDialogMatch(LONG startObject, CResRef dialog, LONG ran
 // 0x46C9E0
 LONG CGameArea::sub_46C9E0(LONG startObject, SHORT range, const BYTE* terrainTable, BOOL checkLOS)
 {
-    // TODO: Incomplete.
+    CGameObject* pObject;
+    LONG nId;
+    BYTE rc;
 
-    return CGameObjectArray::INVALID_INDEX;
+    LONG nBestId = CGameObjectArray::INVALID_INDEX;
+    LONG nBestDistance = range * range + 1;
+
+    // NOTE: Unused.
+    CAIObjectType type(0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
+    // __LINE__: 1756
+    UTIL_ASSERT(terrainTable != NULL);
+
+    rc = m_pGame->GetObjectArray()->GetShare(startObject,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pObject,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return CGameObjectArray::INVALID_INDEX;
+    }
+
+    type.Set(pObject->GetAIType());
+
+    // NOTE: Leaks the share on this path.
+    if (pObject->GetVertListType() != CGameObject::LIST_FRONT) {
+        return CGameObjectArray::INVALID_INDEX;
+    }
+
+    CPoint ptStart = pObject->GetPos();
+
+    CPoint pt;
+    pt.x = ptStart.x;
+    pt.y = 4 * ptStart.y / 3;
+
+    // NOTE: Result unused.
+    pObject->GetVertListPos();
+
+    m_pGame->GetObjectArray()->ReleaseShare(startObject,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    if (checkLOS) {
+        if (m_pGame->GetCharacterPortraitNum(startObject) != -1) {
+            if (!m_visibility.IsTileVisible(m_visibility.PointToTile(ptStart))) {
+                return CGameObjectArray::INVALID_INDEX;
+            }
+        } else {
+            if (!m_visibility.IsTileExplored(m_visibility.PointToTile(ptStart))) {
+                return CGameObjectArray::INVALID_INDEX;
+            }
+        }
+    }
+
+    POSITION pos = m_lVertSortBack.GetHeadPosition();
+    while (pos != NULL) {
+        nId = reinterpret_cast<LONG>(m_lVertSortBack.GetNext(pos));
+
+        rc = m_pGame->GetObjectArray()->GetShare(nId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pObject->GetVertListPos() != NULL) {
+                const CPoint& ptObject = pObject->GetPos();
+                LONG x = ptObject.x;
+                LONG dy = pt.y - 4 * ptObject.y / 3;
+                if (pObject->GetObjectType() == CGameObject::TYPE_TRIGGER
+                    && static_cast<CGameTrigger*>(pObject)->m_triggerType == 2
+                    && (!checkLOS
+                        || CheckLOS(pt, pObject->GetPos(), terrainTable, TRUE))) {
+                    LONG nDistance = (pt.x - x) * (pt.x - x) + dy * dy;
+                    if (nDistance < nBestDistance) {
+                        nBestDistance = nDistance;
+                        nBestId = nId;
+                    }
+                }
+            }
+
+            m_pGame->GetObjectArray()->ReleaseShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    return nBestId;
 }
 
 // 0x46CD20
@@ -1562,7 +1647,109 @@ LONG CGameArea::sub_46DDC0(INT x, INT y, const CAIObjectType& type, SHORT range,
 // 0x46E130
 void CGameArea::sub_46E130(CGameEffect* pEffect, BOOL a2, BOOL bCheckSpecifics, BYTE nSpecifics, CGameObject* pExclude)
 {
-    // TODO: Incomplete.
+    CGameObject* pObject;
+    LONG nId;
+    BYTE rc;
+
+    POSITION pos = m_lVertSort.GetHeadPosition();
+    while (pos != NULL) {
+        nId = reinterpret_cast<LONG>(m_lVertSort.GetNext(pos));
+
+        do {
+            rc = m_pGame->GetObjectArray()->GetShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            continue;
+        }
+
+        if (pObject->GetObjectType() != CGameObject::TYPE_SPRITE
+            || static_cast<CGameSprite*>(pObject)->GetBaseStats()->field_294 == 1) {
+            m_pGame->GetObjectArray()->ReleaseShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            continue;
+        }
+
+        m_pGame->GetObjectArray()->ReleaseShare(nId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        if (a2 && g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(nId) != -1) {
+            if (!g_pBaldurChitin->GetObjectGame()->m_gameSave.field_1AC) {
+                continue;
+            }
+
+            rc = m_pGame->GetObjectArray()->GetShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+            if (rc != CGameObjectArray::SUCCESS) {
+                continue;
+            }
+
+            if (g_pChitin->cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL
+                || g_pChitin->cNetwork.m_idLocalPlayer == pObject->m_remotePlayerID) {
+                m_pGame->GetObjectArray()->ReleaseShare(nId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                continue;
+            }
+
+            m_pGame->GetObjectArray()->ReleaseShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        if (bCheckSpecifics) {
+            rc = m_pGame->GetObjectArray()->GetShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+            if (rc != CGameObjectArray::SUCCESS) {
+                continue;
+            }
+
+            if (pObject->GetAIType().m_nSpecific != nSpecifics) {
+                m_pGame->GetObjectArray()->ReleaseShare(nId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                continue;
+            }
+
+            m_pGame->GetObjectArray()->ReleaseShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        if (pExclude != NULL) {
+            rc = m_pGame->GetObjectArray()->GetShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+            if (rc != CGameObjectArray::SUCCESS) {
+                continue;
+            }
+
+            if (pExclude == pObject) {
+                m_pGame->GetObjectArray()->ReleaseShare(nId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                continue;
+            }
+
+            m_pGame->GetObjectArray()->ReleaseShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        CGameEffect* pCopy = pEffect->Copy();
+        CMessage* message = new CMessageAddEffect(pCopy, nId, nId);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
 }
 
 // 0x46E3D0
