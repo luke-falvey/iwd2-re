@@ -624,12 +624,15 @@ void CDerivedStats::CheckLimits()
     m_nDEX = min(max(m_nDEX, 1), 40);
     m_nCON = min(max(m_nCON, 1), 40);
     m_nCHR = min(max(m_nCHR, 1), 40);
-    m_nXPValue = min(max(m_nXPValue, -1), 0);
-    m_nXP = min(max(m_nXP, -1), 0);
-    m_nGold = min(max(m_nGold, -1), 0);
-    m_nMoraleRecoveryTime = min(max(m_nMoraleRecoveryTime, -1), 0);
-    m_nReputation = min(max(m_nReputation, 10), 200);
-    m_nMoraleBreak = min(max(m_nMoraleBreak, 10), 200);
+    // NOTE: These are unsigned, so clamping to 0..0xFFFFFFFF does nothing. The
+    // original compiles to self-assignments.
+    m_nXPValue = min(max(m_nXPValue, 0), 0xFFFFFFFF);
+    m_nXP = min(max(m_nXP, 0), 0xFFFFFFFF);
+    m_nGold = min(max(m_nGold, 0), 0xFFFFFFFF);
+    m_nMoraleRecoveryTime = min(max(m_nMoraleRecoveryTime, 0), 0xFFFFFFFF);
+    // NOTE: Unsigned compare.
+    m_nReputation = static_cast<SHORT>(min(max(static_cast<WORD>(m_nReputation), 10), 200));
+    m_nMoraleBreak = min(m_nMoraleBreak, 20);
     m_nDamageBonus = min(max(m_nDamageBonus, -128), 127);
     m_nSpellFailureArcane = min(max(m_nSpellFailureArcane, 0), 100);
     m_nSpellFailureDivine = min(max(m_nSpellFailureDivine, 0), 100);
