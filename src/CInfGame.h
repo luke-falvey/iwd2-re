@@ -218,6 +218,7 @@ public:
     WORD GetContainerType(LONG nContainerId);
     void CompressContainer(LONG nContainerId);
     BOOL CheckIfPlayerInPortraitSlotCanUseItem(SHORT nPortraitNum, CItem* pItem, STRREF& strError, BOOL a4);
+    BOOL CheckItemForClassAndKitUsability(DWORD dwClassMask, DWORD dwKitMask, CItem* pItem);
     BOOL CheckIfSpriteCanUseItem(CGameSprite* pSprite, CItem* pItem, STRREF& strError, BOOL a4);
     INT CheckItemUsable(CGameSprite* pSprite, CItem* pItem);
     SHORT GetNumQuickWeaponSlots(SHORT nPortrait);
@@ -286,8 +287,10 @@ public:
     BOOL IsItemExclusive(CGameSprite* pSprite, INT slotNum, CItem* pItem, STRREF& strError);
     CWorldMap* GetWorldMap(CString sArea);
     BOOL sub_5C79C0(CString sArea);
+    DWORD AddItemToStore(const CResRef& cResStore, CItem* pItem, STRREF& strError);
     DWORD FindItemInStore(const CResRef& cResStore, const CResRef& cResItem, BOOL checkForIdentified);
     SHORT TakeItemFromStore(const CResRef& cResStore, const CResRef& cResItem, LONG number);
+    CItem* RemoveItemFromBag(const CResRef& cResStore, const CResRef& cResItem);
     INT sub_5C93E0();
     void ResetMultiPlayerPermissions();
     INT GetNumberOfItemsInBag(const CResRef& storeResRef, CString a2);

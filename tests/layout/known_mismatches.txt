@@ -243,6 +243,7 @@ CDerivedStats::m_cImmunitiesItemEquip
 CDerivedStats::m_cImmunitiesItemTypeEquip
 CDerivedStats::m_cImmunitiesItemTypeUse
 CDerivedStats::m_cImmunitiesItemUse
+CDerivedStats::m_cImmunitiesSpell
 CDerivedStats::m_cImmunitiesWeapon
 CDerivedStats::m_cRegeneratedPersistantEffectList
 CDerivedStats::m_cToHitBonusList
@@ -1099,7 +1100,6 @@ CGameSprite::m_nSequence
 CGameSprite::m_nSndWalk
 CGameSprite::m_nStealthGreyOut
 CGameSprite::m_nTempSelectedWeapon
-CGameSprite::m_nTempSelectedWeaponAbility
 CGameSprite::m_nTwitches
 CGameSprite::m_nUnselectableCounter
 CGameSprite::m_nWeaponSet

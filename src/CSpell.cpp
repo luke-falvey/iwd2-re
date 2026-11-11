@@ -19,6 +19,46 @@ CSpell::CSpell(CResRef res)
     SetResRef(res, TRUE, TRUE);
 }
 
+// 0x586220
+std::list<CGameEffect*> sub_586220(CGameAIBase* pCaster, LPCSTR szResRef, INT nCasterLevel)
+{
+    CResRef resRef((CString(szResRef)));
+
+    CSpell cSpell;
+    cSpell.SetResRef(resRef, TRUE, TRUE);
+    cSpell.Demand();
+
+    SHORT nAbility = 0;
+    while (nAbility < cSpell.GetAbilityCount()) {
+        if (cSpell.GetAbility(nAbility)->minCasterLevel > nCasterLevel) {
+            break;
+        }
+
+        // NOTE: Result is unused.
+        cSpell.GetAbility(nAbility);
+
+        nAbility++;
+    }
+
+    nAbility--;
+
+    SPELL_ABILITY* pAbility = cSpell.GetAbility(nAbility);
+
+    std::list<CGameEffect*> effects;
+    if (pAbility != NULL) {
+        for (INT nEffect = 0; nEffect < pAbility->effectCount; nEffect++) {
+            CGameEffect* pEffect = cSpell.DecodeEffect(nAbility, nEffect, pCaster, 0, 0, 0);
+            pEffect->m_source = pCaster->GetPos();
+            pEffect->m_sourceID = pCaster->GetId();
+            effects.push_back(pEffect);
+        }
+    }
+
+    cSpell.Release();
+
+    return effects;
+}
+
 // 0x54A380
 BOOL CSpell::Demand()
 {

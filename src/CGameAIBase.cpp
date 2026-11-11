@@ -4661,15 +4661,263 @@ SHORT CGameAIBase::TakePartyItem()
 // 0x464200
 SHORT CGameAIBase::sub_464200()
 {
-    // TODO: Incomplete.
+    C2DArray tItems;
+    CString sItem;
 
-    return ACTION_ERROR;
+    tItems.Load(CResRef(m_curAction.GetString1()));
+
+    INT nCount = -1;
+    if (m_curAction.m_actionID == 226) {
+        nCount = m_curAction.m_specificID;
+    }
+
+    for (INT nRow = 0; nRow < tItems.GetHeight(); nRow++) {
+        // NOTE: Uninline.
+        sItem = tItems.GetAt(CPoint(0, nRow));
+
+        BOOL bFound = FALSE;
+
+        for (INT nIndex = 0; nIndex < g_pBaldurChitin->GetObjectGame()->GetNumCharacters(); nIndex++) {
+            INT nSkip = 0;
+
+            // NOTE: Uninline.
+            LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(static_cast<SHORT>(nIndex));
+
+            CGameSprite* pSprite;
+            BYTE rc;
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                return ACTION_NORMAL;
+            }
+
+            SHORT nSlot = pSprite->FindItemPersonal(sItem, 0, FALSE);
+            if (nSlot != -1) {
+                bFound = TRUE;
+
+                do {
+                    CItem* pItem = new CItem(*pSprite->m_equipment.m_items[nSlot]);
+
+                    CMessageRemoveInventoryItem* pMessage = new CMessageRemoveInventoryItem(nSlot,
+                        m_id,
+                        pSprite->GetId());
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                    CAbilityId abilityId;
+                    abilityId.m_itemType = 2;
+                    abilityId.m_itemNum = nSlot;
+                    abilityId.m_abilityNum = 0;
+                    pSprite->CheckQuickLists(&abilityId, 0, TRUE, FALSE);
+
+                    abilityId.m_abilityNum = 1;
+                    pSprite->CheckQuickLists(&abilityId, 0, TRUE, FALSE);
+
+                    abilityId.m_abilityNum = 2;
+                    pSprite->CheckQuickLists(&abilityId, 0, TRUE, FALSE);
+
+                    sub_464950(pItem, TRUE, TRUE, 1, TRUE);
+
+                    nSkip++;
+                    nSlot = pSprite->FindItemPersonal(sItem, nSkip, FALSE);
+                } while (nSlot != -1);
+            }
+
+            SHORT nTaken = pSprite->TakeItemBags(sItem, 0x7FFF, -1);
+            if (nTaken > 0) {
+                bFound = TRUE;
+
+                CItem* pItem = new CItem(CResRef(sItem), 1, 0, 0, 0, 0);
+                sub_464950(pItem, TRUE, TRUE, nTaken, FALSE);
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        if (bFound && m_curAction.m_actionID == 226) {
+            nCount--;
+            if (nCount <= 0) {
+                return ACTION_DONE;
+            }
+        }
+    }
+
+    if (nCount == m_curAction.m_specificID && m_curAction.m_actionID == 226) {
+        CString sDefault = tItems.GetDefault();
+        sDefault.MakeUpper();
+
+        if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(CResRef(sDefault), 1005, TRUE) != NULL) {
+            CItem* pItem = new CItem(CResRef(sDefault), 0, 0, 0, 0, 0);
+            sub_464950(pItem, TRUE, TRUE, 1, TRUE);
+        }
+    }
+
+    return ACTION_DONE;
+}
+
+// NOTE: Uninlined from `CGameAIBase::sub_464950` (the original repeats this
+// block for both the party and the non-party branch).
+static void sub_464950_DropOnGround(LONG nSpriteId, CItem* pItem)
+{
+    LONG nContainerId = g_pBaldurChitin->GetObjectGame()->GetGroundPile(nSpriteId);
+    if (nContainerId != CGameObjectArray::INVALID_INDEX) {
+        CGameContainer* pContainer;
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nContainerId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pContainer),
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            pContainer->PlaceItemInBlankSlot(pItem, TRUE, 0x7FFF);
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nContainerId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
 }
 
 // 0x464950
 BOOL CGameAIBase::sub_464950(CItem* pItem, BOOL a2, BOOL a3, INT nCount, BOOL bFeedback)
 {
-    // TODO: Incomplete.
+    // NOTE: The inventory is accessed through `this` once the object is known
+    // to be a party member or `TYPE_SPRITE`.
+    CGameSprite* pSprite = static_cast<CGameSprite*>(this);
+
+    if (pItem == NULL) {
+        return TRUE;
+    }
+
+    // NOTE: Unsigned compare.
+    if (static_cast<UINT>(nCount) > 1) {
+        CItem* pCopy = new CItem(*pItem);
+        sub_464950(pCopy, a2, a3, nCount - 1, TRUE);
+    }
+
+    pItem->m_flags |= 0x2;
+
+    if (g_pBaldurChitin->GetObjectGame()->m_familiars.Find(reinterpret_cast<int*>(m_id), NULL) != NULL) {
+        CMessageAddInventoryItem* pMessage = new CMessageAddInventoryItem(*pItem,
+            m_id,
+            g_pBaldurChitin->GetObjectGame()->GetProtagonist());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+        return TRUE;
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
+        INT nSlot;
+        for (nSlot = 0; nSlot < CScreenInventory::PERSONAL_INVENTORY_SIZE; nSlot++) {
+            if (pSprite->m_equipment.m_items[18 + nSlot] == NULL) {
+                break;
+            }
+        }
+
+        if (nSlot >= CScreenInventory::PERSONAL_INVENTORY_SIZE) {
+            if (a3) {
+                sub_464950_DropOnGround(m_id, pItem);
+            }
+            return FALSE;
+        }
+
+        if (a2) {
+            pSprite->m_equipment.m_items[18 + nSlot] = pItem;
+            return TRUE;
+        }
+
+        CGameObject* pObject;
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_id,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            pSprite->m_equipment.m_items[18 + nSlot] = pItem;
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_id,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL
+            && g_pChitin->cNetwork.m_idLocalPlayer != m_remotePlayerID) {
+            CMessageAddInventoryItem* pMessage = new CMessageAddInventoryItem(*pItem,
+                m_id,
+                m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+        }
+
+        return TRUE;
+    }
+
+    if (m_objectType == TYPE_SPRITE) {
+        if (bFeedback) {
+            g_pBaldurChitin->GetObjectGame()->FeedBack(CInfGame::FEEDBACK_ITEMLOST, 0, TRUE);
+        }
+
+        INT nSlot;
+        for (nSlot = 27; nSlot >= 0; nSlot--) {
+            if (pSprite->m_equipment.m_items[15 + nSlot] == NULL) {
+                break;
+            }
+        }
+
+        if (nSlot < 0) {
+            if (a3) {
+                sub_464950_DropOnGround(m_id, pItem);
+            }
+            return FALSE;
+        }
+
+        if (a2) {
+            pSprite->m_equipment.m_items[15 + nSlot] = pItem;
+            return TRUE;
+        }
+
+        CGameObject* pObject;
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_id,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            // FIXME: Original bug - the free slot was searched as `15 + nSlot`
+            // (see above), but the item is stored at `18 + nSlot`.
+            pSprite->m_equipment.m_items[18 + nSlot] = pItem;
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_id,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL
+            && g_pChitin->cNetwork.m_idLocalPlayer != m_remotePlayerID) {
+            // NOTE: The original inlines `CItem::operator=` here (the other
+            // two messages call it out of line).
+            CMessageAddInventoryItem* pMessage = new CMessageAddInventoryItem(*pItem,
+                m_id,
+                m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+        }
+
+        return TRUE;
+    }
+
+    if (m_objectType == TYPE_CONTAINER) {
+        static_cast<CGameContainer*>(static_cast<CGameObject*>(this))->PlaceItemInBlankSlot(pItem, TRUE, 0x7FFF);
+        return TRUE;
+    }
+
+    if (a3) {
+        delete pItem;
+    }
 
     return FALSE;
 }

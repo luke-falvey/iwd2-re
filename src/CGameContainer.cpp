@@ -1209,6 +1209,31 @@ SHORT CGameContainer::DropInventoryEx(CString sExclude)
     return ACTION_DONE;
 }
 
+// 0x481EB0
+void CGameContainer::sub_481EB0(INT nSlotNum)
+{
+    POSITION pos = m_lstItems.FindIndex(nSlotNum);
+    if (pos != NULL) {
+        CItem* pItem = m_lstItems.GetAt(pos);
+        if (pItem != NULL) {
+            g_pBaldurChitin->GetObjectGame()->AddDisposableItem(pItem);
+        }
+
+        if (m_pArea->m_resRef == RESREF_AR6051) {
+            sub_480480(static_cast<SHORT>(nSlotNum), NULL);
+        }
+
+        m_lstItems.RemoveAt(pos);
+    }
+
+    CMessageContainerAddItem* pMessage = new CMessageContainerAddItem(CItem(),
+        0x7FFF,
+        TRUE,
+        m_id,
+        m_id);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+}
+
 // 0x482040
 SHORT CGameContainer::SpellHitEffect(CGameAIBase* pSource, const CPoint& ptTarget, LONG targetId, LONG projectileType, LONG nHeight)
 {

@@ -18,6 +18,8 @@ public:
     /* 0050 */ virtual BOOLEAN DoAIUpdate(BOOLEAN active, LONG counter);
 
     void SetText(const CPoint& pt, BYTE nDuration, BYTE nBeginFade, const CString& sText);
+    void sub_4CB820(const CPoint& pt);
+    BOOL sub_4CB9B0();
 
     /* 006E */ CVidCell m_vidCell;
     /* 0148 */ CVidFont m_textFont;

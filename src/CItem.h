@@ -60,6 +60,7 @@ public:
     BYTE GetMinWISRequired();
     BYTE GetMinCONRequired();
     BYTE GetMinCHRRequired();
+    DWORD sub_4EA3F0();
     void sub_4EA580(CUIControlTextDisplay* pText, COLORREF rgbColor);
 
     CItem& operator=(const CItem& other);

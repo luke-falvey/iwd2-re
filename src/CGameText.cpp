@@ -3,8 +3,10 @@
 #include "CBaldurChitin.h"
 #include "CGameArea.h"
 #include "CInfGame.h"
+#include "CInfinity.h"
 #include "CUtil.h"
 #include "CVidMode.h"
+#include "CWarp.h"
 
 // 0x8D6570
 const CSize CGameText::PADDING(0, 0);
@@ -138,6 +140,113 @@ void CGameText::RemoveFromArea()
     } while (rc != CGameObjectArray::SUCCESS);
 
     delete this;
+}
+
+// 0x4CB820
+void CGameText::sub_4CB820(const CPoint& pt)
+{
+    CVidMode* pVidMode = g_pBaldurChitin->pActiveEngine != NULL
+        ? g_pBaldurChitin->pActiveEngine->pVidMode
+        : NULL;
+
+    m_pos = pt;
+
+    CInfinity* pInfinity = &(m_pArea->m_cInfinity);
+
+    CSize size;
+    CPoint ptCenter;
+    if (m_vidCell.GetRes() != NULL) {
+        m_vidCell.GetCurrentCenterPoint(ptCenter, FALSE);
+        m_vidCell.GetCurrentFrameSize(size, FALSE);
+    } else {
+        pVidMode->GetFXSize(size);
+        size.cx /= 2;
+        size.cy /= 2;
+
+        if (static_cast<BYTE>(m_nLines) == 1) {
+            ptCenter.x = m_textFont.GetStringLength(m_szLine[0], FALSE) / 2;
+        } else {
+            ptCenter.x = size.cx / 2;
+        }
+
+        ptCenter.y = static_cast<BYTE>(m_nLines) * size.cy / m_nMaxLines / 2;
+    }
+
+    LONG nLeft = m_pos.x - ptCenter.x;
+    LONG nRight = m_pos.x + ptCenter.x;
+    LONG nTop = m_pos.y - m_posZ - ptCenter.y;
+    LONG nBottom = m_pos.y - m_posZ + ptCenter.y;
+
+    LONG nViewLeft = pInfinity->nCurrentX;
+    LONG nViewTop = pInfinity->nCurrentY;
+    LONG nViewRight = pInfinity->rViewPort.right - pInfinity->rViewPort.left + nViewLeft;
+    LONG nViewBottom = pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + nViewTop;
+
+    LONG dx = 0;
+    LONG dy = 0;
+
+    if (nLeft < nViewLeft) {
+        dx = nViewLeft - nLeft;
+    }
+
+    if (nRight > nViewRight) {
+        dx = nViewRight - nRight;
+    }
+
+    if (nBottom > nViewBottom) {
+        dy = nViewBottom - nBottom;
+    }
+
+    if (nTop < nViewTop) {
+        dy = nViewTop - nTop;
+    }
+
+    m_pos.x += dx;
+    m_pos.y += dy;
+}
+
+// 0x4CB9B0
+BOOL CGameText::sub_4CB9B0()
+{
+    // NOTE: Unlike `sub_4CB820` there is no `NULL` check here.
+    CVidMode* pVidMode = g_pBaldurChitin->pActiveEngine->pVidMode;
+    CInfinity* pInfinity = &(m_pArea->m_cInfinity);
+
+    if (static_cast<BYTE>(m_nLines) == 0) {
+        return FALSE;
+    }
+
+    CSize size;
+    CPoint ptCenter;
+    if (m_vidCell.GetRes() != NULL) {
+        m_vidCell.GetCurrentCenterPoint(ptCenter, FALSE);
+        m_vidCell.GetCurrentFrameSize(size, FALSE);
+    } else {
+        pVidMode->GetFXSize(size);
+        size.cx /= 2;
+        size.cy /= 2;
+
+        if (static_cast<BYTE>(m_nLines) == 1) {
+            ptCenter.x = m_textFont.GetStringLength(m_szLine[0], FALSE) / 2;
+        } else {
+            ptCenter.x = size.cx / 2;
+        }
+
+        ptCenter.y = static_cast<BYTE>(m_nLines) * size.cy / m_nMaxLines / 2;
+    }
+
+    CRect rText(m_pos.x - ptCenter.x,
+        m_pos.y - m_posZ - ptCenter.y,
+        m_pos.x + ptCenter.x,
+        m_pos.y - m_posZ + ptCenter.y);
+
+    CRect rView;
+    rView.left = pInfinity->nCurrentX;
+    rView.top = pInfinity->nCurrentY;
+    rView.right = pInfinity->rViewPort.right - pInfinity->rViewPort.left + rView.left;
+    rView.bottom = pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + rView.top;
+
+    return rView.IntersectRect(rText, rView);
 }
 
 // 0x4CC0D0

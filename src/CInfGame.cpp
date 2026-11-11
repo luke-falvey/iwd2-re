@@ -6436,9 +6436,125 @@ BOOL CInfGame::sub_5B7730(LONG nContainerId, SHORT nSlotNum, CGameSprite* pSprit
 // 0x5B7850
 BOOL CInfGame::SwapItemGround(LONG nContainerId, SHORT nSlotNum, CItem*& pNewItem, STRREF& errorCode, WORD wCount, BOOLEAN bFromServer)
 {
-    // TODO: Incomplete.
+    CGameContainer* pContainer = NULL;
+    CItem* pOldItem;
+    CMessage* message;
 
-    return FALSE;
+    BYTE rc = m_cObjectArray.GetDeny(nContainerId,
+        CGameObjectArray::THREAD_ASYNCH,
+        reinterpret_cast<CGameObject**>(&pContainer),
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return FALSE;
+    }
+
+    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL
+        && g_pChitin->cNetwork.m_idLocalPlayer != pContainer->m_remotePlayerID
+        && g_pChitin->cNetwork.GetSessionOpen() == TRUE
+        && !bFromServer) {
+        BOOLEAN bResult = g_pBaldurChitin->GetBaldurMessage()->SwapItemRequest(CBaldurMessage::SWAPITEM_LOCATION_GROUND,
+            nContainerId,
+            nSlotNum,
+            pNewItem,
+            errorCode,
+            wCount);
+
+        m_cObjectArray.ReleaseDeny(nContainerId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        return bResult;
+    }
+
+    pOldItem = pContainer->GetItem(nSlotNum);
+
+    if (pOldItem != NULL
+        && pNewItem == NULL
+        && pOldItem->GetMaxStackable() > 1
+        && wCount < pOldItem->GetUsageCount(0)) {
+        // Split stack.
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 12276
+        UTIL_ASSERT(wCount != 0);
+
+        pOldItem->SetUsageCount(0, static_cast<WORD>(pOldItem->GetUsageCount(0) - wCount));
+
+        pNewItem = new CItem(pOldItem->GetResRef(), 0, 0, 0, 0, 0);
+        pNewItem->SetUsageCount(0, wCount);
+        pNewItem->m_flags = (pNewItem->m_flags & ~0x1) | (pOldItem->m_flags & 0x1);
+    } else if (pOldItem != NULL
+        && pNewItem != NULL
+        && pOldItem->GetMaxStackable() > 1
+        && pNewItem->GetResRef() == pOldItem->GetResRef()
+        && ((pNewItem->m_flags ^ pOldItem->m_flags) & 0x1) == 0) {
+        // Merge stacks.
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 12286
+        UTIL_ASSERT(wCount != 0);
+
+        INT nCount = wCount;
+        INT nSpace = pOldItem->GetMaxStackable() - pOldItem->GetUsageCount(0);
+        if (nCount >= (pNewItem->GetUsageCount(0) < nSpace ? pNewItem->GetUsageCount(0) : nSpace)) {
+            nSpace = pOldItem->GetMaxStackable() - pOldItem->GetUsageCount(0);
+            nCount = pNewItem->GetUsageCount(0) < nSpace ? pNewItem->GetUsageCount(0) : nSpace;
+        }
+
+        pOldItem->SetUsageCount(0, static_cast<WORD>(pOldItem->GetUsageCount(0) + nCount));
+
+        if (pNewItem->GetUsageCount(0) == static_cast<WORD>(nCount)) {
+            AddDisposableItem(pNewItem);
+            pNewItem = NULL;
+        } else {
+            pNewItem->SetUsageCount(0, static_cast<WORD>(pNewItem->GetUsageCount(0) - nCount));
+        }
+    } else if (pNewItem == NULL) {
+        pContainer->SetItem(nSlotNum, NULL);
+
+        message = new CMessageContainerAddItem(CItem(),
+            nSlotNum,
+            FALSE,
+            pContainer->m_id,
+            pContainer->m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        pNewItem = pOldItem;
+    } else if (pOldItem != NULL && pOldItem->GetResRef() == "MISC07") {
+        // Gold.
+        CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+        pGame->AddPartyGold(pOldItem->GetUsageCount(0));
+        pGame->AddDisposableItem(pOldItem);
+
+        pContainer->SetItem(nSlotNum, NULL);
+
+        message = new CMessageContainerAddItem(CItem(),
+            nSlotNum,
+            FALSE,
+            pContainer->m_id,
+            pContainer->m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        // NOTE: `pNewItem` is left intact.
+    } else {
+        message = new CMessageContainerAddItem(*pNewItem,
+            nSlotNum,
+            FALSE,
+            pContainer->m_id,
+            pContainer->m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        g_pBaldurChitin->GetObjectGame()->AddDisposableItem(pNewItem);
+
+        pNewItem = pOldItem;
+    }
+
+    m_cObjectArray.ReleaseDeny(nContainerId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    errorCode = -1;
+    return TRUE;
 }
 
 // 0x5B7FF0
@@ -6571,13 +6687,169 @@ BOOL CInfGame::CheckIfPlayerInPortraitSlotCanUseItem(SHORT nPortraitNum, CItem* 
     return bResult;
 }
 
+// 0x5B9BA0
+BOOL CInfGame::CheckItemForClassAndKitUsability(DWORD dwClassMask, DWORD dwKitMask, CItem* pItem)
+{
+    WORD nItemType = pItem->GetItemType();
+    if (nItemType == 35 || nItemType == 11) {
+        return TRUE;
+    }
+
+    DWORD dwNotUsableBy = pItem->GetNotUsableBy();
+    DWORD dwNotUsableBy2 = pItem->GetNotUsableBy2();
+
+    if ((dwNotUsableBy & dwClassMask) == dwClassMask) {
+        return (dwNotUsableBy2 & dwKitMask) != dwKitMask;
+    }
+
+    DWORD dwKits = dwNotUsableBy2 & dwKitMask;
+    if (dwKits == 0) {
+        return TRUE;
+    }
+
+    if ((~(dwNotUsableBy & dwClassMask) & dwClassMask & 0x39B) != 0) {
+        return TRUE;
+    }
+
+    if ((dwNotUsableBy & 0x4) == 0 && (dwClassMask & 0x4) != 0) {
+        if ((dwKits & 0xFF8000) == 0) {
+            return TRUE;
+        }
+    }
+
+    if ((dwNotUsableBy & 0x20) == 0 && (dwClassMask & 0x20) != 0) {
+        if ((dwKits & 0x38) == 0) {
+            return TRUE;
+        }
+    }
+
+    if ((dwNotUsableBy & 0x40) == 0 && (dwClassMask & 0x40) != 0) {
+        if ((dwKits & 0x7) == 0) {
+            return TRUE;
+        }
+    }
+
+    if ((dwNotUsableBy & 0x400) == 0 && (dwClassMask & 0x400) != 0) {
+        if ((dwKits & 0x7FC0) == 0) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 // 0x5B9D20
 BOOL CInfGame::CheckIfSpriteCanUseItem(CGameSprite* pSprite, CItem* pItem, STRREF& strError, BOOL a4)
 {
-    // TODO: Incomplete.
+    BOOL bResult = TRUE;
+
+    // NOTE: Result is unused.
+    if (pItem != NULL) {
+        pItem->GetItemType();
+    }
 
     strError = -1;
-    return TRUE;
+
+    if (pItem == NULL) {
+        return bResult;
+    }
+
+    DWORD dwNotUsableBy = pItem->GetNotUsableBy();
+
+    CAIObjectType typeAI;
+    typeAI.Set(pSprite->GetAIType());
+
+    if (!g_pBaldurChitin->GetObjectGame()->GetRuleTables().IsUsableByAlignment(dwNotUsableBy, typeAI.m_nAlignment)) {
+        bResult = FALSE;
+        strError = 9382;
+    }
+
+    if ((dwNotUsableBy & 0x800000) != 0 && typeAI.m_nRace == CAIObjectType::R_ELF) {
+        bResult = FALSE;
+        strError = 9382;
+    }
+
+    if ((dwNotUsableBy & 0x1000000) != 0 && typeAI.m_nRace == CAIObjectType::R_DWARF) {
+        bResult = FALSE;
+        strError = 9382;
+    }
+
+    if ((dwNotUsableBy & 0x2000000) != 0 && typeAI.m_nRace == CAIObjectType::R_HALF_ELF) {
+        bResult = FALSE;
+        strError = 9382;
+    }
+
+    if ((dwNotUsableBy & 0x4000000) != 0 && typeAI.m_nRace == CAIObjectType::R_HALFLING) {
+        bResult = FALSE;
+        strError = 9382;
+    }
+
+    if ((dwNotUsableBy & 0x8000000) != 0 && typeAI.m_nRace == CAIObjectType::R_HUMAN) {
+        bResult = FALSE;
+        strError = 9382;
+    }
+
+    if ((dwNotUsableBy & 0x10000000) != 0 && typeAI.m_nRace == CAIObjectType::R_GNOME) {
+        bResult = FALSE;
+        strError = 9382;
+    }
+
+    if ((dwNotUsableBy & 0x20000000) != 0 && typeAI.m_nRace == CAIObjectType::R_HALF_ORC) {
+        bResult = FALSE;
+        strError = 9382;
+    }
+
+    if (bResult) {
+        if (g_pBaldurChitin->GetObjectGame()->GetRuleTables().ShouldCheckItemRequirements(pItem)) {
+            // NOTE: Unsigned compare.
+            if (pSprite->GetActiveStats()->m_nLevel < pItem->GetMinLevelRequired()) {
+                bResult = FALSE;
+                strError = 9382;
+            }
+
+            if (pSprite->GetActiveStats()->m_nSTR < static_cast<SHORT>(pItem->GetMinSTRRequired())) {
+                bResult = FALSE;
+                strError = 9382;
+            }
+
+            if (pSprite->GetActiveStats()->m_nINT < static_cast<SHORT>(pItem->GetMinINTRequired())) {
+                bResult = FALSE;
+                strError = 9382;
+            }
+
+            if (pSprite->GetActiveStats()->m_nDEX < static_cast<SHORT>(pItem->GetMinDEXRequired())) {
+                bResult = FALSE;
+                strError = 9382;
+            }
+
+            if (pSprite->GetActiveStats()->m_nWIS < static_cast<SHORT>(pItem->GetMinWISRequired())) {
+                bResult = FALSE;
+                strError = 9382;
+            }
+
+            if (pSprite->GetActiveStats()->m_nCON < static_cast<SHORT>(pItem->GetMinCONRequired())) {
+                bResult = FALSE;
+                strError = 9382;
+            }
+
+            if (pSprite->GetActiveStats()->m_nCHR < static_cast<SHORT>(pItem->GetMinCHRRequired())) {
+                bResult = FALSE;
+                strError = 9382;
+                return bResult;
+            }
+        }
+
+        if (bResult) {
+            bResult = CheckItemForClassAndKitUsability(pSprite->GetActiveStats()->m_classMask,
+                pSprite->GetActiveStats()->m_nSpecialization,
+                pItem);
+            if (!bResult) {
+                strError = 9382;
+            }
+        }
+    }
+
+    return bResult;
 }
 
 // 0x5BA080
@@ -6699,9 +6971,201 @@ SHORT CInfGame::GetNumQuickWeaponSlots(SHORT nPortrait)
 // 0x5BAD70
 BOOL CInfGame::SwapItemPersonalInventory(SHORT nPortraitNum, CItem*& pNewItem, SHORT nSlotNum, STRREF& errorCode, WORD wCount, BOOLEAN bFromServer, BOOL bAutoStacking)
 {
-    // TODO: Incomplete.
+    CGameSprite* pSprite;
+    CItem* pOldItem;
+    CMessage* message;
 
-    return FALSE;
+    LONG nCharacterId = nPortraitNum < m_nCharacters
+        ? m_characterPortraits[nPortraitNum]
+        : CGameObjectArray::INVALID_INDEX;
+
+    BOOL bResult = TRUE;
+    errorCode = -1;
+
+    if ((nSlotNum < 18 || nSlotNum >= CScreenInventory::PERSONAL_INVENTORY_SIZE + 18)
+        && nSlotNum != 0x7FFF) {
+        errorCode = 9374;
+        return FALSE;
+    }
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        errorCode = 9373;
+        return FALSE;
+    }
+
+    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL
+        && g_pChitin->cNetwork.m_idLocalPlayer != pSprite->m_remotePlayerID
+        && g_pChitin->cNetwork.GetSessionOpen() == TRUE
+        && !bFromServer) {
+        BOOLEAN bRequestResult = g_pBaldurChitin->GetBaldurMessage()->SwapItemRequest(CBaldurMessage::SWAPITEM_LOCATION_PERSONAL_INVENTORY,
+            nCharacterId,
+            nSlotNum,
+            pNewItem,
+            errorCode,
+            wCount);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        return bRequestResult;
+    }
+
+    if (nSlotNum != 0x7FFF
+        && pNewItem != NULL
+        && pSprite->m_equipment.m_items[nSlotNum] != NULL
+        && pSprite->m_equipment.m_items[nSlotNum]->GetItemType() == 58) {
+        // Drop item into a bag.
+        DWORD nAdded = AddItemToStore(pSprite->m_equipment.m_items[nSlotNum]->GetResRef(), pNewItem, errorCode);
+        if (nAdded != 0) {
+            if (pNewItem->GetMaxStackable() > 1 && pNewItem->GetUsageCount(0) != nAdded) {
+                pNewItem->SetUsageCount(0, static_cast<WORD>(pNewItem->GetUsageCount(0) - nAdded));
+            } else {
+                // NOTE: Uninline.
+                AddDisposableItem(pNewItem);
+                pNewItem = NULL;
+            }
+
+            g_pBaldurChitin->GetActiveEngine()->UpdatePersonalItemStatus(pSprite->m_id);
+
+            if ((g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+                    || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID)
+                && g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
+                message = new CMessageSpriteEquipment(pSprite, nCharacterId, nCharacterId);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            return TRUE;
+        }
+
+        bResult = FALSE;
+    } else if (bAutoStacking && pNewItem != NULL && pNewItem->GetMaxStackable() > 1) {
+        for (SHORT nSlot = 18; nSlot < CScreenInventory::PERSONAL_INVENTORY_SIZE + 18; nSlot++) {
+            CItem* pSlotItem = pSprite->m_equipment.m_items[nSlot];
+            if (pSlotItem != NULL
+                && pSlotItem->GetResRef() == pNewItem->GetResRef()
+                && ((pSlotItem->m_flags ^ pNewItem->m_flags) & 0x1) == 0
+                && pSlotItem->GetUsageCount(0) < pSlotItem->GetMaxStackable()) {
+                if (pSlotItem->GetUsageCount(0) + pNewItem->GetUsageCount(0) <= pSlotItem->GetMaxStackable()) {
+                    nSlotNum = nSlot;
+                    break;
+                }
+
+                pNewItem->SetUsageCount(0, static_cast<WORD>(pNewItem->GetUsageCount(0) - pSlotItem->GetMaxStackable() + pSlotItem->GetUsageCount(0)));
+                pSlotItem->SetUsageCount(0, pSlotItem->GetMaxStackable());
+            }
+        }
+    }
+
+    if (nSlotNum == 0x7FFF) {
+        for (SHORT nSlot = 18; nSlot < CScreenInventory::PERSONAL_INVENTORY_SIZE + 18; nSlot++) {
+            if (nSlotNum != 0x7FFF) {
+                break;
+            }
+
+            if (pSprite->m_equipment.m_items[nSlot] == NULL) {
+                nSlotNum = nSlot;
+            }
+        }
+
+        if (nSlotNum == 0x7FFF) {
+            // "Inventory full"
+            errorCode = 17999;
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            return FALSE;
+        }
+    }
+
+    pOldItem = pSprite->m_equipment.m_items[nSlotNum];
+
+    if (bResult) {
+        if (pOldItem != NULL
+            && ((pOldItem->GetFlagsFile() & 0x4) == 0 || (pOldItem->m_flags & 0x10) != 0)) {
+            bResult = FALSE;
+            errorCode = 25697;
+        } else {
+            if (pOldItem != NULL
+                && pNewItem == NULL
+                && pOldItem->GetMaxStackable() > 1
+                && wCount < pOldItem->GetUsageCount(0)) {
+                // Split stack.
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+                // __LINE__: 14884
+                UTIL_ASSERT(wCount != 0);
+
+                pOldItem->SetUsageCount(0, static_cast<WORD>(pOldItem->GetUsageCount(0) - wCount));
+
+                pNewItem = new CItem(pOldItem->GetResRef(), 0, 0, 0, 0, 0);
+                pNewItem->SetUsageCount(0, wCount);
+                pNewItem->m_flags = (pNewItem->m_flags & ~0x1) | (pOldItem->m_flags & 0x1);
+            } else if (pOldItem != NULL
+                && pNewItem != NULL
+                && pOldItem->GetMaxStackable() > 1
+                && pNewItem->GetResRef() == pOldItem->GetResRef()
+                && ((pNewItem->m_flags ^ pOldItem->m_flags) & 0x1) == 0) {
+                // Merge stacks.
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+                // __LINE__: 14894
+                UTIL_ASSERT(wCount != 0);
+
+                INT nCount = wCount;
+                INT nSpace = pOldItem->GetMaxStackable() - pOldItem->GetUsageCount(0);
+                if (nCount >= (pNewItem->GetUsageCount(0) < nSpace ? pNewItem->GetUsageCount(0) : nSpace)) {
+                    nSpace = pOldItem->GetMaxStackable() - pOldItem->GetUsageCount(0);
+                    nCount = pNewItem->GetUsageCount(0) < nSpace ? pNewItem->GetUsageCount(0) : nSpace;
+                }
+
+                pOldItem->SetUsageCount(0, static_cast<WORD>(pOldItem->GetUsageCount(0) + nCount));
+
+                if (pNewItem->GetUsageCount(0) == static_cast<WORD>(nCount)) {
+                    // NOTE: Uninline.
+                    AddDisposableItem(pNewItem);
+                    pNewItem = NULL;
+                } else {
+                    pNewItem->SetUsageCount(0, static_cast<WORD>(pNewItem->GetUsageCount(0) - nCount));
+                }
+            } else {
+                pSprite->m_equipment.m_items[nSlotNum] = pNewItem;
+                pNewItem = pOldItem;
+            }
+
+            g_pBaldurChitin->GetActiveEngine()->UpdatePersonalItemStatus(pSprite->m_id);
+
+            if ((g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+                    || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID)
+                && g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
+                message = new CMessageSpriteEquipment(pSprite, nCharacterId, nCharacterId);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    }
+
+    pSprite->field_562C = 1;
+    pSprite->ProcessEffectList();
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return bResult;
 }
 
 // 0x5BB600
@@ -9274,6 +9738,136 @@ BOOL CInfGame::sub_5C79C0(CString sArea)
     return FALSE;
 }
 
+// 0x5C7B10
+DWORD CInfGame::AddItemToStore(const CResRef& cResStore, CItem* pItem, STRREF& strError)
+{
+    CMessage* message;
+
+    strError = -1;
+
+    DWORD nAdded = 0;
+    WORD nOldUsageCount = 0;
+
+    if (g_pChitin->cNetwork.GetSessionOpen()) {
+        BOOL bStoreDemanded = FALSE;
+        CStore cStore;
+
+        if (g_pChitin->cNetwork.GetSessionHosting()) {
+            DemandServerStore(cResStore, TRUE);
+            cStore.SetResRef(cResStore);
+        } else {
+            cStore.SetResRef(cResStore);
+            if (!cStore.m_bLocalCopy || memcmp(cStore.m_pVersion, "STORV9.0", 8) != 0) {
+                if (!g_pBaldurChitin->GetBaldurMessage()->DemandResourceFromServer(cResStore.GetResRefStr(), 1014, TRUE, TRUE, TRUE)) {
+                    g_pChitin->cNetwork.CloseSession(TRUE);
+                    return 0;
+                }
+
+                cStore.SetResRef(cResStore);
+                bStoreDemanded = TRUE;
+            }
+        }
+
+        if (cStore.m_header.m_nStoreType == 4) {
+            if (cStore.IsItemAllowed(*pItem)) {
+                if (cStore.m_header.m_nCapacity != 0
+                    && cStore.m_header.m_nCapacity != cStore.GetNumItems()) {
+                    if (pItem->GetMaxStackable() > 1) {
+                        nAdded = pItem->GetUsageCount(0);
+                        nOldUsageCount = pItem->GetUsageCount(0);
+
+                        if (pItem->GetMaxStackable() > 1) {
+                            if (static_cast<INT>(nAdded) / pItem->GetMaxStackable() + cStore.GetNumItems() > cStore.m_header.m_nCapacity) {
+                                nAdded = cStore.m_header.m_nCapacity - cStore.GetNumItems();
+                            }
+                        } else {
+                            // NOTE: Unreachable.
+                            if (cStore.GetNumItems() + static_cast<INT>(nAdded) > cStore.m_header.m_nCapacity) {
+                                nAdded = cStore.m_header.m_nCapacity - cStore.GetNumItems();
+                            }
+                        }
+
+                        pItem->SetUsageCount(0, static_cast<WORD>(nAdded));
+                    } else {
+                        nAdded = 1;
+                    }
+
+                    if (!g_pChitin->cNetwork.GetSessionHosting() && !bStoreDemanded) {
+                        bStoreDemanded = TRUE;
+                        message = new CMessageStoreDemand(cResStore, -1, -1);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                    }
+
+                    message = new CMessageStoreAddItem(cStore.m_resRef, pItem->GetItemFile(), -1, -1);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                    if (g_pChitin->cNetwork.GetSessionHosting()) {
+                        CStore* pStore = g_pBaldurChitin->GetObjectGame()->GetServerStore(cStore.m_resRef);
+
+                        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+                        // __LINE__: 22140
+                        UTIL_ASSERT(pStore != NULL);
+
+                        pStore->AddItemExt(*pItem, 1);
+                    } else {
+                        CStore::InvalidateStore(cStore.m_resRef);
+                    }
+
+                    if (pItem->GetMaxStackable() > 1) {
+                        pItem->SetUsageCount(0, nOldUsageCount);
+                    }
+                } else {
+                    // "The container is full."
+                    strError = 24889;
+                }
+            } else {
+                strError = 26285;
+            }
+        } else {
+            strError = 26285;
+        }
+
+        if (g_pChitin->cNetwork.GetSessionHosting()) {
+            g_pBaldurChitin->GetObjectGame()->ReleaseServerStore(cStore.m_resRef);
+        } else {
+            if (bStoreDemanded) {
+                message = new CMessageStoreRelease(cStore.m_resRef, -1, -1);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    } else {
+        CStore cStore(cResStore);
+
+        if (cStore.m_header.m_nStoreType == 4 && cStore.IsItemAllowed(*pItem)) {
+            if (cStore.m_header.m_nCapacity != 0
+                && cStore.m_header.m_nCapacity != cStore.GetNumItems()) {
+                nAdded = 1;
+                if (pItem->GetMaxStackable() > 1) {
+                    nAdded = pItem->GetUsageCount(0);
+                }
+
+                if (cStore.GetNumItems() + static_cast<INT>(nAdded) > cStore.m_header.m_nCapacity) {
+                    nAdded = cStore.m_header.m_nCapacity - cStore.GetNumItems();
+                }
+
+                pItem->SetUsageCount(0, static_cast<WORD>(nAdded));
+                cStore.AddItemExt(*pItem, 1);
+            } else {
+                // "The container is full."
+                strError = 24889;
+            }
+        } else {
+            strError = 26285;
+        }
+
+        if (strError == -1) {
+            cStore.Marshal(m_sTempDir);
+        }
+    }
+
+    return nAdded;
+}
+
 // 0x5C8190
 DWORD CInfGame::FindItemInStore(const CResRef& cResStore, const CResRef& cResItem, BOOL checkForIdentified)
 {
@@ -9464,6 +10058,108 @@ SHORT CInfGame::TakeItemFromStore(const CResRef& cResStore, const CResRef& cResI
         cStore.Marshal(m_sTempDir);
         return 0;
     }
+}
+
+// 0x5C8C30
+CItem* CInfGame::RemoveItemFromBag(const CResRef& cResStore, const CResRef& cResItem)
+{
+    CItem tempItem;
+    CItem* pItem;
+    CMessage* message;
+
+    if (g_pChitin->cNetwork.GetSessionOpen()) {
+        BOOL bStoreDemanded = FALSE;
+        CStore cStore;
+
+        if (g_pChitin->cNetwork.GetSessionHosting()) {
+            DemandServerStore(cResStore, TRUE);
+            cStore.SetResRef(cResStore);
+        } else {
+            cStore.SetResRef(cResStore);
+            if (!cStore.m_bLocalCopy || memcmp(cStore.m_pVersion, "STORV9.0", 8) != 0) {
+                if (!g_pBaldurChitin->GetBaldurMessage()->DemandResourceFromServer(cResStore.GetResRefStr(), 1014, TRUE, TRUE, TRUE)) {
+                    g_pChitin->cNetwork.CloseSession(TRUE);
+                    return NULL;
+                }
+
+                cStore.SetResRef(cResStore);
+                bStoreDemanded = TRUE;
+            }
+        }
+
+        CResRef curItemRef;
+        for (INT nIndex = 0; nIndex < cStore.GetNumItems(); nIndex++) {
+            curItemRef = cStore.GetItemId(nIndex);
+            cStore.GetItem(nIndex, tempItem);
+            if (curItemRef == cResItem) {
+                pItem = new CItem();
+                cStore.GetItem(nIndex, *pItem);
+
+                if (!g_pChitin->cNetwork.GetSessionHosting() && !bStoreDemanded) {
+                    bStoreDemanded = TRUE;
+                    message = new CMessageStoreDemand(cResStore, -1, -1);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                }
+
+                message = new CMessageStoreRemoveItem(cResStore,
+                    cResItem,
+                    pItem->m_flags,
+                    -1,
+                    1,
+                    -1,
+                    -1);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                if (g_pChitin->cNetwork.GetSessionHosting()) {
+                    CStore* pStore = g_pBaldurChitin->GetObjectGame()->GetServerStore(cStore.m_resRef);
+
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+                    // __LINE__: 22577
+                    UTIL_ASSERT(pStore != NULL);
+
+                    pStore->RemoveItemExt(cResItem, pItem->m_flags, -1, 1, NULL);
+                } else {
+                    CStore::InvalidateStore(cResStore);
+                }
+
+                if (g_pChitin->cNetwork.GetSessionHosting()) {
+                    g_pBaldurChitin->GetObjectGame()->ReleaseServerStore(cStore.m_resRef);
+                } else {
+                    if (bStoreDemanded) {
+                        message = new CMessageStoreRelease(cResStore, -1, -1);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                    }
+                }
+
+                return pItem;
+            }
+        }
+
+        if (g_pChitin->cNetwork.GetSessionHosting()) {
+            g_pBaldurChitin->GetObjectGame()->ReleaseServerStore(cResStore);
+        } else {
+            if (bStoreDemanded) {
+                message = new CMessageStoreRelease(cResStore, -1, -1);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    } else {
+        CStore cStore(cResStore);
+        CResRef curItemRef;
+        for (INT nIndex = 0; nIndex < cStore.GetNumItems(); nIndex++) {
+            curItemRef = cStore.GetItemId(nIndex);
+            cStore.GetItem(nIndex, tempItem);
+            if (curItemRef == cResItem) {
+                pItem = new CItem();
+                cStore.GetItem(nIndex, *pItem);
+                cStore.RemoveItemExt(cResItem, pItem->m_flags, -1, 1, NULL);
+                cStore.Marshal(m_sTempDir);
+                return pItem;
+            }
+        }
+    }
+
+    return NULL;
 }
 
 // 0x5C93E0
@@ -9689,9 +10385,64 @@ LONG CInfGame::GetAveragePartyLevel()
 // 0x5C9C90
 BOOL CInfGame::ChangeStoreMarkup(const CResRef& resRef, LONG nBuyMarkup, LONG nSellMarkup, LONG nAdditionalMarkup)
 {
-    // TODO: Incomplete.
+    CMessage* message;
 
-    return FALSE;
+    if (g_pChitin->cNetwork.GetSessionOpen()) {
+        BOOL bStoreDemanded = FALSE;
+        CStore cStore;
+
+        if (g_pChitin->cNetwork.GetSessionHosting()) {
+            DemandServerStore(resRef, TRUE);
+            cStore.SetResRef(resRef);
+        } else {
+            cStore.SetResRef(resRef);
+            if (!cStore.m_bLocalCopy || memcmp(cStore.m_pVersion, "STORV9.0", 8) != 0) {
+                if (!g_pBaldurChitin->GetBaldurMessage()->DemandResourceFromServer(resRef.GetResRefStr(), 1014, TRUE, TRUE, TRUE)) {
+                    g_pChitin->cNetwork.CloseSession(TRUE);
+                    return FALSE;
+                }
+
+                cStore.SetResRef(resRef);
+                bStoreDemanded = TRUE;
+            }
+        }
+
+        if (!g_pChitin->cNetwork.GetSessionHosting() && !bStoreDemanded) {
+            message = new CMessageStoreDemand(resRef, -1, -1);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        message = new CMessage108(cStore.m_resRef,
+            nBuyMarkup,
+            nSellMarkup,
+            nAdditionalMarkup,
+            -1,
+            -1);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        if (g_pChitin->cNetwork.GetSessionHosting()) {
+            CStore* pStore = g_pBaldurChitin->GetObjectGame()->GetServerStore(cStore.m_resRef);
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+            // __LINE__: 23329
+            UTIL_ASSERT(pStore != NULL);
+
+            pStore->m_header.m_nBuyMarkUp = nBuyMarkup;
+            pStore->m_header.m_nSellMarkDown = nSellMarkup;
+            pStore->m_header.m_nAdditionalMarkDown = nAdditionalMarkup;
+        } else {
+            CStore::InvalidateStore(cStore.m_resRef);
+        }
+
+        // NOTE: Original code neither releases server store, nor sends
+        // `CMessageStoreRelease`.
+    } else {
+        // NOTE: Original code does not apply new values in single player.
+        CStore cStore(resRef);
+        cStore.Marshal(m_sTempDir);
+    }
+
+    return TRUE;
 }
 
 // NOTE: Unclear why `nClass` is passed as pointer.
