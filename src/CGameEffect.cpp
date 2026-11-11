@@ -9,6 +9,7 @@
 #include "CGameSprite.h"
 #include "CInfCursor.h"
 #include "CInfGame.h"
+#include "CItem.h"
 #include "CScreenWorld.h"
 #include "CSpell.h"
 #include "CUtil.h"
@@ -2895,24 +2896,429 @@ BOOL CGameEffectDamage::ApplyEffect(CGameSprite* pSprite)
     return TRUE;
 }
 
+// NOTE: Inlined (probably a macro) in `CGameEffectDamage::sub_4A8DF0`. Picks
+// one of `nVariants` numbered variants of the hit sound, avoiding the one that
+// was played last.
+static void AppendHitSoundVariant(CGameSprite* pSprite, CString& sSound, CString& sTest, const char* szMaterial, int nVariants)
+{
+    sSound += szMaterial;
+
+    char cVariant = static_cast<char>(rand() % nVariants + '1');
+
+    sTest = sSound;
+    sTest += cVariant;
+
+    if (strcmp(sTest, pSprite->m_sLastHitSound) == 0) {
+        if (cVariant - '1' == nVariants - 1) {
+            cVariant = '1';
+        } else {
+            cVariant++;
+        }
+    }
+
+    sSound += cVariant;
+}
+
 // 0x4A8DF0
 void CGameEffectDamage::sub_4A8DF0(DWORD nDamageType, CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
+    CString sSound("H_");
+
+    // NOTE: Uninline.
+    USHORT nAnimationID = pSprite->GetAnimation()->GetAnimationId();
+
+    // NOTE: Uninline.
+    BYTE nPersonalSpace = pSprite->GetAnimation()->GetPersonalSpace();
+
+    char armor[2];
+    armor[0] = '\0';
+    armor[1] = '\0';
+
+    WORD nArmorAnimation = 0;
+
+    CString sTest;
+
+    CItem* pArmor = pSprite->GetEquipment()->m_items[CGameSpriteEquipment::SLOT_ARMOR];
+    if (pArmor != NULL) {
+        nArmorAnimation = pArmor->GetAnimationType();
+        if (nArmorAnimation != 0) {
+            armor[0] = static_cast<char>(HIBYTE(nArmorAnimation));
+            armor[1] = static_cast<char>(LOBYTE(nArmorAnimation));
+        }
+    } else {
+        // NOTE: Uninline.
+        nAnimationID = pSprite->GetAnimation()->GetAnimationId();
+    }
+
+    BOOL bRemember = TRUE;
+
+    switch (nDamageType) {
+    case 0x0:
+        sSound += "BL_";
+
+        if (nArmorAnimation != 0 && armor[1] == 'A') {
+            switch (armor[0]) {
+            case '1':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "CL", 3);
+                break;
+            case '2':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "LR", 3);
+                break;
+            case '3':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "Ch", 4);
+                break;
+            case '4':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "PT", 3);
+                break;
+            default:
+                return;
+            }
+        } else if (nAnimationID == 0x6403 || nAnimationID == 0xE62C || nAnimationID == 0xF019) {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "BN", 3);
+        } else if (nPersonalSpace < 3) {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "MS", 3);
+        } else if (nPersonalSpace <= 5) {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "MM", 3);
+        } else {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "ML", 4);
+        }
+        break;
+    case 0x100000:
+        sSound += "PC_";
+
+        if (nArmorAnimation != 0 && armor[1] == 'A') {
+            switch (armor[0]) {
+            case '1':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "CL", 4);
+                break;
+            case '2':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "LR", 3);
+                break;
+            case '3':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "Ch", 4);
+                break;
+            case '4':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "PT", 5);
+                break;
+            default:
+                return;
+            }
+        } else if (nAnimationID == 0x6403 || nAnimationID == 0xE62C || nAnimationID == 0xF019) {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "BN", 3);
+        } else if (nPersonalSpace < 3) {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "MS", 5);
+        } else if (nPersonalSpace <= 5) {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "MM", 4);
+        } else {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "ML", 4);
+        }
+        break;
+    case 0x1000000:
+        sSound += "SL_";
+
+        if (nArmorAnimation != 0 && armor[1] == 'A') {
+            switch (armor[0]) {
+            case '1':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "CL", 3);
+                break;
+            case '2':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "LR", 3);
+                break;
+            case '3':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "Ch", 3);
+                break;
+            case '4':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "PT", 4);
+                break;
+            default:
+                return;
+            }
+        } else if (nAnimationID == 0x6403 || nAnimationID == 0xE62C || nAnimationID == 0xF019) {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "BN", 3);
+        } else if (nPersonalSpace < 3) {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "MS", 4);
+        } else if (nPersonalSpace <= 5) {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "MM", 3);
+        } else {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "ML", 3);
+        }
+        break;
+    case 0x2000000:
+    case 0x4000000:
+        sSound += "ML_";
+
+        if (nArmorAnimation != 0 && armor[1] == 'A') {
+            switch (armor[0]) {
+            case '1':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "CL", 4);
+                break;
+            case '2':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "LR", 3);
+                break;
+            case '3':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "Ch", 5);
+                break;
+            case '4':
+                AppendHitSoundVariant(pSprite, sSound, sTest, "PT", 5);
+                break;
+            default:
+                return;
+            }
+        } else if (nAnimationID == 0x6403 || nAnimationID == 0xE62C || nAnimationID == 0xF019) {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "BN", 4);
+        } else if (nPersonalSpace < 3) {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "MS", 5);
+        } else if (nPersonalSpace <= 5) {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "MM", 4);
+        } else {
+            AppendHitSoundVariant(pSprite, sSound, sTest, "ML", 5);
+        }
+        break;
+    case 0x8000000:
+        sSound = "HIT_03A";
+        bRemember = FALSE;
+        break;
+    default:
+        return;
+    }
+
+    if (bRemember) {
+        pSprite->m_sLastHitSound = sSound;
+    }
+
+    CMessage* message = new CMessagePlaySoundRef(CResRef(sSound),
+        pSprite->GetId(),
+        pSprite->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    CSound sound;
+
+    // NOTE: Uninline.
+    sound.SetResRef(CResRef(sSound), TRUE, TRUE);
+
+    sound.SetChannel(14, reinterpret_cast<DWORD>(pSprite->GetArea()));
+
+    if (sound.m_nLooping == 0) {
+        sound.SetFireForget(TRUE);
+    }
+
+    sound.Play(pSprite->GetPos().x, pSprite->GetPos().y, 0, FALSE);
 }
 
 // 0x4A9B50
 void CGameEffectDamage::OnAdd(CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
+    if (m_sourceID == CGameObjectArray::INVALID_INDEX) {
+        return;
+    }
+
+    CGameObject* pSource;
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pSource,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    if ((pSprite->field_58C & 0x200000) == 0
+        && pSource->GetAIType().m_nEnemyAlly <= CAIObjectType::EA_GOODCUTOFF) {
+        pSprite->field_58C |= 0x200000;
+        pSprite->sub_6F50A0();
+    }
+
+    // NOTE: The trigger IDs are SHORT constants at `0x847DD8` (HitBy) and
+    // `0x847D9C` (AttackedBy).
+    CAITrigger hitBy(CAITRIGGER_HITBY, pSource->GetAIType(), m_dwFlags >> 16);
+    CMessage* message = new CMessageSetTrigger(hitBy, m_sourceID, pSprite->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    CAITrigger attackedBy(CAITRIGGER_ATTACKEDBY, pSource->GetAIType(), 0);
+    message = new CMessageSetTrigger(attackedBy, m_sourceID, pSprite->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+}
+
+// NOTE: Inlined twice in `CGameEffectDamage::CheckSave`. Reports an evaded
+// effect, naming the item or spell it comes from.
+static void FeedBackEffectEvaded(CGameSprite* pSprite, const CResRef& res)
+{
+    STR_RES strRes;
+    CString sUnused;
+
+    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(res, 1005, FALSE) != NULL) {
+        if (res.GetResRefStr().GetLength() != 0) {
+            CItem item(res, 1, 0, 0, 0, 0);
+            pSprite->FeedBack(CGameSprite::FEEDBACK_EFFECTSEVADED,
+                0,
+                0,
+                0,
+                item.GetIdentifiedName(),
+                0,
+                0);
+        }
+    } else if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(res, 1006, FALSE) != NULL) {
+        if (res.GetResRefStr().GetLength() != 0) {
+            CSpell spell(res);
+            pSprite->FeedBack(CGameSprite::FEEDBACK_EFFECTSEVADED,
+                0,
+                0,
+                0,
+                spell.GetGenericName(),
+                0,
+                0);
+        }
+    } else {
+        pSprite->FeedBack(CGameSprite::FEEDBACK_EFFECTSEVADED, 0, 0, 0, -1, 0, 0);
+    }
 }
 
 // 0x4A9E30
 BOOL CGameEffectDamage::CheckSave(CGameSprite* pSprite, BYTE& roll1, BYTE& roll2, BYTE& roll3, BYTE& roll4)
 {
-    // TODO: Incomplete.
+    CGameEffect* pEffect;
+    POSITION pos;
 
-    return CGameEffect::CheckSave(pSprite, roll1, roll2, roll3, roll4);
+    if (pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_190) {
+        return TRUE;
+    }
+
+    // Mirror images absorb the hit.
+    if (static_cast<BYTE>(pSprite->GetDerivedStats()->m_nMirrorImages) != 0) {
+        INT nMirrorImages = static_cast<BYTE>(pSprite->GetDerivedStats()->m_nMirrorImages) - 1;
+
+        pos = pSprite->GetTimedEffectList()->GetHeadPosition();
+        while (pos != NULL) {
+            pEffect = pSprite->GetTimedEffectList()->GetNext(pos);
+            if (pEffect->m_effectID == CGAMEEFFECT_MIRRORIMAGE) {
+                pEffect->m_effectAmount = nMirrorImages;
+            }
+        }
+
+        pos = pSprite->GetEquipedEffectList()->GetHeadPosition();
+        while (pos != NULL) {
+            pEffect = pSprite->GetEquipedEffectList()->GetNext(pos);
+            if (pEffect->m_effectID == CGAMEEFFECT_MIRRORIMAGE) {
+                pEffect->m_effectAmount = nMirrorImages;
+            }
+        }
+
+        pSprite->GetDerivedStats()->m_nMirrorImages = nMirrorImages;
+
+        CMessage* message = new CMessageVisualEffect(3,
+            static_cast<BYTE>(nMirrorImages),
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        return FALSE;
+    }
+
+    // A stoneskin absorbs the hit; the damage itself is still checked below.
+    if (pSprite->GetDerivedStats()->m_nStoneSkins > 0) {
+        LONG nStoneSkins = pSprite->GetDerivedStats()->m_nStoneSkins - 1;
+
+        pos = pSprite->GetTimedEffectList()->GetHeadPosition();
+        while (pos != NULL) {
+            pEffect = pSprite->GetTimedEffectList()->GetNext(pos);
+            if (pEffect->m_effectID == CGAMEEFFECT_STONESKINS) {
+                pEffect->m_effectAmount = nStoneSkins;
+            }
+        }
+
+        pos = pSprite->GetEquipedEffectList()->GetHeadPosition();
+        while (pos != NULL) {
+            pEffect = pSprite->GetEquipedEffectList()->GetNext(pos);
+            if (pEffect->m_effectID == CGAMEEFFECT_STONESKINS) {
+                pEffect->m_effectAmount = nStoneSkins;
+            }
+        }
+
+        pos = pSprite->GetTimedEffectList()->GetHeadPosition();
+        while (pos != NULL) {
+            pEffect = pSprite->GetTimedEffectList()->GetNext(pos);
+            if (pEffect->m_effectID == ICEWIND_CGAMEEFFECT_AEGIS) {
+                pEffect->m_effectAmount = nStoneSkins;
+            }
+        }
+
+        pos = pSprite->GetEquipedEffectList()->GetHeadPosition();
+        while (pos != NULL) {
+            pEffect = pSprite->GetEquipedEffectList()->GetNext(pos);
+            if (pEffect->m_effectID == ICEWIND_CGAMEEFFECT_AEGIS) {
+                pEffect->m_effectAmount = nStoneSkins;
+            }
+        }
+
+        if (nStoneSkins == 0) {
+            pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+                CGAMEEFFECT_STONESKINS,
+                pSprite->GetEquipedEffectList()->GetPosCurrent(),
+                -1);
+            pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+                CGAMEEFFECT_STONESKINS,
+                pSprite->GetTimedEffectList()->GetPosCurrent(),
+                -1);
+        }
+
+        pSprite->GetDerivedStats()->m_nStoneSkins = nStoneSkins;
+
+        CMessage* message = new CMessageVisualEffect(23,
+            static_cast<BYTE>(nStoneSkins),
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    BOOL bResult = CGameEffect::CheckSave(pSprite, roll1, roll2, roll3, roll4);
+
+    if ((m_dwFlags & 0xFFFF) != 3) {
+        return bResult;
+    }
+
+    // Save for half: evasion negates the damage on a successful reflex
+    // save, improved evasion halves it even on a failed one.
+    if (!bResult) {
+        if ((m_savingThrow & 0x8) == 0) {
+            return TRUE;
+        }
+
+        if (IcewindMisc::sub_585DA0(pSprite)) {
+            FeedBackEffectEvaded(pSprite, m_sourceRes);
+            return FALSE;
+        }
+    }
+
+    if ((m_savingThrow & 0x8) != 0
+        && pSprite->sub_763150(CGAMESPRITE_FEAT_IMPROVED_EVASION) == TRUE
+        && (pSprite->GetEquipment()->m_items[CGameSpriteEquipment::SLOT_ARMOR] == NULL
+            || pSprite->sub_724690(0)
+            || pSprite->sub_724690(1))) {
+        FeedBackEffectEvaded(pSprite, m_sourceRes);
+        return TRUE;
+    }
+
+    if (!bResult) {
+        return TRUE;
+    }
+
+    m_dwFlags &= ~0x3;
+
+    return bResult;
+}
+
+// 0x6F50A0
+void CGameSprite::sub_6F50A0()
+{
+    // TODO: Incomplete. Declared by the effect translation (caller
+    // `CGameEffectDamage::OnAdd`); belongs in `CGameSprite.cpp`.
 }
 
 // 0x4AA6D0

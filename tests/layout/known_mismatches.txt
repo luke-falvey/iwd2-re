@@ -1131,6 +1131,7 @@ CGameSprite::m_radius
 CGameSprite::m_recoilFrame
 CGameSprite::m_removeFromArea
 CGameSprite::m_rSpriteEffectFX
+CGameSprite::m_sLastHitSound
 CGameSprite::m_secondarySounds
 CGameSprite::m_selectedSound
 CGameSprite::m_sequenceTest
