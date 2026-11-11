@@ -10,11 +10,100 @@
 // 0x443B30
 CDerivedStats::CDerivedStats()
 {
-    // TODO: Incomplete.
+    // NOTE: Member constructors are implicit. `field_328` and `field_378` are
+    // zeroed by inlined constructors, `field_CAC.m_nHighestLevel` by the
+    // original (`0xDA8`).
 
     BonusInit();
 
-    // TODO: Incomplete.
+    // NOTE: The original clears the lists a second time here.
+    m_cImmunitiesProjectile.RemoveAll();
+    m_cImmunitiesEffect.ClearAll();
+    m_cImmunitiesAIType.ClearAll();
+    m_cImmunitiesSpellLevel.ClearAll();
+    m_cImmunitiesWeapon.ClearAll();
+    m_cToHitBonusList.ClearAll();
+    m_cDamageBonusList.ClearAll();
+    m_cImmunitiesItemEquip.ClearAll();
+    m_cImmunitiesItemTypeEquip.ClearAll();
+    field_290.ClearAll();
+    field_2AC.ClearAll();
+    m_appliedColorRanges.ClearAll();
+    m_appliedColorEffects.ClearAll();
+    m_cBounceProjectile.RemoveAll();
+    m_cBounceEffect.ClearAll();
+    field_300.ClearAll();
+    field_328.ClearAll();
+    field_378.ClearAll();
+    field_3C8.RemoveAll();
+    field_3E4.RemoveAll();
+    field_400.RemoveAll();
+    field_41C.RemoveAll();
+    m_cImmunitiesItemUse.ClearAll();
+    m_cImmunitiesItemTypeUse.ClearAll();
+    m_spellImmunities.clear();
+    m_naturalImmunities.clear();
+    m_lWhenStruck.clear();
+    field_4AC.ClearAll();
+    field_4C8.ClearAll();
+    field_4E4.ClearAll();
+    field_500.ClearAll();
+    field_51C.ClearAll();
+    field_538.ClearAll();
+    m_cRegeneratedPersistantEffectList.ClearAll();
+}
+
+// -----------------------------------------------------------------------------
+
+// NOTE: Inlined in `CDerivedStats::CDerivedStats`.
+CDerivedStatsLevelPairs::CDerivedStatsLevelPairs()
+{
+    for (int index = 0; index < 10; index++) {
+        m_entries[index][0] = 0;
+        m_entries[index][1] = 0;
+    }
+}
+
+// 0x4E7050
+void CDerivedStatsLevelPairs::ClearAll()
+{
+    for (int index = 0; index < 10; index++) {
+        m_entries[index][0] = 0;
+        m_entries[index][1] = 0;
+    }
+}
+
+// 0x4E71B0
+void CDerivedStatsResRefList::ClearAll()
+{
+    POSITION pos = GetHeadPosition();
+    while (pos != NULL) {
+        CResRef* pResRef = GetNext(pos);
+        delete pResRef;
+    }
+    RemoveAll();
+}
+
+// 0x4E71B0
+void CDerivedStatsPairList::ClearAll()
+{
+    POSITION pos = GetHeadPosition();
+    while (pos != NULL) {
+        CDerivedStatsPair* pPair = GetNext(pos);
+        delete pPair;
+    }
+    RemoveAll();
+}
+
+// NOTE: Same code as 0x4E6E80 (`CImmunitiesEffect::ClearAll`).
+void CPersistantEffectListRegenerated::ClearAll()
+{
+    POSITION pos = GetHeadPosition();
+    while (pos != NULL) {
+        CPersistantEffect* pEffect = GetNext(pos);
+        delete pEffect;
+    }
+    RemoveAll();
 }
 
 // 0x5D6650
@@ -472,8 +561,7 @@ void CDerivedStats::BonusInit()
     m_nACCrushingMod = 0;
     m_nACMissileMod = 0;
     m_nACPiercingMod = 0;
-
-    // TODO: Incomplete.
+    m_nACSlashingMod = 0;
 
     m_damageReduction.clear();
 
@@ -587,27 +675,56 @@ void CDerivedStats::BonusInit()
     m_cImmunitiesItemTypeEquip.ClearAll();
     field_290.ClearAll();
     field_2AC.ClearAll();
+    m_appliedColorRanges.ClearAll();
+    m_appliedColorEffects.ClearAll();
     m_cBounceProjectile.RemoveAll();
     m_cBounceEffect.ClearAll();
+    field_300.ClearAll();
+    field_328.ClearAll();
+    field_378.ClearAll();
     field_3C8.RemoveAll();
     field_3E4.RemoveAll();
     field_400.RemoveAll();
     field_41C.RemoveAll();
     m_cImmunitiesItemUse.ClearAll();
     m_cImmunitiesItemTypeUse.ClearAll();
-    m_appliedColorRanges.ClearAll();
-    m_appliedColorEffects.ClearAll();
-
-    // TODO: Incomplete. The original also clears the lists at 0x300, 0x328,
-    // 0x378, 0x4AC-0x538 and 0x554 here.
 
     m_spellImmunities.clear();
     m_naturalImmunities.clear();
     m_lWhenStruck.clear();
 
-    // TODO: Incomplete.
+    field_4AC.ClearAll();
+    field_4C8.ClearAll();
+    field_4E4.ClearAll();
+    field_500.ClearAll();
+    field_51C.ClearAll();
+    field_538.ClearAll();
+    m_cRegeneratedPersistantEffectList.ClearAll();
 
-    field_DA8 = 0;
+    // NOTE: Inlined `CGameSpriteSpellList` clearing, which also resets
+    // `field_14` and `field_18` (same as the destructor).
+    for (int nClass = 0; nClass < CSPELLLIST_NUM_CLASSES; nClass++) {
+        for (int nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+            CGameSpriteSpellList& list = m_spells.m_spellsByClass[nClass].m_lists[nLevel];
+            if (list.m_List.size() != 0) {
+                list.m_List.clear();
+                list.field_14 = 0;
+                list.field_18 = 0;
+            }
+        }
+        m_spells.m_spellsByClass[nClass].m_nHighestLevel = 0;
+    }
+
+    for (int nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+        CGameSpriteSpellList& list = field_CAC.m_lists[nLevel];
+        if (list.m_List.size() != 0) {
+            list.m_List.clear();
+            list.field_14 = 0;
+            list.field_18 = 0;
+        }
+    }
+
+    field_CAC.m_nHighestLevel = 0;
 
     m_barbarianLevel = 0;
     m_bardLevel = 0;
