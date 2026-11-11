@@ -26091,7 +26091,119 @@ SHORT CGameSprite::SetDialog()
 // 0x74F830
 void CGameSprite::SelectWeaponAbility(unsigned char a1, unsigned char a2, unsigned char a3, unsigned char a4)
 {
-    // TODO: Incomplete.
+    CMessage* message;
+
+    BYTE nOldWeapon = m_equipment.m_selectedWeapon;
+    BYTE nOldAbility = static_cast<BYTE>(m_equipment.m_selectedWeaponAbility);
+
+    CItem* pOldItem = m_equipment.m_items[nOldWeapon];
+    if (pOldItem != NULL) {
+        if ((pOldItem->GetFlagsFile() & 0x10) != 0 && a3 != 0) {
+            FeedBack(12, 0, 0, 0, -1, 0, 0);
+            return;
+        }
+
+        pOldItem->Demand();
+
+        ITEM_ABILITY* pOldAbility = pOldItem->GetAbility(m_equipment.m_selectedWeaponAbility);
+        if (pOldAbility != NULL) {
+            SHORT nLauncherSlot;
+            CItem* pLauncher = GetLauncher(pOldAbility, nLauncherSlot);
+            if (pLauncher != NULL) {
+                pLauncher->Unequip(this, nLauncherSlot, TRUE, FALSE);
+            }
+        }
+
+        pOldItem->Unequip(this, m_equipment.m_selectedWeapon, TRUE, FALSE);
+        pOldItem->Release();
+    }
+
+    m_equipment.m_selectedWeapon = a1;
+    m_nTempSelectedWeapon = a1;
+    m_nTempSelectedWeaponAbility = a2;
+    BOOL bEquipped = FALSE;
+    m_equipment.m_selectedWeaponAbility = a2;
+
+    CItem* pItem = m_equipment.m_items[a1];
+    if (pItem != NULL) {
+        pItem->Demand();
+
+        ITEM_ABILITY* pAbility = pItem->GetAbility(m_equipment.m_selectedWeaponAbility);
+        if (pAbility != NULL) {
+            // NOTE: Only the low byte of `type` is tested.
+            if (static_cast<BYTE>(pAbility->type) == 4) {
+                for (INT nSlot = CGameSpriteEquipment::SLOT_AMMO; nSlot < CGameSpriteEquipment::SLOT_AMMO + 4; nSlot++) {
+                    CItem* pAmmo = m_equipment.m_items[nSlot];
+                    if (pAmmo != NULL) {
+                        pAmmo->Demand();
+
+                        for (INT nAmmoAbility = 0; nAmmoAbility < 3; nAmmoAbility++) {
+                            ITEM_ABILITY* pAmmoAbility = pAmmo->GetAbility(nAmmoAbility);
+                            if (pAmmoAbility != NULL
+                                && static_cast<BYTE>(pAmmoAbility->type) != 4
+                                && CheckLauncherType(pAmmoAbility, pItem)) {
+                                SelectWeaponAbility(static_cast<BYTE>(nSlot), static_cast<BYTE>(nAmmoAbility), a3, 1);
+                                pAmmo->Release();
+                                pItem->Release();
+                                return;
+                            }
+                        }
+
+                        pAmmo->Release();
+                    }
+                }
+            } else {
+                if (CheckLauncherType(pAbility, NULL)) {
+                    SHORT nLauncherSlot;
+                    CItem* pLauncher = GetLauncher(pAbility, nLauncherSlot);
+                    if (pLauncher != NULL) {
+                        pLauncher->Equip(this, nLauncherSlot, FALSE);
+                    }
+
+                    pItem->Equip(this, m_equipment.m_selectedWeapon, FALSE);
+                    bEquipped = TRUE;
+                }
+            }
+        }
+
+        pItem->Release();
+
+        if (bEquipped) {
+            if ((g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+                    || g_pChitin->cNetwork.m_idLocalPlayer == m_remotePlayerID)
+                && g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
+                message = new CMessageSpriteEquipment(this, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            goto DONE;
+        }
+    }
+
+    if (a4 != 0) {
+        SelectWeaponAbility(nOldWeapon, nOldAbility, a3, 0);
+    } else {
+        if (nOldWeapon != CGameSpriteEquipment::SLOT_FIST) {
+            SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, a3, 1);
+        } else {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+            // __LINE__: 18870
+            UTIL_ASSERT_MSG(FALSE, "Failed equiping Weapon::Fist");
+        }
+
+        if ((g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+                || g_pChitin->cNetwork.m_idLocalPlayer == m_remotePlayerID)
+            && g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
+            message = new CMessageSpriteEquipment(this, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    }
+
+DONE:
+    if ((GetActiveStats()->m_generalState & STATE_DEAD) == 0) {
+        message = new CMessageSetSequence(static_cast<BYTE>(GetIdleSequence()), m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
 }
 
 // 0x754980
@@ -32332,6 +32444,12 @@ void CGameSprite::sub_726570()
         pMessage = new CMessageAddEffect(pEffect, m_id, m_id);
         g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
     }
+}
+
+// 0x723830
+void CGameSprite::sub_723830()
+{
+    // TODO: Incomplete.
 }
 
 // 0x726800
