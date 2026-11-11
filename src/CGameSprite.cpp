@@ -9602,17 +9602,229 @@ void CGameSprite::sub_716770(CButtonData& cButtonData)
 // 0x716E80
 CGameButtonList* CGameSprite::sub_716E80(INT a1)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CGameButtonList* buttons = new CGameButtonList();
 
-    return NULL;
+    for (INT nSlot = 0; nSlot < 51; nSlot++) {
+        if (nSlot > 17 && nSlot < 43) {
+            continue;
+        }
+
+        if (g_pBaldurChitin->GetObjectGame()->m_cOptions.m_bQuickItemMapping
+            && nSlot >= 15
+            && nSlot <= 17) {
+            continue;
+        }
+
+        CItem* pItem = m_equipment.m_items[nSlot];
+        if (pItem == NULL) {
+            continue;
+        }
+
+        if (nSlot == 43
+            || nSlot == 45
+            || nSlot == 47
+            || nSlot == 49) {
+            BYTE nNextSlot = static_cast<BYTE>(nSlot + 1);
+            if ((pItem->GetFlagsFile() & 0x2) != 0) {
+                if (m_equipment.m_items[nNextSlot] != NULL) {
+                    continue;
+                }
+            }
+        }
+
+        if (!pItem->Demand()) {
+            continue;
+        }
+
+        for (INT nAbility = 0; nAbility < pItem->GetAbilityCount(); nAbility++) {
+            const ITEM_ABILITY* curAbility = pItem->GetAbility(nAbility);
+
+            if (pItem->GetItemType() == 11) {
+                CGameEffect* pEffect = pItem->GetAbilityEffect(nAbility, 0, NULL);
+                if (pEffect != NULL) {
+                    if (pEffect->m_effectID == CGAMEEFFECT_LEARNSPELL) {
+                        continue;
+                    }
+
+                    delete pEffect;
+                }
+            }
+
+            if (curAbility == NULL) {
+                continue;
+            }
+
+            if (curAbility->quickSlotType != 3) {
+                continue;
+            }
+
+            if ((curAbility->type & 0x100) != 0 && (pItem->m_flags & 0x1) == 0) {
+                continue;
+            }
+
+            if ((curAbility->type & 0x200) != 0 && (pItem->m_flags & 0x1) != 0) {
+                continue;
+            }
+
+            if ((curAbility->type & 0xFF) == 4) {
+                continue;
+            }
+
+            if ((curAbility->type & 0xFF) == 2 && !CheckLauncherType(curAbility, NULL)) {
+                continue;
+            }
+
+            CButtonData* pButtonData = new CButtonData();
+            pButtonData->m_icon = CString(curAbility->quickSlotIcon);
+            pButtonData->m_name = pItem->GetGenericName();
+            pButtonData->m_abilityId.m_itemNum = nSlot;
+            pButtonData->m_abilityId.m_itemType = 2;
+            pButtonData->m_abilityId.m_abilityNum = nAbility;
+            pButtonData->m_abilityId.m_targetType = curAbility->actionType;
+            pButtonData->m_abilityId.field_10 = pGame->GetRuleTables().GetItemAbilityDescription(pItem->GetResRef(), nAbility);
+            if (pButtonData->m_abilityId.field_10 == -1) {
+                pButtonData->m_abilityId.field_10 = pItem->GetGenericName();
+            }
+
+            pButtonData->m_count = 0;
+            if (pItem->GetMaxStackable() > 1 || pItem->GetMaxUsageCount(nAbility) > 0) {
+                pButtonData->m_count = pItem->GetUsageCount(nAbility);
+            }
+
+            SHORT launcherSlot;
+            CItem* pLauncher = GetLauncher(curAbility, launcherSlot);
+            if (pLauncher != NULL) {
+                pButtonData->m_launcherIcon = pLauncher->GetItemIcon();
+                pButtonData->m_launcherName = pLauncher->GetGenericName();
+            }
+
+            buttons->AddTail(pButtonData);
+
+            if (a1) {
+                pItem->Release();
+                return buttons;
+            }
+        }
+
+        pItem->Release();
+    }
+
+    return buttons;
 }
 
 // 0x717250
 CGameButtonList* CGameSprite::sub_717250(INT a1)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CGameButtonList* buttons = new CGameButtonList();
 
-    return NULL;
+    for (INT nSlot = 0; nSlot < 51; nSlot++) {
+        if (nSlot > 17 && nSlot < 43) {
+            continue;
+        }
+
+        if (g_pBaldurChitin->GetObjectGame()->m_cOptions.m_bQuickItemMapping
+            && nSlot >= 15
+            && nSlot <= 17) {
+            continue;
+        }
+
+        CItem* pItem = m_equipment.m_items[nSlot];
+        if (pItem == NULL) {
+            continue;
+        }
+
+        if (nSlot == 43
+            || nSlot == 45
+            || nSlot == 47
+            || nSlot == 49) {
+            BYTE nNextSlot = static_cast<BYTE>(nSlot + 1);
+            if ((pItem->GetFlagsFile() & 0x2) != 0) {
+                if (m_equipment.m_items[nNextSlot] != NULL) {
+                    continue;
+                }
+            }
+        }
+
+        if (!pItem->Demand()) {
+            continue;
+        }
+
+        for (INT nAbility = 0; nAbility < pItem->GetAbilityCount(); nAbility++) {
+            const ITEM_ABILITY* curAbility = pItem->GetAbility(nAbility);
+
+            if (pItem->GetItemType() == 11) {
+                CGameEffect* pEffect = pItem->GetAbilityEffect(nAbility, 0, NULL);
+                if (pEffect != NULL) {
+                    if (pEffect->m_effectID == CGAMEEFFECT_LEARNSPELL) {
+                        continue;
+                    }
+
+                    delete pEffect;
+                }
+            }
+
+            if (curAbility == NULL) {
+                continue;
+            }
+
+            if (curAbility->quickSlotType != 3) {
+                continue;
+            }
+
+            if ((curAbility->type & 0x100) != 0 && (pItem->m_flags & 0x1) == 0) {
+                continue;
+            }
+
+            if ((curAbility->type & 0x200) != 0 && (pItem->m_flags & 0x1) != 0) {
+                continue;
+            }
+
+            if ((curAbility->type & 0xFF) == 4) {
+                continue;
+            }
+
+            if ((curAbility->type & 0xFF) == 2 && !CheckLauncherType(curAbility, NULL)) {
+                continue;
+            }
+
+            CButtonData* pButtonData = new CButtonData();
+            pButtonData->m_icon = CString(curAbility->quickSlotIcon);
+            pButtonData->m_name = pItem->GetGenericName();
+            pButtonData->m_abilityId.m_itemNum = nSlot;
+            pButtonData->m_abilityId.m_itemType = 2;
+            pButtonData->m_abilityId.m_abilityNum = nAbility;
+            pButtonData->m_abilityId.m_targetType = curAbility->actionType;
+            pButtonData->m_abilityId.field_10 = pGame->GetRuleTables().GetItemAbilityDescription(pItem->GetResRef(), nAbility);
+            if (pButtonData->m_abilityId.field_10 == -1) {
+                pButtonData->m_abilityId.field_10 = pItem->GetGenericName();
+            }
+
+            pButtonData->m_count = 0;
+            if (pItem->GetMaxStackable() > 1 || pItem->GetMaxUsageCount(nAbility) > 0) {
+                pButtonData->m_count = pItem->GetUsageCount(nAbility);
+            }
+
+            SHORT launcherSlot;
+            CItem* pLauncher = GetLauncher(curAbility, launcherSlot);
+            if (pLauncher != NULL) {
+                pButtonData->m_launcherIcon = pLauncher->GetItemIcon();
+                pButtonData->m_launcherName = pLauncher->GetGenericName();
+            }
+
+            buttons->AddTail(pButtonData);
+
+            if (a1) {
+                pItem->Release();
+                return buttons;
+            }
+        }
+
+        pItem->Release();
+    }
+
+    return buttons;
 }
 
 // 0x717FC0
@@ -10129,7 +10341,88 @@ void CGameSprite::ReadySpell(SHORT buttonNum, INT nType, BOOLEAN firstCall)
 // 0x719180
 void CGameSprite::sub_719180(CString sSpellResRef)
 {
-    // TODO: Incomplete.
+    CAIAction action;
+
+    CSpell cSpell((CResRef(sSpellResRef)));
+    cSpell.Demand();
+
+    SHORT nCasterLevel;
+    if (GetCasterLevel(&cSpell, 0, 0) > 1) {
+        nCasterLevel = GetCasterLevel(&cSpell, 0, 0);
+    } else {
+        nCasterLevel = 1;
+    }
+
+    SPELL_ABILITY* pAbility = NULL;
+
+    if (cSpell.GetAbilityCount() > 0) {
+        INT nIndex = 0;
+        do {
+            if (cSpell.GetAbility(nIndex)->minCasterLevel > nCasterLevel) {
+                break;
+            }
+
+            pAbility = cSpell.GetAbility(nIndex);
+            nIndex++;
+        } while (nIndex < cSpell.GetAbilityCount());
+    }
+
+    m_currentUseButton.m_abilityId.m_res = sSpellResRef;
+    m_currentUseButton.m_abilityId.m_targetType = pAbility->actionType;
+    ReadyCursor();
+
+    if (pAbility != NULL) {
+        switch (pAbility->actionType) {
+        case 1:
+            g_pBaldurChitin->GetObjectGame()->SetState(2);
+            g_pBaldurChitin->GetObjectGame()->SetIconIndex(20);
+            g_pBaldurChitin->GetObjectGame()->m_iconResRef = "";
+            break;
+        case 2:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+            // __LINE__: 18474
+            UTIL_ASSERT(FALSE);
+            break;
+        case 3:
+            g_pBaldurChitin->GetObjectGame()->SetState(2);
+            g_pBaldurChitin->GetObjectGame()->SetIconIndex(20);
+            g_pBaldurChitin->GetObjectGame()->m_iconResRef = "";
+            break;
+        case 4:
+            g_pBaldurChitin->GetObjectGame()->SetState(1);
+            g_pBaldurChitin->GetObjectGame()->SetIconIndex(20);
+            g_pBaldurChitin->GetObjectGame()->m_iconResRef = "";
+            break;
+        case 5:
+            // FIXME: One time is usually enough.
+            g_pBaldurChitin->GetObjectGame()->SetLastTarget(CGameObjectArray::INVALID_INDEX);
+            g_pBaldurChitin->GetObjectGame()->SetLastTarget(CGameObjectArray::INVALID_INDEX);
+
+            g_pBaldurChitin->GetObjectGame()->SetState(0);
+            g_pBaldurChitin->GetObjectGame()->GetButtonArray()->SetSelectedButton(100);
+            g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateState();
+
+            action = CAIAction(CAIAction::SPELL,
+                m_typeAI,
+                sSpellResRef,
+                0,
+                m_currentUseButton.m_abilityId.m_nClass | (m_currentUseButton.m_abilityId.field_1E << 8));
+            action.m_specificID3 = m_currentUseButton.m_abilityId.field_1D;
+            ClearActions(FALSE);
+            m_userCommandPause = 75;
+            m_triggerId = CGameObjectArray::INVALID_INDEX;
+            AddAction(action);
+            m_interrupt = TRUE;
+            break;
+        case 6:
+            g_pBaldurChitin->GetObjectGame()->SetState(0);
+            g_pBaldurChitin->GetObjectGame()->GetButtonArray()->SetSelectedButton(100);
+            g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateState();
+            break;
+        }
+    }
+
+    cSpell.Release();
 }
 
 // 0x719860
@@ -10731,7 +11024,37 @@ void CGameSprite::AddSpecialAbility(const CResRef& cResInnateSpell, BOOL feedBac
 // 0x71BC60
 void CGameSprite::RemoveSpecialAbility(const CResRef& cResInnateSpell)
 {
-    // TODO: Incomplete.
+    CString sResRef;
+    cResInnateSpell.CopyToString(sResRef);
+
+    UINT nSpellId = 0;
+    if (g_pBaldurChitin->GetObjectGame()->m_songs.Find(cResInnateSpell, nSpellId)) {
+        UINT nId = 0;
+        UINT nUnused1 = 0;
+        UINT nUnused2 = 0;
+        if (g_pBaldurChitin->GetObjectGame()->m_songs.Find(cResInnateSpell, nId)) {
+            m_songs.Remove(nId, TRUE, nUnused2, nUnused1);
+        }
+    } else if (g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Find(cResInnateSpell, nSpellId)) {
+        UINT nId = 0;
+        if (g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Find(cResInnateSpell, nId)) {
+            UINT nUnused2 = 0;
+            UINT nUnused1 = 0;
+            m_shapeshifts.Remove(nId, TRUE, nUnused1, nUnused2);
+        }
+    } else if (g_pBaldurChitin->GetObjectGame()->m_innateSpells.Find(cResInnateSpell, nSpellId)) {
+        UINT nUnused2 = 0;
+        UINT nUnused1 = 0;
+        UINT nId = 0;
+        if (g_pBaldurChitin->GetObjectGame()->m_innateSpells.Find(cResInnateSpell, nId)) {
+            m_innateSpells.Remove(nId, TRUE, nUnused1, nUnused2);
+        }
+    }
+
+    CAbilityId ab;
+    ab.m_itemType = 1;
+    ab.m_res = sResRef;
+    CheckQuickLists(&ab, -1, FALSE, FALSE);
 }
 
 // 0x71BE80
