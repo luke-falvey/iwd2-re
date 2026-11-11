@@ -1756,6 +1756,41 @@ void CScreenSpellbook::CheckMultiPlayerViewable()
     }
 }
 
+// 0x66A8C0
+int CScreenSpellbook::sub_66A8C0(CGameSprite* pSprite)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    const CAIObjectType& typeAI = pSprite->GetAIType();
+    int nDomainClassIndex = field_1670;
+    DWORD nClassIndex = m_nClassIndex;
+
+    BYTE nClass = 0;
+    if (nDomainClassIndex == nClassIndex) {
+        nClass = 3;
+    } else {
+        // __FILE__: .\Include\InfScreenSpellbook.h
+        // __LINE__: 76
+        UTIL_ASSERT(nClassIndex < CSPELLLIST_NUM_CLASSES);
+
+        nClass = static_cast<BYTE>(field_1654[nClassIndex]);
+    }
+
+    INT nBonus;
+    INT nResult = pGame->GetRuleTables().GetMaxKnownSpells(nClass,
+        typeAI,
+        pSprite->m_derivedStats,
+        pSprite->m_baseStats.m_specialization,
+        m_nSpellLevel + 1,
+        nBonus);
+    nResult += nBonus;
+
+    if (nDomainClassIndex == nClassIndex && nResult == 0) {
+        nResult = 1;
+    }
+
+    return nResult;
+}
+
 // 0x66C4B0
 int CScreenSpellbook::sub_66C4B0()
 {
@@ -1825,9 +1860,7 @@ int CScreenSpellbook::sub_66C4B0()
             nTotal += entry.field_4;
         }
 
-        // TODO: Incomplete. The minuend should be `sub_66A8C0(pSprite)`
-        // (0x66A8C0), which is not in the repo yet.
-        nResult = 0 - nTotal;
+        nResult = sub_66A8C0(pSprite) - nTotal;
     }
 
     pGame->GetObjectArray()->ReleaseDeny(nCharacterId,

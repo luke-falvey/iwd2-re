@@ -1766,6 +1766,8 @@ CScreenCharacter::field_184E
 CScreenCharacter::field_1852
 CScreenCharacter::field_1B8
 CScreenCharacter::field_2B6
+CScreenCharacter::field_2BC
+CScreenCharacter::field_64C
 CScreenCharacter::field_77C
 CScreenCharacter::field_780
 CScreenCharacter::field_79C
