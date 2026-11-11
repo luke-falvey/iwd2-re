@@ -279,7 +279,8 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
     m_bCasterHold = FALSE;
     m_nEncumberance = 0;
     m_nMissileTHAC0Bonus = 0;
-    m_nMagicDamageResistance = pCreature->m_resistMagicDamageBase;
+    // NOTE: Unlike its neighbours, the original zero-extends this byte.
+    m_nMagicDamageResistance = static_cast<BYTE>(pCreature->m_resistMagicDamageBase);
     m_nResistPoison = 0;
     m_bDoNotJump = FALSE;
     m_bAuraCleansing = FALSE;
