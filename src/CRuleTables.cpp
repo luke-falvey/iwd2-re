@@ -2028,7 +2028,7 @@ INT CRuleTables::GetStartingHitPoints(const CAIObjectType& typeAI, CDerivedStats
     INT nHitPoints = 0;
 
     for (INT nClass = 1; nClass <= CAIOBJECT_CLASS_MAX; nClass++) {
-        if (DStats.GetClassLevel(nClass) > 0) {
+        if (static_cast<INT>(DStats.GetClassLevel(nClass)) > 0) {
             nHitPoints += sub_542CB0(nClass, DStatsOld, DStats, 1, 1);
         }
     }
