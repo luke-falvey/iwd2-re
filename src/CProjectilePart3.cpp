@@ -332,8 +332,9 @@ void CProjectile84E8C0::Fire(CGameArea* pArea, LONG source, LONG target, CPoint 
             return;
         }
 
-        pt.x = pTarget->GetPos().x;
-        pt.y = pTarget->GetPos().y + 13;
+        const CPoint& ptTargetPos = pTarget->GetPos();
+        pt.x = ptTargetPos.x;
+        pt.y = ptTargetPos.y + 13;
 
         g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
             CGameObjectArray::THREAD_ASYNCH,
@@ -1113,8 +1114,9 @@ void CProjectile8512BC::Fire(CGameArea* pArea, LONG source, LONG target, CPoint 
             return;
         }
 
-        pt.x = pTarget->GetPos().x;
-        pt.y = pTarget->GetPos().y + 13;
+        const CPoint& ptTargetPos = pTarget->GetPos();
+        pt.x = ptTargetPos.x;
+        pt.y = ptTargetPos.y + 13;
 
         g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
             CGameObjectArray::THREAD_ASYNCH,
