@@ -51,14 +51,12 @@ CString CAIUtil::ReadTo(CString& line, CString pattern, BOOL consume)
     }
 
     int index = line.Find(pattern);
-    if (index < 0) {
-        return line;
-    }
+    if (index >= 0) {
+        sTemp = line.Left(index);
 
-    sTemp = line.Left(index);
-
-    if (consume) {
-        line = line.Right(line.GetLength() - pattern.GetLength() - index);
+        if (consume) {
+            line = line.Right(line.GetLength() - pattern.GetLength() - index);
+        }
     }
 
     return sTemp;
