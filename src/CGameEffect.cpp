@@ -10,6 +10,7 @@
 #include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CItem.h"
+#include "CPathSearch.h"
 #include "CProjectileArea.h"
 #include "CScreenWorld.h"
 #include "CSevenEyes.h"
@@ -13892,6 +13893,179 @@ CGameEffect* CGameEffectDisguise::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4C3AA0
+CGameEffectDisguise::~CGameEffectDisguise()
+{
+    if (field_188 != 0 && !g_pBaldurChitin->GetObjectGame()->m_bInDestroyGame) {
+        LONG nSpriteId = m_sourceID;
+        CGameSprite* pSprite;
+
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nSpriteId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            pSprite->UnequipAll(TRUE);
+
+            if (pSprite->GetArea() != NULL
+                && pSprite->GetAnimation()->GetListType() != CGameObject::LIST_FLIGHT) {
+                pSprite->GetArea()->m_search.RemoveObject(CPoint(pSprite->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX,
+                                                              pSprite->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY),
+                    pSprite->GetAIType().m_nEnemyAlly,
+                    pSprite->GetAnimation()->GetPersonalSpace(),
+                    pSprite->field_54A8,
+                    pSprite->field_7430);
+            }
+
+            if ((pSprite->GetBaseStats()->m_generalState & STATE_DEAD) == 0) {
+                if (field_18C != -1) {
+                    // NOTE: Uninline.
+                    pSprite->GetAnimation()->SetAnimationType(static_cast<USHORT>(field_18C),
+                        pSprite->GetBaseStats()->m_colors,
+                        pSprite->GetDirection());
+                }
+
+                if (pSprite->GetArea() != NULL
+                    && pSprite->GetAnimation()->GetListType() != CGameObject::LIST_FLIGHT) {
+                    pSprite->GetArea()->m_search.AddObject(CPoint(pSprite->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX,
+                                                               pSprite->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY),
+                        pSprite->GetAIType().m_nEnemyAlly,
+                        pSprite->GetAnimation()->GetPersonalSpace(),
+                        pSprite->field_54A8,
+                        pSprite->field_7430);
+                }
+            }
+
+            pSprite->JumpToPoint(pSprite->GetPos(), TRUE);
+            pSprite->SetIdleSequence();
+            pSprite->EquipAll(TRUE);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nSpriteId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+}
+
+// 0x4C36C0
+BOOL CGameEffectDisguise::ApplyEffect(CGameSprite* pSprite)
+{
+    pSprite->field_5640 = field_188 == 0;
+
+    DWORD nAnimationID = m_effectAmount;
+    if (nAnimationID == 0) {
+        switch (pSprite->GetAIType().m_nGender) {
+        case CAIOBJECTTYPE_SEX_MALE:
+            switch (pSprite->GetAIType().m_nRace) {
+            case CAIOBJECTTYPE_R_ELF:
+            case CAIOBJECTTYPE_R_HALF_ELF:
+                nAnimationID = 0x6001;
+                break;
+            case CAIOBJECTTYPE_R_DWARF:
+            case CAIOBJECTTYPE_R_GNOME:
+                nAnimationID = 0x6002;
+                break;
+            case CAIOBJECTTYPE_R_HALFLING:
+                nAnimationID = 0x6003;
+                break;
+            case CAIOBJECTTYPE_R_HALF_ORC:
+                nAnimationID = 0x6005;
+                break;
+            default:
+                nAnimationID = 0x6000;
+                break;
+            }
+            break;
+        case CAIOBJECTTYPE_SEX_FEMALE:
+            switch (pSprite->GetAIType().m_nRace) {
+            case CAIOBJECTTYPE_R_ELF:
+            case CAIOBJECTTYPE_R_HALF_ELF:
+                nAnimationID = 0x6011;
+                break;
+            case CAIOBJECTTYPE_R_DWARF:
+            case CAIOBJECTTYPE_R_GNOME:
+                nAnimationID = 0x6012;
+                break;
+            case CAIOBJECTTYPE_R_HALFLING:
+                nAnimationID = 0x6013;
+                break;
+            case CAIOBJECTTYPE_R_HALF_ORC:
+                nAnimationID = 0x6015;
+                break;
+            default:
+                nAnimationID = 0x6010;
+                break;
+            }
+            break;
+        default:
+            nAnimationID = 0x6000;
+            break;
+        }
+    }
+
+    if (m_durationType == 1) {
+        // NOTE: The original stores a DWORD over `m_animationType` and the
+        // following word.
+        pSprite->GetBaseStats()->m_animationType = static_cast<SHORT>(LOWORD(nAnimationID));
+        pSprite->GetBaseStats()->field_22 = static_cast<SHORT>(HIWORD(nAnimationID));
+        m_done = TRUE;
+    } else {
+        m_done = FALSE;
+    }
+
+    if (pSprite->m_pPath != NULL) {
+        CMessage* message = new CMessageDropPath(pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    if (!pSprite->m_bInUnmarshal) {
+        pSprite->UnequipAll(TRUE);
+    }
+
+    if (pSprite->GetArea() != NULL
+        && pSprite->GetAnimation()->GetListType() != CGameObject::LIST_FLIGHT) {
+        pSprite->GetArea()->m_search.RemoveObject(CPoint(pSprite->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX,
+                                                      pSprite->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY),
+            pSprite->GetAIType().m_nEnemyAlly,
+            pSprite->GetAnimation()->GetPersonalSpace(),
+            pSprite->field_54A8,
+            pSprite->field_7430);
+    }
+
+    if (field_18C == -1) {
+        field_18C = pSprite->GetAnimation()->GetAnimationId();
+    }
+
+    // NOTE: Uninline.
+    pSprite->GetAnimation()->SetAnimationType(static_cast<USHORT>(nAnimationID),
+        pSprite->GetBaseStats()->m_colors,
+        pSprite->GetDirection());
+
+    if (pSprite->GetArea() != NULL
+        && pSprite->GetAnimation()->GetListType() != CGameObject::LIST_FLIGHT) {
+        pSprite->GetArea()->m_search.AddObject(CPoint(pSprite->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX,
+                                                   pSprite->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY),
+            pSprite->GetAIType().m_nEnemyAlly,
+            pSprite->GetAnimation()->GetPersonalSpace(),
+            pSprite->field_54A8,
+            pSprite->field_7430);
+    }
+
+    if (!pSprite->m_bInUnmarshal) {
+        pSprite->EquipAll(TRUE);
+    }
+
+    pSprite->JumpToPoint(pSprite->GetPos(), TRUE);
+    pSprite->SetIdleSequence();
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------

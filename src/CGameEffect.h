@@ -1928,7 +1928,9 @@ public:
 class CGameEffectDisguise : public CGameEffect {
 public:
     CGameEffectDisguise(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
+    /* 0000 */ ~CGameEffectDisguise() override;
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 
     /* 018C */ int field_18C;
 };
