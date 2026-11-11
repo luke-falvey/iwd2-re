@@ -42,6 +42,9 @@ const SHORT CAIAction::WAIT = 63;
 // 0x8477F2
 const SHORT CAIAction::SMALLWAIT = 83;
 
+// 0x847818
+const SHORT CAIAction::CREATEITEM = 82;
+
 // 0x84781A
 const SHORT CAIAction::FACE = 84;
 

@@ -198,6 +198,12 @@ const ITEM_ABILITY CGameSprite::DEFAULT_ATTACK = {
 // 0x85BCA0
 const LONG CGameSprite::STANDARD_VERBAL_CONSTANT_LENGTH = 300;
 
+// 0x85BD14
+const LONG CGameSprite::PICKPOCKET_GOLD_CHANCE = 3;
+
+// 0x85BD18
+const LONG CGameSprite::PICKPOCKET_GOLD_MAX = 5;
+
 // 0x85BD1C
 const LONG CGameSprite::STEALTH_GREYOUT_DURATION = 90;
 
@@ -20967,9 +20973,236 @@ SHORT CGameSprite::Panic()
 // 0x7586E0
 SHORT CGameSprite::PickPockets(CGameSprite* pTarget)
 {
-    // TODO: Incomplete.
+    CMessage* message;
+    INT nSlot;
 
-    return ACTION_ERROR;
+    if (pTarget == NULL) {
+        return ACTION_ERROR;
+    }
+
+    if (m_derivedStats.m_disabledButtons[1]) {
+        FeedBack(30, 0, 0, 0, -1, 0, 0);
+        return ACTION_ERROR;
+    }
+
+    CAIObjectType enemy = m_typeAI.GetEnemyOf();
+
+    if (pTarget->GetAIType().OfType(enemy, FALSE, FALSE)) {
+        FeedBack(31, 0, 0, 0, -1, 0, 0);
+        return ACTION_ERROR;
+    }
+
+    const CPoint& ptTargetPos = pTarget->GetPos();
+    CPoint ptTarget(ptTargetPos.x / CPathSearch::GRID_SQUARE_SIZEX,
+        ptTargetPos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    const CPoint& ptSelfPos = GetPos();
+    CPoint ptSelf(ptSelfPos.x / CPathSearch::GRID_SQUARE_SIZEX,
+        ptSelfPos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    LONG nSquares = CAIUtil::CountSquares(ptSelf, ptTarget);
+    if (nSquares * nSquares <= 4
+        && m_pArea->CheckLOS(pTarget->GetPos(),
+            GetPos(),
+            m_visibleTerrainTable,
+            static_cast<BOOLEAN>(pTarget->Orderable(FALSE)))) {
+        if (pTarget->field_70F2 == 1) {
+            FeedBack(32, 0, 0, 0, -1, 0, 0);
+            return ACTION_DONE;
+        }
+
+        if (!IsVisibleToCaller(FALSE)) {
+            ITEM_EFFECT effect;
+            CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+            // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+            effect.durationType = 1;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                m_pos,
+                m_id,
+                CPoint(-1, -1));
+
+            message = new CMessageAddEffect(pEffect, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        INT nBonus = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetAbilityScoreModifier(pTarget->m_derivedStats.m_nWIS);
+        INT nRoll = rand() % 20 + 1 + max(nBonus + pTarget->m_derivedStats.m_nLevel, 0);
+
+        if (pTarget->GetObjectType() != CGameObject::TYPE_SPRITE) {
+            nRoll = rand() % 20 + 1;
+        }
+
+        INT nSkill = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_PICK_POCKET]) + 10;
+
+        FeedBack(83, nSkill, nRoll, nBonus, 0x9986, 0, 0);
+
+        if (nRoll >= 20 || nRoll > nSkill) {
+            CAITrigger trigger(CAITRIGGER_PICKPOCKETFAILED, m_typeAI, 0);
+
+            FeedBack(32, 0, 0, 0, -1, 0, 0);
+
+            // NOTE: Original stores 0 again after the feedback.
+            trigger.m_specificID = 0;
+
+            message = new CMessageSetTrigger(trigger, m_id, pTarget->m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            return ACTION_DONE;
+        }
+
+        // NOTE: `CGameSpriteEquipment::NUM_SLOT` entries.
+        BOOL bSkipSlot[51];
+        for (nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+            bSkipSlot[nSlot] = FALSE;
+        }
+
+        bSkipSlot[CGameSpriteEquipment::SLOT_FIST] = TRUE;
+        bSkipSlot[CGameSpriteEquipment::SLOT_ARMOR] = TRUE;
+        bSkipSlot[CGameSpriteEquipment::SLOT_BELT] = TRUE;
+        bSkipSlot[CGameSpriteEquipment::SLOT_BOOTS] = TRUE;
+        bSkipSlot[CGameSpriteEquipment::SLOT_CLOAK] = TRUE;
+        bSkipSlot[CGameSpriteEquipment::SLOT_GAUNTLETS] = TRUE;
+        bSkipSlot[CGameSpriteEquipment::SLOT_HELMET] = TRUE;
+        bSkipSlot[pTarget->m_equipment.m_selectedWeapon] = TRUE;
+
+        // NOTE: Called on `this` with the target's weapon.
+        SHORT nLauncherSlot = GetLauncherSlot(pTarget->m_equipment.m_selectedWeapon,
+            pTarget->m_equipment.m_selectedWeaponAbility);
+        if (nLauncherSlot != -1) {
+            bSkipSlot[nLauncherSlot] = TRUE;
+        }
+
+        // Weapon slots.
+        for (nSlot = 43; nSlot < 50; nSlot++) {
+            bSkipSlot[nSlot] = TRUE;
+        }
+
+        // Quiver slots.
+        bSkipSlot[11] = TRUE;
+        bSkipSlot[12] = TRUE;
+        bSkipSlot[13] = TRUE;
+
+        if (pTarget->GetAIType().m_nEnemyAlly == CAIObjectType::EA_PC) {
+            bSkipSlot[15] = TRUE;
+            bSkipSlot[16] = TRUE;
+            bSkipSlot[17] = TRUE;
+        } else {
+            bSkipSlot[21] = TRUE;
+            bSkipSlot[22] = TRUE;
+            bSkipSlot[23] = TRUE;
+        }
+
+        // NOTE: Unused.
+        CString sName(pTarget->m_scriptName);
+
+        SHORT nStart = CGameSpriteEquipment::NUM_SLOT != 0
+            ? static_cast<SHORT>(rand() % CGameSpriteEquipment::NUM_SLOT)
+            : CGameSpriteEquipment::NUM_SLOT;
+        SHORT nCurrent = nStart;
+
+        do {
+            CItem* pItem = pTarget->m_equipment.m_items[nCurrent];
+            if (!bSkipSlot[nCurrent]
+                && pItem != NULL
+                && (pItem->m_flags & 0x2) == 0
+                && (pItem->GetFlagsFile() & 0x4) != 0) {
+                if (PICKPOCKET_GOLD_CHANCE == 0
+                    || rand() % PICKPOCKET_GOLD_CHANCE == 0) {
+                    LONG nGold = (PICKPOCKET_GOLD_MAX != 0
+                                     ? rand() % PICKPOCKET_GOLD_MAX
+                                     : 0)
+                        + 1;
+
+                    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pTarget->m_id) == -1) {
+                        message = new CMessagePartyGold(TRUE, TRUE, nGold, m_id, m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                        FeedBack(35, 0, 0, 0, -1, 0, 0);
+                        return ACTION_DONE;
+                    }
+
+                    // NOTE: Unsigned compare.
+                    if (g_pBaldurChitin->GetObjectGame()->m_gameSave.m_nPartyGold > static_cast<DWORD>(nGold)) {
+                        message = new CMessagePartyGold(TRUE, TRUE, -nGold, m_id, m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                        CAIAction createItem;
+                        createItem.m_actionID = CAIAction::CREATEITEM;
+                        createItem.SetString1(CString("MISC07"));
+                        createItem.SetString2(CString(""));
+                        createItem.m_specificID = nGold;
+                        createItem.m_specificID2 = 0;
+                        createItem.m_specificID3 = 0;
+                        createItem.m_internalFlags = 0;
+
+                        message = new CMessageAddAction(createItem, pTarget->m_id, m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                        FeedBack(35, 0, 0, 0, -1, 0, 0);
+                        return ACTION_DONE;
+                    }
+                }
+
+                SHORT nIndex;
+                if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
+                    for (nIndex = 0; nIndex < CScreenInventory::PERSONAL_INVENTORY_SIZE; nIndex++) {
+                        if (m_equipment.m_items[18 + nIndex] == NULL) {
+                            break;
+                        }
+                    }
+
+                    if (nIndex >= CScreenInventory::PERSONAL_INVENTORY_SIZE) {
+                        FeedBack(34, 0, 0, 0, -1, 0, 0);
+                        return ACTION_ERROR;
+                    }
+
+                    m_equipment.m_items[18 + nIndex] = new CItem(*pItem);
+                } else {
+                    for (nIndex = 0; nIndex < 28; nIndex++) {
+                        if (m_equipment.m_items[15 + nIndex] == NULL) {
+                            break;
+                        }
+                    }
+
+                    if (nIndex >= 28) {
+                        FeedBack(34, 0, 0, 0, -1, 0, 0);
+                        return ACTION_ERROR;
+                    }
+
+                    m_equipment.m_items[15 + nIndex] = new CItem(*pItem);
+                }
+
+                message = new CMessageRemoveInventoryItem(nCurrent, m_id, pTarget->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                FeedBack(35, 0, 0, 0, -1, 0, 0);
+                return ACTION_DONE;
+            }
+
+            if (nStart % 2 == 0) {
+                nCurrent++;
+                if (nCurrent >= CGameSpriteEquipment::NUM_SLOT) {
+                    nCurrent = 0;
+                }
+            } else {
+                nCurrent--;
+                if (nCurrent < 0) {
+                    nCurrent = CGameSpriteEquipment::NUM_SLOT - 1;
+                }
+            }
+        } while (nCurrent != nStart);
+
+        FeedBack(33, 0, 0, 0, -1, 0, 0);
+        return ACTION_DONE;
+    }
+
+    SHORT rc = MoveToObject(pTarget);
+    if (rc == ACTION_DONE) {
+        rc = ACTION_INTERRUPTABLE;
+    }
+
+    return rc;
 }
 
 // 0x759240

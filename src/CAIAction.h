@@ -30,6 +30,7 @@ public:
     static const SHORT STARTTIMER;
     static const SHORT WAIT;
     static const SHORT SMALLWAIT;
+    static const SHORT CREATEITEM;
     static const SHORT FACE;
     static const SHORT RANDOMWALK;
     static const SHORT RANDOMWALKCONTINUOUS;
