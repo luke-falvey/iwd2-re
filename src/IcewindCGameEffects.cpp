@@ -50,6 +50,13 @@ const char* RESREF_HARPY_WAIL = "SpIn166";
 // 0x8AEBF0
 const char* RESREF_JACKALWERE_GAZE = "SpIn179";
 
+// TODO: Move to CProjectilePart5.h.
+class CProjectileArea850114 : public CProjectileArea {
+public:
+    CProjectileArea850114();
+    /* 0094 */ void Virtual94(std::list<LONG>& targets) override;
+};
+
 // 0x49DB70
 IcewindCGameEffectBeltynsBurningBlood::IcewindCGameEffectBeltynsBurningBlood(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target)
     : CGameEffect(effect, source, sourceID, target, TRUE)
@@ -64,6 +71,80 @@ CGameEffect* IcewindCGameEffectBeltynsBurningBlood::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x55DEB0
+BOOL IcewindCGameEffectBeltynsBurningBlood::ApplyEffect(CGameSprite* pSprite)
+{
+    if (IcewindMisc::IsDead(pSprite) == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if (m_effectAmount > 0) {
+        DWORD nDuration = 7;
+        for (INT nIndex = 1; nIndex < m_effectAmount; nIndex++) {
+            CGameEffect* pCopy = Copy();
+            pCopy->m_flags |= 0x2;
+            pCopy->m_duration = nDuration;
+            pCopy->m_effectAmount = 0;
+            // NOTE: Original reads it from a constant at 0x8491B0.
+            pCopy->m_durationType = 4;
+            pCopy->m_casterLevel = m_casterLevel;
+            pSprite->AddEffect(pCopy, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+            nDuration += 7;
+        }
+    }
+
+    CGameObject* pObject;
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE)
+        != CGameObjectArray::SUCCESS) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    CGameEffect* pEffect;
+
+    pEffect = IcewindMisc::sub_5853B0(pObject,
+        m_numDice,
+        m_diceSize,
+        0,
+        static_cast<BYTE>(m_spellLevel),
+        4);
+    pEffect->m_flags |= 0x2;
+    pEffect->m_sourceRes = m_sourceRes;
+    pEffect->m_casterLevel = m_casterLevel;
+    pSprite->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, FALSE, TRUE);
+
+    pEffect = IcewindMisc::CreateEffectBerserk(pObject, 7, static_cast<BYTE>(m_spellLevel), 4);
+    pEffect->m_flags |= 0x2;
+    pEffect->m_dwFlags = 1;
+    pEffect->m_sourceRes = m_sourceRes;
+    pEffect->m_casterLevel = m_casterLevel;
+    pSprite->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, FALSE, TRUE);
+
+    pEffect = IcewindMisc::CreateEffectPortraitIcon(pObject, 4, 7, static_cast<BYTE>(m_spellLevel), 4);
+    pEffect->m_flags |= 0x2;
+    pEffect->m_sourceRes = m_sourceRes;
+    pEffect->m_casterLevel = m_casterLevel;
+    pSprite->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, FALSE, TRUE);
+
+    pEffect = IcewindMisc::CreateEffectDisplayString(pObject, 14036, static_cast<BYTE>(m_spellLevel), 4);
+    pEffect->m_flags |= 0x2;
+    pEffect->m_sourceRes = m_sourceRes;
+    pEffect->m_casterLevel = m_casterLevel;
+    pSprite->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, FALSE, TRUE);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -1517,6 +1598,65 @@ CGameEffect* IcewindCGameEffectStaticCharge::Copy()
     return copy;
 }
 
+// 0x564D40
+BOOL IcewindCGameEffectStaticCharge::ApplyEffect(CGameSprite* pSprite)
+{
+    if (IcewindMisc::IsDead(pSprite) == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if (m_effectAmount > 0) {
+        DWORD nDuration = 70;
+        for (INT nIndex = 1; nIndex < m_effectAmount; nIndex++) {
+            CGameEffect* pCopy = Copy();
+            pCopy->m_duration = nDuration;
+            pCopy->m_effectAmount = 0;
+            // NOTE: Original reads it from a constant at 0x8491B0.
+            pCopy->m_durationType = 4;
+            pCopy->m_casterLevel = m_casterLevel;
+            pSprite->AddEffect(pCopy, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+            nDuration += 70;
+        }
+    }
+
+    CGameObject* pObject;
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE)
+        != CGameObjectArray::SUCCESS) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    CProjectileArea850078* pProjectile = new CProjectileArea850078();
+    pProjectile->sub_5704E0(pSprite);
+
+    std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(pSprite,
+        reinterpret_cast<const char*>(m_res.GetResRef()),
+        static_cast<BYTE>(m_casterLevel));
+    for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+        (*it)->m_sourceRes = m_sourceRes;
+        pProjectile->AddEffect(*it);
+    }
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pSprite->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        0,
+        0);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49EC50
@@ -1533,6 +1673,108 @@ CGameEffect* IcewindCGameEffectCallLightning::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x564F80
+BOOL IcewindCGameEffectCallLightning::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_effectAmount > 0) {
+        DWORD nDuration = 70;
+        for (INT nIndex = 1; nIndex < m_effectAmount; nIndex++) {
+            CGameEffect* pCopy = Copy();
+            pCopy->m_duration = nDuration;
+            pCopy->m_effectAmount = 0;
+            // NOTE: Original reads it from a constant at 0x8491B0.
+            pCopy->m_durationType = 4;
+            pCopy->m_casterLevel = m_casterLevel;
+            pSprite->AddEffect(pCopy, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+            nDuration += 70;
+        }
+    }
+
+    CGameObject* pObject;
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE)
+        != CGameObjectArray::SUCCESS) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    CProjectileArea850114* pProjectile = new CProjectileArea850114();
+    pProjectile->sub_5704E0(pSprite);
+
+    std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(pSprite,
+        reinterpret_cast<const char*>(m_res.GetResRef()),
+        static_cast<BYTE>(m_casterLevel));
+    for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+        (*it)->m_sourceRes = m_sourceRes;
+        pProjectile->AddEffect(*it);
+    }
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pSprite->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        0,
+        0);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
+// -----------------------------------------------------------------------------
+
+// TODO: Move to CProjectilePart5.cpp.
+
+// 0x574A70
+CProjectileArea850114::CProjectileArea850114()
+    : CProjectileArea(256)
+{
+    // NOTE: The original reads the constructor argument from a global at
+    // 0x84F1BC and this value from a constant at 0x84F084.
+    field_2AE = 275;
+}
+
+// 0x574AA0
+void CProjectileArea850114::Virtual94(std::list<LONG>& targets)
+{
+    CGameObject* pObject;
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE)
+        == CGameObjectArray::SUCCESS) {
+        CGameSprite* pSprite = NULL;
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            pSprite = static_cast<CGameSprite*>(pObject);
+        }
+
+        // Lightning can only be called outdoors.
+        if ((pObject->GetArea()->GetHeader()->m_areaType & 0x1) != 0) {
+            if (targets.begin() != targets.end()) {
+                Virtual98(*targets.begin());
+            } else if (pSprite != NULL) {
+                // NOTE: Sprite effect `2` and intensity `0` are BYTE
+                // constants at `0x85BB4B` and `0x85BB4E`.
+                pSprite->StartSpriteEffect(2, 0, 30, FALSE);
+                pSprite->FeedBack(CGameSprite::FEEDBACK_CALLLIGHTNINGEND, 0, 0, 0, -1, 0, 0);
+            }
+        } else {
+            // NOTE: The original does not check `pSprite` for `NULL` here.
+            pSprite->FeedBack(CGameSprite::FEEDBACK_CALLLIGHTNINGEND, 0, 0, 0, -1, 0, 0);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
 }
 
 // -----------------------------------------------------------------------------
