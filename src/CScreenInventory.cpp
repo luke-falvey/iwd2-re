@@ -4,12 +4,14 @@
 #include "CGameAnimationTypeCharacter.h"
 #include "CGameArea.h"
 #include "CGameButtonList.h"
+#include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CIcon.h"
 #include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CMessage.h"
 #include "CScreenWorld.h"
+#include "CSpell.h"
 #include "CUIControlLabel.h"
 #include "CUIControlTextDisplay.h"
 #include "CUIPanel.h"
@@ -1780,7 +1782,177 @@ void CScreenInventory::SelectItemAbility(CGameSprite* pSprite)
 // 0x6285B0
 void CScreenInventory::OnDoneButtonClick()
 {
-    // TODO: Incomplete.
+    if (GetTopPopup() != NULL) {
+        switch (GetTopPopup()->m_nID) {
+        case 7:
+        case 8:
+        case 50:
+            OnErrorButtonClick(0);
+            return;
+        case 9:
+            return;
+        }
+    }
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+    // __LINE__: 2785
+    UTIL_ASSERT(pGame != NULL);
+
+    CSingleLock renderLock(&(m_cUIManager.field_36), FALSE);
+    renderLock.Lock(INFINITE);
+
+    LONG nCharacterId = pGame->GetCharacterId(m_nSelectedCharacter);
+
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = pGame->GetObjectArray()->GetDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        CUIPanel* pPanel = GetTopPopup();
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+        // __LINE__: 2808
+        UTIL_ASSERT(pPanel != NULL);
+
+        switch (pPanel->m_nID) {
+        case 3: {
+            BYTE nColorIndex = field_11E;
+            BYTE nColorValue = field_11F;
+
+            if (nColorIndex == 7) {
+                nColorIndex = nColorValue;
+
+                CResRef portraitColorResRef;
+                portraitColorResRef = "portcolr";
+
+                C2DArray tPortraitColor;
+                CString v1;
+                CString sPortraitLarge;
+
+                sPortraitLarge = pSprite->m_baseStats.m_portraitLarge;
+                v1 = sPortraitLarge.Left(8);
+
+                tPortraitColor.Load(portraitColorResRef);
+
+                BOOL bDemanded = tPortraitColor.Demand();
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+                // __LINE__: 2846
+                UTIL_ASSERT(bDemanded == TRUE);
+
+                CPoint ptLocation;
+                if (tPortraitColor.Find(v1, ptLocation, TRUE)) {
+                    switch (nColorValue) {
+                    case 1:
+                        ptLocation.x = 3;
+                        nColorValue = static_cast<BYTE>(tPortraitColor.GetAtLong(ptLocation));
+                        break;
+                    case 2:
+                        ptLocation.x = 2;
+                        nColorValue = static_cast<BYTE>(tPortraitColor.GetAtLong(ptLocation));
+                        break;
+                    case 3:
+                        ptLocation.x = 0;
+                        nColorValue = static_cast<BYTE>(tPortraitColor.GetAtLong(ptLocation));
+                        break;
+                    case 6:
+                        ptLocation.x = 1;
+                        nColorValue = static_cast<BYTE>(tPortraitColor.GetAtLong(ptLocation));
+                        break;
+                    }
+                } else {
+                    switch (nColorValue) {
+                    case 1:
+                        nColorValue = 39;
+                        break;
+                    case 2:
+                        nColorValue = 41;
+                        break;
+                    case 3:
+                        nColorValue = 12;
+                        break;
+                    case 6:
+                        nColorValue = 0;
+                        break;
+                    }
+                }
+
+                tPortraitColor.Release();
+            }
+
+            pSprite->m_baseStats.m_colors[nColorIndex] = nColorValue;
+
+            BYTE nColorRange = CGameAnimationType::RANGE_BODY | nColorIndex;
+            pSprite->GetAnimation()->SetColorRange(nColorRange, nColorValue);
+
+            if (pGame->GetAnimationBam(GetSelectedCharacter(), CGameAnimationType::RANGE_SHIELD) != "") {
+                nColorRange = CGameAnimationType::RANGE_SHIELD | nColorIndex;
+                pSprite->GetAnimation()->SetColorRange(nColorRange, nColorValue);
+            }
+
+            if (pGame->GetAnimationBam(GetSelectedCharacter(), CGameAnimationType::RANGE_HELMET) != "") {
+                nColorRange = CGameAnimationType::RANGE_HELMET | nColorIndex;
+                pSprite->GetAnimation()->SetColorRange(nColorRange, nColorValue);
+            }
+
+            if (pGame->GetAnimationBam(GetSelectedCharacter(), CGameAnimationType::RANGE_WEAPON) != "") {
+                nColorRange = CGameAnimationType::RANGE_WEAPON | nColorIndex;
+                pSprite->GetAnimation()->SetColorRange(nColorRange, nColorValue);
+            }
+
+            CMessageColorChange* pMessage = new CMessageColorChange(pSprite->m_baseStats.m_colors,
+                pSprite->m_id,
+                pSprite->m_id);
+
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+            UpdateAppearance();
+            DismissPopup();
+            break;
+        }
+        case 4:
+            if (m_nRequesterAmount > 0) {
+                BeginSwap();
+                SwapWithSlot(m_nRequesterButtonId, FALSE, static_cast<WORD>(m_nRequesterAmount), TRUE);
+                EndSwap();
+                m_nRequesterButtonId = -1;
+            }
+            DismissPopup();
+            break;
+        case 5:
+            m_nRequesterButtonId = -1;
+            DismissPopup();
+            break;
+        case 6:
+            SelectItemAbility(pSprite);
+
+            if (m_pAbilities != NULL) {
+                POSITION pos = m_pAbilities->GetHeadPosition();
+                while (pos != NULL) {
+                    delete m_pAbilities->GetNext(pos);
+                }
+                m_pAbilities->RemoveAll();
+                m_pAbilities = NULL;
+            }
+            m_pAbilities = NULL;
+            DismissPopup();
+            break;
+        }
+
+        pGame->GetObjectArray()->ReleaseDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    renderLock.Unlock();
 }
 
 // 0x628D20
@@ -2094,9 +2266,120 @@ void CScreenInventory::SetAbilitiesButtonMode(INT nMode)
 // 0x629740
 BOOL CScreenInventory::IsUseButtonActive()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
-    return FALSE;
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+    // __LINE__: 3545
+    UTIL_ASSERT(pGame != NULL);
+
+    BOOLEAN bResult = FALSE;
+
+    CResRef cResIcon;
+    CResRef cResItem;
+    CItem* pItem;
+    STRREF description;
+    WORD wCount;
+
+    MapButtonIdToItemInfo(m_nRequesterButtonId,
+        pItem,
+        description,
+        cResIcon,
+        cResItem,
+        wCount);
+
+    if (pItem != NULL) {
+        switch (m_nUseButtonMode) {
+        case 0:
+        case 2:
+        case 3:
+        case 4:
+            if (pItem->GetItemType() == 9
+                || pItem->GetItemType() == 58
+                || pItem->GetItemType() == 71) {
+                if (pGame->CheckIfPlayerInPortraitSlotCanUseItem(m_nSelectedCharacter,
+                        pItem,
+                        description,
+                        TRUE)) {
+                    bResult = TRUE;
+                }
+            }
+            break;
+        case 1:
+            if (pItem->GetItemType() == 11) {
+                CGameEffect* pEffect = pItem->GetAbilityEffect(1, 0, NULL);
+                if (pEffect != NULL) {
+                    if (pEffect->m_effectID == CGAMEEFFECT_LEARNSPELL) {
+                        // NOTE: Uninline.
+                        LONG nCharacterId = pGame->GetCharacterId(m_nSelectedCharacter);
+
+                        CGameSprite* pSprite;
+
+                        BYTE rc;
+                        do {
+                            rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                                CGameObjectArray::THREAD_ASYNCH,
+                                reinterpret_cast<CGameObject**>(&pSprite),
+                                INFINITE);
+                        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                        if (rc == CGameObjectArray::SUCCESS) {
+                            if ((pSprite->m_liveTypeAI.m_nClassMask & CLASSMASK_WIZARD) != 0) {
+                                CSpell cSpell;
+                                cSpell.SetResRef(CResRef(pEffect->m_res), TRUE, TRUE);
+                                cSpell.Demand();
+
+                                BOOL bUsableBy = FALSE;
+                                if (cSpell.GetRes() != NULL) {
+                                    bUsableBy = cSpell.CheckUsableBy(pSprite);
+                                }
+
+                                cSpell.Release();
+
+                                if (bUsableBy == TRUE) {
+                                    INT nSpellLevel = g_pBaldurChitin->GetObjectGame()->GetSpellLevel(CResRef(pEffect->m_res), 11, 0);
+
+                                    if (nSpellLevel < 9) {
+                                        // TODO: Incomplete. Call `GetIntModMaxAllowedSpellLevel` (0x5456C0, RET 0x4)
+                                        // with `&pSprite->m_derivedStats`.
+                                        INT nMaxAllowedSpellLevel = 0;
+
+                                        if (nSpellLevel < nMaxAllowedSpellLevel) {
+                                            UINT nID = 0;
+                                            if (!g_pBaldurChitin->GetObjectGame()->m_spells.Find(CResRef(pEffect->m_res), nID)) {
+                                                CString sError;
+                                                sError.Format("Spell not in master list - Invalid spell: %s",
+                                                    (LPCSTR)cSpell.GetResRef().GetResRefStr());
+
+                                                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+                                                // __LINE__: 3627
+                                                UTIL_ASSERT_MSG(FALSE, (LPCSTR)sError);
+                                            }
+
+                                            UINT nIndex = 0;
+
+                                            // NOTE: Inlined.
+                                            if (!pSprite->m_spells.GetSpellsAtLevel(6, nSpellLevel)->Find(nID, nIndex)) {
+                                                bResult = TRUE;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                                CGameObjectArray::THREAD_ASYNCH,
+                                INFINITE);
+                        }
+                    }
+
+                    delete pEffect;
+                }
+            }
+            break;
+        }
+    }
+
+    return bResult;
 }
 
 // 0x629B90
@@ -2468,7 +2751,182 @@ void CScreenInventory::OnErrorButtonClick(INT nButton)
 // 0x62A4B0
 void CScreenInventory::IdentifyWithSpell()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+    // __LINE__: 4345
+    UTIL_ASSERT(pGame != NULL);
+
+    CResRef cResIcon;
+    CResRef cResItem;
+
+    // NOTE: Uninline.
+    LONG nCharacterId = pGame->GetCharacterId(m_nSelectedCharacter);
+
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = pGame->GetObjectArray()->GetDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        UINT nID = 0;
+        UINT nIndex = 0;
+        BOOLEAN bFound = FALSE;
+
+        // NOTE: Clerics of Oghma can use the innate spell instead of
+        // Identify.
+        BOOLEAN bInnate = FALSE;
+        if (pSprite->GetAIType().IsClassValid(3)
+            && (pSprite->m_baseStats.m_specialization & 0xFF8000) == SPECMASK_CLERIC_OGHMA
+            // NOTE: Uninline.
+            && g_pBaldurChitin->GetObjectGame()->GetInnateSpells()->Find(CGameSprite::SPIN285, nID) == TRUE
+            && pSprite->m_innateSpells.Find(nID, nIndex) == TRUE
+            // NOTE: Uninline.
+            && pSprite->m_innateSpells.Get(nIndex)->field_8 > 0) {
+            bInnate = TRUE;
+        }
+
+        if (bInnate) {
+            UINT a2 = 1;
+            BOOLEAN a3 = FALSE;
+            pSprite->sub_725270(CGameSprite::SPIN285, a2, a3);
+        } else {
+            if (!g_pBaldurChitin->GetObjectGame()->m_spells.Find(CGameSprite::SPWI110, nID)) {
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+                // __LINE__: 4392
+                UTIL_ASSERT_MSG(FALSE, "Unable to find Identify spell.");
+            }
+
+            BYTE nClass = 0;
+            UINT nSpellLevel = 0;
+            UINT nSpellCasterClassIndex = CSPELLLIST_NUM_CLASSES;
+
+            UINT nLevel;
+            for (nLevel = 0; nLevel < pSprite->m_domainSpells.m_nHighestLevel && !bFound; nLevel++) {
+                nIndex = 0;
+                if (pSprite->m_domainSpells.Find(nID, nLevel, nIndex) == TRUE) {
+                    // NOTE: Uninline.
+                    if (pSprite->m_domainSpells.GetSpellsAtLevel(nLevel)->Get(nIndex)->field_8 > 0) {
+                        nSpellLevel = nLevel;
+                        bFound = TRUE;
+                    }
+                }
+            }
+
+            if (bFound == TRUE) {
+                CResRef resRef(CRuleTables::SPWI110);
+                UINT a4 = 1;
+                BOOLEAN a5 = FALSE;
+                pSprite->sub_725110(nSpellLevel, resRef, a4, a5);
+            } else {
+                bFound = FALSE;
+
+                UINT nClassIndex;
+                for (nClassIndex = 0; nClassIndex < CSPELLLIST_NUM_CLASSES && !bFound; nClassIndex++) {
+                    nLevel = 0;
+                    while (1) {
+                        // __FILE__: .\Include\ObjCreature.h
+                        // __LINE__: 1741
+                        UTIL_ASSERT(nClassIndex <= CSPELLLIST_NUM_CLASSES);
+
+                        if (nLevel >= pSprite->m_spells.Get(nClassIndex)->m_nHighestLevel) {
+                            break;
+                        }
+
+                        if (bFound) {
+                            break;
+                        }
+
+                        nIndex = 0;
+
+                        // NOTE: Inlined.
+                        if (pSprite->m_spells.GetSpellsAtLevel(nClassIndex, nLevel)->Find(nID, nIndex) == TRUE) {
+                            // NOTE: Inlined.
+                            // NOTE: Uninline.
+                            if (pSprite->m_spells.GetSpellsAtLevel(nClassIndex, nLevel)->Get(nIndex)->field_8 > 0) {
+                                nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nClassIndex);
+                                nSpellLevel = nLevel;
+                                nSpellCasterClassIndex = nClassIndex;
+                                bFound = TRUE;
+                            }
+                        }
+
+                        nLevel++;
+                    }
+                }
+
+                if (bFound == TRUE) {
+                    if (nClass == CAIOBJECTTYPE_C_BARD || nClass == CAIOBJECTTYPE_C_SORCERER) {
+                        UINT a2 = 1;
+                        BOOLEAN a3 = FALSE;
+                        pSprite->GetSpells(nClass)->sub_7261A0(nSpellLevel, a2, a3);
+
+                        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+                        // __LINE__: 4454
+                        UTIL_ASSERT(nSpellCasterClassIndex != CSPELLLIST_NUM_CLASSES);
+
+                        CAbilityId ab;
+                        ab.m_itemType = 1;
+                        ab.m_nClass = nClass;
+                        ab.field_1D = nClass + 1;
+
+                        // NOTE: Inlined.
+                        for (UINT nSpellIndex = 0; nSpellIndex < pSprite->m_spells.GetSpellsAtLevel(nSpellCasterClassIndex, nSpellLevel)->m_List.size(); nSpellIndex++) {
+                            // NOTE: Inlined.
+                            // NOTE: Uninline.
+                            nID = pSprite->m_spells.GetSpellsAtLevel(nSpellCasterClassIndex, nSpellLevel)->Get(nSpellIndex)->m_nID;
+
+                            // NOTE: Uninline.
+                            ab.m_res = g_pBaldurChitin->GetObjectGame()->m_spells.Get(nID);
+
+                            pSprite->CheckQuickLists(&ab, -1, FALSE, FALSE);
+                        }
+                    } else {
+                        CResRef resRef(CRuleTables::SPWI110);
+                        UINT a4 = 1;
+                        BOOLEAN a5 = FALSE;
+                        pSprite->sub_724FD0(nClass, nSpellLevel, resRef, a4, a5);
+                    }
+                }
+            }
+        }
+
+        STRREF description;
+        WORD wCount;
+        CItem* pItem;
+        MapButtonIdToItemInfo(m_nRequesterButtonId,
+            pItem,
+            description,
+            cResIcon,
+            cResItem,
+            wCount);
+
+        if (pItem != NULL) {
+            pItem->m_flags |= 0x1;
+
+            g_pBaldurChitin->GetObjectGame()->m_cButtonArray.UpdateButtons();
+
+            CUIPanel* pPanel = m_cUIManager.GetPanel(5);
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+            // __LINE__: 2116
+            UTIL_ASSERT(pPanel != NULL);
+
+            UpdateHistoryPanel(TRUE);
+
+            CMessageSpriteEquipment* pMessage = new CMessageSpriteEquipment(pSprite, pSprite->m_id, pSprite->m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+        }
+
+        pGame->GetObjectArray()->ReleaseDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
 }
 
 // 0x62AE70
@@ -2544,7 +3002,101 @@ void CScreenInventory::IdentifyWithScroll()
 // 0x62B0B0
 void CScreenInventory::CopySpell()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+    // __LINE__: 4587
+    UTIL_ASSERT(pGame != NULL);
+
+    CResRef cResIcon;
+    CResRef cResItem;
+
+    STRREF description;
+    WORD wCount;
+    CItem* pItem;
+    MapButtonIdToItemInfo(m_nRequesterButtonId,
+        pItem,
+        description,
+        cResIcon,
+        cResItem,
+        wCount);
+
+    if (pItem != NULL && pItem->GetItemType() == 11) {
+        pItem->Demand();
+
+        CGameEffect* pEffect = pItem->GetAbilityEffect(1, 0, NULL);
+        if (pEffect != NULL && pEffect->m_effectID == CGAMEEFFECT_LEARNSPELL) {
+            pItem->SetUsageCount(0, pItem->GetUsageCount(0) - 1);
+
+            // NOTE: Uninline.
+            LONG nCharacterId = pGame->GetCharacterId(m_nSelectedCharacter);
+
+            CGameSprite* pSprite;
+
+            BYTE rc;
+            do {
+                rc = pGame->GetObjectArray()->GetDeny(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                INT nSlot = MapButtonIdToInventoryId(m_nRequesterButtonId);
+
+                pItem->Release();
+
+                pSprite->sub_75D450(nSlot, 0);
+
+                CAbilityId ab;
+                ab.m_itemType = 2;
+                ab.m_itemNum = nSlot;
+                ab.m_abilityNum = 0;
+                pSprite->CheckQuickLists(&ab, -1, FALSE, TRUE);
+
+                pGame->GetObjectArray()->ReleaseDeny(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+
+                CMessageAddEffect* pMessage = new CMessageAddEffect(pEffect, nCharacterId, nCharacterId);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                CSpell cSpell;
+                cSpell.SetResRef(CResRef(pEffect->m_res), TRUE, TRUE);
+
+                if (cSpell.Demand()) {
+                    UINT nID = 0;
+                    if (g_pBaldurChitin->GetObjectGame()->m_spells.Find(CResRef(pEffect->m_res), nID) == TRUE) {
+                        INT nLevel = g_pBaldurChitin->GetObjectGame()->GetSpellLevel(CResRef(pEffect->m_res), 11, 0);
+                        if (nLevel < 9) {
+                            UINT nSpellLevel = nLevel + 1;
+
+                            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+                            // __LINE__: 5690
+                            UTIL_ASSERT(nSpellLevel <= CSPELLLIST_MAX_LEVELS);
+
+                            nID = 0;
+                            if (!g_pBaldurChitin->GetObjectGame()->m_spells.Find(CResRef(pEffect->m_res), nID)) {
+                                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+                                // __LINE__: 5695
+                                UTIL_ASSERT(FALSE);
+                            }
+
+                            field_51C = nID;
+                            field_520 = nSpellLevel;
+                            field_524 = 1;
+                        }
+                    }
+                }
+
+                cSpell.Release();
+            } else {
+                pItem->Release();
+            }
+        } else {
+            pItem->Release();
+        }
+    }
 }
 
 // 0x62B4C0
@@ -4719,9 +5271,112 @@ BOOL CScreenInventory::SwapWithSlot(INT nButtonId, BOOL bShowError, WORD wCount,
 // 0x6305B0
 BOOL CScreenInventory::SwapWithPortrait(INT nButtonId, BOOL bShowError)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
-    return FALSE;
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+    // __LINE__: 8166
+    UTIL_ASSERT(pGame != NULL);
+
+    SHORT nPortrait = static_cast<SHORT>(nButtonId);
+
+    BOOL bResult = FALSE;
+    STRREF strError = -1;
+    INT nControlId;
+    BOOL bAllowed;
+    SHORT nSlot;
+
+    if (nPortrait != field_510) {
+        bAllowed = IsCharacterInRange(nPortrait);
+        strError = 0x4652;
+        nSlot = 0x7FFF;
+    } else {
+        // TODO: Incomplete. Call `FindEmptyItemPersonalInventory` (0x5BE840,
+        // RET 0x4) with `nPortrait`; it returns the slot number as a SHORT, or
+        // -1 if there is no empty slot.
+        nSlot = -1;
+
+        if (nSlot == -1) {
+            bAllowed = FALSE;
+            strError = 0x464F;
+        } else {
+            bAllowed = TRUE;
+            nControlId = MapInventoryIdToButtonId(nSlot);
+
+            // NOTE: Uninline.
+            LONG nCharacterId = pGame->GetCharacterId(nPortrait);
+
+            CGameSprite* pSprite;
+
+            BYTE rc;
+            do {
+                rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                DWORD dwState = pSprite->m_derivedStats.m_generalState & STATE_DEAD;
+
+                pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+
+                if (dwState != 0) {
+                    bAllowed = FALSE;
+                    strError = 0x4652;
+                }
+            } else {
+                bAllowed = FALSE;
+                strError = 0x4652;
+            }
+        }
+    }
+
+    CItem* pOldItem = m_pTempItem;
+
+    if (bAllowed) {
+        if (pGame->SwapItemPersonalInventory(nPortrait, m_pTempItem, nSlot, strError, 0xFFFF, FALSE, TRUE)) {
+            UpdateCursorShape();
+
+            bResult = TRUE;
+
+            if (nPortrait == field_510) {
+                CUIPanel* pPanel = m_cUIManager.GetPanel(2);
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+                // __LINE__: 8241
+                UTIL_ASSERT(pPanel != NULL);
+
+                pPanel->InvalidateRect(NULL);
+
+                CUIControlBase* pControl = pPanel->GetControl(nControlId);
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+                // __LINE__: 8244
+                UTIL_ASSERT(pControl != NULL);
+
+                pControl->InvalidateRect();
+            }
+        }
+    }
+
+    if (bShowError) {
+        if (bResult) {
+            SetErrorString(-1, 0xFFFFFF);
+            PlaySwapSound(pOldItem, m_pTempItem);
+        } else {
+            SetErrorString(strError, 0xFFFFFF);
+            return bResult;
+        }
+    }
+
+    if (bResult) {
+        field_510 = -1;
+        field_514 = -1;
+    }
+
+    return bResult;
 }
 
 // 0x6312D0

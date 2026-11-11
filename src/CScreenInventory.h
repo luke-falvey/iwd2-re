@@ -135,7 +135,7 @@ public:
     /* 0454 */ INT m_nTopGroundItem;
     /* 0458 */ LONG m_nGroundPile[6];
     /* 0470 */ BOOL m_nGroundPileQueried[6];
-    /* 0488 */ DWORD m_nRequesterAmount;
+    /* 0488 */ INT m_nRequesterAmount;
     /* 048C */ DWORD m_nRequesterButtonId;
     /* 0490 */ CTypedPtrList<CPtrList, CUIPanel*> m_lPopupStack;
     /* 04AC */ int m_nCurrentAbility;
