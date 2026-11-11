@@ -1,9 +1,11 @@
 #include "IcewindCGameEffects.h"
 
 #include "CBaldurChitin.h"
+#include "CGameArea.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CMessage.h"
+#include "CScreenWorld.h"
 #include "CUtil.h"
 #include "IcewindMisc.h"
 
@@ -1364,6 +1366,69 @@ CGameEffect* IcewindCGameEffectRangerTracking::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x5667C0
+BOOL IcewindCGameEffectRangerTracking::ApplyEffect(CGameSprite* pSprite)
+{
+    CString sAreaName;
+    STR_RES strRes;
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    pGame->m_gameAreas[pGame->m_visibleArea]->m_resRef.CopyToString(sAreaName);
+
+    STRREF strRef = g_pBaldurChitin->GetObjectGame()->GetTrackingText(pSprite, sAreaName);
+    g_pBaldurChitin->m_cTlkTable.Fetch(strRef, strRes);
+
+    g_pBaldurChitin->m_pEngineWorld->DisplayText(pSprite->GetName(),
+        strRes.szText,
+        // NOTE: Original reads it from a constant at 0x84C960.
+        -1,
+        FALSE);
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
+// TODO: Move to CInfGame.cpp.
+//
+// 0x5466F0
+STRREF CInfGame::GetTrackingText(CGameSprite* pSprite, CString& sAreaName)
+{
+    STRREF strRef = 19534;
+    const C2DArray& tTracking = m_ruleTables.m_tTracking;
+
+    CPoint pt;
+    tTracking.Find(sAreaName, pt, TRUE);
+    if (pt.y == -1) {
+        return 19534;
+    }
+
+    INT nSkill = static_cast<signed char>(pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_WILDERNESS_LORE]);
+    if (nSkill > 0) {
+        // NOTE: The result is unused.
+        pSprite->GetSkillBonus(CGAMESPRITE_SKILL_WILDERNESS_LORE);
+
+        pt.x = 1;
+        INT nDC = tTracking.GetAtLong(pt) / 5 + 10;
+        INT nRoll = rand() % 20 + 1;
+
+        pSprite->FeedBack(CGameSprite::FEEDBACK_ROLL,
+            nRoll + nSkill,
+            nDC,
+            nSkill,
+            40285,
+            0,
+            0);
+
+        if (nRoll + nSkill >= nDC) {
+            pt.x = 0;
+            strRef = tTracking.GetAtLong(pt);
+        }
+    }
+
+    return strRef;
 }
 
 // -----------------------------------------------------------------------------
