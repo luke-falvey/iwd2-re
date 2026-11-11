@@ -9,6 +9,7 @@
 
 #include <bitset>
 #include <set>
+#include <string>
 
 // STATE.IDS
 
@@ -571,6 +572,9 @@ public:
     /* 041C */ CImmunitiesProjectile field_41C;
     /* 0438 */ CImmunitiesItemEquipList m_cImmunitiesItemUse;
     /* 0454 */ CImmunitiesItemTypeEquipList m_cImmunitiesItemTypeUse;
+    // NOTE: At 0x0470 in the original (not annotated because the STL
+    // container layout differs, see known layout mismatches around it).
+    std::set<std::string> m_spellImmunities;
     /* 04AC */ CPtrList field_4AC;
     /* 0480 */ std::set<int> m_naturalImmunities;
     /* 04C8 */ CPtrList field_4C8;

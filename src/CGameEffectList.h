@@ -20,6 +20,7 @@ public:
     BOOL CheckEffects();
     BOOL IsTypeOnList(WORD effectID);
     BOOL ModifyAllOfType(WORD effectID, LONG newEffectAmount, BOOL increment);
+    BOOL RemoveMatchingEffect(CGameEffect* pEffect);
 
     /* 001C */ POSITION m_posNext;
     /* 0020 */ POSITION m_posCurrent;

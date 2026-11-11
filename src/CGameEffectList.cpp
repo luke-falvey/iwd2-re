@@ -322,3 +322,20 @@ BOOL CGameEffectList::ModifyAllOfType(WORD effectID, LONG newEffectAmount, BOOL 
     }
     return TRUE;
 }
+
+// 0x4C0830
+BOOL CGameEffectList::RemoveMatchingEffect(CGameEffect* pEffect)
+{
+    POSITION pos = GetHeadPosition();
+    while (pos != NULL) {
+        POSITION posOld = pos;
+        CGameEffect* pNode = GetNext(pos);
+        if (pEffect->CompareTo(*pNode, FALSE)) {
+            RemoveAt(posOld);
+            delete pNode;
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}

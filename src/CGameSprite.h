@@ -746,6 +746,8 @@ public:
     INT GetRacialFavoredClass(DWORD& nSpecialization);
     INT GetMulticlassingPenalty();
     void SetColorRange(BYTE rangeValue);
+    void sub_6F50A0();
+    void DisplaySaveString(DWORD dwSaveType, BYTE bSaved, INT nRoll, INT nBonus, const CString& sSpellName);
     void DisplayFeats(CUIControlTextDisplay* pText);
     void DisplaySkills(CUIControlTextDisplay* pText);
     SHORT JumpToArea(CString areaName, const CPoint& dest, SHORT facingDirection, SHORT delay);

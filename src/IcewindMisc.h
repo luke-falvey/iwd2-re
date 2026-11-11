@@ -64,6 +64,7 @@ public:
     static CGameEffect* CreateEffectDisplayString(CGameObject* pObject, int effectAmount, BYTE spellLevel, DWORD savingThrow);
     static CGameEffect* CreateEffectVisualSpellHit(CGameObject* pObject, DWORD dwFlags, BYTE spellLevel, DWORD savingThrow);
     static CGameEffect* CreateEffectHitPoints(CGameObject* pObject, int effectAmount, DWORD duration, BYTE spellLevel, BYTE targetType);
+    static CString sub_5864F0(const CResRef& resRef);
     static CGameEffect* CreateEffectImmunitySpell(CGameObject* pObject, const BYTE* res, DWORD dwFlags, DWORD duration, BYTE spellLevel, BYTE targetType);
     static CGameEffect* CreateEffectRemoveAllOfType(CGameObject* pObject, DWORD dwFlags, BYTE spellLevel);
     static CGameEffect* CreateEffectConfusion(CGameObject* pObject, DWORD duration, BYTE spellLevel, DWORD savingThrow);

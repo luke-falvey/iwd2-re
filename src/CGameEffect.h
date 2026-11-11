@@ -296,12 +296,15 @@ public:
     /* 000C */ virtual BOOL ResolveEffect(CGameSprite* pSprite);
     /* 0010 */ virtual void OnAdd(CGameSprite* pSprite);
     /* 0014 */ virtual void OnLoad(CGameSprite* pSprite);
-    /* 0018 */ virtual BOOL CheckSave(CGameSprite* pSprite, BYTE& roll1, BYTE& roll2, BYTE& roll3, BYTE& roll4);
+    /* 0018 */ virtual BOOL CheckSave(CGameSprite* pSprite, BYTE& fortitudeRoll, BYTE& reflexRoll, BYTE& willRoll, BYTE& resistMagicRoll);
     /* 001C */ virtual BOOL UsesDice();
     /* 0020 */ virtual void DisplayString(CGameSprite* pSprite);
     /* 0024 */ virtual void OnRemove(CGameSprite* pSprite);
 
     BOOL Compare(const CGameEffect& other);
+    BOOL CompareTo(const CGameEffect& other, BOOL bCheckSource);
+    BOOL CheckAdd(CGameSprite* pSprite, BYTE& fortitudeRoll, BYTE& reflexRoll, BYTE& willRoll, BYTE& resistMagicRoll, BYTE& probabilityRoll);
+    void sub_4A3FF0(CGameSprite* pSprite);
     void PlaySound(const CResRef& soundResRef, CGameSprite* pSprite);
     BOOL CheckExpiration();
     ITEM_EFFECT* GetItemEffect();
