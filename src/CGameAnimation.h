@@ -38,6 +38,7 @@ public:
     char* GetSndWalk(SHORT tableIndex);
     DWORD GetSndWalkFreq();
     BOOL IsFalseColor();
+    BOOL IsMirroring();
     void SetAnimationType(USHORT animationID, BYTE* colorRangeValues, WORD facing);
     void ClearColorEffectsAll();
     void SetColorEffect(BYTE effectType, BYTE colorRange, COLORREF tintColor, BYTE periodLength);

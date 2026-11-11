@@ -266,7 +266,10 @@ public:
 
     static const ITEM_ABILITY DEFAULT_ATTACK;
 
+    static const BYTE TRAP_CRITICAL_FAILURE_MARGIN;
     static const LONG STANDARD_VERBAL_CONSTANT_LENGTH;
+    static const LONG PICKPOCKET_GOLD_CHANCE;
+    static const LONG PICKPOCKET_GOLD_MAX;
     static const LONG STEALTH_GREYOUT_DURATION;
 
     static const SHORT FLY_RIGHT;
@@ -483,6 +486,7 @@ public:
 
     void AddBlood(SHORT nHeight, SHORT nDirection, SHORT nType);
     void RemoveReplacementFromArea();
+    void sub_6F50A0();
     void AIUpdateWalk();
     void SetPath(LONG* pPath, SHORT nPath);
     BOOL ClearBumpPath(const CPoint& start, const CPoint& goal);
@@ -587,12 +591,14 @@ public:
     void AddKnownDivineSpells(const BYTE& nClass);
     void DisplayTextRef(STRREF nameRef, STRREF textRef, COLORREF nameColor, COLORREF textColor);
     void GetNumInventoryPersonalSlots(INT& nUsedSlots, INT& nTotalSlots);
+    char InDark();
     void SetModalState(BYTE modalState, BOOL bUpdateToolbar);
     void sub_719180(CString sSpellResRef);
     BOOL sub_7202E0();
     void CheckSequence(BYTE& sequence);
     void sub_7204C0();
     void sub_720B50(CMemINIValue* a1, CMemINIValue* a2);
+    CString GetRaceString(BYTE nRace);
     SHORT FindItemBags(const CString& sName, LONG number, BOOL checkForIdentified);
     SHORT TakeItemBags(const CString& sName, LONG number, SHORT slotNum);
     BOOL HaveUnexportableItems();
@@ -600,11 +606,15 @@ public:
     LONG GetLevel();
     void sub_723BF0(BOOLEAN a1, BOOLEAN a2);
     INT GetAC();
+    INT sub_723DB0();
     INT sub_723F60();
     void sub_71E760(CDerivedStats& DStats, int a2);
     void sub_722D50(BYTE nClass, SHORT nLevels, int a3);
     void CheckStatsChange();
+    void sub_71CC90();
+    void sub_71CEA0(CItem* pItem, BOOL bLeft);
     int sub_71F6E0();
+    void sub_71F860(CProjectile* pProjectile, CItem* pItem, SHORT abilityNum, const CPoint& target);
     const CString& GetName();
     STRREF GetNameRef();
     void PlaySound(const CResRef& res);
@@ -666,8 +676,11 @@ public:
     SHORT PickLock(CGameAIBase* pTarget);
     SHORT RemoveSpell();
     SHORT BashDoor(CGameAIBase* pTarget);
+    BOOL sub_75D450(SHORT slotNum, SHORT abilityNum);
     SHORT EquipRanged();
+    SHORT sub_75E330(CItem* pLauncher, BOOL bEquipMelee);
     SHORT StartStore(CGameSprite* pTarget);
+    INT sub_75E930(INT a1);
     SHORT ChangeAnimation();
     SHORT ReturnToSavedLocation();
     SHORT RunAwayFromNoLeaveArea(CGameSprite* pTarget);
@@ -679,7 +692,10 @@ public:
     CPoint sub_734720(LONG** ppPath, LONG* pnPath, SHORT range, BOOLEAN* pbExtended);
     void FeedBack(WORD nFeedBackId, LONG a2, LONG a3, LONG a4, LONG a5, LONG a6, LONG a7);
     BOOLEAN sub_737910(BOOL a1);
+    void CheckReputation();
     SHORT GetCriticalHitBonus();
+    BOOLEAN Hit(CGameSprite* target, CItem* curWeapon, INT abilityNum, BOOL* pbCritical, BOOL bCheckOffhand, BYTE nAttackCount);
+    BOOL sub_73C490(CGameSprite* target);
     SHORT sub_73C6A0(CGameSprite* target, CItem* curWeapon, const ITEM_ABILITY* curAttack);
     SHORT sub_73C7E0();
     SHORT sub_73C8C0(CGameSprite* target);
@@ -688,8 +704,13 @@ public:
     SHORT sub_73CAE0(CItem* curWeapon, const ITEM_ABILITY* curAttack);
     SHORT sub_73CB10(CItem* curWeapon, const ITEM_ABILITY* curAttack);
     SHORT sub_73CC40(CItem* curWeapon, const ITEM_ABILITY* curAttack);
+    SHORT sub_73CD00(CGameSprite* target, CItem* curWeapon, const ITEM_ABILITY* curAttack);
+    SHORT sub_73CF10(CItem* curWeapon, const ITEM_ABILITY* curAttack);
+    SHORT sub_73D080(BOOL bOffhand);
+    SHORT sub_73D1B0(CGameSprite* target, const ITEM_ABILITY* curAttack);
     SHORT sub_73D420();
     SHORT sub_73D440(CItem* curWeapon);
+    CGameEffect* Damage(CItem* curWeapon, CItem* pLauncher, INT abilityNum, BOOL bCritical, const CAIObjectType& targetType, SHORT nTargetDirection, SHORT nAttackDirection, CGameSprite* target, BOOL bCheckOffhand);
     SHORT MoveToPoint();
     SHORT OneSwing();
     SHORT Recoil();
@@ -720,6 +741,7 @@ public:
     SHORT sub_7615F0(int a1);
     void sub_761650();
     SHORT DropItem(CItem* pItem);
+    void sub_761AB0(CGameSprite* pTarget);
     void sub_761990();
     SHORT PlayBardSong();
     SHORT SpellCastEffect(const CString& sString1, const CString& sString2, LONG nSpecific1, LONG nSpecific2, LONG nSpecific3);
@@ -810,7 +832,7 @@ public:
     BOOLEAN sub_724C40(const unsigned int& a1);
     BOOLEAN RemoveKnownSpell(const BYTE& nClass, const UINT& nSpellLevel, const CResRef& resRef, const unsigned int& a4, const unsigned int& a5, const unsigned int& a6);
     BOOLEAN RemoveDomainSpell(const UINT& nSpellLevel, const CResRef& resRef, const unsigned int& a3, const unsigned int& a4, const unsigned int& a5);
-    BOOLEAN RemoveInnateSpell(const CResRef& resRef, const unsigned int& a2, const unsigned int& a3, const unsigned int& a4);
+    BOOLEAN RemoveInnateSpell(const CResRef& resRef, const BOOLEAN& a2, const unsigned int& a3, const unsigned int& a4);
     BOOLEAN RemoveSong(const CResRef& resRef, const unsigned int& a2, const unsigned int& a3, const unsigned int& a4);
     BOOLEAN RemoveShapeshift(const CResRef& resRef);
     BOOLEAN sub_724FD0(const BYTE& nClass, const UINT& nSpellLevel, const CResRef& resRef, const unsigned int& a4, const unsigned int& a5);
@@ -826,6 +848,7 @@ public:
     void sub_726570();
     INT sub_726800();
     void sub_726810(BYTE nWeaponSet);
+    void sub_726F20();
     BYTE GetLastSong();
 
     void GetQuickSpell(BYTE buttonNum, CButtonData& buttonData);
@@ -889,6 +912,8 @@ public:
     /* 4DFF */ BYTE m_currSndArmor;
     /* 4E00 */ CSound m_sndReady;
     /* 4E64 */ CSound m_sndDeath;
+    /* 4EC8 */ CSound m_sndCasting;
+    /* 4F2C */ CSound m_sndCastingChant;
     /* 4F90 */ CSound m_sndSpriteEffect;
     /* 4FF4 */ int m_nNumberOfTimesTalkedTo;
     /* 4FF8 */ BOOL m_bSeenPartyBefore;

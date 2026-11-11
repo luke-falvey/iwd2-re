@@ -3535,6 +3535,16 @@ void CRuleTables::sub_546B60(CGameSprite* pSprite, int& a2, int& a3, int& a4, BO
     // TODO: Incomplete.
 }
 
+// 0x547020
+INT CRuleTables::sub_547020(INT nBaseAttackBonus, INT nStep, INT nAttack) const
+{
+    INT nValue = nBaseAttackBonus - nStep * nAttack;
+    if (nValue < 0) {
+        nValue = 0;
+    }
+    return nValue;
+}
+
 // 0x547040
 INT CRuleTables::sub_547040(CGameSprite* pSprite, const CResRef& resRef, INT a3, BYTE nClass, DWORD nSpecialization, INT a6) const
 {

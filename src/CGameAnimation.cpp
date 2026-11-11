@@ -279,6 +279,16 @@ BOOL CGameAnimation::IsFalseColor()
 }
 
 // NOTE: Inlined.
+BOOL CGameAnimation::IsMirroring()
+{
+    // __FILE__: .\Include\ObjAnimation.h
+    // __LINE__: 2101
+    UTIL_ASSERT(m_animation != NULL);
+
+    return m_animation->IsMirroring();
+}
+
+// NOTE: Inlined.
 BOOL CGameAnimation::IsBeginningOfSequence()
 {
     // __FILE__: .\Include\ObjAnimation.h
