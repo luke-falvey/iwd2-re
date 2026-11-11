@@ -3441,13 +3441,6 @@ SHORT CGameAIBase::ForceSpell(CGameAIBase* pTarget)
     }
 
     CProjectile* pProjectile = CProjectile::DecodeProjectile(pAbility->missileType, this, FALSE);
-    if (pProjectile == NULL) {
-        // TODO: Not in the original; remove once 0x51EAF0 is translated.
-        pSpell->Release();
-        delete pSpell;
-        return ACTION_ERROR;
-    }
-
     if (GetObjectType() == TYPE_SPRITE) {
         BYTE nClass = 0;
         int nType = 0;
@@ -3550,14 +3543,6 @@ SHORT CGameAIBase::ForceSpell(CGameAIBase* pTarget)
             0,
             0,
             static_cast<BYTE>(casterLevel));
-        if (pEffect == NULL) {
-            // TODO: Not in the original; remove once 0x54A510 is translated.
-            pSpell->Release();
-            delete pSpell;
-            delete pProjectile;
-            return ACTION_ERROR;
-        }
-
         pEffect->m_source = m_pos;
         pEffect->m_sourceID = m_id;
         pEffect->m_target = pTarget->GetPos();
@@ -3794,13 +3779,6 @@ SHORT CGameAIBase::ForceSpellPoint()
     }
 
     CProjectile* pProjectile = CProjectile::DecodeProjectile(pAbility->missileType, this, FALSE);
-    if (pProjectile == NULL) {
-        // TODO: Not in the original; remove once 0x51EAF0 is translated.
-        pSpell->Release();
-        delete pSpell;
-        return ACTION_ERROR;
-    }
-
     if (GetObjectType() == TYPE_SPRITE) {
         BYTE nClass = 0;
         int nType = 0;
@@ -3818,14 +3796,6 @@ SHORT CGameAIBase::ForceSpellPoint()
             0,
             0,
             static_cast<BYTE>(casterLevel));
-        if (pEffect == NULL) {
-            // TODO: Not in the original; remove once 0x54A510 is translated.
-            pSpell->Release();
-            delete pSpell;
-            delete pProjectile;
-            return ACTION_ERROR;
-        }
-
         pEffect->m_source = m_pos;
         pEffect->m_sourceID = m_id;
         pEffect->m_target = ptTarget;
@@ -3980,13 +3950,6 @@ SHORT CGameAIBase::ApplySpell(CGameAIBase* pTarget)
             0,
             0,
             casterLevel);
-        if (pEffect == NULL) {
-            // TODO: Not in the original; remove once 0x54A510 is translated.
-            pSpell->Release();
-            delete pSpell;
-            return ACTION_ERROR;
-        }
-
         pEffect->m_source = m_pos;
         pEffect->m_sourceID = m_id;
         pEffect->m_target = pTarget->GetPos();

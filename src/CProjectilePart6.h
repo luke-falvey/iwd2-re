@@ -107,6 +107,17 @@ public:
     /* 02D2 */ LONG field_2D2;
 };
 
+// vtable 0x850F14, sizeof 0x2BE
+//
+// NOTE: Original layout uses MSVC 6 `std::set` (16 bytes).
+class CProjectileSingleTarget850F14 : public CProjectileSingleTarget {
+public:
+    CProjectileSingleTarget850F14(const std::set<LONG>& a1);
+    /* 0078 */ void DeliverEffects() override;
+
+    /* 02AE */ std::set<LONG> field_2AE;
+};
+
 // vtable 0x85101C, sizeof 0x2EC
 class CProjectileSingleTarget85101C : public CProjectileSingleTarget {
 public:

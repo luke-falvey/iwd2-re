@@ -275,3 +275,9 @@ void CProjectile85112C::DeliverEffects()
 {
     // TODO: Incomplete.
 }
+
+// 0x5367C0
+void CProjectile84D838::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
+{
+    // TODO: Incomplete.
+}

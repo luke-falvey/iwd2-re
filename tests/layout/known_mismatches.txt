@@ -1532,6 +1532,7 @@ CProjectileSingleTarget850E84::field_2C6
 CProjectileSingleTarget850E84::field_2CA
 CProjectileSingleTarget850E84::field_2CE
 CProjectileSingleTarget850E84::field_2D2
+CProjectileSingleTarget850F14::field_2AE
 CProjectileSingleTarget85101C::field_2AE
 CProjectileSingleTarget85101C::field_2B2
 CProjectileSingleTarget85101C::field_2B6

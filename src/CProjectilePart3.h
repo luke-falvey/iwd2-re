@@ -64,6 +64,18 @@ public:
     /* 032B */ BYTE field_32B;
 };
 
+// vtable 0x84D838, sizeof 0x32C
+class CProjectile84D838 : public CProjectile84E9C0 {
+public:
+    // NOTE: Inlined in CProjectile::DecodeProjectile.
+    CProjectile84D838(const CString& sVidCell, const CString& sSound, const CString& sBitmap, LONG a4, BYTE a5)
+        : CProjectile84E9C0(sVidCell, sSound, sBitmap, a4, a5)
+    {
+    }
+
+    /* 006C */ void Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType) override;
+};
+
 class CProjectile850F9C : public CProjectile {
 public:
     CProjectile850F9C(const CString& sVidCell, const CString& sSound, BYTE a3, BYTE a4, const IcewindCVisualEffect& vfx);

@@ -177,6 +177,26 @@ void CProjectileSingleTarget850E84::Virtual8C(CPoint pt)
     // TODO: Incomplete.
 }
 
+// 0x57C510
+CProjectileSingleTarget850F14::CProjectileSingleTarget850F14(const std::set<LONG>& a1)
+    : CProjectileSingleTarget(CResRef((BYTE*)"CLightT"))
+    , field_2AE(a1)
+{
+    m_pVidCell->SequenceSet(0);
+    field_1D8 = 16;
+    m_fireSoundRef = "TRA_09";
+    m_speed *= 2;
+    m_vfx.sub_586A90(TRUE);
+    m_bHasHeight = FALSE;
+    field_1C2 = 0;
+}
+
+// 0x57C7B0
+void CProjectileSingleTarget850F14::DeliverEffects()
+{
+    // TODO: Incomplete.
+}
+
 // 0x57D390
 CProjectileSingleTarget85101C::CProjectileSingleTarget85101C()
     : CProjectileSingleTarget(CResRef((BYTE*)"LightnT"))
