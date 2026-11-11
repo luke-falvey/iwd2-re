@@ -5,6 +5,7 @@
 #include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CMessage.h"
+#include "CProjectileArea.h"
 #include "CScreenWorld.h"
 #include "CUtil.h"
 #include "IcewindMisc.h"
@@ -31,6 +32,12 @@ const char RESREF_EYE_OF_FORTITUDE[] = "SpIn131";
 
 // 0x8AEBE4
 const char RESREF_EYE_OF_STONE[] = "SpIn132";
+
+// 0x8AEBEC
+const char* RESREF_HARPY_WAIL = "SpIn166";
+
+// 0x8AEBF0
+const char* RESREF_JACKALWERE_GAZE = "SpIn179";
 
 // 0x49DB70
 IcewindCGameEffectBeltynsBurningBlood::IcewindCGameEffectBeltynsBurningBlood(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target)
@@ -1721,6 +1728,42 @@ CGameEffect* IcewindCGameEffectHarpyWail::Copy()
     return copy;
 }
 
+// 0x566E10
+BOOL IcewindCGameEffectHarpyWail::ApplyEffect(CGameSprite* pSprite)
+{
+    if (IcewindMisc::IsDead(pSprite) == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    CGameEffect* pCopy = Copy();
+    pCopy->m_duration = 7;
+    // NOTE: Original reads it from a constant at 0x8491B0.
+    pCopy->m_durationType = 4;
+    pSprite->AddEffect(pCopy, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+
+    CProjectileArea* pProjectile = new CProjectileArea(300);
+    pProjectile->field_4E2.field_10 = "EFF_P111";
+
+    std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(pSprite, RESREF_HARPY_WAIL, 1);
+    for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+        (*it)->m_sourceRes = CResRef(CString(RESREF_HARPY_WAIL));
+        (*it)->m_casterLevel = m_casterLevel;
+        pProjectile->AddEffect(*it);
+    }
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pSprite->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        0,
+        0);
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4A05B0
@@ -1737,6 +1780,45 @@ CGameEffect* IcewindCGameEffectJackalwereGaze::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x567040
+BOOL IcewindCGameEffectJackalwereGaze::ApplyEffect(CGameSprite* pSprite)
+{
+    if (IcewindMisc::IsDead(pSprite) == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    CGameEffect* pCopy = Copy();
+    pCopy->m_duration = 7;
+    // NOTE: Original reads it from a constant at 0x8491B0.
+    pCopy->m_durationType = 4;
+    pSprite->AddEffect(pCopy, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+
+    pSprite->AddEffect(IcewindMisc::CreateEffectDisplayString(pSprite, 26939, 0, 0),
+        CGameAIBase::EFFECT_LIST_TIMED,
+        TRUE,
+        TRUE);
+
+    CProjectileArea* pProjectile = new CProjectileArea(300);
+
+    std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(pSprite, RESREF_JACKALWERE_GAZE, 1);
+    for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+        (*it)->m_sourceRes = CResRef(CString(RESREF_JACKALWERE_GAZE));
+        pProjectile->AddEffect(*it);
+    }
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pSprite->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        0,
+        0);
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
