@@ -36,8 +36,10 @@ only when the packet leaves a name unresolved:
 - `g_pChitin` (`[0x8CF6D8]`) and `g_pBaldurChitin` (`[0x8CF6DC]`) are the same `CBaldurChitin`.
 - The repo builds with 2-byte packing (`/Zp2`). Never add pack pragmas.
 - `CPtrList` node: `pNext` +0, `pPrev` +4, `data` +8.
-- A GetShare/GetDeny call that loops while the result is SHARED or DENIED is written
+- A GetShare/GetDeny call inside a retry loop is written
   `do { rc = ...; } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);`
+  but only with the conditions the asm actually tests. `[0x851870]` is SHARED and
+  `[0x851871]` is DENIED. Many loops test DENIED alone; some calls have no loop at all.
 - `operator new(size)` followed by stores of a vtable and fields is an inlined constructor.
   Write `new ClassName(args)` with the class from the packet's VTABLES section.
 
