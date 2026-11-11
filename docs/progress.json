@@ -5,9 +5,9 @@
     "0x7DA200"
   ],
   "functions_total": 9831,
-  "functions_done": 7521,
-  "functions_complete": 7059,
-  "incomplete_markers": 496,
+  "functions_done": 7530,
+  "functions_complete": 7075,
+  "incomplete_markers": 489,
   "incomplete_by_file": {
     "src/CMessage.cpp": 86,
     "src/CGameSprite.cpp": 62,
@@ -25,7 +25,6 @@
     "src/CProjectilePart4.cpp": 9,
     "src/CBaldurProjector.cpp": 7,
     "src/CGameAIBase.cpp": 7,
-    "src/CItem.cpp": 7,
     "src/CScreenCreateChar.cpp": 7,
     "src/CVidPoly.cpp": 7,
     "src/CParticle.cpp": 6,
@@ -77,8 +76,8 @@
     "src/CVidMosaic.cpp": 1,
     "src/CWarp.cpp": 1
   },
-  "annotations_total": 10039,
-  "annotations_not_function_start": 2496,
+  "annotations_total": 10050,
+  "annotations_not_function_start": 2498,
   "duplicate_annotations": {
     "0x7ACD60": [
       "src/CAIObjectType.cpp",
@@ -862,13 +861,14 @@
       "src/CResItem.cpp",
       "src/CResSpell.cpp"
     ],
+    "0x401BA0": [
+      "src/CResItem.cpp",
+      "src/CResSpell.cpp",
+      "src/CResUI.cpp"
+    ],
     "0x780340": [
       "src/CResMosaic.cpp",
       "src/CResMosaic.cpp"
-    ],
-    "0x401BA0": [
-      "src/CResSpell.cpp",
-      "src/CResUI.cpp"
     ],
     "0x66F4B0": [
       "src/CScreenChapter.cpp",
@@ -2672,6 +2672,7 @@
     "0x8D7E60",
     "0x8D7E68",
     "0x8D828C",
+    "0x8D86B0",
     "0x8D8FE4",
     "0x8DE064",
     "0x8DE068",
@@ -2684,6 +2685,7 @@
     "0x8DE8BC",
     "0x8DE8C0",
     "0x8DE8C4",
+    "0x8DE8C8",
     "0x8DE8CC",
     "0x8DE8D0",
     "0x8DE8D4",
@@ -3767,8 +3769,8 @@
     "0xA1917C"
   ],
   "bytes_total": 3846937,
-  "bytes_done": 3257059,
-  "bytes_complete": 2694988,
+  "bytes_done": 3266247,
+  "bytes_complete": 2709361,
   "largest_stubs": [
     {
       "addr": "0x4DB160",
