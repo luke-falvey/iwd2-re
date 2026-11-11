@@ -9508,9 +9508,238 @@ void CInfGame::SetupCharacters(BOOLEAN bProgressBarInPlace)
 // 0x5BDFE0
 LONG CInfGame::sub_5BDFE0(SHORT nType)
 {
-    // TODO: Incomplete.
+    CGameSprite* pSprite;
+    BYTE rc;
+    SHORT nIndex;
+    SHORT nBest;
+    INT nClassLevel = 0;
+    INT nValue;
+    LONG nResult = CGameObjectArray::INVALID_INDEX;
+    LONG nCharacterId;
 
-    return CGameObjectArray::INVALID_INDEX;
+    switch (nType) {
+    case 1:
+        nBest = 0x7FFF;
+        for (nIndex = 0; nIndex < m_nCharacters; nIndex++) {
+            // NOTE: Uninline.
+            nCharacterId = GetCharacterId(nIndex);
+
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
+                    SHORT nLevel = pSprite->m_derivedStats.m_nLevel;
+                    if (nLevel < nBest) {
+                        nResult = nCharacterId;
+                        nBest = nLevel;
+                        nClassLevel = pSprite->m_derivedStats.GetClassMaskLevel(0xD1);
+                    } else if (nLevel == nBest) {
+                        nValue = pSprite->m_derivedStats.GetClassMaskLevel(0xD1);
+                        if (nValue < nClassLevel) {
+                            nResult = nCharacterId;
+                            nBest = pSprite->m_derivedStats.m_nLevel;
+                            nClassLevel = nValue;
+                        }
+                    }
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+        break;
+    case 2:
+        nBest = 0;
+        for (nIndex = 0; nIndex < m_nCharacters; nIndex++) {
+            // NOTE: Uninline.
+            nCharacterId = GetCharacterId(nIndex);
+
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
+                    SHORT nLevel = pSprite->m_derivedStats.m_nLevel;
+                    if (nLevel > nBest) {
+                        nResult = nCharacterId;
+                        nBest = nLevel;
+                        nClassLevel = pSprite->m_derivedStats.GetClassMaskLevel(0xD1);
+                    } else if (nLevel == nBest) {
+                        nValue = pSprite->m_derivedStats.GetClassMaskLevel(0xD1);
+                        if (nValue > nClassLevel) {
+                            nResult = nCharacterId;
+                            nBest = pSprite->m_derivedStats.m_nLevel;
+                            nClassLevel = nValue;
+                        }
+                    }
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+        break;
+    case 3:
+        nBest = 0;
+        for (nIndex = 0; nIndex < m_nCharacters; nIndex++) {
+            // NOTE: Uninline.
+            nCharacterId = GetCharacterId(nIndex);
+
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
+                    SHORT nDamage = pSprite->m_derivedStats.m_nMaxHitPoints - pSprite->m_baseStats.m_hitPoints;
+                    if (nDamage > nBest) {
+                        nResult = nCharacterId;
+                        nBest = nDamage;
+                    }
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+        break;
+    case 4:
+        nBest = 0x7FFF;
+        for (nIndex = 0; nIndex < m_nCharacters; nIndex++) {
+            // NOTE: Uninline.
+            nCharacterId = GetCharacterId(nIndex);
+
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
+                    SHORT nDamage = pSprite->m_derivedStats.m_nMaxHitPoints - pSprite->m_baseStats.m_hitPoints;
+                    if (nDamage < nBest) {
+                        nResult = nCharacterId;
+                        nBest = nDamage;
+                    }
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+        break;
+    case 5:
+        nBest = 0;
+        for (nIndex = 0; nIndex < m_nCharacters; nIndex++) {
+            // NOTE: Uninline.
+            nCharacterId = GetCharacterId(nIndex);
+
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0
+                    && pSprite->GetAIType().m_nGender == CAIObjectType::SEX_MALE) {
+                    SHORT nLevel = pSprite->m_derivedStats.m_nLevel;
+                    if (nLevel > nBest) {
+                        nResult = nCharacterId;
+                        nBest = nLevel;
+                        nClassLevel = pSprite->m_derivedStats.GetClassMaskLevel(0xD1);
+                    } else if (nLevel == nBest) {
+                        nValue = pSprite->m_derivedStats.GetClassMaskLevel(0xD1);
+                        if (nValue > nClassLevel) {
+                            nResult = nCharacterId;
+                            nBest = pSprite->m_derivedStats.m_nLevel;
+                            nClassLevel = nValue;
+                        }
+                    }
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+        break;
+    case 6:
+        nBest = -20;
+        for (nIndex = 0; nIndex < m_nCharacters; nIndex++) {
+            // NOTE: Uninline.
+            nCharacterId = GetCharacterId(nIndex);
+
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
+                    if (pSprite->GetAC() > nBest) {
+                        nResult = nCharacterId;
+                        nBest = pSprite->GetAC();
+                    }
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+        break;
+    case 7:
+        nBest = 20;
+        for (nIndex = 0; nIndex < m_nCharacters; nIndex++) {
+            // NOTE: Uninline.
+            nCharacterId = GetCharacterId(nIndex);
+
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
+                    if (pSprite->GetAC() < nBest) {
+                        nResult = nCharacterId;
+                        nBest = pSprite->GetAC();
+                    }
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+        break;
+    }
+
+    return nResult;
 }
 
 // 0x5BFC40
