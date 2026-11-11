@@ -10,6 +10,7 @@
 #include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CItem.h"
+#include "CResEffect.h"
 #include "CScreenWorld.h"
 #include "CSevenEyes.h"
 #include "CSpell.h"
@@ -11905,6 +11906,36 @@ CGameEffect* CGameEffectAddInnateAbility::Copy()
     return copy;
 }
 
+// 0x4BE000
+BOOL CGameEffectAddInnateAbility::ApplyEffect(CGameSprite* pSprite)
+{
+    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(m_res, 1006, TRUE) == NULL) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    pSprite->AddSpecialAbility(m_res, FALSE);
+
+    UINT nID = 0;
+    if (g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Find(m_res, nID) == true) {
+        if (m_res == CGameSprite::SPIN122) {
+            UINT nIndex = 0;
+            if (pSprite->m_shapeshifts.Find(nID, nIndex) == TRUE) {
+                if (pSprite->m_shapeshifts.Get(nIndex)->field_4 == 0) {
+                    pSprite->m_shapeshifts.Add(nID, 1, 0, 0);
+                    pSprite->m_shapeshifts.sub_725C50(nID, 1, FALSE);
+                }
+            }
+        } else {
+            pSprite->m_shapeshifts.sub_725D30(1, FALSE);
+        }
+    }
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -12028,6 +12059,35 @@ BOOL CGameEffectHoldCreatureSpell::ApplyEffect(CGameSprite* pSprite)
 
 // -----------------------------------------------------------------------------
 
+// NOTE: Inlined in `CGameEffectApplyEffect::ApplyEffect`,
+// `CGameEffectApplyEffectEquipItem::ApplyEffect` and
+// `CGameEffectApplyEffectEquipItemType::ApplyEffect`.
+static CGameEffect* DecodeEffectResource(CResHelper<CResEffect, 1016>& cResEffect)
+{
+    BYTE* pData = static_cast<BYTE*>(cResEffect.GetRes()->Demand());
+    if (pData == NULL) {
+        cResEffect.GetRes()->Release();
+        return NULL;
+    }
+
+    CGameEffectBase* pBase = reinterpret_cast<CGameEffectBase*>(pData + 8);
+
+    ITEM_EFFECT effect;
+    effect.effectID = static_cast<WORD>(pBase->m_effectID);
+
+    CPoint source(-1, -1);
+    CPoint target(-1, -1);
+    CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect, source, -1, target);
+    pEffect->CopyFromBase(pBase);
+    pEffect->m_res.MakeUpper();
+    pEffect->m_res2.MakeUpper();
+    pEffect->m_res3.MakeUpper();
+
+    cResEffect.GetRes()->Release();
+
+    return pEffect;
+}
+
 // NOTE: Inlined.
 CGameEffectApplyEffect::CGameEffectApplyEffect(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target)
     : CGameEffect(effect, source, sourceID, target, FALSE)
@@ -12042,6 +12102,87 @@ CGameEffect* CGameEffectApplyEffect::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4BE2A0
+BOOL CGameEffectApplyEffect::ApplyEffect(CGameSprite* pSprite)
+{
+    BOOL bMatch = FALSE;
+
+    CAIObjectType type;
+    type.Set(pSprite->GetAIType());
+
+    CAIObjectType cmp(0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0);
+
+    switch (m_dwFlags) {
+    case 2:
+        cmp.m_nEnemyAlly = static_cast<BYTE>(m_effectAmount);
+        if (!type.OfType(cmp, FALSE, FALSE)) {
+            return TRUE;
+        }
+        break;
+    case 3:
+        if (type.m_nGeneral != m_effectAmount && m_effectAmount != 0) {
+            return TRUE;
+        }
+        break;
+    case 4:
+        if (type.m_nRace != m_effectAmount && m_effectAmount != 0) {
+            return TRUE;
+        }
+        break;
+    case 5:
+        if ((type.m_nClassMask & m_effectAmount) == 0 && m_effectAmount != 0) {
+            return TRUE;
+        }
+        break;
+    case 6:
+        if (type.m_nSpecific != m_effectAmount && m_effectAmount != 0) {
+            return TRUE;
+        }
+        break;
+    case 7:
+        if (type.m_nGender != m_effectAmount && m_effectAmount != 0) {
+            return TRUE;
+        }
+        break;
+    case 8:
+        if (type.m_nAlignment == m_effectAmount || m_effectAmount == 0) {
+            bMatch = TRUE;
+        }
+
+        if (!(m_effectAmount == 1 && (type.m_nAlignment & 0xF) == m_effectAmount)
+            && !(m_effectAmount == 2 && (type.m_nAlignment & 0xF) == m_effectAmount)
+            && !(m_effectAmount == 3 && (type.m_nAlignment & 0xF) == m_effectAmount)
+            && !(m_effectAmount == 0x10 && (type.m_nAlignment & 0xF0) == m_effectAmount)
+            && !(m_effectAmount == 0x20 && (type.m_nAlignment & 0xF0) == m_effectAmount)
+            && !(m_effectAmount == 0x30 && (type.m_nAlignment & 0xF0) == m_effectAmount)
+            && !bMatch) {
+            return TRUE;
+        }
+        break;
+    default:
+        return TRUE;
+    }
+
+    CResRef resRef = m_res;
+
+    CResHelper<CResEffect, 1016> cResEffect;
+    cResEffect.SetResRef(resRef, TRUE, TRUE);
+
+    if (cResEffect.GetRes() != NULL) {
+        // NOTE: Uninline.
+        CGameEffect* pEffect = DecodeEffectResource(cResEffect);
+        if (pEffect != NULL) {
+            pEffect->ApplyEffect(pSprite);
+            if (pEffect->m_done) {
+                m_done = TRUE;
+            }
+            delete pEffect;
+        }
+    }
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -12252,6 +12393,32 @@ CGameEffect* CGameEffectApplyEffectEquipItem::Copy()
     return copy;
 }
 
+// 0x4BE9A0
+BOOL CGameEffectApplyEffectEquipItem::ApplyEffect(CGameSprite* pSprite)
+{
+    CImmunitiesItemEquip* pItemEquip = new CImmunitiesItemEquip();
+    pItemEquip->m_error = -1;
+    pItemEquip->m_res = m_res;
+
+    CResRef resRef = m_res2;
+
+    CResHelper<CResEffect, 1016> cResEffect;
+    cResEffect.SetResRef(resRef, TRUE, TRUE);
+
+    CGameEffect* pEffect;
+    if (cResEffect.GetRes() != NULL) {
+        // NOTE: Uninline.
+        pEffect = DecodeEffectResource(cResEffect);
+    } else {
+        pEffect = NULL;
+    }
+
+    pItemEquip->m_pEffect = pEffect;
+    pSprite->GetDerivedStats()->field_290.AddTail(pItemEquip);
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -12268,6 +12435,32 @@ CGameEffect* CGameEffectApplyEffectEquipItemType::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4BEB60
+BOOL CGameEffectApplyEffectEquipItemType::ApplyEffect(CGameSprite* pSprite)
+{
+    CImmunitiesItemTypeEquip* pItemTypeEquip = new CImmunitiesItemTypeEquip();
+    pItemTypeEquip->m_error = m_effectAmount;
+    pItemTypeEquip->m_type = m_dwFlags;
+
+    CResRef resRef = m_res;
+
+    CResHelper<CResEffect, 1016> cResEffect;
+    cResEffect.SetResRef(resRef, TRUE, TRUE);
+
+    CGameEffect* pEffect;
+    if (cResEffect.GetRes() != NULL) {
+        // NOTE: Uninline.
+        pEffect = DecodeEffectResource(cResEffect);
+    } else {
+        pEffect = NULL;
+    }
+
+    pItemTypeEquip->m_pEffect = pEffect;
+    pSprite->GetDerivedStats()->field_2AC.AddTail(pItemTypeEquip);
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------

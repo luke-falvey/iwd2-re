@@ -1525,6 +1525,7 @@ class CGameEffectAddInnateAbility : public CGameEffect {
 public:
     CGameEffectAddInnateAbility(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectRemoveInnateAbility : public CGameEffect {
@@ -1559,6 +1560,7 @@ class CGameEffectApplyEffect : public CGameEffect {
 public:
     CGameEffectApplyEffect(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSelectiveToHitBonus : public CGameEffect {
@@ -1593,12 +1595,14 @@ class CGameEffectApplyEffectEquipItem : public CGameEffect {
 public:
     CGameEffectApplyEffectEquipItem(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectApplyEffectEquipItemType : public CGameEffect {
 public:
     CGameEffectApplyEffectEquipItemType(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSetDoNoJump : public CGameEffect {
