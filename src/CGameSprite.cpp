@@ -4033,7 +4033,494 @@ BOOL CGameSprite::CanSpeak(BOOL ignoreDeath, BOOL ignoreSilence)
 // 0x7011E0
 void CGameSprite::PlaySound(BYTE soundID, BOOL showText, BOOL showCircle, BOOL overrideOption)
 {
-    // TODO: Incomplete.
+    STR_RES strRes;
+
+    // NOTE: The original works through this pointer. It stays NULL on the
+    // assert path and in case 10 (see below).
+    STR_RES* pStrRes = NULL;
+
+    // NOTE: Uninitialized in the original on the assert path.
+    INT nSound = 0;
+
+    SHORT nNumSounds;
+    INT nIndex;
+
+    // NOTE: Uninline.
+    BYTE channel = GetChannel();
+
+    // NOTE: Set for the selection sounds. A voice with an area is then played
+    // without coordinates.
+    BOOL bNonPositional = FALSE;
+
+    if (!CanSpeak(soundID == 7, FALSE)) {
+        return;
+    }
+
+    switch (soundID) {
+    case 1:
+        nNumSounds = GetNumSounds(0, 2);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[nIndex], strRes);
+        nSound = nIndex;
+        if (channel == 13) {
+            strRes.cSound.SetChannel(13, reinterpret_cast<DWORD>(m_pArea));
+        } else {
+            strRes.cSound.SetChannel(channel, 0);
+        }
+        pStrRes = &strRes;
+        break;
+    case 2:
+        nNumSounds = GetNumSounds(7, 2);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[7 + nIndex], strRes);
+        nSound = nIndex + 7;
+        strRes.cSound.SetChannel(channel, reinterpret_cast<DWORD>(m_pArea));
+        pStrRes = &strRes;
+        break;
+    case 3:
+        nNumSounds = GetNumSounds(9, 2);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[9 + nIndex], strRes);
+        nSound = nIndex + 9;
+        strRes.cSound.SetChannel(channel, reinterpret_cast<DWORD>(m_pArea));
+        pStrRes = &strRes;
+        break;
+    case 4:
+        nNumSounds = GetNumSounds(11, 2);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[11 + nIndex], strRes);
+        nSound = nIndex + 11;
+        strRes.cSound.SetChannel(channel, reinterpret_cast<DWORD>(m_pArea));
+        pStrRes = &strRes;
+        break;
+    case 5:
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) == -1) {
+            if (g_pBaldurChitin->GetScreenWorld()->m_nBattleCryTimeOut > 0) {
+                return;
+            }
+
+            // NOTE: The original reads 30 from a constant at 0x85A238.
+            g_pBaldurChitin->GetScreenWorld()->m_nBattleCryTimeOut = 30;
+        }
+
+        if (!g_pBaldurChitin->GetObjectGame()->GetOptions()->m_bAttackSounds
+            || m_attackSoundDeadzone > 0) {
+            return;
+        }
+
+        m_attackSoundDeadzone = 90;
+
+        if (field_70FC) {
+            if (field_7360.GetCount() == 0) {
+                return;
+            }
+
+            CSound cSound;
+            CString sResRef;
+
+            INT nCount = field_7360.GetCount();
+            nIndex = nCount != 0 ? rand() % nCount : 0;
+            sResRef = field_7360.GetAt(field_7360.FindIndex(nIndex)).field_0;
+
+            cSound.SetResRef(CResRef(sResRef), TRUE, TRUE);
+            cSound.m_nPitchVariance = 5;
+            cSound.m_nVolumeVariance = 20;
+            cSound.SetChannel(channel, reinterpret_cast<DWORD>(m_pArea));
+            if (!cSound.GetLooping()) {
+                cSound.SetFireForget(TRUE);
+            }
+            cSound.Play(m_pos.x, m_pos.y, 0, FALSE);
+            return;
+        }
+
+        nNumSounds = GetNumSounds(2, 5);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[2 + nIndex], strRes);
+        nSound = nIndex + 2;
+        strRes.cSound.SetChannel(channel, reinterpret_cast<DWORD>(m_pArea));
+        pStrRes = &strRes;
+        break;
+    case 6:
+        if (field_70FD) {
+            INT nCount = field_737C.GetCount();
+            if (nCount != 0) {
+                nIndex = rand() % nCount;
+                CGameSpriteSoundEntry& entry = field_737C.GetAt(field_737C.FindIndex(nIndex));
+                field_7410 = entry.field_0;
+                field_7414 = entry.field_4;
+            }
+            return;
+        }
+
+        nNumSounds = GetNumSounds(33, 3);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[33 + nIndex], strRes);
+        nSound = nIndex + 33;
+        pStrRes = &strRes;
+        if (channel == 13) {
+            strRes.cSound.SetChannel(13, reinterpret_cast<DWORD>(m_pArea));
+        } else {
+            strRes.cSound.SetChannel(channel, 0);
+        }
+        break;
+    case 7:
+        nNumSounds = GetNumSounds(36, 2);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[36 + nIndex], strRes);
+        nSound = nIndex + 36;
+        if (channel == 13) {
+            strRes.cSound.SetChannel(13, reinterpret_cast<DWORD>(m_pArea));
+        } else {
+            strRes.cSound.SetChannel(channel, 0);
+        }
+        pStrRes = &strRes;
+        break;
+    case 8:
+        nNumSounds = GetNumSounds(13, 2);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[13 + nIndex], strRes);
+        nSound = nIndex + 13;
+        if (channel == 13) {
+            strRes.cSound.SetChannel(13, reinterpret_cast<DWORD>(m_pArea));
+        } else {
+            strRes.cSound.SetChannel(channel, 0);
+        }
+        pStrRes = &strRes;
+        break;
+    case 9:
+        if (field_7100) {
+            if (field_73D0.GetCount() == 0) {
+                return;
+            }
+
+            CSound cSound;
+            CString sResRef;
+
+            INT nCount = field_73D0.GetCount();
+            nIndex = nCount != 0 ? rand() % nCount : 0;
+            sResRef = field_73D0.GetAt(field_73D0.FindIndex(nIndex)).field_0;
+
+            cSound.SetResRef(CResRef(sResRef), TRUE, TRUE);
+            cSound.m_nPitchVariance = 5;
+            cSound.m_nVolumeVariance = 20;
+            cSound.SetChannel(channel, reinterpret_cast<DWORD>(m_pArea));
+            if (!cSound.GetLooping()) {
+                cSound.SetFireForget(TRUE);
+            }
+            cSound.Play(m_pos.x, m_pos.y, 0, FALSE);
+            return;
+        }
+
+        if (1) {
+            BOOL bPlay = FALSE;
+            bNonPositional = TRUE;
+
+            switch (g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nSelectionSoundsFrequency) {
+            case 2:
+                if (rand() % 5 == 0) {
+                    bPlay = TRUE;
+                }
+                break;
+            case 3:
+                bPlay = TRUE;
+                break;
+            }
+
+            if (!overrideOption && !bPlay) {
+                return;
+            }
+        }
+
+        if (field_710C > 8) {
+            g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[29 + field_710E], strRes);
+            nSound = field_710E + 29;
+            pStrRes = &strRes;
+            if (channel == 13) {
+                strRes.cSound.SetChannel(6, reinterpret_cast<DWORD>(m_pArea));
+            } else {
+                strRes.cSound.SetChannel(channel, 0);
+            }
+
+            field_710E++;
+            if (field_710E >= GetNumSounds(29, 4)) {
+                field_710E = 0;
+                field_710C = 0;
+            }
+            field_710A = 0;
+        } else {
+            nNumSounds = GetNumSounds(15, 7);
+            nIndex = nNumSounds > 0 ? field_710A % nNumSounds : 0;
+            g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[15 + nIndex], strRes);
+            nSound = nIndex + 15;
+            pStrRes = &strRes;
+            if (channel == 13) {
+                strRes.cSound.SetChannel(6, reinterpret_cast<DWORD>(m_pArea));
+            } else {
+                strRes.cSound.SetChannel(channel, 0);
+            }
+
+            field_710A++;
+            field_710C++;
+        }
+        break;
+    case 10:
+        bNonPositional = TRUE;
+
+        nNumSounds = GetNumSounds(15, 7);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[15 + nIndex], strRes);
+        nSound = nIndex + 15;
+
+        // FIXME: `pStrRes` is never set in this case. The original calls
+        // `SetChannel` on address 4 and crashes.
+        if (channel == 13) {
+            pStrRes->cSound.SetChannel(6, reinterpret_cast<DWORD>(m_pArea));
+        } else {
+            pStrRes->cSound.SetChannel(channel, 0);
+        }
+        break;
+    case 11:
+        if (1) {
+            BOOL bPlay = FALSE;
+
+            switch (g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nCommandSoundsFrequency) {
+            case 2:
+                if (m_firstActionSound) {
+                    bPlay = TRUE;
+                }
+                break;
+            case 3:
+                bPlay = TRUE;
+                break;
+            }
+
+            if (!overrideOption && !bPlay) {
+                return;
+            }
+        }
+
+        nNumSounds = GetNumSounds(22, 7);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[22 + nIndex], strRes);
+        nSound = nIndex + 22;
+        strRes.cSound.SetChannel(channel, reinterpret_cast<DWORD>(m_pArea));
+        pStrRes = &strRes;
+        m_firstActionSound = FALSE;
+        break;
+    case 12:
+        bNonPositional = TRUE;
+
+        nNumSounds = GetNumSounds(29, 4);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[29 + nIndex], strRes);
+        nSound = nIndex + 29;
+        strRes.cSound.SetChannel(channel, reinterpret_cast<DWORD>(m_pArea));
+        pStrRes = &strRes;
+        if (channel == 13) {
+            strRes.cSound.SetChannel(6, reinterpret_cast<DWORD>(m_pArea));
+        } else {
+            strRes.cSound.SetChannel(channel, 0);
+        }
+        break;
+    case 13:
+        nNumSounds = GetNumSounds(38, 2);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[38 + nIndex], strRes);
+        nSound = nIndex + 38;
+        strRes.cSound.SetChannel(channel, reinterpret_cast<DWORD>(m_pArea));
+        pStrRes = &strRes;
+        break;
+    case 14:
+        if (m_attackSoundDeadzone > 0) {
+            return;
+        }
+
+        m_attackSoundDeadzone = 90;
+
+        nNumSounds = GetNumSounds(40, 4);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[40 + nIndex], strRes);
+        nSound = nIndex + 40;
+        strRes.cSound.SetChannel(channel, reinterpret_cast<DWORD>(m_pArea));
+        pStrRes = &strRes;
+        break;
+    case 15:
+        nNumSounds = GetNumSounds(44, 20);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[44 + nIndex], strRes);
+        nSound = nIndex + 44;
+        strRes.cSound.SetChannel(channel, reinterpret_cast<DWORD>(m_pArea));
+        pStrRes = &strRes;
+        break;
+    case 16:
+        nNumSounds = GetNumSounds(40, 2);
+        if (nNumSounds == 0) {
+            return;
+        }
+
+        nIndex = nNumSounds != 0 ? rand() % nNumSounds : 0;
+        g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[40 + nIndex], strRes);
+        nSound = nIndex + 40;
+        strRes.cSound.SetChannel(channel, reinterpret_cast<DWORD>(m_pArea));
+        pStrRes = &strRes;
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+        // __LINE__: 7005
+        UTIL_ASSERT(FALSE);
+    }
+
+    COLORREF nameColor = CVidPalette::RANGE_COLORS[m_baseStats.m_colors[CVIDPALETTE_RANGE_MAIN_CLOTH]];
+    BOOL bShowText = g_pBaldurChitin->GetObjectGame()->GetOptions()->m_bSubtitles != FALSE;
+
+    pStrRes->szText.TrimLeft();
+
+    if (m_secondarySounds != "") {
+        if (bShowText) {
+            CString sSoundSet(field_725A);
+            STRREF strRef = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetSpeechStringRef(sSoundSet, nSound);
+            if (strRef != -1) {
+                STR_RES strResText;
+                g_pBaldurChitin->GetTlkTable().Fetch(strRef, strResText);
+                if (strResText.szText.GetLength() != 0) {
+                    pStrRes->szText = strResText.szText;
+                } else {
+                    pStrRes->szText = "";
+                }
+            }
+        }
+
+        CString sSoundName;
+        CString sSoundSetName;
+        BOOL bCustom = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetCustomSound(sSoundName, static_cast<BYTE>(nSound));
+        m_secondarySounds.CopyToString(sSoundSetName);
+        sSoundName.TrimLeft();
+        sSoundName.TrimRight();
+        sSoundName = sSoundSetName + sSoundName;
+
+        if (!bCustom
+            || g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(CResRef(sSoundName), 4, TRUE) != NULL) {
+            pStrRes->cSound.SetResRef(CResRef(sSoundName), TRUE, TRUE);
+        }
+    }
+
+    if (m_typeAI.GetEnemyAlly() == CAIObjectType::EA_PC) {
+        if (pStrRes->cSound.GetRes() != NULL) {
+            if (!pStrRes->cSound.GetLooping()) {
+                pStrRes->cSound.SetFireForget(TRUE);
+            }
+
+            if (pStrRes->cSound.Play(FALSE) && showCircle) {
+                m_talkingCounter = min(pStrRes->cSound.GetPlayTime() / 66, STANDARD_VERBAL_CONSTANT_LENGTH);
+            }
+        }
+    } else {
+        // NOTE: Uninitialized in the original when nothing is played.
+        BOOL bPlayed = FALSE;
+
+        if (pStrRes->cSound.GetRes() != NULL) {
+            if (!pStrRes->cSound.GetLooping()) {
+                pStrRes->cSound.SetFireForget(TRUE);
+            }
+
+            if (pStrRes->cSound.m_nArea != 0) {
+                if (bNonPositional) {
+                    if (!m_sndCastingChant.IsSoundPlaying()
+                        || m_sndCastingChant.cResRef != pStrRes->cSound.cResRef) {
+                        m_sndCastingChant.Stop();
+                        m_sndCastingChant.SetResRef(pStrRes->cSound.cResRef, TRUE, TRUE);
+                        m_sndCastingChant.SetChannel(pStrRes->cSound.m_nChannel, 0);
+                        bPlayed = m_sndCastingChant.Play(FALSE);
+                    }
+                } else {
+                    if (!m_sndCastingChant.IsSoundPlaying()
+                        || m_sndCastingChant.cResRef != pStrRes->cSound.cResRef) {
+                        m_sndCastingChant.Stop();
+                        m_sndCastingChant.SetResRef(pStrRes->cSound.cResRef, TRUE, TRUE);
+                        m_sndCastingChant.SetChannel(pStrRes->cSound.m_nChannel, reinterpret_cast<DWORD>(m_pArea));
+                        bPlayed = m_sndCastingChant.Play(m_pos.x, m_pos.y, 0, FALSE);
+                    }
+                }
+            } else {
+                if (!m_sndCastingChant.IsSoundPlaying()
+                    || m_sndCastingChant.cResRef != pStrRes->cSound.cResRef) {
+                    m_sndCastingChant.Stop();
+                    m_sndCastingChant.SetResRef(pStrRes->cSound.cResRef, TRUE, TRUE);
+                    m_sndCastingChant.SetChannel(pStrRes->cSound.m_nChannel, 0);
+                    bPlayed = m_sndCastingChant.Play(FALSE);
+                }
+            }
+        }
+
+        if (bPlayed && showCircle) {
+            m_talkingCounter = min(pStrRes->cSound.GetPlayTime() / 66, STANDARD_VERBAL_CONSTANT_LENGTH);
+        }
+    }
+
+    if (strcmp(pStrRes->szText, "") != 0 && showText && bShowText) {
+        g_pBaldurChitin->GetScreenWorld()->DisplayText(m_sName,
+            pStrRes->szText,
+            nameColor,
+            nameColor,
+            -1,
+            FALSE);
+    }
 }
 
 // 0x702900
@@ -6373,13 +6860,370 @@ void CGameSprite::RenderSpriteCover(CVidMode* pVidMode, INT nSurface, CVidCell* 
 // 0x708FC0
 void CGameSprite::RenderDamageArrow(CGameArea* pArea, CVidMode* pVidMode, INT nSurface)
 {
-    // TODO: Incomplete.
+    DWORD nLocatorFeedbackLevel = g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nLocatorFeedbackLevel;
+
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) == -1) {
+        return;
+    }
+
+    switch (nLocatorFeedbackLevel) {
+    case 2:
+        if (!(m_bBloodFlashOn
+                && m_nDamageLocatorTime != 0
+                && g_pBaldurChitin->nAUCounter % CMarker::PICKED_FLASH_PERIOD >= (CMarker::PICKED_FLASH_PERIOD >> 1))) {
+            return;
+        }
+        // FALLTHROUGH
+    case 3:
+        if (!(m_bBloodFlashOn
+                && m_nDamageLocatorTime != 0
+                && g_pBaldurChitin->nAUCounter % CMarker::PICKED_FLASH_PERIOD >= (CMarker::PICKED_FLASH_PERIOD >> 1))
+            && m_id != pArea->m_iPicked) {
+            return;
+        }
+        // FALLTHROUGH
+    case 4:
+    case 5:
+        break;
+    default:
+        return;
+    }
+
+    if (!m_active || !m_activeAI || !m_activeImprisonment) {
+        return;
+    }
+
+    if (m_baseStats.field_294 == TRUE) {
+        return;
+    }
+
+    if ((m_derivedStats.m_generalState & STATE_DEAD) != 0) {
+        return;
+    }
+
+    if (m_pArea != pArea) {
+        return;
+    }
+
+    CInfinity* pInfinity = &(m_pArea->m_cInfinity);
+
+    CRect rView;
+    rView.left = pInfinity->nCurrentX;
+    rView.top = pInfinity->nCurrentY;
+    rView.right = pInfinity->rViewPort.right - pInfinity->rViewPort.left + pInfinity->nCurrentX;
+    rView.bottom = pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + pInfinity->nCurrentY;
+
+    CPoint pos = m_pos;
+    pos.y += m_pArea->GetHeightOffset(m_pos, m_listType);
+
+    CRect rFx;
+    CPoint ptReference;
+    m_animation.CalculateFxRect(rFx, ptReference, m_posZ);
+
+    CRect rGCBounds;
+    m_animation.CalculateGCBoundsRect(rGCBounds,
+        pos,
+        ptReference,
+        m_posZ,
+        rFx.Width(),
+        rFx.Height());
+
+    if (!(rView & rGCBounds).IsRectEmpty()) {
+        return;
+    }
+
+    INT x;
+    INT y;
+    SHORT nSequence;
+
+    if (pos.x < rView.left) {
+        if (m_posZ + pos.y < rView.top) {
+            x = m_pArea->m_cInfinity.rViewPort.left;
+            y = m_pArea->m_cInfinity.rViewPort.top;
+            nSequence = 3;
+        } else if (m_posZ + pos.y > rView.bottom) {
+            x = m_pArea->m_cInfinity.rViewPort.left;
+            y = m_pArea->m_cInfinity.rViewPort.bottom;
+            nSequence = 5;
+        } else {
+            x = m_pArea->m_cInfinity.rViewPort.left;
+            y = m_pArea->m_cInfinity.rViewPort.top - rView.top + pos.y;
+            nSequence = 4;
+        }
+    } else if (pos.x > rView.right) {
+        if (m_posZ + pos.y < rView.top) {
+            x = m_pArea->m_cInfinity.rViewPort.right;
+            y = m_pArea->m_cInfinity.rViewPort.top;
+            nSequence = 1;
+        } else if (m_posZ + pos.y > rView.bottom) {
+            x = m_pArea->m_cInfinity.rViewPort.right;
+            y = m_pArea->m_cInfinity.rViewPort.bottom;
+            nSequence = 7;
+        } else {
+            x = m_pArea->m_cInfinity.rViewPort.right;
+            y = m_pArea->m_cInfinity.rViewPort.top - rView.top + pos.y;
+            nSequence = 0;
+        }
+    } else {
+        if (m_posZ + pos.y < rView.top) {
+            x = m_pArea->m_cInfinity.rViewPort.left - rView.left + pos.x;
+            y = m_pArea->m_cInfinity.rViewPort.top;
+            nSequence = 2;
+        } else if (m_posZ + pos.y > rView.bottom) {
+            x = m_pArea->m_cInfinity.rViewPort.left - rView.left + pos.x;
+            y = m_pArea->m_cInfinity.rViewPort.bottom;
+            nSequence = 6;
+        } else {
+            return;
+        }
+    }
+
+    g_pBaldurChitin->GetObjectGame()->m_vcLocator.SequenceSet(nSequence);
+    g_pBaldurChitin->GetObjectGame()->m_vcLocator.FrameSet(0);
+
+    COLORREF rgbColor;
+    if (m_bBloodFlashOn && m_nDamageLocatorTime > 0) {
+        rgbColor = m_nDamageLocatorColor;
+    } else {
+        rgbColor = m_marker.m_rgbColor;
+    }
+
+    g_pBaldurChitin->GetObjectGame()->m_vcLocator.SetTintColor(g_pChitin->GetCurrentVideoMode()->ApplyFadeAmount(rgbColor));
+    g_pBaldurChitin->GetObjectGame()->m_vcLocator.Render(nSurface,
+        x,
+        y,
+        m_pArea->m_cInfinity.rViewPort,
+        NULL,
+        0,
+        0x20000,
+        -1);
 }
 
 // 0x7093E0
 void CGameSprite::RenderSpriteEffect(CVidMode* pVidMode, INT nSurface)
 {
-    // TODO: Incomplete.
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+    // __LINE__: 10675
+    UTIL_ASSERT(pVidMode != NULL);
+
+    DWORD dwFlags = (m_animation.IsMirroring() ? CInfinity::MIRROR_FX : 0) | m_spriteEffectFlags;
+
+    if (m_spriteEffectDuration == 0) {
+        return;
+    }
+
+    BOOLEAN bDithered;
+    if (m_id == m_pArea->m_iPicked
+        || g_pBaldurChitin->GetObjectGame()->GetOptions()->m_bAlwaysDither
+        || g_pBaldurChitin->GetObjectGame()->m_bForceDither) {
+        bDithered = TRUE;
+    } else {
+        bDithered = FALSE;
+    }
+
+    CRect rFX;
+    CPoint ptCenter;
+    CSize frameSize;
+
+    if (!m_spriteSplashVidCell.IsEndOfSequence(FALSE)) {
+        m_spriteSplashVidCell.GetCurrentCenterPoint(ptCenter, FALSE);
+        m_spriteSplashVidCell.GetCurrentFrameSize(frameSize, FALSE);
+        rFX.SetRect(0, 0, frameSize.cx, frameSize.cy);
+
+        LONG x = m_pos.x;
+        LONG y = m_pArea->GetHeightOffset(m_pos, m_listType) + m_pos.y;
+
+        CRect rGCBounds;
+        rGCBounds.left = x - ptCenter.x;
+        rGCBounds.right = rFX.right - rFX.left + rGCBounds.left;
+        rGCBounds.top = m_posZ - ptCenter.y + y;
+        rGCBounds.bottom = rFX.bottom - rFX.top + rGCBounds.top;
+
+        dwFlags |= CInfinity::FXPREP_COPYFROMBACK;
+
+        CPoint ptPos;
+        ptPos.x = x;
+        ptPos.y = m_posZ - m_ptSpriteEffectReference.y / 2 + y;
+
+        m_pArea->m_cInfinity.FXPrep(rFX, dwFlags, nSurface, ptPos, ptCenter);
+
+        if (!m_pArea->m_cInfinity.FXLock(rFX, dwFlags)) {
+            return;
+        }
+
+        m_pArea->m_cInfinity.FXRender(&m_spriteSplashVidCell, ptCenter.x, ptCenter.y, dwFlags, 0);
+
+        CRect rClip;
+        rClip.left = rGCBounds.left;
+        rClip.top = rGCBounds.top - m_ptSpriteEffectReference.y / 2 - m_posZ;
+        rClip.right = rGCBounds.right;
+        rClip.bottom = rGCBounds.bottom - m_ptSpriteEffectReference.y / 2 - m_posZ;
+
+        CPoint ptRef;
+        ptRef.x = ptCenter.x;
+        ptRef.y = m_posZ - m_ptSpriteEffectReference.y / 2 + ptCenter.y;
+
+        m_pArea->m_cInfinity.FXRenderClippingPolys(x,
+            y - m_ptSpriteEffectReference.y / 2 - m_posZ,
+            m_posZ,
+            ptRef,
+            rClip,
+            bDithered,
+            dwFlags);
+
+        m_pArea->m_cInfinity.FXUnlock(dwFlags, NULL, CPoint(0, 0));
+
+        m_pArea->m_cInfinity.FXBltFrom(nSurface,
+            rFX,
+            x,
+            m_posZ - m_ptSpriteEffectReference.y / 2 + y,
+            ptCenter.x,
+            ptCenter.y,
+            dwFlags);
+        return;
+    }
+
+    if (m_pSpriteEffectArray == NULL) {
+        return;
+    }
+
+    BOOL bRendered = FALSE;
+
+    CSize fxSize;
+    pVidMode->GetFXSize(fxSize);
+
+    CPoint ptOffset;
+
+    switch (m_effectExtendDirection) {
+    case 0:
+        ptOffset.x = 0;
+        ptOffset.y = 0;
+        rFX.SetRect(0, 0, m_rSpriteEffectFX.right, m_rSpriteEffectFX.bottom);
+        if (rFX.right > fxSize.cx) {
+            rFX.right = fxSize.cx;
+        }
+        if (rFX.bottom > fxSize.cy) {
+            rFX.bottom = fxSize.cy;
+        }
+        break;
+    case 1:
+        ptOffset.x = 0;
+        ptOffset.y = m_rSpriteEffectFX.bottom - fxSize.cy + 1;
+        rFX.SetRect(0, 0, m_rSpriteEffectFX.right, fxSize.cy - 1);
+        if (rFX.right > fxSize.cx) {
+            rFX.right = fxSize.cx;
+        }
+        if (rFX.bottom > fxSize.cy) {
+            rFX.bottom = fxSize.cy;
+        }
+        break;
+    case 2:
+        ptOffset.x = 0;
+        ptOffset.y = 0;
+        rFX.SetRect(0, 0, m_rSpriteEffectFX.right, fxSize.cy - 1);
+        if (rFX.right > fxSize.cx) {
+            rFX.right = fxSize.cx;
+        }
+        if (rFX.bottom > fxSize.cy) {
+            rFX.bottom = fxSize.cy;
+        }
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+        // __LINE__: 10799
+        UTIL_ASSERT(FALSE);
+    }
+
+    LONG nHeightOffset = m_pArea->GetHeightOffset(m_pos, m_listType);
+
+    CRect rGCBounds;
+    rGCBounds.left = m_pos.x - m_ptSpriteEffectReference.x + ptOffset.x;
+    rGCBounds.top = m_posZ - m_ptSpriteEffectReference.y + m_pos.y + nHeightOffset + ptOffset.y;
+    rGCBounds.right = rFX.right - rFX.left + rGCBounds.left;
+    rGCBounds.bottom = rFX.bottom - rFX.top + rGCBounds.top;
+
+    if ((m_spriteEffectFlags & 0x208) != 0) {
+        dwFlags |= CInfinity::FXPREP_COPYFROMBACK;
+    } else {
+        dwFlags |= CInfinity::FXPREP_CLEARFILL | 0x1;
+    }
+
+    CPoint ptPos;
+    ptPos.x = m_pos.x + ptOffset.x;
+    ptPos.y = m_posZ + m_pos.y + nHeightOffset + ptOffset.y;
+
+    m_pArea->m_cInfinity.FXPrep(rFX, dwFlags, nSurface, ptPos, m_ptSpriteEffectReference);
+
+    if (!m_pArea->m_cInfinity.FXLock(rFX, dwFlags)) {
+        return;
+    }
+
+    for (BYTE nSequence = 0; nSequence < m_spriteEffectSequenceLength; nSequence++) {
+        for (BYTE nParticle = 0; nParticle < static_cast<char>(m_spriteEffectBaseIntensity) - 1 + m_spriteEffectRandomIntensity; nParticle++) {
+            SHORT nArrayIndex = static_cast<SHORT>((static_cast<char>(m_spriteEffectBaseIntensity) + m_spriteEffectRandomIntensity - 1) * nSequence + nParticle);
+            if (m_pSpriteEffectArray[nArrayIndex] == 0xFFFF) {
+                break;
+            }
+
+            m_spriteEffectVidCell.SequenceSet(m_pSpriteEffectArray[nArrayIndex] >> 8);
+            m_spriteEffectVidCell.FrameSet(m_pSpriteEffectArray[nArrayIndex] & 0xFF);
+            m_spriteEffectVidCell.GetCurrentCenterPoint(ptCenter, FALSE);
+            m_spriteEffectVidCell.GetCurrentFrameSize(frameSize, FALSE);
+
+            INT x;
+            if ((dwFlags & CInfinity::MIRROR_FX) != 0) {
+                x = rFX.right - m_pSpriteEffectArrayPosition[nArrayIndex].x - m_ptSpriteEffectReference.x + ptOffset.x + ptCenter.x;
+            } else {
+                x = m_pSpriteEffectArrayPosition[nArrayIndex].x - ptOffset.x - ptCenter.x + m_ptSpriteEffectReference.x;
+            }
+
+            INT y = m_pSpriteEffectArrayPosition[nArrayIndex].y - ptOffset.y - ptCenter.y + m_ptSpriteEffectReference.y;
+
+            if (x >= frameSize.cx >> 2
+                && x <= rFX.right - (frameSize.cx >> 2)
+                && y >= frameSize.cy >> 2
+                && y <= rFX.bottom - (frameSize.cy >> 2)
+                && x - ptCenter.x >= 0
+                && x - ptCenter.x + frameSize.cx < rFX.right - rFX.left
+                && y - ptCenter.y >= 0
+                && y - ptCenter.y + frameSize.cy < rFX.bottom - rFX.top) {
+                m_pArea->m_cInfinity.FXRender(&m_spriteEffectVidCell, x, y, dwFlags, 0);
+                bRendered = TRUE;
+            }
+        }
+    }
+
+    // NOTE: The original only checks this when the sequence is not empty
+    // (`bRendered` is FALSE otherwise).
+    if (bRendered) {
+        CRect rClip;
+        rClip.left = rGCBounds.left;
+        rClip.top = rGCBounds.top;
+        rClip.right = rGCBounds.right;
+        rClip.bottom = rGCBounds.bottom - m_posZ;
+
+        m_pArea->m_cInfinity.FXRenderClippingPolys(m_pos.x,
+            m_pos.y,
+            0,
+            m_ptSpriteEffectReference,
+            rClip,
+            bDithered,
+            dwFlags);
+    }
+
+    m_pArea->m_cInfinity.FXUnlock(dwFlags, NULL, CPoint(0, 0));
+
+    if (!bRendered) {
+        return;
+    }
+
+    m_pArea->m_cInfinity.FXBltFrom(nSurface,
+        rFX,
+        m_pos.x + ptOffset.x,
+        m_posZ + m_pos.y + nHeightOffset + ptOffset.y,
+        m_ptSpriteEffectReference.x,
+        m_ptSpriteEffectReference.y,
+        dwFlags);
 }
 
 // 0x709B60
@@ -25900,7 +26744,34 @@ BOOL CGameSprite::sub_763200(UINT nFeatNumber, INT a2)
                 && m_baseStats.m_skills[CGAMESPRITE_SKILL_CONCENTRATION] >= 4;
         }
     case CGAMESPRITE_FEAT_MERCANTILE_BACKGROUND:
-        // TODO: Incomplete.
+        return m_typeAI.m_nRace == CAIOBJECTTYPE_R_HUMAN
+            || (m_typeAI.m_nRace == CAIOBJECTTYPE_R_DWARF
+                && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_DWARF_GRAY)
+            || (m_typeAI.m_nRace == CAIOBJECTTYPE_R_GNOME
+                && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_GNOME_DEEP);
+    case CGAMESPRITE_FEAT_POWER_ATTACK:
+        return nSTR >= 13;
+    case CGAMESPRITE_FEAT_RESIST_POISON:
+        if ((m_typeAI.m_nRace == CAIOBJECTTYPE_R_DWARF
+                && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_DWARF_GRAY)
+            || m_typeAI.m_nRace == CAIOBJECTTYPE_R_HALF_ORC) {
+            // NOTE: Probably inlined "get character level" helper.
+            INT nLevel = 0;
+            DWORD nClassMask = GetAIType().m_nClassMask & 0xFFF;
+            if (nClassMask != 0) {
+                DWORD nMask = 1;
+                for (INT nClass = 0; nClass < 11 && nMask <= 0xFFF; nClass++) {
+                    if ((nMask & nClassMask) != 0) {
+                        nLevel += m_baseStats.m_classLevels[nClass];
+                    }
+                    nMask <<= 1;
+                }
+
+                if (nLevel == 1) {
+                    return TRUE;
+                }
+            }
+        }
         return FALSE;
     case CGAMESPRITE_FEAT_SIMPLE_CROSSBOW:
     case CGAMESPRITE_FEAT_SIMPLE_MACE:
@@ -25908,8 +26779,27 @@ BOOL CGameSprite::sub_763200(UINT nFeatNumber, INT a2)
     case CGAMESPRITE_FEAT_SIMPLE_QUARTERSTAFF:
     case CGAMESPRITE_FEAT_SIMPLE_SMALLBLADE:
         return GetFeatValue(nFeatNumber) != 3 || m_baseStats.m_fighterLevel >= 4;
+    case CGAMESPRITE_FEAT_SLIPPERY_MIND:
+        return m_baseStats.m_rogueLevel >= 10;
     case CGAMESPRITE_FEAT_SNAKE_BLOOD:
-        // TODO: Incomplete.
+        if (m_typeAI.m_nRace == CAIOBJECTTYPE_R_HUMAN) {
+            // NOTE: Probably inlined "get character level" helper.
+            INT nLevel = 0;
+            DWORD nClassMask = GetAIType().m_nClassMask & 0xFFF;
+            if (nClassMask != 0) {
+                DWORD nMask = 1;
+                for (INT nClass = 0; nClass < 11 && nMask <= 0xFFF; nClass++) {
+                    if ((nMask & nClassMask) != 0) {
+                        nLevel += m_baseStats.m_classLevels[nClass];
+                    }
+                    nMask <<= 1;
+                }
+
+                if (nLevel == 1) {
+                    return TRUE;
+                }
+            }
+        }
         return FALSE;
     case CGAMESPRITE_FEAT_STUNNING_FIST:
         return (nDEX >= 13 && nWIS >= 13 && m_baseStats.m_attackBase >= 8)
