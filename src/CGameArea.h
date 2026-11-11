@@ -225,6 +225,7 @@ public:
     int ExitSpawn();
     int EnterSpawn();
     void sub_47A190();
+    CGameObject* sub_47A1C0(LONG nId, const CPoint* pPoints, USHORT nPoints);
 
     CAreaFileHeader* GetHeader();
     CInfinity* GetInfinity();

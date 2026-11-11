@@ -35,6 +35,7 @@ public:
     void AddDoor(CPoint* pPoints, USHORT nPoints, BOOL bOpaque);
     void RemoveDoor(CPoint* pPoints, USHORT nPoints);
     BOOLEAN CanToggleDoor(const CPoint* pPoints, USHORT nPoints);
+    BOOLEAN sub_54A210(const CPoint& ptGrid, BYTE personalSpace, const CPoint* pPoints, USHORT nPoints);
 
     SHORT GetTableIndex(const CPoint& pt);
     CPoint GetNearestOpenSquare(CPoint pt, const BYTE* terrainTable, BYTE personalSpace, SHORT nDirection);

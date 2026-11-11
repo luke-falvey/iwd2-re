@@ -3,6 +3,7 @@
 
 #include "CGameAIBase.h"
 #include "CResRef.h"
+#include "CSound.h"
 #include "CTiledObject.h"
 #include "FileFormat.h"
 
@@ -61,6 +62,7 @@ public:
     /* 0664 */ SHORT m_drawPoly;
     /* 0666 */ CPoint m_ptOpenDest;
     /* 066E */ CPoint m_ptClosedDest;
+    /* 0676 */ CSound m_sndDoor;
     /* 06DA */ CArray<CRect*> field_6DA;
     /* 06EE */ CAreaPoint* field_6EE;
     /* 06F2 */ CArray<CRect*> field_6F2;
