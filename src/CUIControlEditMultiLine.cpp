@@ -575,7 +575,9 @@ BOOL CUIControlEditMultiLine::Render(BOOL bForce)
     nTextX -= rClip.left;
     rClip.OffsetRect(-rClip.left, -rClip.top);
 
-    if (m_sText.Right(1) == "\n"
+    // NOTE: A one-character string never equals "\r\n", so this branch is dead
+    // in the original too.
+    if (m_sText.Right(1) == "\r\n"
         && (!g_pChitin->field_1A0 || !CUtil::IsDBCSTrailByte(m_sText, m_sText.GetLength() - 1))) {
         sText = m_sText.Left(m_sText.GetLength() - 1);
     } else {
