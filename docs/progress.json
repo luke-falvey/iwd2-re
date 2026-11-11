@@ -5,18 +5,18 @@
     "0x7DA200"
   ],
   "functions_total": 9831,
-  "functions_done": 7700,
-  "functions_complete": 7323,
-  "incomplete_markers": 406,
+  "functions_done": 7705,
+  "functions_complete": 7336,
+  "incomplete_markers": 398,
   "incomplete_by_file": {
     "src/CMessage.cpp": 85,
-    "src/CGameSprite.cpp": 38,
+    "src/CGameSprite.cpp": 36,
     "src/CProjectilePart6.cpp": 35,
     "src/CProjectilePart3.cpp": 20,
     "src/CProjectilePart5.cpp": 19,
-    "src/CScreenCharacter.cpp": 19,
     "src/CProjectilePart1.cpp": 16,
-    "src/CInfGame.cpp": 13,
+    "src/CInfGame.cpp": 14,
+    "src/CScreenCharacter.cpp": 14,
     "src/CDerivedStats.cpp": 9,
     "src/CProjectilePart2.cpp": 9,
     "src/CProjectilePart4.cpp": 9,
@@ -24,9 +24,9 @@
     "src/CScreenCreateChar.cpp": 7,
     "src/CVidPoly.cpp": 7,
     "src/CParticle.cpp": 6,
-    "src/CScreenInventory.cpp": 6,
     "src/CAIGroup.cpp": 5,
     "src/CGameAIBase.cpp": 5,
+    "src/CScreenInventory.cpp": 5,
     "src/CScreenStore.cpp": 5,
     "src/CUIControlEdit.cpp": 5,
     "src/CBlood.cpp": 4,
@@ -46,7 +46,6 @@
     "src/CGameAreaNotes.cpp": 2,
     "src/CImm.cpp": 2,
     "src/CScreenMultiPlayer.cpp": 2,
-    "src/CScreenSpellbook.cpp": 2,
     "src/CSearchBitmap.cpp": 2,
     "src/CSpawn.cpp": 2,
     "src/CUIControlEditMultiLine.cpp": 2,
@@ -62,6 +61,7 @@
     "src/CScreenChapter.cpp": 1,
     "src/CScreenMap.cpp": 1,
     "src/CScreenSave.cpp": 1,
+    "src/CScreenSpellbook.cpp": 1,
     "src/CTimerWorld.cpp": 1,
     "src/CUIControlFactory.cpp": 1,
     "src/CUnknown2.cpp": 1,
@@ -71,7 +71,7 @@
     "src/CWarp.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10236,
+  "annotations_total": 10241,
   "annotations_not_function_start": 2514,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -3790,8 +3790,8 @@
     "0xA1917C"
   ],
   "bytes_total": 3846937,
-  "bytes_done": 3412137,
-  "bytes_complete": 2973688,
+  "bytes_done": 3420403,
+  "bytes_complete": 2985867,
   "largest_stubs": [
     {
       "addr": "0x4DB160",
@@ -3817,6 +3817,11 @@
       "addr": "0x4AB510",
       "name": "CGameEffect_opcode_13_2",
       "size": 7439
+    },
+    {
+      "addr": "0x5B81C0",
+      "name": "CInfGame_SwapItemPersonal",
+      "size": 6507
     },
     {
       "addr": "0x5A5060",
@@ -3857,11 +3862,6 @@
       "addr": "0x5A3DB0",
       "name": "FUN_005a3db0",
       "size": 4478
-    },
-    {
-      "addr": "0x62F360",
-      "name": "CScreenInventory_SwapWithSlot",
-      "size": 4445
     },
     {
       "addr": "0x5E56F0",
