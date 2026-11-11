@@ -9602,17 +9602,229 @@ void CGameSprite::sub_716770(CButtonData& cButtonData)
 // 0x716E80
 CGameButtonList* CGameSprite::sub_716E80(INT a1)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CGameButtonList* buttons = new CGameButtonList();
 
-    return NULL;
+    for (INT nSlot = 0; nSlot < 51; nSlot++) {
+        if (nSlot > 17 && nSlot < 43) {
+            continue;
+        }
+
+        if (g_pBaldurChitin->GetObjectGame()->m_cOptions.m_bQuickItemMapping
+            && nSlot >= 15
+            && nSlot <= 17) {
+            continue;
+        }
+
+        CItem* pItem = m_equipment.m_items[nSlot];
+        if (pItem == NULL) {
+            continue;
+        }
+
+        if (nSlot == 43
+            || nSlot == 45
+            || nSlot == 47
+            || nSlot == 49) {
+            BYTE nNextSlot = static_cast<BYTE>(nSlot + 1);
+            if ((pItem->GetFlagsFile() & 0x2) != 0) {
+                if (m_equipment.m_items[nNextSlot] != NULL) {
+                    continue;
+                }
+            }
+        }
+
+        if (!pItem->Demand()) {
+            continue;
+        }
+
+        for (INT nAbility = 0; nAbility < pItem->GetAbilityCount(); nAbility++) {
+            const ITEM_ABILITY* curAbility = pItem->GetAbility(nAbility);
+
+            if (pItem->GetItemType() == 11) {
+                CGameEffect* pEffect = pItem->GetAbilityEffect(nAbility, 0, NULL);
+                if (pEffect != NULL) {
+                    if (pEffect->m_effectID == CGAMEEFFECT_LEARNSPELL) {
+                        continue;
+                    }
+
+                    delete pEffect;
+                }
+            }
+
+            if (curAbility == NULL) {
+                continue;
+            }
+
+            if (curAbility->quickSlotType != 3) {
+                continue;
+            }
+
+            if ((curAbility->type & 0x100) != 0 && (pItem->m_flags & 0x1) == 0) {
+                continue;
+            }
+
+            if ((curAbility->type & 0x200) != 0 && (pItem->m_flags & 0x1) != 0) {
+                continue;
+            }
+
+            if ((curAbility->type & 0xFF) == 4) {
+                continue;
+            }
+
+            if ((curAbility->type & 0xFF) == 2 && !CheckLauncherType(curAbility, NULL)) {
+                continue;
+            }
+
+            CButtonData* pButtonData = new CButtonData();
+            pButtonData->m_icon = CString(curAbility->quickSlotIcon);
+            pButtonData->m_name = pItem->GetGenericName();
+            pButtonData->m_abilityId.m_itemNum = nSlot;
+            pButtonData->m_abilityId.m_itemType = 2;
+            pButtonData->m_abilityId.m_abilityNum = nAbility;
+            pButtonData->m_abilityId.m_targetType = curAbility->actionType;
+            pButtonData->m_abilityId.field_10 = pGame->GetRuleTables().GetItemAbilityDescription(pItem->GetResRef(), nAbility);
+            if (pButtonData->m_abilityId.field_10 == -1) {
+                pButtonData->m_abilityId.field_10 = pItem->GetGenericName();
+            }
+
+            pButtonData->m_count = 0;
+            if (pItem->GetMaxStackable() > 1 || pItem->GetMaxUsageCount(nAbility) > 0) {
+                pButtonData->m_count = pItem->GetUsageCount(nAbility);
+            }
+
+            SHORT launcherSlot;
+            CItem* pLauncher = GetLauncher(curAbility, launcherSlot);
+            if (pLauncher != NULL) {
+                pButtonData->m_launcherIcon = pLauncher->GetItemIcon();
+                pButtonData->m_launcherName = pLauncher->GetGenericName();
+            }
+
+            buttons->AddTail(pButtonData);
+
+            if (a1) {
+                pItem->Release();
+                return buttons;
+            }
+        }
+
+        pItem->Release();
+    }
+
+    return buttons;
 }
 
 // 0x717250
 CGameButtonList* CGameSprite::sub_717250(INT a1)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CGameButtonList* buttons = new CGameButtonList();
 
-    return NULL;
+    for (INT nSlot = 0; nSlot < 51; nSlot++) {
+        if (nSlot > 17 && nSlot < 43) {
+            continue;
+        }
+
+        if (g_pBaldurChitin->GetObjectGame()->m_cOptions.m_bQuickItemMapping
+            && nSlot >= 15
+            && nSlot <= 17) {
+            continue;
+        }
+
+        CItem* pItem = m_equipment.m_items[nSlot];
+        if (pItem == NULL) {
+            continue;
+        }
+
+        if (nSlot == 43
+            || nSlot == 45
+            || nSlot == 47
+            || nSlot == 49) {
+            BYTE nNextSlot = static_cast<BYTE>(nSlot + 1);
+            if ((pItem->GetFlagsFile() & 0x2) != 0) {
+                if (m_equipment.m_items[nNextSlot] != NULL) {
+                    continue;
+                }
+            }
+        }
+
+        if (!pItem->Demand()) {
+            continue;
+        }
+
+        for (INT nAbility = 0; nAbility < pItem->GetAbilityCount(); nAbility++) {
+            const ITEM_ABILITY* curAbility = pItem->GetAbility(nAbility);
+
+            if (pItem->GetItemType() == 11) {
+                CGameEffect* pEffect = pItem->GetAbilityEffect(nAbility, 0, NULL);
+                if (pEffect != NULL) {
+                    if (pEffect->m_effectID == CGAMEEFFECT_LEARNSPELL) {
+                        continue;
+                    }
+
+                    delete pEffect;
+                }
+            }
+
+            if (curAbility == NULL) {
+                continue;
+            }
+
+            if (curAbility->quickSlotType != 3) {
+                continue;
+            }
+
+            if ((curAbility->type & 0x100) != 0 && (pItem->m_flags & 0x1) == 0) {
+                continue;
+            }
+
+            if ((curAbility->type & 0x200) != 0 && (pItem->m_flags & 0x1) != 0) {
+                continue;
+            }
+
+            if ((curAbility->type & 0xFF) == 4) {
+                continue;
+            }
+
+            if ((curAbility->type & 0xFF) == 2 && !CheckLauncherType(curAbility, NULL)) {
+                continue;
+            }
+
+            CButtonData* pButtonData = new CButtonData();
+            pButtonData->m_icon = CString(curAbility->quickSlotIcon);
+            pButtonData->m_name = pItem->GetGenericName();
+            pButtonData->m_abilityId.m_itemNum = nSlot;
+            pButtonData->m_abilityId.m_itemType = 2;
+            pButtonData->m_abilityId.m_abilityNum = nAbility;
+            pButtonData->m_abilityId.m_targetType = curAbility->actionType;
+            pButtonData->m_abilityId.field_10 = pGame->GetRuleTables().GetItemAbilityDescription(pItem->GetResRef(), nAbility);
+            if (pButtonData->m_abilityId.field_10 == -1) {
+                pButtonData->m_abilityId.field_10 = pItem->GetGenericName();
+            }
+
+            pButtonData->m_count = 0;
+            if (pItem->GetMaxStackable() > 1 || pItem->GetMaxUsageCount(nAbility) > 0) {
+                pButtonData->m_count = pItem->GetUsageCount(nAbility);
+            }
+
+            SHORT launcherSlot;
+            CItem* pLauncher = GetLauncher(curAbility, launcherSlot);
+            if (pLauncher != NULL) {
+                pButtonData->m_launcherIcon = pLauncher->GetItemIcon();
+                pButtonData->m_launcherName = pLauncher->GetGenericName();
+            }
+
+            buttons->AddTail(pButtonData);
+
+            if (a1) {
+                pItem->Release();
+                return buttons;
+            }
+        }
+
+        pItem->Release();
+    }
+
+    return buttons;
 }
 
 // 0x717FC0
@@ -10129,7 +10341,88 @@ void CGameSprite::ReadySpell(SHORT buttonNum, INT nType, BOOLEAN firstCall)
 // 0x719180
 void CGameSprite::sub_719180(CString sSpellResRef)
 {
-    // TODO: Incomplete.
+    CAIAction action;
+
+    CSpell cSpell((CResRef(sSpellResRef)));
+    cSpell.Demand();
+
+    SHORT nCasterLevel;
+    if (GetCasterLevel(&cSpell, 0, 0) > 1) {
+        nCasterLevel = GetCasterLevel(&cSpell, 0, 0);
+    } else {
+        nCasterLevel = 1;
+    }
+
+    SPELL_ABILITY* pAbility = NULL;
+
+    if (cSpell.GetAbilityCount() > 0) {
+        INT nIndex = 0;
+        do {
+            if (cSpell.GetAbility(nIndex)->minCasterLevel > nCasterLevel) {
+                break;
+            }
+
+            pAbility = cSpell.GetAbility(nIndex);
+            nIndex++;
+        } while (nIndex < cSpell.GetAbilityCount());
+    }
+
+    m_currentUseButton.m_abilityId.m_res = sSpellResRef;
+    m_currentUseButton.m_abilityId.m_targetType = pAbility->actionType;
+    ReadyCursor();
+
+    if (pAbility != NULL) {
+        switch (pAbility->actionType) {
+        case 1:
+            g_pBaldurChitin->GetObjectGame()->SetState(2);
+            g_pBaldurChitin->GetObjectGame()->SetIconIndex(20);
+            g_pBaldurChitin->GetObjectGame()->m_iconResRef = "";
+            break;
+        case 2:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+            // __LINE__: 18474
+            UTIL_ASSERT(FALSE);
+            break;
+        case 3:
+            g_pBaldurChitin->GetObjectGame()->SetState(2);
+            g_pBaldurChitin->GetObjectGame()->SetIconIndex(20);
+            g_pBaldurChitin->GetObjectGame()->m_iconResRef = "";
+            break;
+        case 4:
+            g_pBaldurChitin->GetObjectGame()->SetState(1);
+            g_pBaldurChitin->GetObjectGame()->SetIconIndex(20);
+            g_pBaldurChitin->GetObjectGame()->m_iconResRef = "";
+            break;
+        case 5:
+            // FIXME: One time is usually enough.
+            g_pBaldurChitin->GetObjectGame()->SetLastTarget(CGameObjectArray::INVALID_INDEX);
+            g_pBaldurChitin->GetObjectGame()->SetLastTarget(CGameObjectArray::INVALID_INDEX);
+
+            g_pBaldurChitin->GetObjectGame()->SetState(0);
+            g_pBaldurChitin->GetObjectGame()->GetButtonArray()->SetSelectedButton(100);
+            g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateState();
+
+            action = CAIAction(CAIAction::SPELL,
+                m_typeAI,
+                sSpellResRef,
+                0,
+                m_currentUseButton.m_abilityId.m_nClass | (static_cast<WORD>(m_currentUseButton.m_abilityId.field_1E) << 8));
+            action.m_specificID3 = m_currentUseButton.m_abilityId.field_1D;
+            ClearActions(FALSE);
+            m_userCommandPause = 75;
+            m_triggerId = CGameObjectArray::INVALID_INDEX;
+            AddAction(action);
+            m_interrupt = TRUE;
+            break;
+        case 6:
+            g_pBaldurChitin->GetObjectGame()->SetState(0);
+            g_pBaldurChitin->GetObjectGame()->GetButtonArray()->SetSelectedButton(100);
+            g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateState();
+            break;
+        }
+    }
+
+    cSpell.Release();
 }
 
 // 0x719860
@@ -10731,7 +11024,37 @@ void CGameSprite::AddSpecialAbility(const CResRef& cResInnateSpell, BOOL feedBac
 // 0x71BC60
 void CGameSprite::RemoveSpecialAbility(const CResRef& cResInnateSpell)
 {
-    // TODO: Incomplete.
+    CString sResRef;
+    cResInnateSpell.CopyToString(sResRef);
+
+    UINT nSpellId = 0;
+    if (g_pBaldurChitin->GetObjectGame()->m_songs.Find(cResInnateSpell, nSpellId)) {
+        UINT nId = 0;
+        UINT nUnused1 = 0;
+        UINT nUnused2 = 0;
+        if (g_pBaldurChitin->GetObjectGame()->m_songs.Find(cResInnateSpell, nId)) {
+            m_songs.Remove(nId, TRUE, nUnused2, nUnused1);
+        }
+    } else if (g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Find(cResInnateSpell, nSpellId)) {
+        UINT nId = 0;
+        if (g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Find(cResInnateSpell, nId)) {
+            UINT nUnused2 = 0;
+            UINT nUnused1 = 0;
+            m_shapeshifts.Remove(nId, TRUE, nUnused1, nUnused2);
+        }
+    } else if (g_pBaldurChitin->GetObjectGame()->m_innateSpells.Find(cResInnateSpell, nSpellId)) {
+        UINT nUnused2 = 0;
+        UINT nUnused1 = 0;
+        UINT nId = 0;
+        if (g_pBaldurChitin->GetObjectGame()->m_innateSpells.Find(cResInnateSpell, nId)) {
+            m_innateSpells.Remove(nId, TRUE, nUnused1, nUnused2);
+        }
+    }
+
+    CAbilityId ab;
+    ab.m_itemType = 1;
+    ab.m_res = sResRef;
+    CheckQuickLists(&ab, -1, FALSE, FALSE);
 }
 
 // 0x71BE80
@@ -11489,7 +11812,189 @@ void CGameSprite::PlayDialogSound(CGameSprite* pNPC)
 // 0x71E240
 void CGameSprite::UpdateFeats(CCreatureFileHeader* pOldBaseStats, CDerivedStats* pDerivedStats)
 {
-    // TODO: Incomplete.
+    // Aegis of Rime
+    if ((pOldBaseStats->m_feats[0] & 0x1) == 0 && (m_baseStats.m_feats[0] & 0x1) != 0) {
+        m_baseStats.m_resistColdBase += 5;
+        if (m_baseStats.m_resistColdBase < 0) {
+            m_baseStats.m_resistColdBase = 0;
+        } else if (m_baseStats.m_resistColdBase > 100) {
+            m_baseStats.m_resistColdBase = 100;
+        }
+    }
+
+    // Aqua Mortis
+    if ((pOldBaseStats->m_feats[0] & 0x4) == 0 && (m_baseStats.m_feats[0] & 0x4) != 0) {
+        m_baseStats.m_resistAcidBase += 5;
+        if (m_baseStats.m_resistAcidBase < 0) {
+            m_baseStats.m_resistAcidBase = 0;
+        } else if (m_baseStats.m_resistAcidBase > 100) {
+            m_baseStats.m_resistAcidBase = 100;
+        }
+    }
+
+    // Bullheaded
+    if ((pOldBaseStats->m_feats[0] & 0x80) == 0 && (m_baseStats.m_feats[0] & 0x80) != 0) {
+        m_baseStats.m_saveVSWillBase++;
+    }
+
+    // Discipline
+    if ((pOldBaseStats->m_feats[0] & 0x8000) == 0 && (m_baseStats.m_feats[0] & 0x8000) != 0) {
+        m_baseStats.m_saveVSWillBase++;
+    }
+
+    // Great Fortitude
+    if ((pOldBaseStats->m_feats[0] & 0x4000000) == 0 && (m_baseStats.m_feats[0] & 0x4000000) != 0) {
+        m_baseStats.m_saveVSFortitudeBase += 2;
+    }
+
+    // Iron Will
+    if ((pOldBaseStats->m_feats[1] & 0x4) == 0 && (m_baseStats.m_feats[1] & 0x4) != 0) {
+        m_baseStats.m_saveVSWillBase += 2;
+    }
+
+    // Lightning Reflexes
+    if ((pOldBaseStats->m_feats[1] & 0x8) == 0 && (m_baseStats.m_feats[1] & 0x8) != 0) {
+        m_baseStats.m_saveVSReflexBase += 2;
+    }
+
+    // Luck of Heroes
+    if ((pOldBaseStats->m_feats[1] & 0x20) == 0 && (m_baseStats.m_feats[1] & 0x20) != 0) {
+        m_baseStats.m_saveVSReflexBase++;
+        m_baseStats.m_saveVSFortitudeBase++;
+        m_baseStats.m_saveVSWillBase++;
+    }
+
+    // Scion of Storms
+    if ((pOldBaseStats->m_feats[1] & 0x80000) == 0 && (m_baseStats.m_feats[1] & 0x80000) != 0) {
+        m_baseStats.m_resistElectricityBase += 5;
+        if (m_baseStats.m_resistElectricityBase < 0) {
+            m_baseStats.m_resistElectricityBase = 0;
+        } else if (m_baseStats.m_resistElectricityBase > 100) {
+            m_baseStats.m_resistElectricityBase = 100;
+        }
+    }
+
+    // Snake Blood
+    if ((pOldBaseStats->m_feats[1] & 0x8000000) == 0 && (m_baseStats.m_feats[1] & 0x8000000) != 0) {
+        m_baseStats.m_saveVSReflexBase++;
+    }
+
+    // Spirit of Flame
+    if ((pOldBaseStats->m_feats[2] & 0x2) == 0 && (m_baseStats.m_feats[2] & 0x2) != 0) {
+        m_baseStats.m_resistFireBase += 5;
+        if (m_baseStats.m_resistFireBase < 0) {
+            m_baseStats.m_resistFireBase = 0;
+        } else if (m_baseStats.m_resistFireBase > 100) {
+            m_baseStats.m_resistFireBase = 100;
+        }
+    }
+
+    if ((pOldBaseStats->m_feats[0] & 0x20000) == 0 && (m_baseStats.m_feats[0] & 0x20000) != 0) {
+        AddSpecialAbility(SPIN231, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[1] & 0x2000) == 0 && (m_baseStats.m_feats[1] & 0x2000) != 0) {
+        AddSpecialAbility(SPIN197, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[2] & 0x100) == 0 && (m_baseStats.m_feats[2] & 0x100) != 0) {
+        AddSpecialAbility(SPIN111, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[2] & 0x200) == 0 && (m_baseStats.m_feats[2] & 0x200) != 0) {
+        AddSpecialAbility(SPIN245, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[2] & 0x400) == 0 && (m_baseStats.m_feats[2] & 0x400) != 0) {
+        AddSpecialAbility(SPIN246, FALSE);
+    }
+
+    // Stunning Fist
+    if (sub_763150(CGAMESPRITE_FEAT_STUNNING_FIST) == TRUE) {
+        INT nNewLevel = m_derivedStats.GetClassMaskLevel(0xFFF);
+
+        INT nOldLevel;
+        if ((pOldBaseStats->m_feats[2] & 0x8) == 0 && (m_baseStats.m_feats[2] & 0x8) != 0) {
+            nOldLevel = 1;
+        } else {
+            nOldLevel = pDerivedStats->GetClassMaskLevel(0xFFF);
+        }
+
+        for (INT nLevel = nOldLevel; nLevel <= nNewLevel; nLevel++) {
+            if (nLevel % 4 == 0) {
+                AddSpecialAbility(SPIN232, FALSE);
+            }
+        }
+    }
+
+    if ((pOldBaseStats->m_feats[1] & 0x8000) == 0 && (m_baseStats.m_feats[1] & 0x8000) != 0) {
+        AddSpecialAbility(SPIN275, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[0] & 0x80000) == 0 && (m_baseStats.m_feats[0] & 0x80000) != 0) {
+        AddSpecialAbility(SPIN276, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[0] & 0x20) == 0 && (m_baseStats.m_feats[0] & 0x20) != 0) {
+        AddSpecialAbility(SPIN277, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[0] & 0x8000000) == 0 && (m_baseStats.m_feats[0] & 0x8000000) != 0) {
+        AddSpecialAbility(SPIN278, FALSE);
+    }
+
+    if ((pOldBaseStats->m_feats[1] & 0x20000) == 0 && (m_baseStats.m_feats[1] & 0x20000) != 0) {
+        AddSpecialAbility(SPIN279, FALSE);
+    }
+
+    // Toughness
+    if ((m_baseStats.m_feats[2] & 0x20) != 0) {
+        INT nDiff = m_baseStats.m_featToughness - pOldBaseStats->m_featToughness;
+        if (nDiff != 0) {
+            nDiff *= 3;
+            m_baseStats.m_hitPoints += nDiff;
+            m_baseStats.m_maxHitPointsBase += nDiff;
+        }
+    }
+
+    // Extra Rage
+    if ((m_baseStats.m_feats[0] & 0x100000) != 0) {
+        INT nDiff = m_baseStats.m_featExtraRage - pOldBaseStats->m_featExtraRage;
+        if (nDiff != 0) {
+            CResRef cResSpell;
+            if (m_derivedStats.GetClassLevel(1) >= 15 && pDerivedStats->GetClassLevel(1) < 15) {
+                cResSpell = SPIN260;
+            } else {
+                cResSpell = SPIN236;
+            }
+
+            if (nDiff > 0) {
+                do {
+                    AddSpecialAbility(cResSpell, FALSE);
+                } while (--nDiff != 0);
+            }
+        }
+    }
+
+    // Extra Smiting
+    if ((m_baseStats.m_feats[0] & 0x400000) != 0) {
+        INT nDiff = m_baseStats.m_featExtraSmiting - pOldBaseStats->m_featExtraSmiting;
+        if (nDiff != 0 && nDiff > 0) {
+            do {
+                AddSpecialAbility(SPIN152, FALSE);
+            } while (--nDiff != 0);
+        }
+    }
+
+    // Extra Turning
+    if ((m_baseStats.m_feats[0] & 0x800000) != 0) {
+        INT nDiff = m_baseStats.m_featExtraTurning - pOldBaseStats->m_featExtraTurning;
+        if (nDiff != 0 && nDiff > 0) {
+            do {
+                AddSpecialAbility(SPIN970, FALSE);
+            } while (--nDiff != 0);
+        }
+    }
 }
 
 // 0x71E9F0
@@ -12723,7 +13228,18 @@ CString CGameSprite::GetRaceString(BYTE nRace)
 // 0x722740
 CItem* CGameSprite::sub_722740(const CString& sName)
 {
-    // TODO: Incomplete.
+    CString sUpper(sName);
+    sUpper.MakeUpper();
+
+    for (INT nSlot = 0; nSlot < 51; nSlot++) {
+        CItem* pItem = m_equipment.m_items[nSlot];
+        if (pItem != NULL && pItem->GetItemType() == 58) {
+            CItem* pRemoved = g_pBaldurChitin->GetObjectGame()->RemoveItemFromBag(pItem->GetResRef(), CResRef(sUpper));
+            if (pRemoved != NULL) {
+                return pRemoved;
+            }
+        }
+    }
 
     return NULL;
 }
@@ -26267,25 +26783,278 @@ SHORT CGameSprite::Interact(CGameSprite* pTarget)
 // 0x754D70
 SHORT CGameSprite::DropItem(SHORT slotNum)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
-    return ACTION_ERROR;
+    if (slotNum == -1) {
+        return ACTION_ERROR;
+    }
+
+    LONG iContainer = pGame->GetGroundPile(m_id);
+    if (iContainer == CGameObjectArray::INVALID_INDEX) {
+        return ACTION_ERROR;
+    }
+
+    CGameContainer* pContainer;
+
+    BYTE rc = pGame->GetObjectArray()->GetDeny(iContainer,
+        CGameObjectArray::THREAD_ASYNCH,
+        reinterpret_cast<CGameObject**>(&pContainer),
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return ACTION_ERROR;
+    }
+
+    if (slotNum != CGameSpriteEquipment::SLOT_FIST) {
+        CItem* pItem = m_equipment.m_items[slotNum];
+        if (pItem != NULL && (pItem->GetFlagsFile() & 0x4) != 0) {
+            pContainer->PlaceItemInBlankSlot(pItem, TRUE, 0x7FFF);
+            pItem->Demand();
+
+            if (slotNum == m_equipment.m_selectedWeapon) {
+                SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 0, 1);
+            } else if (m_equipment.m_selectedWeapon >= CGameSpriteEquipment::SLOT_AMMO
+                && m_equipment.m_selectedWeapon < CGameSpriteEquipment::SLOT_AMMO + 3
+                && (pItem->GetAbility(0)->type & 0xFF) == 4) {
+                SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 0, 1);
+            }
+
+            pItem->ReleaseAll();
+            Unequip(slotNum);
+            m_equipment.m_items[slotNum] = NULL;
+        }
+    }
+
+    pGame->GetObjectArray()->ReleaseDeny(iContainer,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return ACTION_DONE;
 }
 
 // 0x754EE0
 SHORT CGameSprite::DropInventory(BOOLEAN a1, CString a2)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CGameContainer* pContainer;
+    LONG iContainer;
+    BOOLEAN bHaveContainer = FALSE;
+    CMessage* message;
+    BYTE rc;
 
-    return ACTION_ERROR;
+    if (m_pArea == NULL) {
+        return ACTION_DONE;
+    }
+
+    for (SHORT nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+        if (nSlot == CGameSpriteEquipment::SLOT_FIST) {
+            continue;
+        }
+
+        CItem* pItem = m_equipment.m_items[nSlot];
+        if (pItem == NULL) {
+            continue;
+        }
+
+        if ((pItem->GetFlagsFile() & 0x4) != 0
+            && (!a1 || (pItem->GetFlagsFile() & 0x1) != 0)) {
+            if (!bHaveContainer) {
+                iContainer = pGame->GetGroundPile(m_id);
+                if (iContainer == CGameObjectArray::INVALID_INDEX) {
+                    return ACTION_ERROR;
+                }
+
+                rc = pGame->GetObjectArray()->GetDeny(iContainer,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pContainer),
+                    INFINITE);
+                if (rc != CGameObjectArray::SUCCESS) {
+                    return ACTION_ERROR;
+                }
+
+                bHaveContainer = TRUE;
+            }
+
+            if (pItem->GetResRef() != a2) {
+                Unequip(nSlot);
+                pContainer->PlaceItemInBlankSlot(pItem, TRUE, 0x7FFF);
+                m_equipment.m_items[nSlot] = NULL;
+            }
+        } else {
+            if (a1) {
+                Unequip(nSlot);
+            }
+        }
+    }
+
+    SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 0, 1);
+
+    if (m_baseStats.m_gold != 0) {
+        CItem* pGold = new CItem(CResRef("MISC07"), static_cast<WORD>(m_baseStats.m_gold), 0, 0, 0, 0);
+        if (pGold != NULL) {
+            if (!bHaveContainer) {
+                iContainer = pGame->GetGroundPile(m_id);
+                if (iContainer == CGameObjectArray::INVALID_INDEX) {
+                    return ACTION_ERROR;
+                }
+
+                rc = pGame->GetObjectArray()->GetDeny(iContainer,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pContainer),
+                    INFINITE);
+                if (rc != CGameObjectArray::SUCCESS) {
+                    return ACTION_ERROR;
+                }
+
+                bHaveContainer = TRUE;
+            }
+
+            pContainer->PlaceItemInBlankSlot(pGold, TRUE, 0x7FFF);
+            m_baseStats.m_gold = 0;
+        }
+    }
+
+    if (!bHaveContainer) {
+        return ACTION_DONE;
+    }
+
+    if ((g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+            || g_pChitin->cNetwork.m_idLocalPlayer == m_remotePlayerID)
+        && g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
+        message = new CMessageSpriteEquipment(this, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    for (BYTE buttonNum = 0; buttonNum < CGAMESAVECHARACTER_NUM_QUICK_WEAPONS22; buttonNum++) {
+        CButtonData buttonData;
+
+        // __FILE__: .\Include\ObjCreature.h
+        // __LINE__: 2030
+        UTIL_ASSERT(buttonNum < CGAMESAVECHARACTER_NUM_QUICK_WEAPONS22);
+
+        m_quickWeapons[buttonNum] = buttonData;
+
+        // __FILE__: .\Include\ObjCreature.h
+        // __LINE__: 2031
+        UTIL_ASSERT(buttonNum < CGAMESAVECHARACTER_NUM_QUICK_WEAPONS22);
+
+        field_3D3A[buttonNum] = 0;
+    }
+
+    for (BYTE buttonNum = 0; buttonNum < CGAMESAVECHARACTER_NUM_QUICK_ITEMS22; buttonNum++) {
+        CButtonData buttonData;
+
+        // __FILE__: .\Include\ObjCreature.h
+        // __LINE__: 2032
+        UTIL_ASSERT(buttonNum < CGAMESAVECHARACTER_NUM_QUICK_ITEMS22);
+
+        m_quickItems[buttonNum] = buttonData;
+    }
+
+    pGame->GetObjectArray()->ReleaseDeny(iContainer,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return ACTION_DONE;
 }
 
 // 0x7555F0
 SHORT CGameSprite::UseContainer()
 {
-    // TODO: Incomplete.
+    if (m_actionCount > 0) {
+        return ACTION_INTERRUPTABLE;
+    }
 
-    return ACTION_ERROR;
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    LONG iContainer = m_curAction.m_specificID;
+
+    if (pGame->GetCharacterPortraitNum(m_id) == -1) {
+        if (pGame->m_familiars.Find(reinterpret_cast<int*>(m_id), NULL) == NULL) {
+            return ACTION_DONE;
+        }
+    }
+
+    if (!Orderable(FALSE)) {
+        return ACTION_DONE;
+    }
+
+    if (!m_bSelected) {
+        return ACTION_DONE;
+    }
+
+    CGameContainer* pContainer;
+
+    BYTE rc = pGame->GetObjectArray()->GetShare(iContainer,
+        CGameObjectArray::THREAD_ASYNCH,
+        reinterpret_cast<CGameObject**>(&pContainer),
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return ACTION_ERROR;
+    }
+
+    // NOTE: Read from an unnamed `const SHORT` at 0x847E78.
+    CAITrigger cTrigger(CAITRIGGER_CLICKED, m_typeAI, 0);
+
+    CMessage* message = new CMessageSetTrigger(cTrigger, m_id, pContainer->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    CPoint ptContainer = pContainer->GetPos();
+
+    message = new CMessageSetForceActionPick(TRUE, m_id, pContainer->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    if ((ptContainer.y - m_pos.y) * (ptContainer.y - m_pos.y) * 16 / 9 + (ptContainer.x - m_pos.x) * (ptContainer.x - m_pos.x) > CGameTrigger::RANGE_TRIGGER) {
+        pGame->GetObjectArray()->ReleaseShare(iContainer,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return ACTION_DONE;
+    }
+
+    if (!IsVisibleToCaller(FALSE)) {
+        ITEM_EFFECT effect;
+        CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+        // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+        effect.durationType = 1;
+
+        CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+            m_pos,
+            m_id,
+            CPoint(-1, -1));
+
+        message = new CMessageAddEffect(pEffect, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    if (pContainer->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+        if ((pContainer->m_dwFlags & 0x1) != 0) {
+            if (pContainer->m_keyType == ""
+                || !PartyHasItem(pContainer->m_keyType)) {
+                DisplayTextRef(-1, 19862, 0, RGB(215, 215, 190));
+
+                pGame->GetObjectArray()->ReleaseShare(iContainer,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return ACTION_DONE;
+            }
+        }
+
+        pContainer->OpenContainer(m_typeAI);
+    }
+
+    pGame->GetObjectArray()->ReleaseShare(iContainer,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    if (pGame->GetCharacterPortraitNum(m_id) != -1) {
+        pGame->m_iContainer = iContainer;
+        pGame->m_iContainerSprite = m_id;
+        g_pBaldurChitin->m_pEngineWorld->StartContainer();
+    } else {
+        DisplayTextRef(-1, 7546, RGB(255, 0, 0), RGB(255, 0, 0));
+    }
+
+    ClearActions(FALSE);
+
+    return ACTION_INTERRUPTABLE;
 }
 
 // 0x755A70
@@ -26297,7 +27066,60 @@ void CGameSprite::sub_755A70(CSpell* pSpell, SPELL_ABILITY* pAbility, const CPoi
 // 0x7564E0
 void CGameSprite::ApplyCastingEffectPost(CSpell* pSpell, SPELL_ABILITY* pAbility)
 {
-    // TODO: Incomplete.
+    // NOTE: Result is not used.
+    pSpell->GetCasterType();
+
+    if (pSpell == NULL || pAbility == NULL) {
+        return;
+    }
+
+    CString sSound("CAS_");
+
+    if (pSpell->GetCasterType() == 2) {
+        sSound += 'P';
+    } else {
+        // NOTE: Result is not used.
+        pSpell->GetCasterType();
+        sSound += 'M';
+    }
+
+    switch (pSpell->GetAnimationType()) {
+    case 9:
+        sSound += "07";
+        break;
+    case 10:
+        sSound += "08";
+        break;
+    case 11:
+        sSound += "05";
+        break;
+    case 12:
+        sSound += "02";
+        break;
+    case 13:
+        sSound += "01";
+        break;
+    case 14:
+        sSound += "03";
+        break;
+    case 15:
+        sSound += "06";
+        break;
+    case 16:
+        sSound += "04";
+        break;
+    default:
+        return;
+    }
+
+    m_sndCasting.Stop();
+    m_sndCasting.SetChannel(4, reinterpret_cast<DWORD>(m_pArea));
+    m_sndCasting.SetResRef(CResRef(sSound), TRUE, TRUE);
+    m_sndCasting.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+
+    CMessagePlaySoundRef* message = new CMessagePlaySoundRef(CResRef(sSound), m_id, m_id);
+    message->m_nChannel = 4;
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
 }
 
 // 0x756770
@@ -26322,17 +27144,95 @@ void CGameSprite::sub_756930(CItem* pItem, CItem* pLauncher)
 // 0x757540
 SHORT CGameSprite::GiveItem(CGameSprite* pTarget)
 {
-    // TODO: Incomplete.
+    if (pTarget == NULL) {
+        return ACTION_ERROR;
+    }
 
-    return ACTION_ERROR;
+    CItem* pItem;
+    SHORT slotNum = FindItemPersonal(m_curAction.GetString1(), 0, FALSE);
+    if (slotNum == -1) {
+        pItem = sub_722740(m_curAction.GetString1());
+        if (pItem == NULL) {
+            return ACTION_ERROR;
+        }
+    } else {
+        pItem = m_equipment.m_items[slotNum];
+    }
+
+    // NOTE: `slotNum` is still -1 when the item was taken from a bag.
+    Unequip(slotNum);
+    m_equipment.m_items[slotNum] = NULL;
+
+    if (pTarget->m_objectType == CGameObject::TYPE_SPRITE) {
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pTarget->m_id) != -1) {
+            g_pBaldurChitin->GetObjectGame()->FeedBack(CInfGame::FEEDBACK_ITEMGAINED, 0, TRUE);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->AddDisposableItem(pItem);
+
+        CMessage* message = new CMessageAddInventoryItem(*pItem, m_id, pTarget->m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x757720
 SHORT CGameSprite::sub_757720()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
-    return ACTION_ERROR;
+    for (INT nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+        if (m_equipment.m_items[nSlot] == NULL || nSlot == CGameSpriteEquipment::SLOT_FIST) {
+            continue;
+        }
+
+        if ((m_equipment.m_items[nSlot]->GetFlagsFile() & 0x4) == 0) {
+            continue;
+        }
+
+        CItem* pItem = m_equipment.m_items[nSlot];
+        Unequip(nSlot);
+        m_equipment.m_items[nSlot] = NULL;
+
+        BOOL bGiven = FALSE;
+
+        for (INT nCharacter = static_cast<SHORT>(pGame->m_nCharacters) - 1; nCharacter >= 0 && !bGiven; nCharacter--) {
+            // NOTE: Uninline.
+            LONG nCharacterId = pGame->GetCharacterId(static_cast<SHORT>(nCharacter));
+
+            CGameSprite* pSprite;
+            BYTE rc;
+
+            do {
+                rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                // NOTE: `nSlot` is advanced by this loop, and the sprite
+                // obtained above is not used.
+                for (; nSlot < CGameSpriteEquipment::NUM_SLOT && !bGiven; nSlot++) {
+                    if (m_equipment.m_items[0] == NULL && CGameSpriteEquipment::SLOT_FIST != 0) {
+                        bGiven = TRUE;
+
+                        pGame->AddDisposableItem(pItem);
+
+                        CMessage* message = new CMessageAddInventoryItem(*pItem, m_id, nCharacterId);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                    }
+                }
+
+                pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x7579C0
@@ -27752,9 +28652,65 @@ SHORT CGameSprite::PickLock(CGameAIBase* pTarget)
 // 0x75C980
 SHORT CGameSprite::RemoveSpell()
 {
-    // TODO: Incomplete.
+    CString sSpell("");
 
-    return ACTION_ERROR;
+    if (m_curAction.GetString1() == "") {
+        DecodeSpell(m_curAction.m_specificID, sSpell);
+
+        if (sSpell == "") {
+            return ACTION_ERROR;
+        }
+    } else {
+        sSpell = m_curAction.GetString1();
+    }
+
+    CResRef cResSpell(sSpell);
+
+    BYTE nClass = 0;
+    INT a3 = 0;
+    BYTE nLevel = 0;
+    sub_727720(cResSpell, nClass, a3, nLevel);
+
+    switch (g_pBaldurChitin->GetObjectGame()->GetSpellType(cResSpell)) {
+    case 1:
+        {
+            UINT nSpellLevel = nLevel - 1;
+            UINT nZero1 = 0;
+            UINT nZero2 = 0;
+            BOOLEAN bRemove = TRUE;
+            RemoveKnownSpell(nClass, nSpellLevel, cResSpell, bRemove, nZero1, nZero2);
+
+            if (a3 != 0) {
+                UINT nDomainSpellLevel = nLevel - 1;
+                UINT nZero3 = 0;
+                UINT nZero4 = 0;
+                BOOLEAN bRemoveDomain = TRUE;
+                RemoveDomainSpell(nDomainSpellLevel, cResSpell, bRemoveDomain, nZero3, nZero4);
+            }
+        }
+        break;
+    case 2:
+        {
+            UINT nZero1 = 0;
+            UINT nZero2 = 0;
+            BOOLEAN bRemove = TRUE;
+            RemoveInnateSpell(cResSpell, bRemove, nZero1, nZero2);
+        }
+        break;
+    case 3:
+        {
+            UINT nZero1 = 0;
+            UINT nZero2 = 0;
+            BOOLEAN bRemove = TRUE;
+            RemoveSong(cResSpell, bRemove, nZero1, nZero2);
+        }
+        break;
+    case 4:
+        RemoveShapeshift(cResSpell);
+        break;
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x75CBD0
@@ -28127,9 +29083,67 @@ SHORT CGameSprite::EquipMostDamagingMelee()
 // 0x75E150
 SHORT CGameSprite::EquipRanged()
 {
-    // TODO: Incomplete.
+    if (m_equipment.m_items[42] != NULL) {
+        return ACTION_ERROR;
+    }
 
-    return ACTION_ERROR;
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
+        m_equipment.m_items[m_equipment.m_selectedWeapon]->Demand();
+
+        // NOTE: The original compares the low byte of `type` only.
+        if (m_equipment.m_items[m_equipment.m_selectedWeapon] != NULL
+            && m_equipment.m_items[m_equipment.m_selectedWeapon]->GetAbility(m_equipment.m_selectedWeaponAbility) != NULL
+            && static_cast<BYTE>(m_equipment.m_items[m_equipment.m_selectedWeapon]->GetAbility(m_equipment.m_selectedWeaponAbility)->type) == 2) {
+            m_equipment.m_items[m_equipment.m_selectedWeapon]->Release();
+            return ACTION_DONE;
+        }
+
+        m_equipment.m_items[m_equipment.m_selectedWeapon]->Release();
+    }
+
+    for (INT nAmmo = 0; nAmmo < 4; nAmmo++) {
+        CItem* pItem = m_equipment.m_items[CGameSpriteEquipment::SLOT_AMMO + nAmmo];
+        if (pItem != NULL) {
+            pItem->Demand();
+
+            ITEM_ABILITY* pAbility = pItem->GetAbility(0);
+            if (pAbility != NULL
+                && static_cast<BYTE>(pAbility->type) == 2
+                && CheckLauncherType(pAbility, NULL)) {
+                SHORT launcherSlot;
+                if (GetLauncher(pAbility, launcherSlot) != NULL) {
+                    sub_726810((launcherSlot - CGameSpriteEquipment::SLOT_WEAPON) / 2);
+                }
+
+                pItem->Release();
+                return ACTION_DONE;
+            }
+
+            pItem->Release();
+        }
+    }
+
+    for (INT nWeapon = 0; nWeapon < 8; nWeapon++) {
+        CItem* pItem = m_equipment.m_items[CGameSpriteEquipment::SLOT_WEAPON + nWeapon];
+        if (pItem != NULL) {
+            pItem->Demand();
+
+            ITEM_ABILITY* pAbility = pItem->GetAbility(0);
+            if (pAbility != NULL
+                && static_cast<BYTE>(pAbility->type) == 2
+                && CheckLauncherType(pAbility, NULL)) {
+                sub_726810((CGameSpriteEquipment::SLOT_WEAPON + nWeapon - CGameSpriteEquipment::SLOT_WEAPON) / 2);
+                pItem->Release();
+                return ACTION_DONE;
+            }
+
+            pItem->Release();
+        }
+    }
+
+    EquipMostDamagingMelee();
+
+    return ACTION_DONE;
 }
 
 // 0x75E330
