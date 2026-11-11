@@ -6395,9 +6395,74 @@ void CUIControlButtonStoreStoreSpell::OnRButtonClick(CPoint pt)
 // 0x682D10
 BOOL CUIControlButtonStoreStoreSpell::Render(BOOL bForce)
 {
-    // TODO: Incomplete.
+    CString sResRef;
+    CResRef iconResRef;
 
-    return FALSE;
+    if (!m_bActive && !m_bInactiveRender) {
+        return FALSE;
+    }
+
+    if (m_nRenderCount == 0 && !bForce) {
+        return FALSE;
+    }
+
+    if (!CUIControlButton3State::Render(bForce)) {
+        return FALSE;
+    }
+
+    if (m_resRef != "") {
+        CSpell cSpell(m_resRef);
+        cSpell.Demand();
+
+        BYTE resRef[RESREF_SIZE];
+        cSpell.GetIcon(resRef);
+        iconResRef = resRef;
+
+        cSpell.Release();
+
+        iconResRef.CopyToString(sResRef);
+        sResRef.SetAt(sResRef.GetLength() - 1, 'B');
+        iconResRef = sResRef;
+
+        CRect rControlFrame(m_pPanel->m_ptOrigin + m_ptOrigin, m_size);
+
+        if (m_bPressed) {
+            rControlFrame.OffsetRect(field_63E, field_642);
+        }
+
+        CPoint pos = rControlFrame.TopLeft();
+
+        CRect rClip;
+        rClip.IntersectRect(rControlFrame, m_rDirty);
+
+        // NOTE: Original code reads the flag from a global (1).
+        CIcon::RenderIcon(0,
+            pos,
+            m_size,
+            rClip,
+            iconResRef,
+            m_pPanel->m_pManager->m_bDoubleSize,
+            m_bEnabled ? 0 : 0x1,
+            0,
+            FALSE,
+            0,
+            FALSE,
+            0);
+
+        if (!m_bValid) {
+            CVidCell vcTint(CResRef("STORTINT"), m_pPanel->m_pManager->m_bDoubleSize);
+            vcTint.Render(0,
+                m_pPanel->m_ptOrigin.x + m_ptOrigin.x,
+                m_pPanel->m_ptOrigin.y + m_ptOrigin.y,
+                rClip,
+                NULL,
+                0,
+                2,
+                192);
+        }
+    }
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
