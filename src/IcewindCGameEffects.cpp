@@ -553,6 +553,72 @@ CGameEffect* IcewindCGameEffectVampiricTouch::Copy()
     return copy;
 }
 
+// 0x55F260
+BOOL IcewindCGameEffectVampiricTouch::ApplyEffect(CGameSprite* pSprite)
+{
+    LONG nDamage = m_effectAmount;
+    for (DWORD nIndex = 0; nIndex < m_numDice; nIndex++) {
+        nDamage += (m_diceSize != 0 ? rand() % static_cast<INT>(m_diceSize) : 0) + 1;
+    }
+
+    if (nDamage >= pSprite->GetBaseStats()->m_hitPoints) {
+        nDamage = pSprite->GetBaseStats()->m_hitPoints;
+    }
+
+    CGameObject* pSource;
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pSource,
+            INFINITE)
+        == CGameObjectArray::SUCCESS) {
+        CGameEffect* pEffect;
+        CMessage* message;
+
+        switch (m_dwFlags) {
+        case 0:
+            pEffect = IcewindMisc::sub_585380(pSprite, 0, 0, nDamage, static_cast<BYTE>(m_spellLevel), 0);
+            pEffect->m_casterLevel = m_casterLevel;
+            pSprite->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, FALSE, TRUE);
+
+            IcewindMisc::sub_584880(pSprite, 4392, 0);
+
+            message = new CMessageAddEffect(IcewindMisc::CreateEffectHitPoints(pSource, nDamage, 350, static_cast<BYTE>(m_spellLevel), 1),
+                pSprite->GetId(),
+                m_sourceID);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            IcewindMisc::sub_584880(static_cast<CGameSprite*>(pSource), 4391, nDamage);
+            break;
+        case 1:
+            pEffect = IcewindMisc::CreateEffectHitPoints(pSprite, nDamage, 350, static_cast<BYTE>(m_spellLevel), 1);
+            pEffect->m_casterLevel = m_casterLevel;
+            pSprite->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, FALSE, TRUE);
+
+            IcewindMisc::sub_584880(pSprite, 4391, nDamage);
+
+            message = new CMessageAddEffect(IcewindMisc::sub_585380(pSource, 0, 0, nDamage, static_cast<BYTE>(m_spellLevel), 0),
+                pSprite->GetId(),
+                m_sourceID);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            IcewindMisc::sub_584880(static_cast<CGameSprite*>(pSource), 4392, 0);
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+            // __LINE__: 1580
+            UTIL_ASSERT(FALSE);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49E2F0
