@@ -5236,7 +5236,66 @@ CStore* CInfGame::GetServerStore(const CResRef& store)
 // 0x5AF160
 void CInfGame::SwapCharacters(DWORD pos1, DWORD pos2)
 {
-    // TODO: Incomplete.
+    CGameSprite* pSprite;
+    BYTE rc;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 10546
+    UTIL_ASSERT(pos1 < (DWORD)m_nCharacters && pos2 < (DWORD)m_nCharacters);
+
+    LONG id2 = m_characterPortraits[pos2];
+    LONG id1 = m_characterPortraits[pos1];
+    m_characterPortraits[pos1] = id2;
+    m_characterPortraits[pos2] = id1;
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->m_cObjectArray.GetDeny(id1,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        pSprite->FetchCommonStrings();
+        UpdatePortraitToolTip(pos2, pSprite->GetNameRef());
+
+        g_pBaldurChitin->GetObjectGame()->m_cObjectArray.ReleaseDeny(id1,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->m_cObjectArray.GetDeny(id2,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            pSprite->FetchCommonStrings();
+            UpdatePortraitToolTip(pos1, pSprite->GetNameRef());
+
+            g_pBaldurChitin->GetObjectGame()->m_cObjectArray.ReleaseDeny(id2,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            // NOTE: `2` is the sound constant at `0x85BB65`.
+            if (pos1 == 0) {
+                CMessage* message = new CMessagePlaySound(2,
+                    TRUE,
+                    FALSE,
+                    m_characterPortraits[0],
+                    m_characterPortraits[0]);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            } else if (pos2 == 0) {
+                CMessage* message = new CMessagePlaySound(2,
+                    TRUE,
+                    FALSE,
+                    m_characterPortraits[0],
+                    m_characterPortraits[0]);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    }
 }
 
 // 0x5AF360
@@ -9157,7 +9216,90 @@ void CInfGame::sub_5BDBA0(int a1, BOOL a2)
 // 0x5BDC00
 void CInfGame::ReputationAdjustment(SHORT reputationAdjustment, BOOL set)
 {
-    // TODO: Incomplete.
+    CGameSprite* pSprite;
+    BYTE rc;
+
+    if (set) {
+        reputationAdjustment -= m_nReputation;
+    }
+
+    if (!g_pBaldurChitin->GetBaldurMessage()->m_bInReputationChange) {
+        CMessage* message = new CMessageReputationChange(reputationAdjustment,
+            GetProtagonist(),
+            GetProtagonist());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    m_nReputation += reputationAdjustment;
+
+    if (m_nReputation > 200) {
+        m_nReputation = 200;
+    }
+
+    if (m_nReputation < 10) {
+        m_nReputation = 10;
+    }
+
+    ITEM_EFFECT effect;
+    CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_REPUTATION);
+    // NOTE: Read from an unnamed WORD constant at 0x8491AA.
+    effect.durationType = 1;
+    effect.dwFlags = 1;
+    effect.effectAmount = m_nReputation;
+
+    for (SHORT nIndex = 0; nIndex < m_nCharacters; nIndex++) {
+        // NOTE: Uninline.
+        LONG nCharacterId = GetCharacterId(nIndex);
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (g_pChitin->cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL
+                || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+                SHORT nColumn = 0;
+                if ((pSprite->GetAIType().m_nAlignment & 0xF) == 2) {
+                    nColumn = 1;
+                } else if ((pSprite->GetAIType().m_nAlignment & 0xF) == 3) {
+                    nColumn = 2;
+                }
+
+                SHORT nRow = static_cast<SHORT>(m_nReputation / REPUTATION_MULTIPLIER - 1);
+                SHORT nHappiness = static_cast<SHORT>(atol(m_ruleTables.m_tHappiness.GetAt(CPoint(nColumn, nRow))));
+
+                CMessage* pHappiness = new CMessageSetHappiness(nHappiness,
+                    nCharacterId,
+                    nCharacterId);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pHappiness, FALSE);
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    CPoint(-1, -1),
+                    -1,
+                    CPoint(-1, -1));
+
+                // NOTE: Uninline (both ids).
+                CMessage* pMessage = new CMessageAddEffect(pEffect,
+                    GetCharacterId(nIndex),
+                    GetCharacterId(nIndex));
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                pSprite->CheckReputation();
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    if (!g_pChitin->cNetwork.GetSessionOpen()
+        || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        FeedBack(FEEDBACK_REPUTATION, reputationAdjustment / REPUTATION_MULTIPLIER, TRUE);
+    }
 }
 
 // 0x5BDF80
