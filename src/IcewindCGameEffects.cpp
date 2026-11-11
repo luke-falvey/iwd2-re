@@ -19,25 +19,25 @@
 // NOTE: I'm not sure where these constants belong.
 
 // 0x8AEBCC
-const char RESREF_EYE_OF_THE_MIND[] = "SpIn126";
+const char* RESREF_EYE_OF_THE_MIND = "SpIn126";
 
 // 0x8AEBD0
-const char RESREF_EYE_OF_THE_SWORD[] = "SpIn127";
+const char* RESREF_EYE_OF_THE_SWORD = "SpIn127";
 
 // 0x8AEBD4
-const char RESREF_EYE_OF_THE_MAGE[] = "SpIn128";
+const char* RESREF_EYE_OF_THE_MAGE = "SpIn128";
 
 // 0x8AEBD8
-const char RESREF_EYE_OF_VENOM[] = "SpIn129";
+const char* RESREF_EYE_OF_VENOM = "SpIn129";
 
 // 0x8AEBDC
-const char RESREF_EYE_OF_THE_SPIRIT[] = "SpIn130";
+const char* RESREF_EYE_OF_THE_SPIRIT = "SpIn130";
 
 // 0x8AEBE0
-const char RESREF_EYE_OF_FORTITUDE[] = "SpIn131";
+const char* RESREF_EYE_OF_FORTITUDE = "SpIn131";
 
 // 0x8AEBE4
-const char RESREF_EYE_OF_STONE[] = "SpIn132";
+const char* RESREF_EYE_OF_STONE = "SpIn132";
 
 // 0x8AEBE8
 const char* RESREF_BEHOLDER_DISPEL_MAGIC = "SpIn164";

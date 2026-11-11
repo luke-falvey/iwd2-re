@@ -129,13 +129,13 @@
 #define ICEWIND_CGAMEEFFECT_FEATHAMSTRING 456
 #define ICEWIND_CGAMEEFFECT_FEATRAPIDSHOT 457
 
-extern const char RESREF_EYE_OF_THE_MIND[];
-extern const char RESREF_EYE_OF_THE_SWORD[];
-extern const char RESREF_EYE_OF_THE_MAGE[];
-extern const char RESREF_EYE_OF_VENOM[];
-extern const char RESREF_EYE_OF_THE_SPIRIT[];
-extern const char RESREF_EYE_OF_FORTITUDE[];
-extern const char RESREF_EYE_OF_STONE[];
+extern const char* RESREF_EYE_OF_THE_MIND;
+extern const char* RESREF_EYE_OF_THE_SWORD;
+extern const char* RESREF_EYE_OF_THE_MAGE;
+extern const char* RESREF_EYE_OF_VENOM;
+extern const char* RESREF_EYE_OF_THE_SPIRIT;
+extern const char* RESREF_EYE_OF_FORTITUDE;
+extern const char* RESREF_EYE_OF_STONE;
 
 class IcewindCGameEffectBeltynsBurningBlood : public CGameEffect {
 public:
