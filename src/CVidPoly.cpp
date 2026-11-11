@@ -430,27 +430,175 @@ BOOL CVidPoly::FillPoly(WORD* pSurface, LONG lPitch, const CRect& rClipRect, DWO
 // 0x7C18F0
 void CVidPoly::sub_7C18F0()
 {
-    // TODO: Incomplete.
+    CVidPolyEdge* pPrev = NULL;
+    CVidPolyEdge* pEdge = field_10;
+
+    while (pEdge != NULL) {
+        if ((field_C != NULL && --pEdge->m_nRowsLeft == 0)
+            || (field_C == NULL && --pEdge->m_nRowsLeft == -1)) {
+            if (pPrev == NULL) {
+                field_10 = pEdge->pNext;
+            } else {
+                pPrev->pNext = pEdge->pNext;
+            }
+        } else {
+            pEdge->x += pEdge->m_nXRun;
+            pEdge->m_nErrTerm += pEdge->m_nAdjUp;
+            if (pEdge->m_nErrTerm >= 0) {
+                pEdge->x += pEdge->m_nXDir;
+                pEdge->m_nErrTerm -= pEdge->m_nDy;
+            }
+            pPrev = pEdge;
+        }
+
+        pEdge = pEdge->pNext;
+    }
 }
 
 // 0x7C1970
 void CVidPoly::sub_7C1970(CVidPolyEdge* pEdges)
 {
-    // TODO: Incomplete.
+    field_C = NULL;
+
+    for (INT nIndex = 0; nIndex < m_nVertices; nIndex++) {
+        SHORT nNext = static_cast<SHORT>((nIndex + 1) % m_nVertices);
+
+        UINT xTop;
+        UINT yTop;
+        UINT xBottom;
+        UINT yBottom;
+        if (m_pVertices[nIndex].y < m_pVertices[nNext].y) {
+            xTop = m_pVertices[nIndex].x;
+            yTop = m_pVertices[nIndex].y;
+            xBottom = m_pVertices[nNext].x;
+            yBottom = m_pVertices[nNext].y;
+        } else {
+            xTop = m_pVertices[nNext].x;
+            yTop = m_pVertices[nNext].y;
+            xBottom = m_pVertices[nIndex].x;
+            yBottom = m_pVertices[nIndex].y;
+        }
+
+        INT dy = yBottom - yTop;
+        if (dy != 0) {
+            CVidPolyEdge* pEdge = pEdges++;
+            INT dx = xBottom - xTop;
+
+            pEdge->m_nErrTerm = 1 - dy;
+            pEdge->m_nXDir = dx >= 0 ? 1 : -1;
+            pEdge->pNext = NULL;
+            pEdge->x = xTop;
+            pEdge->y = yTop;
+            pEdge->m_nRowsLeft = dy;
+
+            INT nAbsDx = abs(dx);
+            pEdge->m_nDy = dy;
+            pEdge->m_nXRun = (nAbsDx / dy) * pEdge->m_nXDir;
+            pEdge->m_nAdjUp = nAbsDx % dy;
+
+            CVidPolyEdge** ppLink = &field_C;
+            CVidPolyEdge* pCur = field_C;
+            while (pCur != NULL) {
+                if (pCur->y > static_cast<INT>(yTop)) {
+                    break;
+                }
+                if (pCur->y == static_cast<INT>(yTop) && pCur->x > static_cast<INT>(xTop)) {
+                    break;
+                }
+                ppLink = &pCur->pNext;
+                pCur = pCur->pNext;
+            }
+
+            *ppLink = pEdge;
+            pEdge->pNext = pCur;
+        }
+    }
+}
+
+// 0x7C1D40
+CVidPolyCacheEntry::~CVidPolyCacheEntry()
+{
+    if (m_pEdges != NULL) {
+        operator delete(m_pEdges);
+    }
+}
+
+CVidPolyCacheEntry::CVidPolyCacheEntry()
+{
+    m_nVertices = 0;
+    m_pFirstEdge = NULL;
+    m_pEdges = NULL;
+    m_pVertices = NULL;
 }
 
 // 0x7C1DE0
 BOOL CVidPolyCache::sub_7C1DE0(CVidPoly* pPoly)
 {
-    // TODO: Incomplete.
+    m_cs.Lock();
 
+    POSITION pos = GetHeadPosition();
+    while (pos != NULL) {
+        POSITION posCur = pos;
+        CVidPolyCacheEntry* pEntry = static_cast<CVidPolyCacheEntry*>(GetNext(pos));
+
+        if (pEntry != NULL
+            && pPoly->m_pVertices == pEntry->m_pVertices
+            && pPoly->m_nVertices == pEntry->m_nVertices) {
+            INT nVertices = pEntry->m_nVertices;
+            CVidPolyEdge* pEdges = pEntry->m_pEdges;
+            CVidPolyEdge* pFirstEdge = pEntry->m_pFirstEdge;
+            CVIDPOLY_VERTEX* pVertices = pEntry->m_pVertices;
+
+            if (pEdges != NULL && pFirstEdge != NULL && pVertices != NULL) {
+                pPoly->field_C = pFirstEdge;
+                memcpy(CVidPoly::m_aEdges, pEdges, nVertices * sizeof(CVidPolyEdge));
+                pPoly->m_nVertices = nVertices;
+                pPoly->m_pVertices = pVertices;
+            }
+
+            RemoveAt(posCur);
+            AddHead(pEntry);
+
+            m_cs.Unlock();
+            return TRUE;
+        }
+    }
+
+    m_cs.Unlock();
     return FALSE;
 }
 
 // 0x7C1EC0
 void CVidPolyCache::sub_7C1EC0(CVidPoly* pPoly)
 {
-    // TODO: Incomplete.
+    m_cs.Lock();
+
+    if (GetCount() >= 16) {
+        do {
+            CVidPolyCacheEntry* pOld = static_cast<CVidPolyCacheEntry*>(RemoveTail());
+            if (pOld != NULL) {
+                delete pOld;
+            }
+        } while (GetCount() >= 16);
+    }
+
+    if (pPoly != NULL) {
+        CVidPolyCacheEntry* pEntry = new CVidPolyCacheEntry();
+
+        if (pPoly->m_nVertices != 0) {
+            pEntry->m_pEdges = static_cast<CVidPolyEdge*>(operator new(pPoly->m_nVertices * sizeof(CVidPolyEdge)));
+            if (pEntry->m_pEdges != NULL) {
+                memcpy(pEntry->m_pEdges, CVidPoly::m_aEdges, pPoly->m_nVertices * sizeof(CVidPolyEdge));
+                pEntry->m_pFirstEdge = pPoly->field_C;
+                pEntry->m_nVertices = pPoly->m_nVertices;
+                pEntry->m_pVertices = pPoly->m_pVertices;
+            }
+        }
+
+        AddTail(pEntry);
+    }
+
+    m_cs.Unlock();
 }
 
 // 0x7C15F0

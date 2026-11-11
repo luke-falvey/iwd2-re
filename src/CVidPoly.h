@@ -18,18 +18,32 @@ public:
     /* 0000 */ CVidPolyEdge* pNext;
     /* 0004 */ INT x;
     /* 0008 */ INT y;
-    /* 000C */ int field_C;
-    /* 0010 */ int field_10;
-    /* 0014 */ int field_14;
-    /* 0018 */ int field_18;
-    /* 001C */ int field_1C;
-    /* 0020 */ int field_20;
+    /* 000C */ int m_nXDir;
+    /* 0010 */ int m_nXRun;
+    /* 0014 */ int m_nErrTerm;
+    /* 0018 */ int m_nAdjUp;
+    /* 001C */ int m_nDy;
+    /* 0020 */ int m_nRowsLeft;
 };
 
-class CVidPolyCache {
+// Cached edge list of a polygon (20 bytes).
+class CVidPolyCacheEntry {
+public:
+    CVidPolyCacheEntry();
+    virtual ~CVidPolyCacheEntry();
+
+    /* 0004 */ INT m_nVertices;
+    /* 0008 */ CVidPolyEdge* m_pEdges;
+    /* 000C */ CVidPolyEdge* m_pFirstEdge;
+    /* 0010 */ CVIDPOLY_VERTEX* m_pVertices;
+};
+
+class CVidPolyCache : public CPtrList {
 public:
     BOOL sub_7C1DE0(CVidPoly* pPoly);
     void sub_7C1EC0(CVidPoly* pPoly);
+
+    /* 001C */ CCriticalSection m_cs;
 };
 
 class CVidPoly {
