@@ -983,6 +983,7 @@ void CVidInf::FXBltBackTo(const CPoint& ptTopLeft, const CRect& rFXRect, const C
     UTIL_ASSERT(GetFXSurfacePtr(dwFlags) != NULL);
 
     DDBLTFX fx;
+    fx.dwSize = sizeof(fx);
     fx.dwDDFX = 0;
 
     if ((dwFlags & 0x20) != 0) {
@@ -1102,6 +1103,7 @@ BOOL CVidInf::FXBltToBack(CRect& rFXRect, INT x, INT y, INT nRefPointX, INT nRef
     }
 
     DDBLTFX fx;
+    fx.dwSize = sizeof(fx);
     fx.dwDDFX = 0;
 
     if ((dwFlags & 0x20) != 0) {
@@ -1142,6 +1144,7 @@ BOOL CVidInf::FXBltToBack(CRect& rFXRect, INT x, INT y, INT nRefPointX, INT nRef
     } else {
         if (pt.x < rClip.left) {
             rSrc.left += rClip.left - pt.x;
+            pt.x = rClip.left;
         }
 
         if (rSrc.Width() + pt.x - 1 >= rClip.right) {
