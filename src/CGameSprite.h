@@ -486,6 +486,7 @@ public:
 
     void AddBlood(SHORT nHeight, SHORT nDirection, SHORT nType);
     void RemoveReplacementFromArea();
+    void sub_6F50A0();
     void AIUpdateWalk();
     void SetPath(LONG* pPath, SHORT nPath);
     BOOL ClearBumpPath(const CPoint& start, const CPoint& goal);
@@ -613,6 +614,7 @@ public:
     void sub_71CC90();
     void sub_71CEA0(CItem* pItem, BOOL bLeft);
     int sub_71F6E0();
+    void sub_71F860(CProjectile* pProjectile, CItem* pItem, SHORT abilityNum, const CPoint& target);
     const CString& GetName();
     STRREF GetNameRef();
     void PlaySound(const CResRef& res);
@@ -674,6 +676,7 @@ public:
     SHORT PickLock(CGameAIBase* pTarget);
     SHORT RemoveSpell();
     SHORT BashDoor(CGameAIBase* pTarget);
+    BOOL sub_75D450(SHORT slotNum, SHORT abilityNum);
     SHORT EquipRanged();
     SHORT sub_75E330(CItem* pLauncher, BOOL bEquipMelee);
     SHORT StartStore(CGameSprite* pTarget);
@@ -738,6 +741,7 @@ public:
     SHORT sub_7615F0(int a1);
     void sub_761650();
     SHORT DropItem(CItem* pItem);
+    void sub_761AB0(CGameSprite* pTarget);
     void sub_761990();
     SHORT PlayBardSong();
     SHORT SpellCastEffect(const CString& sString1, const CString& sString2, LONG nSpecific1, LONG nSpecific2, LONG nSpecific3);

@@ -8,6 +8,7 @@
 #include "FileFormat.h"
 
 #include <bitset>
+#include <list>
 #include <set>
 
 // STATE.IDS
@@ -524,6 +525,17 @@ public:
     /* 001C */ LONG m_nCounter;
 };
 
+// NOTE: Entry of the "when struck" spell list filled by effects 406 (0x568D00)
+// and 429 (0x56A5A0) and applied to the attacker by
+// `CGameSprite::sub_761AB0`.
+class CDerivedStatsWhenStruck {
+public:
+    /* 0000 */ CResRef m_sourceRes;
+    /* 0008 */ CResRef m_res;
+    /* 0010 */ DWORD m_nCasterLevel;
+    /* 0014 */ CPoint m_target;
+};
+
 class CDerivedStats : public CDerivedStatsTemplate {
 public:
     CDerivedStats();
@@ -571,6 +583,7 @@ public:
     /* 041C */ CImmunitiesProjectile field_41C;
     /* 0438 */ CImmunitiesItemEquipList m_cImmunitiesItemUse;
     /* 0454 */ CImmunitiesItemTypeEquipList m_cImmunitiesItemTypeUse;
+    /* 0490 */ std::list<CDerivedStatsWhenStruck> m_lWhenStruck;
     /* 04AC */ CPtrList field_4AC;
     /* 0480 */ std::set<int> m_naturalImmunities;
     /* 04C8 */ CPtrList field_4C8;

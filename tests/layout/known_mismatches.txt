@@ -248,6 +248,7 @@ CDerivedStats::m_cRegeneratedPersistantEffectList
 CDerivedStats::m_cToHitBonusList
 CDerivedStats::m_disabledButtons
 CDerivedStats::m_disabledSpellTypes
+CDerivedStats::m_lWhenStruck
 CDerivedStats::m_naturalImmunities
 CDerivedStats::m_spells
 CGameAnimationType::field_3E8

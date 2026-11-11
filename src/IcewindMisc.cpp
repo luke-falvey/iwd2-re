@@ -1017,3 +1017,11 @@ void IcewindMisc::sub_5860F0(CGameSprite* pSprite, CGameEffect* pEffect)
         }
     }
 }
+
+// 0x586220
+std::list<CGameEffect*> IcewindMisc::sub_586220(CGameSprite* pSprite, const BYTE* resRef, INT nLevel)
+{
+    // TODO: Incomplete.
+
+    return std::list<CGameEffect*>();
+}
