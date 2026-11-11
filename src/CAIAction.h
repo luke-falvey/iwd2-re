@@ -71,6 +71,7 @@ public:
     CAIAction(SHORT actionID, const CString& name, CPoint pt, LONG specificID);
     CAIAction(SHORT actionID, const CAIObjectType& actee, const CString& name, LONG specificID, LONG specificID2);
     CAIAction(SHORT actionID, const CString& string1, CPoint pt, LONG specificID, LONG specificID2);
+    CAIAction(SHORT actionID, LONG specificID);
     CAIAction(const CAIAction& action);
     ~CAIAction();
     BOOL OfType(SHORT type) const;

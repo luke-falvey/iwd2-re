@@ -20865,9 +20865,61 @@ SHORT CGameSprite::Turn()
 // 0x75A4B0
 SHORT CGameSprite::Berserk()
 {
-    // TODO: Incomplete.
+    m_curAction.m_specificID--;
 
-    return ACTION_ERROR;
+    if (!m_berserkActive || m_curAction.m_specificID <= 0) {
+        return ACTION_DONE;
+    }
+
+    CAIObjectType type(0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0);
+    CAIAction action;
+
+    if (rand() % 100 < 25) {
+        LONG nNearest = m_pArea->GetNearest(m_id,
+            CAIObjectType::ANYONE,
+            GetVisualRange(),
+            m_terrainTable,
+            TRUE,
+            GetCanSeeInvisible(),
+            FALSE,
+            FALSE,
+            FALSE);
+        if (nNearest != CGameObjectArray::INVALID_INDEX) {
+            AddAction(m_curAction);
+
+            type.m_nInstance = nNearest;
+            action = CAIAction(CAIAction::ATTACK, type, 0, 0, 0);
+        }
+
+        // NOTE: Original code adds `action` even when no target was found
+        // (in which case it is still `NO_ACTION`).
+        AddAction(action);
+    } else {
+        CAIObjectType enemy = m_typeAI.GetEnemyOf();
+
+        LONG nNearest = m_pArea->GetNearest(m_id,
+            enemy,
+            GetVisualRange(),
+            m_terrainTable,
+            TRUE,
+            GetCanSeeInvisible(),
+            FALSE,
+            FALSE,
+            FALSE);
+
+        AddAction(m_curAction);
+
+        if (nNearest != CGameObjectArray::INVALID_INDEX) {
+            type.m_nInstance = nNearest;
+            action = CAIAction(CAIAction::ATTACK, type, 0, 0, 0);
+            AddAction(action);
+        } else {
+            action = CAIAction(CAIAction::WAIT, 6);
+            AddAction(action);
+        }
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x75ACB0
