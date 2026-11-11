@@ -2452,23 +2452,413 @@ BOOL CBaldurMessage::PurgeDroppedPlayers()
 }
 
 // 0x42D860
-void CBaldurMessage::UpdateDemandCharacters(unsigned char a1, int a2, unsigned char a3)
+void CBaldurMessage::UpdateDemandCharacters(BOOLEAN bUpdateAllCharacters, INT nUpdatedCharacterSlot, BOOLEAN bProgressBarInPlace)
 {
-    // TODO: Incomplete.
+    CString sPlayerName;
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return;
+    }
+
+    INT nSlot;
+    if (bUpdateAllCharacters == TRUE) {
+        nSlot = 0;
+        nUpdatedCharacterSlot = 5;
+    } else {
+        nSlot = nUpdatedCharacterSlot;
+    }
+
+    BOOLEAN bProgressStarted = FALSE;
+
+    for (; nSlot <= nUpdatedCharacterSlot; nSlot++) {
+        CGameObject* pObject;
+        BYTE rc;
+
+        LONG nCharacterId;
+        if (static_cast<SHORT>(nSlot) >= 6) {
+            nCharacterId = CGameObjectArray::INVALID_INDEX;
+        } else {
+            nCharacterId = g_pBaldurChitin->GetObjectGame()->m_characters[static_cast<SHORT>(nSlot)];
+        }
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            INT nPlayer = g_pBaldurChitin->GetObjectGame()->m_multiplayerSettings.GetCharacterControlledByPlayer(nSlot);
+
+            // NOTE: Only the low byte of `m_nLocalPlayer` is compared.
+            if (nPlayer != static_cast<BYTE>(g_pChitin->cNetwork.m_nLocalPlayer)) {
+                if (!bProgressStarted) {
+                    if (bProgressBarInPlace == TRUE
+                        && g_pChitin->cNetwork.m_nServiceProvider != CNetwork::SERV_PROV_NULL) {
+                        g_pChitin->cProgressBar.m_nWaitingReason = 19714;
+                        g_pChitin->cProgressBar.m_bWaiting = TRUE;
+                    }
+                    bProgressStarted = TRUE;
+                }
+
+                g_pChitin->cNetwork.GetPlayerName(nPlayer, sPlayerName);
+
+                sub_42DF50(nSlot, nPlayer);
+
+                while (!g_pChitin->cNetwork.PeekSpecificMessage(sPlayerName, MSG_TYPE_PLAYERCHAR, MSG_SUBTYPE_PLAYERCHAR_UPDATE_REPLY)
+                    && g_pChitin->cNetwork.m_bConnectionEstablished == TRUE
+                    && g_pChitin->cNetwork.GetPlayerID(nPlayer) != 0) {
+                    g_pBaldurChitin->GetBaldurMessage()->HandleBlockingMessages();
+
+                    g_pChitin->m_bDisplayStale = TRUE;
+                    SleepEx(60, FALSE);
+                }
+
+                if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE
+                    && g_pChitin->cNetwork.GetPlayerID(nPlayer) != 0) {
+                    DWORD dwSize;
+                    BYTE* pMessage = g_pChitin->cNetwork.FetchSpecificMessage(sPlayerName,
+                        MSG_TYPE_PLAYERCHAR,
+                        MSG_SUBTYPE_PLAYERCHAR_UPDATE_REPLY,
+                        dwSize);
+                    sub_42E630(nPlayer, pMessage, dwSize);
+                } else if (!g_pChitin->cNetwork.m_bIsHost
+                    && g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+                    // NOTE: Only the low byte of `m_nHostPlayer` is compared.
+                    if (nPlayer != static_cast<BYTE>(g_pChitin->cNetwork.m_nHostPlayer)) {
+                        nPlayer = static_cast<BYTE>(g_pChitin->cNetwork.m_nHostPlayer);
+
+                        g_pChitin->cNetwork.GetPlayerName(nPlayer, sPlayerName);
+
+                        sub_42DF50(nSlot, nPlayer);
+
+                        while (!g_pChitin->cNetwork.PeekSpecificMessage(sPlayerName, MSG_TYPE_PLAYERCHAR, MSG_SUBTYPE_PLAYERCHAR_UPDATE_REPLY)
+                            && g_pChitin->cNetwork.m_bConnectionEstablished == TRUE
+                            && g_pChitin->cNetwork.GetPlayerID(nPlayer) != 0) {
+                            g_pBaldurChitin->GetBaldurMessage()->HandleBlockingMessages();
+
+                            g_pChitin->m_bDisplayStale = TRUE;
+                            SleepEx(60, FALSE);
+                        }
+
+                        if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE
+                            && g_pChitin->cNetwork.GetPlayerID(nPlayer) != 0) {
+                            DWORD dwSize;
+                            BYTE* pMessage = g_pChitin->cNetwork.FetchSpecificMessage(sPlayerName,
+                                MSG_TYPE_PLAYERCHAR,
+                                MSG_SUBTYPE_PLAYERCHAR_UPDATE_REPLY,
+                                dwSize);
+                            sub_42E630(nPlayer, pMessage, dwSize);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (bProgressBarInPlace == TRUE) {
+            // 0x8518A8
+            g_pChitin->cProgressBar.m_nActionProgress += 500000;
+        }
+    }
+
+    if (bProgressStarted == TRUE && bProgressBarInPlace == TRUE) {
+        g_pChitin->cProgressBar.m_bWaiting = FALSE;
+        g_pBaldurChitin->m_cCachingStatus.InvalidateScreen();
+    }
 }
 
 // 0x42DCF0
 void CBaldurMessage::BroadcastUpdateCharacterSlot(BOOLEAN bUpdateAllCharacters, INT nUpdatedCharacterSlot, BOOLEAN bProgressBarInPlace)
 {
-    // TODO: Incomplete.
+    CString sName;
+    BOOLEAN bProgressStarted = FALSE;
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return;
+    }
+
+    INT nSlot;
+    if (bUpdateAllCharacters == TRUE) {
+        nSlot = 0;
+        nUpdatedCharacterSlot = 5;
+    } else {
+        nSlot = nUpdatedCharacterSlot;
+    }
+
+    for (; nSlot <= nUpdatedCharacterSlot; nSlot++) {
+        CGameSprite* pSprite;
+        BYTE rc;
+
+        LONG nCharacterId;
+        if (static_cast<SHORT>(nSlot) >= 6) {
+            nCharacterId = CGameObjectArray::INVALID_INDEX;
+        } else {
+            nCharacterId = g_pBaldurChitin->GetObjectGame()->m_characters[static_cast<SHORT>(nSlot)];
+        }
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            BOOLEAN bLocal;
+            if (g_pChitin->cNetwork.m_nServiceProvider != 0) {
+                bLocal = g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID;
+            } else {
+                bLocal = TRUE;
+            }
+
+            pSprite->m_bForceVisualEffects = TRUE;
+            pSprite->field_562C = TRUE;
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            if (bLocal == TRUE || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+                if (!bProgressStarted) {
+                    if (bProgressBarInPlace == TRUE
+                        && g_pChitin->cNetwork.m_nServiceProvider != CNetwork::SERV_PROV_NULL) {
+                        g_pChitin->cProgressBar.m_nWaitingReason = 19715;
+                        g_pChitin->cProgressBar.m_bWaiting = TRUE;
+                    }
+                    bProgressStarted = TRUE;
+                }
+
+                sub_42E1B0(CString(""), nSlot, TRUE);
+            }
+        }
+
+        if (bProgressBarInPlace == TRUE) {
+            // 0x8518A8
+            g_pChitin->cProgressBar.m_nActionProgress += 500000;
+        }
+    }
+
+    if (bProgressStarted == TRUE && bProgressBarInPlace == TRUE) {
+        g_pChitin->cProgressBar.m_bWaiting = FALSE;
+        g_pBaldurChitin->m_cCachingStatus.InvalidateScreen();
+    }
+}
+
+// 0x42DF50
+BOOLEAN CBaldurMessage::sub_42DF50(SHORT nCharacterSlot, SHORT nPlayerSlot)
+{
+    CString sPlayerName;
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return FALSE;
+    }
+
+    g_pChitin->cNetwork.GetPlayerName(nPlayerSlot, sPlayerName);
+
+    if (strcmp(sPlayerName, "") == 0) {
+        return FALSE;
+    }
+
+    DWORD dwSize = sizeof(SHORT);
+    BYTE* pMessage = CreateBuffer(dwSize);
+    if (pMessage == NULL) {
+        return FALSE;
+    }
+
+    *reinterpret_cast<SHORT*>(pMessage) = nCharacterSlot;
+
+    g_pChitin->cNetwork.SendSpecificMessage(sPlayerName,
+        CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_PLAYERCHAR,
+        MSG_SUBTYPE_PLAYERCHAR_UPDATE_DEMAND,
+        pMessage,
+        dwSize);
+
+    // NOTE: The result is unused.
+    sPlayerName.GetBuffer(128);
+
+    DestroyBuffer(pMessage);
+
+    return TRUE;
 }
 
 // 0x42E0C0
 BOOLEAN CBaldurMessage::OnUpdateDemandCharacterSlot(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    CString sPlayerName;
 
-    return FALSE;
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return FALSE;
+    }
+
+    SHORT nCharacterSlot = *reinterpret_cast<SHORT*>(pMessage + CNetwork::SPEC_MSG_HEADER_LENGTH);
+
+    BOOLEAN bSendCharInfo = TRUE;
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterSlot(nCharacterSlot) == CGameObjectArray::INVALID_INDEX) {
+        bSendCharInfo = FALSE;
+    }
+
+    g_pChitin->cNetwork.GetPlayerName(nMsgFrom, sPlayerName);
+
+    sub_42E1B0(sPlayerName, nCharacterSlot, bSendCharInfo);
+
+    return TRUE;
+}
+
+// 0x42E1B0
+BOOLEAN CBaldurMessage::sub_42E1B0(CString& sPlayerName, SHORT nCharacterSlot, BOOLEAN bSendCharInfo)
+{
+    CSavedGamePartyCreature partyCreature;
+    STR_RES strRes;
+    DWORD nCustomBio = 0;
+    BYTE* pStats;
+    LONG nStats;
+    INT aPortraitIcons[128];
+    DWORD dwCreatureDataLoc;
+    USHORT nAnimationId;
+    SHORT nPortraitIcons;
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return FALSE;
+    }
+
+    DWORD dwSize = sizeof(SHORT) + sizeof(BOOLEAN);
+
+    if (bSendCharInfo == TRUE) {
+        LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterSlot(nCharacterSlot);
+
+        CGameSprite* pSprite;
+
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            pSprite->m_derivedStats.Marshal(&pStats, &nStats);
+            dwSize = nStats + 3;
+
+            // NOTE: Uninline.
+            nAnimationId = pSprite->m_animation.GetAnimationId();
+            dwSize += sizeof(USHORT);
+
+            nPortraitIcons = 0;
+            POSITION pos = pSprite->m_portraitIcons.GetHeadPosition();
+            while (pos != NULL) {
+                pSprite->m_portraitIcons.GetNext(pos);
+                nPortraitIcons++;
+            }
+            dwSize += sizeof(SHORT);
+
+            if (nPortraitIcons > 0) {
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\CBaldurMessage.cpp
+                // __LINE__: 3968
+                UTIL_ASSERT(nPortraitIcons < 128);
+
+                INT nIcon = 0;
+                pos = pSprite->m_portraitIcons.GetHeadPosition();
+                while (pos != NULL) {
+                    aPortraitIcons[nIcon] = reinterpret_cast<INT>(pSprite->m_portraitIcons.GetNext(pos));
+                    dwSize += sizeof(INT);
+                    nIcon++;
+                }
+            }
+
+            dwSize += sizeof(CSavedGamePartyCreature);
+
+            pSprite->Marshal(partyCreature, TRUE);
+
+            dwCreatureDataLoc = dwSize;
+            dwSize += partyCreature.m_creatureSize + sizeof(DWORD);
+
+            if (g_pBaldurChitin->GetTlkTable().m_override.Fetch(pSprite->m_baseStats.m_biography, strRes)) {
+                nCustomBio = strRes.szText.GetLength();
+                dwSize += nCustomBio;
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        } else {
+            bSendCharInfo = FALSE;
+        }
+    }
+
+    BYTE* pMessage = CreateBuffer(dwSize);
+    if (pMessage == NULL) {
+        return FALSE;
+    }
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<SHORT*>(pMessage + cnt) = nCharacterSlot;
+    cnt += sizeof(SHORT);
+
+    *reinterpret_cast<BOOLEAN*>(pMessage + cnt) = bSendCharInfo;
+    cnt += sizeof(BOOLEAN);
+
+    if (bSendCharInfo == TRUE) {
+        memcpy(pMessage + cnt, pStats, nStats);
+        cnt += nStats;
+
+        delete pStats;
+
+        *reinterpret_cast<USHORT*>(pMessage + cnt) = nAnimationId;
+        cnt += sizeof(USHORT);
+
+        *reinterpret_cast<SHORT*>(pMessage + cnt) = nPortraitIcons;
+        cnt += sizeof(SHORT);
+
+        if (nPortraitIcons > 0) {
+            memcpy(pMessage + cnt, aPortraitIcons, nPortraitIcons * sizeof(INT));
+            cnt += nPortraitIcons * sizeof(INT);
+        }
+
+        BYTE* pCreature = reinterpret_cast<BYTE*>(partyCreature.m_creatureOffset);
+        partyCreature.m_creatureOffset = dwCreatureDataLoc;
+
+        memcpy(pMessage + cnt, &partyCreature, sizeof(CSavedGamePartyCreature));
+        cnt += sizeof(CSavedGamePartyCreature);
+
+        memcpy(pMessage + cnt, pCreature, partyCreature.m_creatureSize);
+        cnt += partyCreature.m_creatureSize;
+
+        delete pCreature;
+
+        *reinterpret_cast<DWORD*>(pMessage + cnt) = nCustomBio;
+        cnt += sizeof(DWORD);
+
+        if (nCustomBio != 0) {
+            memcpy(pMessage + cnt, (LPCSTR)strRes.szText, nCustomBio);
+        }
+    }
+
+    DWORD dwFlags = CNetwork::SEND_GUARANTEED;
+    if (strcmp(sPlayerName, "") == 0) {
+        dwFlags |= CNetwork::SEND_ALL_PLAYERS;
+    }
+
+    g_pChitin->cNetwork.SendSpecificMessage(sPlayerName,
+        dwFlags,
+        MSG_TYPE_PLAYERCHAR,
+        MSG_SUBTYPE_PLAYERCHAR_UPDATE_REPLY,
+        pMessage,
+        dwSize);
+
+    DestroyBuffer(pMessage);
+
+    // NOTE: The result is unused.
+    sPlayerName.GetBuffer(128);
+
+    return TRUE;
 }
 
 // 0x42E630
