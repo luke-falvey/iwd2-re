@@ -4,22 +4,21 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 9831,
-  "functions_done": 7721,
-  "functions_complete": 7402,
-  "incomplete_markers": 349,
+  "functions_total": 9797,
+  "functions_done": 7723,
+  "functions_complete": 7449,
+  "incomplete_markers": 300,
   "incomplete_by_file": {
-    "src/CMessage.cpp": 85,
-    "src/CProjectilePart6.cpp": 35,
+    "src/CMessage.cpp": 59,
     "src/CProjectilePart3.cpp": 20,
     "src/CProjectilePart5.cpp": 19,
+    "src/CProjectilePart6.cpp": 18,
     "src/CProjectilePart1.cpp": 16,
     "src/CGameSprite.cpp": 14,
     "src/CScreenCharacter.cpp": 11,
-    "src/CInfGame.cpp": 10,
+    "src/CInfGame.cpp": 9,
     "src/CProjectilePart2.cpp": 9,
     "src/CProjectilePart4.cpp": 9,
-    "src/CDerivedStats.cpp": 8,
     "src/CBaldurProjector.cpp": 7,
     "src/CParticle.cpp": 6,
     "src/CScreenCreateChar.cpp": 6,
@@ -33,6 +32,7 @@
     "src/CProjectileSingleTarget.cpp": 4,
     "src/CScreenStore.cpp": 4,
     "src/CChitin.cpp": 3,
+    "src/CDerivedStats.cpp": 3,
     "src/CGameEffect.cpp": 3,
     "src/CScreenConnection.cpp": 3,
     "src/CScreenWorldMap.cpp": 3,
@@ -66,8 +66,8 @@
     "src/CWarp.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10259,
-  "annotations_not_function_start": 2516,
+  "annotations_total": 10269,
+  "annotations_not_function_start": 2524,
   "duplicate_annotations": {
     "0x7ACD60": [
       "src/CAIObjectType.cpp",
@@ -418,6 +418,8 @@
     "0x4E71B0": [
       "src/CColorEffects.cpp",
       "src/CColorEffects.cpp",
+      "src/CDerivedStats.cpp",
+      "src/CDerivedStats.cpp",
       "src/CImmunities.cpp",
       "src/CImmunities.cpp",
       "src/CImmunities.cpp",
@@ -429,7 +431,15 @@
     ],
     "0x47C830": [
       "src/CGameAIBase.cpp",
-      "src/CGameAIBase.cpp"
+      "src/CGameAIBase.cpp",
+      "src/CGameContainer.cpp",
+      "src/CGameDoor.cpp",
+      "src/CGameSound.cpp",
+      "src/CGameSpawning.cpp",
+      "src/CGameStatic.cpp",
+      "src/CGameText.cpp",
+      "src/CGameTrigger.cpp",
+      "src/CObjectMarker.cpp"
     ],
     "0x766660": [
       "src/CGameAIBase.cpp",
@@ -1705,6 +1715,9 @@
     "0x84CF5B",
     "0x84CF5C",
     "0x84CF5D",
+    "0x84CF5E",
+    "0x84CF5F",
+    "0x84CF60",
     "0x84CF64",
     "0x84CF65",
     "0x84CF66",
@@ -1748,6 +1761,9 @@
     "0x84CF97",
     "0x84CF98",
     "0x84CF99",
+    "0x84CF9A",
+    "0x84CF9B",
+    "0x84CF9C",
     "0x84CF9F",
     "0x84CFA0",
     "0x84CFA1",
@@ -1760,6 +1776,8 @@
     "0x84CFAC",
     "0x84CFB0",
     "0x84CFB1",
+    "0x84CFB2",
+    "0x84CFB3",
     "0x84CFB8",
     "0x84CFB9",
     "0x84CFBA",
@@ -3786,9 +3804,9 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3846937,
-  "bytes_done": 3426537,
-  "bytes_complete": 3055558,
+  "bytes_total": 3841580,
+  "bytes_done": 3426707,
+  "bytes_complete": 3089628,
   "largest_stubs": [
     {
       "addr": "0x4DB160",
@@ -3976,11 +3994,6 @@
       "size": 2577
     },
     {
-      "addr": "0x5BA2E0",
-      "name": "CInfGame_B3AUTO_005ba2e0",
-      "size": 2439
-    },
-    {
       "addr": "0x715BD0",
       "name": "CGameSprite_GetInnateQuickButtons",
       "size": 2411
@@ -3989,6 +4002,11 @@
       "addr": "0x5E3B80",
       "name": "CScreenCharacter_OnBackButtonClick",
       "size": 2402
+    },
+    {
+      "addr": "0x429A90",
+      "name": "FUN_00429a90",
+      "size": 2400
     }
   ],
   "next": [
@@ -4215,12 +4233,6 @@
       "size": 25
     },
     {
-      "addr": "0x444D10",
-      "name": "FUN_00444d10",
-      "translated_callers": 5,
-      "size": 391
-    },
-    {
       "addr": "0x448580",
       "name": "FUN_00448580",
       "translated_callers": 5,
@@ -4291,6 +4303,12 @@
       "name": "UnknownContainer_Copy",
       "translated_callers": 4,
       "size": 511
+    },
+    {
+      "addr": "0x4C49A0",
+      "name": "FUN_004c49a0",
+      "translated_callers": 4,
+      "size": 235
     }
   ]
 }

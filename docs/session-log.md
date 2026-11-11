@@ -2,6 +2,29 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-12 (S5 follow-up): inventory differences fixed, batches 19–22
+
+**Inventory screen.** The three differences S5 left open are fixed:
+- Dark wedges beside portraits 1 and 3: `CVidCell::Blt8To32` advanced the wrong pointer at the left clip and used the unclipped width for the row jump.
+- Missing status icon on portrait 5: the day blindness effect queued in `CGameSprite::AIUpdate` had no duration type (the original writes 1 from the constant at 0x8491AA), so it expired and was re-queued every tick.
+- Paper-doll pose: `CGameSprite::CanSaveGame` (0x75E890) and the 0x47C830 override on eight object classes were missing, so the area always reported "cannot save" and sprites used the READY idle.
+
+**Batches merged.**
+- 19: `CInfGame::sub_5BA2E0` and 16 `CProjectilePart6` methods. All verified as matching.
+- 20: 16 `CBaldurMessage` handlers. All verified as matching.
+- 21: ten `CMessage` functions, including `CMessageSaveGame::Run`. The verifier found one difference (`CMessage51::MarshalMessage` released the wrong id); fixed.
+- 22: `CDerivedStats` constructor and `BonusInit`, with the members at 0x300, 0x328, 0x378, 0x4AC–0x538 and 0xCAC now declared. The other 34 functions of that batch are standard-library or compiler-generated code and are listed in the new `tools/inventory_exclusions.txt`.
+
+**Progress:** 7,449 of 9,797 counted functions have no TODO (76.0%); 80.4% of bytes. S1–S5 pass on the rebuild.
+
+**S5 changes.** It now compares the portrait strip. It failed three times in about a dozen runs with the dialogue on a different branch (keys out of step with the dialogue). Pauses between steps are now 3 s and it passed nine runs in a row, but the cause was not established. An attempt to wait on screen changes instead of sleeping did not work: one node shows no change after the reply key, and the bottom of the screen never settles once the dialogue is over.
+
+**Open**
+- `CVidInf::BKTextOut` (`src/CVidInf.cpp`, near line 1790) assigns `rNewClip.top` twice and never sets `.right`. Not checked against the listing yet.
+- Other callers of `CGameEffect::ClearItemEffect` may also need the duration type the original writes.
+- `CBaldurEngine::UpdateLabel` is declared static, but the original pushes the engine as a first argument.
+- `CMessage51::MarshalMessage` sizes its buffer one byte short in the original (kept, with a note).
+
 ## 2026-11-12 (S5): finish the dialogue, open the inventory
 
 Branch `phase-a/stubs-and-layout` (local only). 7,402 of 9,831 functions without a TODO (75.3%). S1–S5 pass on the rebuild.
