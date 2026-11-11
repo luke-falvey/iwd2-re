@@ -2771,6 +2771,7 @@ BOOLEAN CBaldurMessage::NonBlockingWaitForSignal(BYTE signalType, BYTE signalToW
         nCount++;
     }
 
+
     bAllReceived = TRUE;
     for (nPlayerNumber = 0; nPlayerNumber < 6; nPlayerNumber++) {
         if (g_pChitin->cNetwork.GetPlayerID(nPlayerNumber) != 0
@@ -8496,15 +8497,154 @@ SHORT CMessageHandler::AddMessage(CMessage* message, BOOL bForcePassThrough, SHO
 // 0x4F7620
 SHORT CMessageHandler::Broadcast(CMessage* message, BOOLEAN bSendMessageToSelf, BOOLEAN bIgnoreObjectControl)
 {
-    // TODO: Incomplete.
+    CNetwork& cNetwork = g_pChitin->cNetwork;
+    LONG nTargetId = message->m_targetId;
+    CGameObject* pObject;
 
-    return -1;
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        pObject = NULL;
+    }
+
+    if (bIgnoreObjectControl == TRUE
+        || (pObject != NULL
+            && (cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL
+                || cNetwork.m_idLocalPlayer == pObject->m_remotePlayerID))) {
+        if (cNetwork.m_nServiceProvider != CNetwork::SERV_PROV_NULL
+            && cNetwork.m_bConnectionEstablished == TRUE
+            && (bIgnoreObjectControl == TRUE
+                || (pObject != NULL && pObject->field_6B == 0))) {
+            BYTE* pData = NULL;
+            DWORD dwSize = 0;
+            message->MarshalMessage(&pData, &dwSize);
+            if (dwSize != 0) {
+                CString sPlayerName("");
+                BYTE nSubType = message->GetMsgSubType();
+                BYTE nType = message->GetMsgType();
+                cNetwork.SendSpecificMessage(sPlayerName,
+                    CNetwork::SEND_ALL_PLAYERS | CNetwork::SEND_GUARANTEED,
+                    nType,
+                    nSubType,
+                    pData,
+                    dwSize);
+                // NOTE: Original does not free `pData` here.
+            }
+        }
+    }
+
+    if (bSendMessageToSelf == TRUE) {
+        m_messageList.AddTail(message);
+    } else if (message != NULL) {
+        delete message;
+    }
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    return 0;
 }
 
 // 0x4F7830
 SHORT CMessageHandler::Send(CMessage* message)
 {
-    // TODO: Incomplete.
+    CNetwork& cNetwork = g_pChitin->cNetwork;
+    LONG nTargetId = message->m_targetId;
+
+    if (nTargetId != CGameObjectArray::INVALID_INDEX) {
+        CGameObject* pObject;
+
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            // The object is ours: run the message locally.
+            if (cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL
+                || cNetwork.m_idLocalPlayer == pObject->m_remotePlayerID) {
+                m_messageList.AddTail(message);
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return 0;
+            }
+
+            // Otherwise send it to the player who controls the object.
+            BOOL bDelete = TRUE;
+            CString sPlayerName("");
+            BYTE* pData = NULL;
+            DWORD dwSize = 0;
+            message->MarshalMessage(&pData, &dwSize);
+
+            if (dwSize != 0) {
+                PLAYER_ID idPlayer = pObject->m_remotePlayerID;
+                INT nPlayer = cNetwork.FindPlayerLocationByID(idPlayer, FALSE);
+                if (nPlayer == -1) {
+                    if (g_pBaldurChitin->GetObjectGame()->FindAreaID(idPlayer) == TRUE) {
+                        if (message != NULL) {
+                            delete message;
+                        }
+                    } else {
+                        idPlayer = cNetwork.m_nHostPlayer != -1
+                            ? cNetwork.m_pPlayerID[cNetwork.m_nHostPlayer]
+                            : 0;
+                        nPlayer = cNetwork.FindPlayerLocationByID(idPlayer, FALSE);
+                    }
+
+                    if (nPlayer == -1) {
+                        // NOTE: Original leaves the message alone when the
+                        // host can't be found either.
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                        return -1;
+                    }
+                }
+
+                cNetwork.GetPlayerName(nPlayer, sPlayerName);
+
+                BYTE nSubType = message->GetMsgSubType();
+                BYTE nType = message->GetMsgType();
+                if (!cNetwork.SendSpecificMessage(sPlayerName,
+                        CNetwork::SEND_GUARANTEED,
+                        nType,
+                        nSubType,
+                        pData,
+                        dwSize)
+                    && cNetwork.m_idLocalPlayer == idPlayer) {
+                    m_messageList.AddTail(message);
+                    bDelete = FALSE;
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            if (bDelete && message != NULL) {
+                delete message;
+            }
+
+            return 0;
+        }
+    }
+
+    if (message != NULL) {
+        delete message;
+    }
 
     return -1;
 }

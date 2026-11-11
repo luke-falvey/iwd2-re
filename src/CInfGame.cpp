@@ -7401,6 +7401,14 @@ BOOL CInfGame::AddCharacterToParty(LONG id, SHORT nPortraitNumber)
 
     m_characterPortraits[nPortraitNumber] = id;
 
+    // NOTE: Inlined: put the character in the first free character slot.
+    for (INT nCharacterSlot = 0; nCharacterSlot < CINFGAME_MAXCHARACTERS; nCharacterSlot++) {
+        if (m_characters[nCharacterSlot] == -1) {
+            m_characters[nCharacterSlot] = id;
+            break;
+        }
+    }
+
     UpdatePortraitToolTip(nPortraitNumber, pSprite->GetNameRef());
     pSprite->SetFootstepChannel();
 

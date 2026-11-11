@@ -499,7 +499,9 @@ BOOL CNamedCreatureVariableHash::AddKey(CVariable& var)
         return FALSE;
     }
 
-    int hash = Hash(sName);
+    var.SetName(sTemp);
+
+    int hash = Hash(sTemp);
 
     if (m_hashEntries[hash] != NULL) {
         CNamedCreatureVariableHashEntry* pCurr = m_hashEntries[hash];
