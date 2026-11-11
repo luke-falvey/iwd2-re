@@ -1411,7 +1411,7 @@ GLuint CVidMode::GetTextureId()
     CVideo3d::glGenTextures(1, textures);
     g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
 
-    return textures[1];
+    return textures[0];
 }
 
 // 0x7BC250

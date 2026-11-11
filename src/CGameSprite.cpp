@@ -3029,7 +3029,7 @@ void CGameSprite::SetPath(LONG* pPath, SHORT nPath)
     // NOTE: Uninline.
     CPathSearch::PositionToPoint(m_pPath[nPath - 1], &goal);
 
-    if (abs(goal.x - start.x) <= 4 && abs(goal.y - start.y <= 4) && nPath <= 4) {
+    if (abs(goal.x - start.x) <= 4 && abs(goal.y - start.y) <= 4 && nPath <= 4) {
         m_walkBackwards = TRUE;
     }
 

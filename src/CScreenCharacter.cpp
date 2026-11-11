@@ -4112,12 +4112,13 @@ void CScreenCharacter::UpdateClassSelectionPanel(CGameSprite* pSprite)
         case CAIOBJECTTYPE_R_HALFLING:
         case CAIOBJECTTYPE_R_GNOME:
         case CAIOBJECTTYPE_R_HALF_ORC:
-            if (nClass > 0 || nClass <= 11) {
+            if (nClass > 0 && nClass <= 11) {
                 bEnabled = rule.IsValidAlignment(pButton->GetClass(),
                     pSprite->m_startTypeAI.GetAlignment(),
                     0);
                 break;
             }
+            bEnabled = FALSE;
             break;
         default:
             bEnabled = FALSE;

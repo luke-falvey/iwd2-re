@@ -6579,7 +6579,7 @@ BOOL CInfGame::CheckIfSpriteCanUseItem(CGameSprite* pSprite, CItem* pItem, STRRE
 INT CInfGame::CheckItemUsable(CGameSprite* pSprite, CItem* pItem)
 {
     INT nType = pItem->GetItemType();
-    if (nType != 35 || nType != 11) {
+    if (nType != 35 && nType != 11) {
         return 1;
     }
 
@@ -9399,6 +9399,8 @@ SHORT CInfGame::TakeItemFromStore(const CResRef& cResStore, const CResRef& cResI
                     if (g_pChitin->cNetwork.GetSessionHosting()) {
                         pStore->RemoveItemExt(cResItem, tempItem.m_flags, -1, 1, NULL);
                     }
+
+                    removed++;
                 }
 
                 if (!g_pChitin->cNetwork.GetSessionHosting()) {

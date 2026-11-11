@@ -670,7 +670,7 @@ int musicSetPath(const char* path, const char* extension)
     strcpy(defaultMusicPath, path);
 
     size_t end = strlen(defaultMusicPath) - 1;
-    if (defaultMusicPath[end] != '//' && defaultMusicPath[end] != '/') {
+    if (defaultMusicPath[end] != '\\' && defaultMusicPath[end] != '/') {
         strcpy(&(defaultMusicPath[end + 1]), "/");
     }
 

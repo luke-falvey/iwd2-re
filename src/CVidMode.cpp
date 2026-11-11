@@ -2441,7 +2441,7 @@ BOOL CVidMode::SetPointer(CVidCell* pVidCell, CResRef cResRef, BOOLEAN bAnimatin
     }
 
     m_bPointerAnimating = bAnimating;
-    m_nPointerNumber = m_nPointerNumber;
+    m_nPointerNumber = nPointerNumber;
     m_pPointerVidCell = pVidCell;
 
     lock.Unlock();

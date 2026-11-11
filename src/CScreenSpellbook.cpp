@@ -513,7 +513,7 @@ void CScreenSpellbook::OnPortraitLClick(DWORD nPortrait)
 // 0x66A100
 void CScreenSpellbook::SetSpellLevel(INT nLevel)
 {
-    if (nLevel < 0 && nLevel >= 9) {
+    if (nLevel < 0 || nLevel >= 9) {
         return;
     }
 
