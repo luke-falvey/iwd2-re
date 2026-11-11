@@ -669,6 +669,7 @@ public:
     SHORT RemoveSpell();
     SHORT BashDoor(CGameAIBase* pTarget);
     SHORT EquipRanged();
+    SHORT sub_75E330(CItem* pLauncher, BOOL bEquipMelee);
     SHORT StartStore(CGameSprite* pTarget);
     INT sub_75E930(INT a1);
     SHORT ChangeAnimation();

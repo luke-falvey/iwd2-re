@@ -21644,6 +21644,82 @@ SHORT CGameSprite::EquipRanged()
     return ACTION_ERROR;
 }
 
+// 0x75E330
+SHORT CGameSprite::sub_75E330(CItem* pLauncher, BOOL bEquipMelee)
+{
+    SHORT nMaxCount = 0;
+    INT nBestAmmo = -1;
+
+    for (INT nAmmo = 0; nAmmo < 4; nAmmo++) {
+        CItem* pItem = m_equipment.m_items[CGameSpriteEquipment::SLOT_AMMO + nAmmo];
+        if (pItem != NULL) {
+            pItem->Demand();
+
+            ITEM_ABILITY* pAbility = pItem->GetAbility(0);
+
+            // NOTE: The original compares the low byte of `type` only.
+            if (pAbility != NULL && static_cast<BYTE>(pAbility->type) == 2) {
+                SHORT launcherSlot;
+                if (GetLauncher(pAbility, launcherSlot) == pLauncher) {
+                    if (pItem->GetUsageCount(0) > nMaxCount) {
+                        nBestAmmo = nAmmo;
+                        nMaxCount = pItem->GetUsageCount(0);
+                    }
+                }
+            }
+
+            pItem->Release();
+        }
+    }
+
+    if (static_cast<SHORT>(nBestAmmo) == -1) {
+        if (bEquipMelee == TRUE) {
+            EquipMostDamagingMelee();
+            return ACTION_DONE;
+        }
+        return ACTION_ERROR;
+    }
+
+    SelectWeaponAbility(CGameSpriteEquipment::SLOT_AMMO + static_cast<BYTE>(nBestAmmo), 0, 1, 1);
+
+    for (INT nSlot = 43; nSlot < 51; nSlot++) {
+        if (m_equipment.m_items[nSlot] == pLauncher) {
+            CGameButtonList* pButtons = GetItemUsages(CGameSpriteEquipment::SLOT_AMMO + static_cast<SHORT>(nBestAmmo), 1, 0);
+            if (pButtons != NULL) {
+                CButtonData* pButtonData = pButtons->GetHead();
+                if (pButtonData != NULL) {
+                    BYTE buttonNum = static_cast<BYTE>(nSlot - 43);
+
+                    // NOTE: Uninline.
+                    SetQuickWeapon(buttonNum, *pButtonData);
+
+                    if (pButtonData->m_abilityId.m_itemNum >= 11
+                        && pButtonData->m_abilityId.m_itemNum <= 14) {
+                        // NOTE: Uninline.
+                        SetQuickWeapon(buttonNum, static_cast<BYTE>(pButtonData->m_abilityId.m_itemNum));
+                    } else {
+                        // NOTE: Uninline.
+                        SetQuickWeapon(buttonNum, static_cast<BYTE>(0));
+                    }
+
+                    CAbilityId abilityId;
+                    CheckQuickLists(&abilityId, 0, FALSE, FALSE);
+
+                    // NOTE: The head node is deleted but stays in the list.
+                    delete pButtonData;
+                    delete pButtons;
+
+                    return ACTION_DONE;
+                }
+
+                delete pButtons;
+            }
+        }
+    }
+
+    return ACTION_DONE;
+}
+
 // 0x75E630
 SHORT CGameSprite::StartStore(CGameSprite* pTarget)
 {
