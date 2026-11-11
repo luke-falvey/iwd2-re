@@ -1009,7 +1009,7 @@ CGameSprite::CGameSprite(BYTE* pCreature, LONG creatureSize, int a3, WORD type, 
         m_followRange = followRange;
         m_posStart = startPos;
         m_timeOfDayVisible = timeOfDayVisible;
-        m_active = (g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->GetCurrentHour() & 1) != 0;
+        m_active = ((timeOfDayVisible >> g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->GetCurrentHour()) & 1) != 0;
         m_activeAI = TRUE;
         m_activeImprisonment = TRUE;
 
