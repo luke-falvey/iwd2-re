@@ -27516,7 +27516,536 @@ void CGameSprite::sub_756770(CPoint& ptDelta, const CPoint& ptTarget)
 // 0x756930
 void CGameSprite::sub_756930(CItem* pItem, CItem* pLauncher)
 {
-    // TODO: Incomplete.
+    if ((m_derivedStats.m_generalState & STATE_SILENCED) == 0) {
+        CString sFileName("");
+        CString sSound;
+        CString sBuf;
+        sSound = "";
+        char szNum[3] = {0, 0, 0};
+        INT nField = 0;
+        INT nCount;
+        INT nIndex;
+        INT nRand;
+
+        if (field_70FB) {
+            // __FILE__: .\Include\ObjAnimation.h
+            // __LINE__: 2118
+            UTIL_ASSERT(m_animation.m_animation != NULL);
+
+            switch (m_animation.m_nSequence) {
+                case CGAMESPRITE_SEQ_ATTACK_SLASH:
+                    nCount = field_72F0.GetCount();
+                    if (nCount == 0) {
+                        goto noList;
+                    }
+
+                    nIndex = nCount != 0 ? rand() % nCount : 0;
+                    {
+                        CGameSpriteSoundEntry& entry = field_72F0.GetAt(field_72F0.FindIndex(nIndex));
+                        sSound = entry.field_0;
+                        nField = entry.field_4;
+                    }
+
+                    if (strcmp(sSound, field_7408) == 0) {
+                        if (nIndex == field_72F0.GetCount() - 1) {
+                            CGameSpriteSoundEntry& entry = field_72F0.GetAt(field_72F0.FindIndex(0));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        } else {
+                            CGameSpriteSoundEntry& entry = field_72F0.GetAt(field_72F0.FindIndex(nIndex + 1));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        }
+                    } else {
+                        field_7408 = sSound;
+                        field_740C = nField;
+                    }
+                    goto done;
+                case CGAMESPRITE_SEQ_ATTACK_BACKSLASH:
+                    nCount = field_730C.GetCount();
+                    if (nCount == 0) {
+                        goto noList;
+                    }
+
+                    nIndex = nCount != 0 ? rand() % nCount : 0;
+                    {
+                        CGameSpriteSoundEntry& entry = field_730C.GetAt(field_730C.FindIndex(nIndex));
+                        sSound = entry.field_0;
+                        nField = entry.field_4;
+                    }
+
+                    if (strcmp(sSound, field_7408) == 0) {
+                        if (nIndex == field_730C.GetCount() - 1) {
+                            CGameSpriteSoundEntry& entry = field_730C.GetAt(field_730C.FindIndex(0));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        } else {
+                            CGameSpriteSoundEntry& entry = field_730C.GetAt(field_730C.FindIndex(nIndex + 1));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        }
+                    } else {
+                        field_7408 = sSound;
+                        field_740C = nField;
+                    }
+                    goto done;
+                case CGAMESPRITE_SEQ_ATTACK_JAB:
+                    nCount = field_7328.GetCount();
+                    if (nCount == 0) {
+                        goto noList;
+                    }
+
+                    nIndex = nCount != 0 ? rand() % nCount : 0;
+                    {
+                        CGameSpriteSoundEntry& entry = field_7328.GetAt(field_7328.FindIndex(nIndex));
+                        sSound = entry.field_0;
+                        nField = entry.field_4;
+                    }
+
+                    if (strcmp(sSound, field_7408) == 0) {
+                        if (nIndex == field_7328.GetCount() - 1) {
+                            CGameSpriteSoundEntry& entry = field_7328.GetAt(field_7328.FindIndex(0));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        } else {
+                            CGameSpriteSoundEntry& entry = field_7328.GetAt(field_7328.FindIndex(nIndex + 1));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        }
+                    } else {
+                        field_7408 = sSound;
+                        field_740C = nField;
+                    }
+                    goto done;
+                default:
+                    nCount = field_7344.GetCount();
+                    if (nCount == 0) {
+                        goto noList;
+                    }
+
+                    nIndex = nCount != 0 ? rand() % nCount : 0;
+                    {
+                        CGameSpriteSoundEntry& entry = field_7344.GetAt(field_7344.FindIndex(nIndex));
+                        sSound = entry.field_0;
+                        nField = entry.field_4;
+                    }
+
+                    if (strcmp(sSound, field_7408) == 0) {
+                        if (nIndex == field_7344.GetCount() - 1) {
+                            CGameSpriteSoundEntry& entry = field_7344.GetAt(field_7344.FindIndex(0));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        } else {
+                            CGameSpriteSoundEntry& entry = field_7344.GetAt(field_7344.FindIndex(nIndex + 1));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        }
+                    } else {
+                        field_7408 = sSound;
+                        field_740C = nField;
+                    }
+                    goto done;
+            }
+        }
+
+    noList:
+        {
+            CResRef cResRef = pItem->cResRef;
+            BOOL bDefault = FALSE;
+
+            if (cResRef == "WYVERN1") {
+                sFileName = "WYVER05";
+            } else if (cResRef == "WYVERN2") {
+                sFileName = "WYVER06";
+            } else if (cResRef == "WOLFWI1") {
+                sFileName = "WWOLF07";
+            } else if (cResRef == "WOLFWI2") {
+                sFileName = "WWOLF06";
+            } else {
+                WORD nType = pItem->GetItemType();
+                if (pLauncher != NULL) {
+                    nType = pLauncher->GetItemType();
+                }
+
+                if (nType == 0) {
+                    nType = 20;
+                }
+
+                sFileName = "Sw_";
+
+                switch (nType) {
+                    case 15:
+                        sFileName += "Ms";
+                        nRand = rand() % 5;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 4) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 16:
+                    case 17:
+                    case 22:
+                    case 29:
+                        sFileName += "Sm";
+                        nRand = rand() % 7;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 6) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 18:
+                        sFileName += "Slg";
+                        nRand = rand() % 5;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 4) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 19:
+                    case 20:
+                    case 69:
+                        sFileName += "Swd";
+                        nRand = rand() % 5;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 4) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 21:
+                    case 25:
+                    case 26:
+                    case 30:
+                        sFileName += "Lg";
+                        nRand = rand() % 6;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 5) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 23:
+                        sFileName += "Flal";
+                        nRand = rand() % 5;
+                        if (nRand < 10) {
+                            szNum[0] = static_cast<char>(nRand + '0');
+                            szNum[1] = '\0';
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 4) {
+                                szNum[0] = '0';
+                                szNum[1] = '\0';
+                            } else {
+                                nRand++;
+                                _itoa(nRand, szNum, 10);
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 24:
+                        sFileName += "Fist";
+                        nRand = rand() % 3;
+                        if (nRand < 10) {
+                            szNum[0] = static_cast<char>(nRand + '0');
+                            szNum[1] = '\0';
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 2) {
+                                szNum[0] = '0';
+                                szNum[1] = '\0';
+                            } else {
+                                nRand++;
+                                _itoa(nRand, szNum, 10);
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 27:
+                        sFileName += "Xbow";
+                        nRand = rand() % 5;
+                        if (nRand < 10) {
+                            szNum[0] = static_cast<char>(nRand + '0');
+                            szNum[1] = '\0';
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 4) {
+                                szNum[0] = '0';
+                                szNum[1] = '\0';
+                            } else {
+                                nRand++;
+                                _itoa(nRand, szNum, 10);
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 28:
+                        sFileName += "Fist";
+                        nRand = rand() % 3;
+                        if (nRand < 10) {
+                            szNum[0] = static_cast<char>(nRand + '0');
+                            szNum[1] = '\0';
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 2) {
+                                szNum[0] = '0';
+                                szNum[1] = '\0';
+                            } else {
+                                nRand++;
+                                _itoa(nRand, szNum, 10);
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 44:
+                        sFileName += "Lg";
+                        nRand = rand() % 6;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 5) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 57:
+                        sFileName += "Swd";
+                        nRand = rand() % 5;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 4) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    default:
+                        bDefault = TRUE;
+                        break;
+                }
+            }
+
+            CString sLeft = sFileName.Left(7);
+            if (bDefault || strcmp(sLeft, "Sw_Fist") == 0) {
+                // __FILE__: .\Include\ObjAnimation.h
+                // __LINE__: 2118
+                UTIL_ASSERT(m_animation.m_animation != NULL);
+
+                BYTE nSpeech;
+                switch (m_animation.m_nSequence) {
+                    case CGAMESPRITE_SEQ_ATTACK_SLASH:
+                        nSpeech = 40;
+                        if (m_baseStats.m_speech[40] == -1) {
+                            goto skipSound;
+                        }
+                        break;
+                    case CGAMESPRITE_SEQ_ATTACK_BACKSLASH:
+                        nSpeech = 41;
+                        if (m_baseStats.m_speech[41] == -1) {
+                            goto skipSound;
+                        }
+                        break;
+                    case CGAMESPRITE_SEQ_ATTACK_JAB:
+                        nSpeech = 42;
+                        if (m_baseStats.m_speech[42] == -1) {
+                            goto skipSound;
+                        }
+                        break;
+                    default:
+                        goto skipSound;
+                }
+
+                {
+                    STR_RES strRes;
+                    g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[nSpeech], strRes);
+                    strRes.cSound.cResRef.CopyToString(sFileName);
+                }
+            }
+
+        skipSound:
+            if (strcmp(sFileName, "") != 0) {
+                field_7408 = sFileName;
+                field_740C = 0;
+            }
+        }
+
+    done:;
+    }
 }
 
 // 0x757540
