@@ -17,12 +17,15 @@ Branch `phase-a/stubs-and-layout` (local only).
   - `StartChapterMultiplayerHost` didn't select the chapter engine; `GetChapterText` compared a BYTE with -1.
 - `inventory.py` now reports functions and bytes without `TODO: Incomplete` separately.
 
-**State of S2 on the rebuild:** passes the Prologue chapter checkpoint, returns to the world with the party, portraits and NPCs drawn. It then times out waiting for Hedron's dialogue.
+**State of S2 on the rebuild: PASSES.** Main menu → premade party → Prologue chapter screen → Targos with Hedron's opening dialogue, all matching the original's screenshots. Known differences: party gold shows 108 (original 114) and the camera position differs slightly.
+
+Later fixes found by running the game: `CMessageHandler::Send`/`Broadcast` were stubs (no message ever ran), `CItem` constructors were stubs (all items blank), `CSearchBitmap::RemoveObject` left its flag set (creatures jumped around), `CDerivedStats::CheckLimits` broke morale (everyone fled), `AddCharacterToParty` didn't fill `m_characters`, named-creature keys weren't uppercased, helmet animation cells, `CopyDisplay`.
 
 **Next**
-1. Dialogue actions in `CGameSprite` (Dialog 0x752DD0, PlayerDialog, StartDialog, Interact) so the opening dialogue starts; then S2 should pass.
-2. Remaining `CGameSprite` action handlers (combat, spells, items), `CInfButtonArray` (action bar), `CProjectile::DecodeProjectile`.
-3. `CInfinity::FXRenderClippingPolys` (sprites behind walls), `CMessageSaveGame::Run`.
+1. Merge the spells/items and effects agents' work (in progress).
+2. Gold difference (108 vs 114) and camera start position.
+3. More scenarios (S3+): talk to Hedron, walk, fight, save/load.
+4. Remaining stubs: `CInfinity::FXRenderClippingPolys` (sprites behind walls), ~115 projectile methods, the CBaldurMessage multiplayer handlers.
 
 **Notes**
 - Debugging recipe that worked: add `fopen("C:\\iwd2-play\\trace.txt", "a")` logging in a `// DBGTRACE` block, run `tests/e2e/drive.py`, read the file, never commit the block.
