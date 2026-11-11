@@ -1635,6 +1635,47 @@ void CGameSprite::RemoveFromArea()
     }
 }
 
+// 0x6F50A0
+void CGameSprite::sub_6F50A0()
+{
+    DWORD dwFlags = field_58C;
+    if ((dwFlags & 0x200000) != 0 && dwFlags != 0x200000) {
+        for (INT nTeam = 0; nTeam < 21; nTeam++) {
+            if ((dwFlags & (1 << nTeam)) != 0) {
+                CString sVariable;
+                CString sTeam;
+
+                sTeam.Format("%d", nTeam);
+                sVariable = "TEAM_";
+                sVariable += sTeam;
+                sVariable += "_ENEMY";
+
+                CVariable* pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sVariable);
+                if (pVariable != NULL) {
+                    pVariable->m_intValue = 1;
+                } else {
+                    CVariable* pNewVariable = new CVariable();
+                    pNewVariable->SetName(sVariable);
+                    pNewVariable->m_intValue = 1;
+                    g_pBaldurChitin->GetObjectGame()->m_variables.AddKey(*pNewVariable);
+                    delete pNewVariable;
+                }
+
+                // NOTE: The scope is the area resref (`m_areaName` is not
+                // guaranteed to be NULL-terminated).
+                CMessage* message = new CMessageSetVariable(sVariable,
+                    CString(reinterpret_cast<char*>(m_pArea->m_header.m_areaName)),
+                    1,
+                    0,
+                    m_id,
+                    m_id,
+                    0);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    }
+}
+
 // 0x6F5FF0
 void CGameSprite::AIUpdate()
 {
@@ -11072,6 +11113,156 @@ STRREF CGameSprite::GetNameRef()
     }
 
     return strName;
+}
+
+// 0x71F860
+void CGameSprite::sub_71F860(CProjectile* pProjectile, CItem* pItem, SHORT abilityNum, const CPoint& target)
+{
+    if (pItem != NULL) {
+        pItem->Demand();
+
+        ITEM_ABILITY* pAbility = pItem->GetAbility(abilityNum);
+        if (pAbility != NULL) {
+            SHORT launcherSlot;
+            CItem* pLauncher = GetLauncher(pAbility, launcherSlot);
+
+            ITEM_ABILITY* pLauncherAbility;
+            if (pLauncher != NULL) {
+                pLauncher->Demand();
+                pLauncherAbility = pLauncher->GetAbility(0);
+            } else {
+                pLauncherAbility = NULL;
+            }
+
+            for (INT nEffect = 0; nEffect < pAbility->effectCount; nEffect++) {
+                CGameEffect* pEffect = pItem->GetAbilityEffect(abilityNum, nEffect, this);
+                pEffect->m_source = m_pos;
+                pEffect->m_sourceID = m_id;
+                pEffect->m_target = target;
+                IcewindMisc::sub_5860F0(this, pEffect);
+
+            switch (pEffect->m_targetType) {
+            case 1:
+                {
+                    CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                }
+                break;
+            case 2:
+                pProjectile->AddEffect(pEffect);
+                break;
+            case 3:
+                ApplyEffectToParty(pEffect);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 4:
+                m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 5:
+                m_pArea->sub_46E130(pEffect, TRUE, FALSE, 0, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 6:
+                m_pArea->sub_46E130(pEffect, FALSE, TRUE, m_typeAI.m_nSpecific, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 7:
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 8:
+                m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, this);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            default:
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+                // __LINE__: 22039
+                UTIL_ASSERT(FALSE);
+            }
+            }
+
+            pItem->Release();
+
+            if (pLauncherAbility != NULL) {
+                for (INT nEffect = 0; nEffect < pLauncherAbility->effectCount; nEffect++) {
+                    CGameEffect* pEffect = pLauncher->GetAbilityEffect(0, nEffect, this);
+                    pEffect->m_source = m_pos;
+                    pEffect->m_sourceID = m_id;
+                    pEffect->m_target = target;
+                    IcewindMisc::sub_5860F0(this, pEffect);
+
+                switch (pEffect->m_targetType) {
+                case 1:
+                    {
+                        CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                    }
+                    break;
+                case 2:
+                    pProjectile->AddEffect(pEffect);
+                    break;
+                case 3:
+                    ApplyEffectToParty(pEffect);
+                    if (pEffect != NULL) {
+                        delete pEffect;
+                    }
+                    break;
+                case 4:
+                    m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, NULL);
+                    if (pEffect != NULL) {
+                        delete pEffect;
+                    }
+                    break;
+                case 5:
+                    m_pArea->sub_46E130(pEffect, TRUE, FALSE, 0, NULL);
+                    if (pEffect != NULL) {
+                        delete pEffect;
+                    }
+                    break;
+                case 6:
+                    m_pArea->sub_46E130(pEffect, FALSE, TRUE, m_typeAI.m_nSpecific, NULL);
+                    if (pEffect != NULL) {
+                        delete pEffect;
+                    }
+                    break;
+                case 7:
+                    if (pEffect != NULL) {
+                        delete pEffect;
+                    }
+                    break;
+                case 8:
+                    m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, this);
+                    if (pEffect != NULL) {
+                        delete pEffect;
+                    }
+                    break;
+                default:
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+                    // __LINE__: 22096
+                    UTIL_ASSERT(FALSE);
+                }
+                }
+            }
+
+            if (pLauncher != NULL) {
+                pLauncher->Release();
+            }
+        } else {
+            pItem->Release();
+        }
+    }
 }
 
 // 0x727B80
@@ -22523,6 +22714,29 @@ SHORT CGameSprite::PlayBardSong()
     }
 
     return ACTION_DONE;
+}
+
+// 0x761AB0
+void CGameSprite::sub_761AB0(CGameSprite* pTarget)
+{
+    for (std::list<CDerivedStatsWhenStruck>::iterator it = m_derivedStats.m_lWhenStruck.begin(); it != m_derivedStats.m_lWhenStruck.end(); ++it) {
+        std::list<CGameEffect*> effects = IcewindMisc::sub_586220(this,
+            (*it).m_res.GetResRef(),
+            (*it).m_nCasterLevel);
+
+        for (std::list<CGameEffect*>::iterator effectIt = effects.begin(); effectIt != effects.end(); ++effectIt) {
+            (*effectIt)->m_sourceRes = (*it).m_sourceRes;
+            (*effectIt)->m_target = (*it).m_target;
+
+            CMessage* message;
+            if ((*effectIt)->m_targetType == 1) {
+                message = new CMessageAddEffect(*effectIt, m_id, m_id);
+            } else {
+                message = new CMessageAddEffect(*effectIt, m_id, pTarget->m_id);
+            }
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    }
 }
 
 // 0x761C50

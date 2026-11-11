@@ -483,6 +483,7 @@ public:
 
     void AddBlood(SHORT nHeight, SHORT nDirection, SHORT nType);
     void RemoveReplacementFromArea();
+    void sub_6F50A0();
     void AIUpdateWalk();
     void SetPath(LONG* pPath, SHORT nPath);
     BOOL ClearBumpPath(const CPoint& start, const CPoint& goal);
@@ -605,6 +606,7 @@ public:
     void sub_722D50(BYTE nClass, SHORT nLevels, int a3);
     void CheckStatsChange();
     int sub_71F6E0();
+    void sub_71F860(CProjectile* pProjectile, CItem* pItem, SHORT abilityNum, const CPoint& target);
     const CString& GetName();
     STRREF GetNameRef();
     void PlaySound(const CResRef& res);
@@ -666,7 +668,9 @@ public:
     SHORT PickLock(CGameAIBase* pTarget);
     SHORT RemoveSpell();
     SHORT BashDoor(CGameAIBase* pTarget);
+    BOOL sub_75D450(SHORT slotNum, SHORT abilityNum);
     SHORT EquipRanged();
+    SHORT sub_75E330(CItem* pItem, BOOL a2);
     SHORT StartStore(CGameSprite* pTarget);
     SHORT ChangeAnimation();
     SHORT ReturnToSavedLocation();
@@ -680,6 +684,7 @@ public:
     void FeedBack(WORD nFeedBackId, LONG a2, LONG a3, LONG a4, LONG a5, LONG a6, LONG a7);
     BOOLEAN sub_737910(BOOL a1);
     SHORT GetCriticalHitBonus();
+    BOOLEAN Hit(CGameSprite* pTarget, CItem* curWeapon, WORD abilityNum, BOOL* pCriticalHit, BOOL bOffhand, BYTE nAttackCount);
     SHORT sub_73C6A0(CGameSprite* target, CItem* curWeapon, const ITEM_ABILITY* curAttack);
     SHORT sub_73C7E0();
     SHORT sub_73C8C0(CGameSprite* target);
@@ -690,6 +695,7 @@ public:
     SHORT sub_73CC40(CItem* curWeapon, const ITEM_ABILITY* curAttack);
     SHORT sub_73D420();
     SHORT sub_73D440(CItem* curWeapon);
+    CGameEffect* Damage(CItem* curWeapon, CItem* pLauncher, WORD abilityNum, BOOL bCriticalHit, const CAIObjectType& targetType, SHORT nTargetDirection, SHORT nDirectionToTarget, CGameSprite* pTarget, BOOL bOffhand);
     SHORT MoveToPoint();
     SHORT OneSwing();
     SHORT Recoil();
@@ -720,6 +726,7 @@ public:
     SHORT sub_7615F0(int a1);
     void sub_761650();
     SHORT DropItem(CItem* pItem);
+    void sub_761AB0(CGameSprite* pTarget);
     void sub_761990();
     SHORT PlayBardSong();
     SHORT SpellCastEffect(const CString& sString1, const CString& sString2, LONG nSpecific1, LONG nSpecific2, LONG nSpecific3);
