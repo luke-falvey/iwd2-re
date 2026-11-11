@@ -1115,6 +1115,8 @@ CGameSprite::m_sequenceTest
 CGameSprite::m_shapeshifts
 CGameSprite::m_skipDeltaDirection
 CGameSprite::m_sndArmor
+CGameSprite::m_sndCasting
+CGameSprite::m_sndCastingChant
 CGameSprite::m_sndDeath
 CGameSprite::m_sndReady
 CGameSprite::m_sndSpriteEffect
