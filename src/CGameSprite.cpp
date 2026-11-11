@@ -23653,8 +23653,6 @@ SHORT CGameSprite::UseItemPoint()
 
             g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
 
-            // NOTE: The last argument is read from an unnamed `const WORD`
-            // at 0x84D5E8.
             m_curProjectile->Fire(m_pArea,
                 m_id,
                 CGameObjectArray::INVALID_INDEX,
