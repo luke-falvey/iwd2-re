@@ -19,6 +19,8 @@ public:
     void SetVidCell(CResRef resRef);
     void SetBitmap(CString sName);
     void SetPaletteRange(USHORT nRange, USHORT nValue);
+    void sub_52B6B0(CRect& rFx, CPoint& ptRef, CVidCell* pVidCell);
+    void sub_52C8C0(CVidCell* pVidCell);
 
     /* 0192 */ CVidCell* m_pVidCell;
     /* 0196 */ CVidCell* field_196;

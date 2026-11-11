@@ -1,8 +1,11 @@
 #include "CProjectile.h"
 
 #include "CBaldurChitin.h"
+#include "CGameContainer.h"
+#include "CGameDoor.h"
 #include "CGameEffect.h"
 #include "CGameSprite.h"
+#include "CGameTrigger.h"
 #include "CInfGame.h"
 #include "CMessage.h"
 #include "CProjectileArea.h"
@@ -3064,7 +3067,63 @@ void CProjectile::OnArrival()
 // 0x52A1A0
 void CProjectile::DeliverEffects()
 {
-    // TODO: Incomplete.
+    CGameObject* pObject;
+    BYTE rc;
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    if ((pObject->GetObjectType() & CGameObject::TYPE_AIBASE) == 0) {
+        // NOTE: Uninline.
+        ClearEffects();
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return;
+    }
+
+    if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+        CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+        if (pSprite->m_derivedStats.m_cImmunitiesProjectile.OnList(m_projectileType)
+            || (static_cast<BYTE>(field_186) < 9
+                && pSprite->m_derivedStats.m_cImmunitiesSpellLevel.m_levels[static_cast<BYTE>(field_186)])) {
+            // NOTE: Uninline.
+            ClearEffects();
+
+            CGameEffect::FeedBackImmuneToResource(pSprite, field_18A);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            return;
+        }
+    }
+
+    std::list<CMessageAddEffect*> effects;
+
+    POSITION pos = m_effectList.GetHeadPosition();
+    while (pos != NULL) {
+        CGameEffect* pEffect = m_effectList.GetNext(pos);
+        CMessageAddEffect* pAddEffect = new CMessageAddEffect(pEffect, m_sourceId, m_targetId);
+        effects.push_back(pAddEffect);
+    }
+    m_effectList.RemoveAll();
+
+    CMessage105* pMessage = new CMessage105(effects, m_sourceId, m_targetId);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x52A480
@@ -3098,10 +3157,111 @@ void CProjectile::PlaySound(CResRef resRef, BOOL loop, BOOL fireAndForget)
     }
 }
 
+// NOTE: Not in the original. Inlined four times in 0x52A640.
+static SHORT GetEllipseDiagonal(CGameSprite* pSprite)
+{
+    SHORT a = static_cast<SHORT>(static_cast<SHORT>(pSprite->GetAnimation()->GetEllipseRect().right) * static_cast<SHORT>(pSprite->GetAnimation()->GetEllipseRect().right));
+    SHORT b = static_cast<SHORT>(static_cast<SHORT>(pSprite->GetAnimation()->GetEllipseRect().bottom) * static_cast<SHORT>(pSprite->GetAnimation()->GetEllipseRect().bottom));
+    return static_cast<SHORT>(sqrt(static_cast<double>(a * b / (b + a))));
+}
+
 // 0x52A640
 void CProjectile::sub_52A640(LONG nObjectId, CPoint& pt, BOOLEAN a3)
 {
-    // TODO: Incomplete.
+    CGameObject* pObject;
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nObjectId,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pObject,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    switch (pObject->GetObjectType()) {
+    case 0: // CGameObject::TYPE_NONE
+    case 1: // CGameObject::TYPE_AIBASE
+    case 16: // CGameObject::TYPE_SOUND
+    case 32: // CGameObject::TYPE_SPAWNING
+    case 48: // CGameObject::TYPE_STATIC
+    case 49: // CGameObject::TYPE_SPRITE
+    case 64: // CGameObject::TYPE_OBJECT_MARKER
+    case 80: // CGameObject::TYPE_TEXT
+        pt = pObject->GetPos();
+        break;
+    case 17: // CGameObject::TYPE_CONTAINER
+        pt = static_cast<CGameContainer*>(pObject)->m_posTrapOrigin;
+        break;
+    case 33: // CGameObject::TYPE_DOOR
+        pt.x = static_cast<CGameDoor*>(pObject)->m_posXTrapOrigin;
+        pt.y = static_cast<CGameDoor*>(pObject)->m_posYTrapOrigin;
+        break;
+    case 65: // CGameObject::TYPE_TRIGGER
+        pt = static_cast<CGameTrigger*>(pObject)->m_posTrapOrigin;
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CProjectile.cpp
+        // __LINE__: 3590
+        UTIL_ASSERT(FALSE);
+    }
+
+    if (a3 && pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+        CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+        SHORT nDiagonal;
+
+        switch (pSprite->m_nDirection) {
+        case 0:
+        case 1:
+            pt.y += pSprite->GetAnimation()->GetEllipseRect().bottom / 2;
+            break;
+        case 2:
+        case 3:
+            nDiagonal = GetEllipseDiagonal(pSprite);
+            pt.x += -2 * nDiagonal;
+            pt.y += 2 * nDiagonal;
+            break;
+        case 4:
+        case 5:
+            pt.x += -2 * pSprite->GetAnimation()->GetEllipseRect().right;
+            pt.y += 1;
+            break;
+        case 6:
+        case 7:
+            nDiagonal = GetEllipseDiagonal(pSprite);
+            pt.x += -2 * nDiagonal;
+            pt.y += -2 * nDiagonal;
+            break;
+        case 8:
+        case 9:
+            pt.y += -2 * pSprite->GetAnimation()->GetEllipseRect().bottom;
+            break;
+        case 10:
+        case 11:
+            nDiagonal = GetEllipseDiagonal(pSprite);
+            pt.x += 2 * nDiagonal;
+            pt.y += -2 * nDiagonal;
+            break;
+        case 12:
+        case 13:
+            pt.x += 2 * pSprite->GetAnimation()->GetEllipseRect().right;
+            pt.y += 1;
+            break;
+        case 14:
+        case 15:
+            nDiagonal = GetEllipseDiagonal(pSprite);
+            pt.x += 2 * nDiagonal;
+            pt.y += 2 * nDiagonal;
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\CProjectile.cpp
+            // __LINE__: 3664
+            UTIL_ASSERT(FALSE);
+        }
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nObjectId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x560310
