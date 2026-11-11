@@ -1,0 +1,54 @@
+# Functions of iwd2.exe that are library template instantiations or
+# compiler-generated code. The repo gets them from the standard library or
+# the compiler, so they are not counted as work to do.
+# One address per line; text after the address or '#' is a comment.
+
+# CTypedPtrList<CPtrList, T*> constructors (implicit)
+0x4482F0
+0x448310
+0x448330
+0x448350
+0x448370
+0x448390
+0x4483B0
+0x4483D0
+0x4483F0
+0x448410
+
+# std::bitset constructors
+0x4486D0
+0x4486F0
+
+# compiler-generated operator= (CGameSpriteGroupedSpellList, CGameSpriteSpells)
+0x444D10
+0x4450A0
+
+# std::vector<CDamageReduction>
+0x448550
+0x448AD0
+0x448B00
+0x448BD0
+0x448C00
+0x449B80
+
+# std::set<int> of CDamageReduction
+0x448700
+0x448470
+0x448740
+0x448A50
+0x449880
+
+# std::set<std::string> m_spellImmunities
+0x448C40
+0x448C70
+0x449ED0
+0x44A3F0
+0x44A300
+0x44A4F0
+
+# std::set<int> m_naturalImmunities
+0x448DA0
+0x449010
+
+# std::list<CDerivedStatsWhenStruck> _Buynode
+0x4490E0
