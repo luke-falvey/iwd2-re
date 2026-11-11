@@ -1247,6 +1247,12 @@ BOOL CGameSprite::GetCanSeeInvisible()
         || (m_baseStats.m_flags & 0x10000) != 0;
 }
 
+// 0x6F3B80
+void CGameSprite::sub_6F3B80(CGameArea* pNewArea, CPoint pos, LONG posZ, BYTE listType, POSITION posVertList, BOOLEAN bInfravisionOn)
+{
+    // TODO: Incomplete.
+}
+
 // 0x6F40F0
 void CGameSprite::AddToArea(CGameArea* pNewArea, const CPoint& pos, LONG posZ, BYTE listType)
 {
