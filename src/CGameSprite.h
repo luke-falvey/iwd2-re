@@ -243,6 +243,8 @@ public:
 
     static const SHORT READY_COUNT;
     static const SHORT USER_OVERRIDE_COUNT;
+    static const SHORT RANDOM_WALK_CHOICES;
+    static const SHORT RANDOM_WALK_WAIT_TIME;
 
     static const BYTE SEQ_ATTACK;
     static const BYTE SEQ_AWAKE;
@@ -661,9 +663,11 @@ public:
     void ClearStoredPaths();
     void ClearDialogActions();
     BOOL HandleEffects();
+    CPoint sub_734720(LONG** ppPath, LONG* pnPath, SHORT range, BOOLEAN* pbExtended);
     void FeedBack(WORD nFeedBackId, LONG a2, LONG a3, LONG a4, LONG a5, LONG a6, LONG a7);
     BOOLEAN sub_737910(BOOL a1);
     SHORT GetCriticalHitBonus();
+    SHORT Swing(CGameSprite* pTarget);
     SHORT sub_73C6A0(CGameSprite* target, CItem* curWeapon, const ITEM_ABILITY* curAttack);
     SHORT sub_73C7E0();
     SHORT sub_73C8C0(CGameSprite* target);
