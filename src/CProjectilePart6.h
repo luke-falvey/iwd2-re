@@ -56,14 +56,14 @@ public:
     /* 0078 */ void DeliverEffects() override;
     /* 0088 */ virtual void Virtual88();
 
-    /* 02AE */ unsigned char field_2AE[32];
+    /* 02AE */ CPoint field_2AE[4];
     /* 02CE */ LONG field_2CE;
     /* 02D2 */ LONG field_2D2;
     /* 02D6 */ LONG field_2D6;
     /* 02DA */ LONG field_2DA;
     /* 02DE */ std::string field_2DE;
     /* 02EE */ LONG field_2EE;
-    /* 02F2 */ std::vector<LONG> field_2F2;
+    /* 02F2 */ std::vector<CPoint> field_2F2;
     /* 0302 */ LONG field_302;
     /* 0306 */ LONG field_306;
     /* 030A */ LONG field_30A;
@@ -71,7 +71,8 @@ public:
     /* 0312 */ LONG field_312;
     /* 0316 */ BOOLEAN field_316;
     /* 0317 */ BOOLEAN field_317;
-    /* 0318 */ unsigned char field_318[16];
+    /* 0318 */ CPoint field_318;
+    /* 0320 */ unsigned char field_320[8];
     /* 0328 */ LONG field_328;
     /* 032C */ SHORT field_32C;
     /* 032E */ LONG field_32E;
