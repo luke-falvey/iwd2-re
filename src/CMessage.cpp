@@ -4655,9 +4655,32 @@ BOOLEAN CBaldurMessage::SendMapWorldRequestToServer(LONG nLeavingEdge)
 // 0x4352A0
 BOOLEAN CBaldurMessage::sub_4352A0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || !g_pChitin->cNetwork.m_bIsHost) {
+        return FALSE;
+    }
 
-    return FALSE;
+    DWORD nFacingDirection = *reinterpret_cast<DWORD*>(pMessage + CNetwork::SPEC_MSG_HEADER_LENGTH);
+
+    BOOLEAN bStartMapWorld = TRUE;
+
+    if (g_pBaldurChitin->GetObjectGame()->m_gameSave.m_mode == 0x182
+        || g_pBaldurChitin->GetObjectGame()->m_gameSave.m_mode == 0x502) {
+        bStartMapWorld = FALSE;
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->m_multiplayerSettings.m_bHostPermittedDialog == TRUE) {
+        bStartMapWorld = FALSE;
+    }
+
+    CScreenWorld* pWorld = g_pBaldurChitin->m_pEngineWorld;
+    if (pWorld->m_bHardPaused == TRUE || !bStartMapWorld) {
+        pWorld->SetPendingMapWorld(g_pChitin->cNetwork.GetPlayerID(nMsgFrom), static_cast<SHORT>(nFacingDirection));
+    } else {
+        pWorld->StartMapWorldMultiplayerHost(g_pChitin->cNetwork.GetPlayerID(nMsgFrom), static_cast<SHORT>(nFacingDirection));
+    }
+
+    return TRUE;
 }
 
 // 0x435360
