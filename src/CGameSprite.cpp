@@ -22022,6 +22022,199 @@ SHORT CGameSprite::BashDoor(CGameAIBase* pTarget)
     return ACTION_ERROR;
 }
 
+// 0x75D450
+BOOL CGameSprite::sub_75D450(SHORT slotNum, SHORT abilityNum)
+{
+    CResRef resRef;
+    CAITrigger trigger(CAITrigger::NO_TRIGGER, 0);
+    SHORT nSelectedWeapon = m_equipment.m_selectedWeapon;
+    SHORT launcherSlot = GetLauncherSlot(m_equipment.m_selectedWeapon, m_equipment.m_selectedWeaponAbility);
+
+    g_pBaldurChitin->GetActiveEngine()->UpdatePersonalItemStatus(m_id);
+
+    if (slotNum > CGameSpriteEquipment::NUM_SLOT || slotNum < 0) {
+        CAITrigger unusable(CAITRIGGER_UNUSABLE, 0);
+
+        CMessage* message = new CMessageSetTrigger(unusable, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        return TRUE;
+    }
+
+    CItem* pItem = m_equipment.m_items[slotNum];
+    if (pItem == NULL) {
+        CString sResRef;
+        CAITrigger unusable(CAITRIGGER_UNUSABLE, 0);
+        unusable.m_string1 = sResRef;
+
+        CMessage* message = new CMessageSetTrigger(unusable, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        return TRUE;
+    }
+
+    resRef = pItem->GetResRef();
+
+    BOOL bRelease = TRUE;
+    m_equipment.m_items[slotNum]->Demand();
+
+    ITEM_ABILITY* pAbility = pItem->GetAbility(abilityNum);
+    if (pAbility == NULL) {
+        if (abilityNum == 0) {
+            if (pItem->GetMaxStackable() <= 1) {
+                PlaySound(CResRef("EFF_M02"));
+            }
+
+            if (slotNum != m_equipment.m_selectedWeapon) {
+                Unequip(slotNum);
+            } else {
+                SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 0, 1);
+            }
+
+            m_equipment.m_items[slotNum]->ReleaseAll();
+            if (m_equipment.m_items[slotNum] != NULL) {
+                delete m_equipment.m_items[slotNum];
+            }
+            m_equipment.m_items[slotNum] = NULL;
+
+            if (slotNum == nSelectedWeapon) {
+                if (launcherSlot == -1) {
+                    EquipMostDamagingMelee();
+                } else {
+                    if (sub_75E330(m_equipment.m_items[launcherSlot], !IcewindMisc::IsPC(this)) == ACTION_DONE) {
+                        CItem* pSelected = m_equipment.m_items[m_equipment.m_selectedWeapon];
+                        if (pSelected != NULL && pSelected->GetResRef() == resRef) {
+                            return FALSE;
+                        }
+                    }
+                }
+            }
+
+            return TRUE;
+        }
+
+        CString sResRef;
+        pItem->GetResRef().CopyToString(sResRef);
+
+        CAITrigger unusable(CAITRIGGER_UNUSABLE, 0);
+        unusable.m_string1 = sResRef;
+
+        CMessage* message = new CMessageSetTrigger(unusable, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        m_equipment.m_items[slotNum]->ReleaseAll();
+
+        return TRUE;
+    }
+
+    if (pItem->GetUsageCount(abilityNum) == 0xFFFF
+        && pAbility->maxUsageCount > 0
+        && pAbility->usageFlags == 1) {
+        pItem->SetUsageCount(abilityNum, 0);
+    }
+
+    if (pItem->GetUsageCount(abilityNum) != 0 || pAbility->maxUsageCount == 0) {
+        m_equipment.m_items[slotNum]->Release();
+        return FALSE;
+    }
+
+    CString sResRef;
+    pItem->GetResRef().CopyToString(sResRef);
+
+    switch (pAbility->usageFlags) {
+    case 1:
+        if (m_equipment.m_items[slotNum] != NULL) {
+            if (pItem->GetMaxStackable() <= 1) {
+                PlaySound(CResRef("EFF_M02"));
+            }
+
+            if (slotNum != m_equipment.m_selectedWeapon) {
+                Unequip(slotNum);
+            } else {
+                SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 0, 1);
+            }
+
+            m_equipment.m_items[slotNum]->ReleaseAll();
+            bRelease = FALSE;
+            if (m_equipment.m_items[slotNum] != NULL) {
+                delete m_equipment.m_items[slotNum];
+            }
+            m_equipment.m_items[slotNum] = NULL;
+
+            if (slotNum == nSelectedWeapon) {
+                if (launcherSlot == -1) {
+                    if (!IcewindMisc::IsPC(this)) {
+                        EquipMostDamagingMelee();
+                    }
+                } else {
+                    if (sub_75E330(m_equipment.m_items[launcherSlot], !IcewindMisc::IsPC(this)) == ACTION_DONE) {
+                        CItem* pSelected = m_equipment.m_items[m_equipment.m_selectedWeapon];
+                        if (pSelected != NULL && pSelected->GetResRef() == resRef) {
+                            return FALSE;
+                        }
+                    }
+                }
+            }
+
+            sub_726810(m_nWeaponSet);
+        }
+        break;
+    case 2:
+        if (slotNum != m_equipment.m_selectedWeapon) {
+            Unequip(slotNum);
+        }
+
+        m_equipment.m_items[slotNum]->Release();
+        bRelease = FALSE;
+
+        if (pItem->GetUsedUpItemId() != "") {
+            pItem->SetResRef(pItem->GetUsedUpItemId(), TRUE);
+            pItem->GetResRef().CopyToString(sResRef);
+        } else {
+            m_equipment.m_items[slotNum]->ReleaseAll();
+            if (m_equipment.m_items[slotNum] != NULL) {
+                delete m_equipment.m_items[slotNum];
+            }
+            m_equipment.m_items[slotNum] = NULL;
+        }
+
+        if (slotNum == nSelectedWeapon) {
+            if (launcherSlot == -1) {
+                if (!IcewindMisc::IsPC(this)) {
+                    EquipMostDamagingMelee();
+                }
+            } else {
+                if (sub_75E330(m_equipment.m_items[launcherSlot], !IcewindMisc::IsPC(this)) == ACTION_DONE) {
+                    CItem* pSelected = m_equipment.m_items[m_equipment.m_selectedWeapon];
+                    if (pSelected != NULL && pSelected->GetResRef() == resRef) {
+                        return FALSE;
+                    }
+                }
+            }
+        }
+
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1
+            && (m_derivedStats.m_generalState & STATE_CHARMED) == 0) {
+            sub_726810(m_nWeaponSet);
+        } else {
+            EquipRanged();
+        }
+        break;
+    }
+
+    trigger = CAITrigger(CAITRIGGER_UNUSABLE, 0);
+    trigger.m_string1 = sResRef;
+
+    CMessage* message = new CMessageSetTrigger(trigger, m_id, m_id);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    if (bRelease) {
+        m_equipment.m_items[slotNum]->Release();
+    }
+
+    return TRUE;
+}
+
 // 0x75DFD0
 SHORT CGameSprite::EquipMostDamagingMelee()
 {
