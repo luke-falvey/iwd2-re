@@ -7,6 +7,7 @@
 #include "CGameAnimationType.h"
 #include "CGameArea.h"
 #include "CGameSprite.h"
+#include "CGameSpriteSpells.h"
 #include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CItem.h"
@@ -6384,6 +6385,59 @@ CGameEffect* CGameEffectSpellMemorizationMage::Copy()
     return copy;
 }
 
+// NOTE: Inlined in `CGameEffectSpellMemorizationMage::ApplyEffect` and
+// `CGameEffectSpellMemoizationCleric::ApplyEffect` (once per class).
+static void RestoreMemorizedSpells(CGameSprite* pSprite, CGameSpriteGroupedSpellList* pSpells, BYTE nClass, DWORD dwLevelMask, LONG nAmount)
+{
+    UINT nMask = 1;
+    for (UINT nLevel = 0; nLevel < pSpells->m_nHighestLevel; nLevel++) {
+        if ((dwLevelMask & nMask) != 0) {
+            for (UINT nIndex = 0; nIndex < pSpells->GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+                if (pSpells->GetSpellsAtLevel(nLevel)->Get(nIndex)->field_4 > 0) {
+                    UINT nID = pSpells->GetSpellsAtLevel(nLevel)->Get(nIndex)->m_nID;
+                    const CResRef& resRef = g_pBaldurChitin->GetObjectGame()->m_spells.Get(nID);
+
+                    unsigned int a4 = nAmount;
+                    unsigned int a5 = nAmount;
+                    unsigned int a6 = 0;
+                    BYTE nSpellClass = nClass;
+                    pSprite->AddKnownSpell(nSpellClass, nLevel, resRef, a4, a5, a6);
+                }
+            }
+        }
+        nMask <<= 1;
+    }
+}
+
+// 0x4B1960
+BOOL CGameEffectSpellMemorizationMage::ApplyEffect(CGameSprite* pSprite)
+{
+    const CAIObjectType& typeAI = pSprite->GetAIType();
+
+    BYTE nClass = CAIObjectType::C_BARD;
+    CGameSpriteGroupedSpellList* pSpells = pSprite->GetDerivedStats()->sub_447B00(nClass);
+
+    if (typeAI.IsClassValid(CAIObjectType::C_BARD)) {
+        RestoreMemorizedSpells(pSprite, pSpells, CAIObjectType::C_BARD, m_dwFlags, m_effectAmount);
+    }
+
+    // NOTE: The other classes copy their spells over the bard list obtained
+    // above and iterate that.
+    if (typeAI.IsClassValid(CAIObjectType::C_SORCERER)) {
+        nClass = CAIObjectType::C_SORCERER;
+        *pSpells = *pSprite->GetSpells(nClass);
+        RestoreMemorizedSpells(pSprite, pSpells, CAIObjectType::C_SORCERER, m_dwFlags, m_effectAmount);
+    }
+
+    if (typeAI.IsClassValid(CAIObjectType::C_WIZARD)) {
+        nClass = CAIObjectType::C_WIZARD;
+        *pSpells = *pSprite->GetSpells(nClass);
+        RestoreMemorizedSpells(pSprite, pSpells, CAIObjectType::C_WIZARD, m_dwFlags, m_effectAmount);
+    }
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -7698,6 +7752,41 @@ CGameEffect* CGameEffectSpellMemoizationCleric::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4B41A0
+BOOL CGameEffectSpellMemoizationCleric::ApplyEffect(CGameSprite* pSprite)
+{
+    const CAIObjectType& typeAI = pSprite->GetAIType();
+
+    BYTE nClass = CAIObjectType::C_CLERIC;
+    CGameSpriteGroupedSpellList* pSpells = pSprite->GetDerivedStats()->sub_447B00(nClass);
+
+    if (typeAI.IsClassValid(CAIObjectType::C_CLERIC)) {
+        RestoreMemorizedSpells(pSprite, pSpells, CAIObjectType::C_CLERIC, m_dwFlags, m_effectAmount);
+    }
+
+    // NOTE: The other classes copy their spells over the cleric list
+    // obtained above and iterate that.
+    if (typeAI.IsClassValid(CAIObjectType::C_DRUID)) {
+        nClass = CAIObjectType::C_DRUID;
+        *pSpells = *pSprite->GetSpells(nClass);
+        RestoreMemorizedSpells(pSprite, pSpells, CAIObjectType::C_DRUID, m_dwFlags, m_effectAmount);
+    }
+
+    if (typeAI.IsClassValid(CAIObjectType::C_PALADIN)) {
+        nClass = CAIObjectType::C_PALADIN;
+        *pSpells = *pSprite->GetSpells(nClass);
+        RestoreMemorizedSpells(pSprite, pSpells, CAIObjectType::C_PALADIN, m_dwFlags, m_effectAmount);
+    }
+
+    if (typeAI.IsClassValid(CAIObjectType::C_RANGER)) {
+        nClass = CAIObjectType::C_RANGER;
+        *pSpells = *pSprite->GetSpells(nClass);
+        RestoreMemorizedSpells(pSprite, pSpells, CAIObjectType::C_RANGER, m_dwFlags, m_effectAmount);
+    }
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------

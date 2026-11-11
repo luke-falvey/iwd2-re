@@ -653,6 +653,7 @@ class CGameEffectSpellMemorizationMage : public CGameEffect {
 public:
     CGameEffectSpellMemorizationMage(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectStoneToFlesh : public CGameEffect {
@@ -805,6 +806,7 @@ class CGameEffectSpellMemoizationCleric : public CGameEffect {
 public:
     CGameEffectSpellMemoizationCleric(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectInfravision : public CGameEffect {
