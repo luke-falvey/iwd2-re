@@ -52,3 +52,23 @@
 
 # std::list<CDerivedStatsWhenStruck> _Buynode
 0x4490E0
+
+# std::vector<CDamageReduction> (assignment): 0x44B2D0 is the uninitialized
+# copy of 0x24-byte elements, 0x44BF20 is the compiler-generated
+# CDamageReduction::operator= (copies two dwords, assigns the std::set<int>).
+# Both use the nil sentinel 0x8D13F4 and are only called from
+# CDerivedStats::operator= (0x445330).
+0x44B2D0
+0x44BF20
+
+# std::set<int> of m_naturalImmunities (assignment): nil sentinel 0x8D13F0,
+# only called from CDerivedStats::operator= (0x445330) and the
+# CDerivedStats constructor/Reload machinery. 0x44A550 erase(iterator),
+# 0x44A950 tree copy, 0x44AA40 _Erase, 0x44B280 iterator::operator++.
+0x44A550
+0x44A950
+0x44AA40
+0x44B280
+
+# std::list<CDerivedStatsWhenStruck> element copy (placement copy of 0x1C bytes)
+0x44BA70

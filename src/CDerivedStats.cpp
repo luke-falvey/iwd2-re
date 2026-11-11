@@ -64,6 +64,18 @@ CDerivedStatsLevelPairs::CDerivedStatsLevelPairs()
     }
 }
 
+// 0x4E7070
+CDerivedStatsLevelPairs& CDerivedStatsLevelPairs::operator=(const CDerivedStatsLevelPairs& other)
+{
+    // NOTE: The original copies 9 of the 10 pairs.
+    for (int index = 0; index < 9; index++) {
+        m_entries[index][0] = other.m_entries[index][0];
+        m_entries[index][1] = other.m_entries[index][1];
+    }
+
+    return *this;
+}
+
 // 0x4E7050
 void CDerivedStatsLevelPairs::ClearAll()
 {
@@ -71,6 +83,46 @@ void CDerivedStatsLevelPairs::ClearAll()
         m_entries[index][0] = 0;
         m_entries[index][1] = 0;
     }
+}
+
+// 0x4E7680
+CDerivedStatsResRefList& CDerivedStatsResRefList::operator=(const CDerivedStatsResRefList& other)
+{
+    // NOTE: Does not clear the list first.
+    POSITION pos = other.GetHeadPosition();
+    while (pos != NULL) {
+        CResRef* pResRef = other.GetNext(pos);
+        CResRef* pCopy = new CResRef();
+        *pCopy = *pResRef;
+        AddTail(pCopy);
+    }
+
+    return *this;
+}
+
+// -----------------------------------------------------------------------------
+
+// NOTE: Inlined.
+CDerivedStatsPair::CDerivedStatsPair()
+{
+    field_0 = 0;
+    field_4 = 0;
+}
+
+// 0x4E7720
+CDerivedStatsPairList& CDerivedStatsPairList::operator=(const CDerivedStatsPairList& other)
+{
+    // NOTE: Does not clear the list first.
+    POSITION pos = other.GetHeadPosition();
+    while (pos != NULL) {
+        CDerivedStatsPair* pPair = other.GetNext(pos);
+        CDerivedStatsPair* pCopy = new CDerivedStatsPair();
+        pCopy->field_0 = pPair->field_0;
+        pCopy->field_4 = pPair->field_4;
+        AddTail(pCopy);
+    }
+
+    return *this;
 }
 
 // 0x4E71B0
@@ -519,6 +571,18 @@ CDerivedStats& CDerivedStats::operator=(const CDerivedStats& other)
     m_DamageBonusLeft = other.m_DamageBonusLeft;
     m_nStoneSkins = other.m_nStoneSkins;
     m_spellStates = other.m_spellStates;
+    m_visualEffects = other.m_visualEffects;
+    m_nDamageModFire = other.m_nDamageModFire;
+    m_nDamageModCold = other.m_nDamageModCold;
+    m_nDamageModElectricity = other.m_nDamageModElectricity;
+    m_nDamageModAcid = other.m_nDamageModAcid;
+    m_nDamageModMagic = other.m_nDamageModMagic;
+    m_nDamageModPoison = other.m_nDamageModPoison;
+    m_nDamageModSlashing = other.m_nDamageModSlashing;
+    m_nDamageModPiercing = other.m_nDamageModPiercing;
+    m_nDamageModCrushing = other.m_nDamageModCrushing;
+    m_nDamageModMissile = other.m_nDamageModMissile;
+    field_124 = other.field_124;
     m_cImmunitiesProjectile = other.m_cImmunitiesProjectile;
     m_cImmunitiesEffect = other.m_cImmunitiesEffect;
     m_cImmunitiesAIType = other.m_cImmunitiesAIType;
@@ -534,9 +598,9 @@ CDerivedStats& CDerivedStats::operator=(const CDerivedStats& other)
     m_appliedColorEffects = other.m_appliedColorEffects;
     m_cBounceProjectile = other.m_cBounceProjectile;
     m_cBounceEffect = other.m_cBounceEffect;
-    // m_cBounceSpellLevel = other.m_cBounceSpellLevel;
-    // m_cBounceProjectileLevelDec = other.m_cBounceProjectileLevelDec;
-    // m_cImmunitiesProjectileLevelDec = other.m_cImmunitiesProjectileLevelDec;
+    field_300 = other.field_300;
+    field_328 = other.field_328;
+    field_378 = other.field_378;
     field_3C8 = other.field_3C8;
     field_3E4 = other.field_3E4;
     field_400 = other.field_400;
@@ -548,12 +612,12 @@ CDerivedStats& CDerivedStats::operator=(const CDerivedStats& other)
     m_naturalImmunities = other.m_naturalImmunities;
     m_lWhenStruck = other.m_lWhenStruck;
 
-    // field_4AC = other.field_4AC;
-    // field_4C8 = other.field_4C8;
-    // field_4E4 = other.field_4E4;
-    // field_500 = other.field_500;
-    // field_51C = other.field_51C;
-    // field_538 = other.field_538;
+    field_4AC = other.field_4AC;
+    field_4C8 = other.field_4C8;
+    field_4E4 = other.field_4E4;
+    field_500 = other.field_500;
+    field_51C = other.field_51C;
+    field_538 = other.field_538;
 
     field_128 = other.field_128;
     field_12C = other.field_12C;
@@ -565,8 +629,9 @@ CDerivedStats& CDerivedStats::operator=(const CDerivedStats& other)
 
     memcpy(m_nSkills, other.m_nSkills, sizeof(m_nSkills));
 
-    // field_5AC = other.field_5AC;
-    // field_CAC = other.field_CAC;
+    m_bPreventAISlowDown = other.m_bPreventAISlowDown;
+    m_spells = other.m_spells;
+    field_CAC = other.field_CAC;
 
     // NOTE: Original code uses loop.
     memcpy(m_disabledButtons, other.m_disabledButtons, sizeof(m_disabledButtons));
