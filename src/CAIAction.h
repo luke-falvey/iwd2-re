@@ -36,6 +36,7 @@ public:
     static const SHORT LEADER;
     static const SHORT MOVETOPOINTNORECTICLE;
     static const SHORT LEAVEAREA;
+    static const SHORT LEAVEAREANAME;
     static const SHORT GROUPATTACK;
     static const SHORT SPELLPOINT;
     static const SHORT USEITEMPOINT;

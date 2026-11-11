@@ -705,6 +705,9 @@ const BYTE CBaldurMessage::MSG_TYPE_LEAVEAREANAME = 120;
 // 0x84CFDC
 const BYTE CBaldurMessage::MSG_SUBTYPE_LEAVEAREANAME_PERMIT_REQUEST = 82;
 
+// 0x84CFDF
+const BYTE CBaldurMessage::LEAVEAREANAME_REPLY_WAITING = 2;
+
 // 0x4294F0
 CBaldurMessage::CBaldurMessage()
 {
@@ -3861,6 +3864,14 @@ BOOLEAN CBaldurMessage::sub_438560(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
     // TODO: Incomplete.
 
     return FALSE;
+}
+
+// 0x438710
+BYTE CBaldurMessage::LeaveAreaNameRequestToServer(LONG nCharacterId, LONG nTriggerId, CString sArea)
+{
+    // TODO: Incomplete.
+
+    return 0;
 }
 
 // 0x438BF0

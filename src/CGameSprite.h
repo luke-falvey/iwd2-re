@@ -448,6 +448,7 @@ public:
     static INT m_bRollFeedbackEnabled;
     static const LONG dword_84C7B8;
     static BOOLEAN byte_8F9AF4;
+    static BOOLEAN byte_8F9AF5;
     static CAIAction m_aiDoAction;
 
     CGameSprite(BYTE* pCreature, LONG creatureSize, int a3, WORD type, DWORD expirationTime, WORD huntingRange, WORD followRange, DWORD timeOfDayVisible, CPoint startPos, WORD facing);

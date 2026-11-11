@@ -262,6 +262,7 @@ public:
 
     static const BYTE MSG_TYPE_LEAVEAREANAME;
     static const BYTE MSG_SUBTYPE_LEAVEAREANAME_PERMIT_REQUEST;
+    static const BYTE LEAVEAREANAME_REPLY_WAITING;
 
     CBaldurMessage();
     ~CBaldurMessage();
@@ -448,6 +449,7 @@ public:
     BOOLEAN OnLeaveAreaLuaReplyFromServer(BYTE* pByteMessage, DWORD dwSize);
     BOOLEAN sub_437FD0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_438560(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BYTE LeaveAreaNameRequestToServer(LONG nCharacterId, LONG nTriggerId, CString sArea);
     BOOLEAN OnLeaveAreaNameReplyFromServer(BYTE* pByteMessage, DWORD dwSize);
     BOOLEAN sub_439250(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_43A470(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
