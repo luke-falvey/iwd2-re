@@ -662,7 +662,9 @@ void CScreenChapter::StartChapterMultiplayerHost(BYTE nChapter, BYTE* resRef)
     g_pBaldurChitin->GetBaldurMessage()->ChapterAnnounceStatus(nChapter, CResRef(resRef));
 
     // NOTE: Uninline.
-    StartChapter(CResRef(resRef));
+    g_pBaldurChitin->m_pEngineChapter->StartChapter(CResRef(resRef));
+
+    SelectEngine(g_pBaldurChitin->m_pEngineChapter);
 }
 
 // 0x5D4650

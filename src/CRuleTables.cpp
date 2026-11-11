@@ -2265,7 +2265,7 @@ CList<STRREF, STRREF>* CRuleTables::GetChapterText(const CResRef& cResText, BYTE
 
     CList<STRREF, STRREF>* pTextList = new CList<STRREF, STRREF>();
 
-    if (nChapter == -1) {
+    if (nChapter == static_cast<BYTE>(-1)) {
         // NOTE: Uninline.
         nChapter = g_pBaldurChitin->GetObjectGame()->GetCurrentChapter();
     }
