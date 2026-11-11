@@ -1928,17 +1928,72 @@ void CGameSprite::sub_6F50A0()
 // 0x765830
 void CGameSprite::DisplaySaveString(DWORD dwSaveType, BYTE bSaved, INT nRoll, INT nBonus, const CString& sSpellName)
 {
-    // TODO: Incomplete.
-}
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    if ((pGame->GetOptions()->m_nEffectTextLevel & 0x1) == 0) {
+        return;
+    }
 
-// TODO: Move to IcewindMisc.cpp.
-//
-// 0x5864F0
-CString IcewindMisc::sub_5864F0(const CResRef& resRef)
-{
-    // TODO: Incomplete.
+    CString sRoll;
+    COLORREF rgbNameColor = CVidPalette::RANGE_COLORS[GetBaseStats()->m_colors[2]];
+    CString sTemp;
 
-    return CString();
+    sTemp.Format("%d", nRoll);
+    sRoll += sTemp;
+
+    if (nBonus >= 0) {
+        sTemp.Format(" + %d", nBonus);
+    } else {
+        sTemp.Format(" - %d", -nBonus);
+    }
+    sRoll += sTemp;
+
+    sTemp.Format(" = %d", nRoll + nBonus);
+    sRoll += sTemp;
+
+    STRREF strSave;
+    switch (dwSaveType) {
+    case 4:
+        strSave = 14009;
+        break;
+    case 8:
+        strSave = 14006;
+        break;
+    case 16:
+        strSave = 14005;
+        break;
+    default:
+        // NOTE: The original leaves the strref uninitialized here.
+        strSave = -1;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+        // __LINE__: 31452
+        UTIL_ASSERT(FALSE);
+    }
+
+    STR_RES strRes;
+    g_pBaldurChitin->m_cTlkTable.Fetch(strSave, strRes);
+
+    CString sText(strRes.szText);
+
+    if (sSpellName.GetLength() != 0) {
+        sText += " (" + sSpellName + ')';
+    }
+
+    if ((pGame->GetOptions()->m_nEffectTextLevel & 0x8) != 0) {
+        sText += " : " + sRoll;
+    }
+
+    STR_RES strResult;
+    g_pBaldurChitin->m_cTlkTable.Fetch(bSaved == 1 ? 33753 : 33752, strResult);
+    sText += " : " + strResult.szText;
+
+    g_pBaldurChitin->GetBaldurMessage()->DisplayText(GetName(),
+        sText,
+        rgbNameColor,
+        RGB(0xD7, 0xD7, 0xBE),
+        -1,
+        m_id,
+        m_id);
 }
 
 // 0x78E6E0

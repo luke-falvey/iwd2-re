@@ -7,6 +7,7 @@
 #include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
+#include "CItem.h"
 #include "CSpell.h"
 #include "CUtil.h"
 #include "IcewindCGameEffects.h"
@@ -1054,4 +1055,33 @@ std::list<CGameEffect*> IcewindMisc::GetSpellEffects(CGameAIBase* pCaster, const
     cSpell.Release();
 
     return effects;
+}
+
+// Returns the name of the item or spell `resRef`.
+//
+// 0x5864F0
+CString IcewindMisc::sub_5864F0(const CResRef& resRef)
+{
+    if (resRef.GetResRefStr().IsEmpty()) {
+        return CString();
+    }
+
+    STR_RES strRes;
+    CString sName;
+
+    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(resRef, 1005, FALSE)) {
+        CItem item(resRef, 1, 0, 0, 0, 0);
+        g_pBaldurChitin->m_cTlkTable.Fetch(item.GetIdentifiedName(), strRes);
+        sName = strRes.szText;
+        return sName;
+    }
+
+    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(resRef, 1006, FALSE)) {
+        CSpell spell(resRef);
+        g_pBaldurChitin->m_cTlkTable.Fetch(spell.GetGenericName(), strRes);
+        sName = strRes.szText;
+        return sName;
+    }
+
+    return CString();
 }
