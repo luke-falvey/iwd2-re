@@ -27767,7 +27767,356 @@ SHORT CGameSprite::UseContainer()
 // 0x755A70
 void CGameSprite::sub_755A70(CSpell* pSpell, SPELL_ABILITY* pAbility, const CPoint& ptTarget)
 {
-    // TODO: Incomplete.
+    // NOTE: Result is not used.
+    pSpell->GetCasterType();
+
+    if (pSpell == NULL || pAbility == NULL) {
+        return;
+    }
+
+    CString sSound;
+
+    INT nDiff = pAbility->speedFactor - m_derivedStats.m_nMentalSpeed;
+
+    BYTE cGender;
+    if (nDiff < 0 || nDiff < 3) {
+        cGender = 'N';
+    } else {
+        cGender = m_typeAI.m_nGender == 2 ? 'F' : 'M';
+    }
+
+    BYTE cCasterType;
+    if (pSpell->GetCasterType() == 2) {
+        cCasterType = 'P';
+    } else {
+        // NOTE: Result is not used.
+        pSpell->GetCasterType();
+        cCasterType = 'M';
+    }
+
+    if (cGender != 'N') {
+        CString sTemp;
+        sTemp = "CHA_";
+        sTemp += static_cast<char>(cGender);
+        sTemp += static_cast<char>(cCasterType);
+
+        // NOTE: Every `rand()` result below is discarded.
+        switch (pSpell->GetAnimationType()) {
+        case 9:
+            rand();
+            sSound.Format("%s1%c", (LPCSTR)sTemp, '3');
+            break;
+        case 10:
+            rand();
+            sSound.Format("%s1%c", (LPCSTR)sTemp, '5');
+            break;
+        case 11:
+            rand();
+            sSound += "09";
+            break;
+        case 12:
+            rand();
+            sSound.Format("%s0%c", (LPCSTR)sTemp, '3');
+            break;
+        case 13:
+            rand();
+            sSound.Format("%s0%c", (LPCSTR)sTemp, '1');
+            break;
+        case 14:
+            rand();
+            sSound.Format("%s0%c", (LPCSTR)sTemp, '5');
+            break;
+        case 15:
+            rand();
+            sSound.Format("%s1%c", (LPCSTR)sTemp, '1');
+            break;
+        case 16:
+            rand();
+            sSound.Format("%s0%c", (LPCSTR)sTemp, '7');
+            break;
+        }
+    }
+
+    BOOLEAN bHarpy = FALSE;
+
+    // NOTE: Compares the object type with the harpy race id.
+    if (GetObjectType() == CAIObjectType::R_HARPY) {
+        sSound = "HARPY06";
+        bHarpy = TRUE;
+    }
+
+    if ((cGender != 'N' && IcewindMisc::sub_585210(this) == TRUE)
+        || bHarpy == TRUE) {
+        m_sndCastingChant.SetChannel(2, reinterpret_cast<DWORD>(m_pArea));
+        // NOTE: Uninline.
+        m_sndCastingChant.SetResRef(CResRef(sSound), TRUE, TRUE);
+        m_sndCastingChant.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+
+        CMessagePlaySoundRef* message = new CMessagePlaySoundRef(CResRef(sSound), m_id, m_id);
+        // NOTE: No NULL check.
+        message->m_nChannel = 2;
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    sSound = "PRE_";
+    sSound += static_cast<char>(cCasterType);
+
+    switch (pSpell->GetAnimationType()) {
+    case 9:
+        sSound += "07";
+        break;
+    case 10:
+        sSound += "08";
+        break;
+    case 11:
+        sSound += "05";
+        break;
+    case 12:
+        sSound += "02";
+        break;
+    case 14:
+        sSound += "03";
+        break;
+    case 15:
+        sSound += "06";
+        break;
+    case 16:
+        sSound += "04";
+        break;
+    default:
+        sSound += "01";
+        break;
+    }
+
+    m_sndCasting.SetChannel(4, reinterpret_cast<DWORD>(m_pArea));
+    // NOTE: Uninline.
+    m_sndCasting.SetResRef(CResRef(sSound), TRUE, TRUE);
+    m_sndCasting.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+
+    CMessagePlaySoundRef* message = new CMessagePlaySoundRef(CResRef(sSound), m_id, m_id);
+    // NOTE: No NULL check.
+    message->m_nChannel = 4;
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    INT nLevel = pAbility->speedFactor;
+    if (sub_763150(0x20) == 1) {
+        nLevel--;
+        if (nLevel < 0) {
+            nLevel = 0;
+        }
+    }
+
+    nLevel -= m_derivedStats.m_nMentalSpeed;
+    if (nLevel < 0) {
+        nLevel = 0;
+    }
+
+    SHORT nDuration = nLevel * 100 / 10;
+
+    ITEM_EFFECT effect;
+    CGameEffect::ClearItemEffect(&effect, 0);
+
+    // NOTE: The duration type is read from an unnamed `const WORD` at
+    // 0x8491BC.
+    switch (pSpell->GetAnimationType()) {
+    case 9:
+        effect.dwFlags = 7;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 10:
+        effect.dwFlags = 8;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 11:
+        effect.dwFlags = 4;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 12:
+        effect.dwFlags = 1;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 13:
+        effect.dwFlags = 5;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 14:
+        effect.dwFlags = 2;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 15:
+        effect.dwFlags = 6;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 16:
+        effect.dwFlags = 3;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 17:
+    case 26:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 2;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 18:
+    case 27:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 1;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 19:
+    case 28:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 2;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 20:
+    case 29:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 4;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 21:
+    case 30:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 5;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 22:
+    case 31:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 11;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 23:
+    case 32:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 6;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 24:
+    case 33:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 7;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 25:
+    case 34:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 8;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    }
+
+    effect.duration += 4;
+
+    CGameEffect* pCastingEffect = CGameEffect::DecodeEffect(&effect,
+        ptTarget,
+        m_id,
+        CPoint(-1, -1));
+
+    CMessage* pMessage = new CMessageAddEffect(pCastingEffect, m_id, m_id);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+    INT nEffect = 0;
+    if (pSpell->GetCastingEffectNo() > 0) {
+        do {
+            CGameEffect* pEffect = pSpell->GetCastingEffect(nEffect);
+            pEffect->m_source = m_pos;
+            pEffect->m_sourceID = m_id;
+            pEffect->m_target = m_pos;
+
+            switch (pEffect->m_targetType) {
+            case 1:
+                {
+                    CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                }
+                break;
+            case 2:
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+                // __LINE__: 21479
+                UTIL_ASSERT(FALSE);
+                break;
+            case 3:
+                ApplyEffectToParty(pEffect);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 4:
+                m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 5:
+                m_pArea->sub_46E130(pEffect, TRUE, FALSE, 0, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 6:
+                m_pArea->sub_46E130(pEffect, FALSE, TRUE, m_typeAI.m_nSpecific, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 7:
+                m_pArea->sub_46E130(pEffect, FALSE, TRUE, GetAIType().m_nSpecific, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 8:
+                m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, this);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            default:
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            }
+
+            nEffect++;
+        } while (nEffect < pSpell->GetCastingEffectNo());
+    }
 }
 
 // 0x7564E0
