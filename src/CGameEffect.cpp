@@ -196,7 +196,7 @@ const CString CGameEffect::EFFECT_NAME[] = {
     "q",
 };
 
-// NOTE: Inlined.
+// 0x4C26A0
 CGameEffectBase::CGameEffectBase()
 {
     memset(this, 0, sizeof(*this));
@@ -12708,6 +12708,12 @@ CGameEffect* CGameEffectFamiliarBlock::Copy()
     return copy;
 }
 
+// 0x499370
+void CGameEffectFamiliarBlock::OnLoad(CGameSprite* pSprite)
+{
+    ApplyEffect(pSprite);
+}
+
 // 0x4B9E70
 BOOL CGameEffectFamiliarBlock::ApplyEffect(CGameSprite* pSprite)
 {
@@ -13473,6 +13479,71 @@ CGameEffect* CGameEffectStoneSkins::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4C0250
+BOOL CGameEffectStoneSkins::ApplyEffect(CGameSprite* pSprite)
+{
+    switch (m_dwFlags) {
+    case 0:
+        if (m_secondaryType != 0) {
+            // NOTE: Uninline.
+            DisplayStringRef(pSprite, 803);
+        }
+
+        pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_STONESKIN, true);
+
+        // NOTE: Uninline.
+        AddPortraitIcon(pSprite, 46);
+
+        if (m_secondaryType != 0) {
+            m_effectAmount2 = min(static_cast<BYTE>(m_casterLevel) * 10, 150);
+        }
+
+        // TODO: Incomplete. The original builds a temporary damage
+        // reduction entry (0x447B60, ctor args 10, 5), adds damage types 0,
+        // 0x100000, 0x1000000, 0x2000000, 0x4000000 and 0x8000000 to it
+        // (0x447E50), binds it to `&m_effectAmount2`, `pSprite` and `this`
+        // (0x447F10), appends it to the container at `CDerivedStats` + 0x49C
+        // (0x447F30) and destroys the temporary (0x448470). That container
+        // is not declared yet.
+        break;
+    case 1:
+        if (m_secondaryType != 0) {
+            // NOTE: Uninline.
+            DisplayStringRef(pSprite, 804);
+        }
+
+        pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_IRON_SKINS, true);
+
+        // NOTE: Uninline.
+        AddPortraitIcon(pSprite, 89);
+
+        pSprite->GetDerivedStats()->m_nResistCrushing += 10;
+        pSprite->GetDerivedStats()->m_nResistPiercing += 10;
+        pSprite->GetDerivedStats()->m_nResistSlashing += 10;
+        pSprite->GetDerivedStats()->m_nStoneSkins = max(pSprite->GetDerivedStats()->m_nStoneSkins, m_effectAmount);
+
+        CMessage* message = new CMessageVisualEffect(23,
+            static_cast<BYTE>(pSprite->GetDerivedStats()->m_nStoneSkins),
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        break;
+    }
+
+    pSprite->SetColorRange(14);
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_STONESKINS);
+
+    m_done = FALSE;
+
+    return TRUE;
+}
+
+// 0x49FC40
+BOOL CGameEffectStoneSkins::UsesDice()
+{
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------

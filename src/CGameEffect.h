@@ -1688,6 +1688,7 @@ public:
     CGameEffectFamiliarBlock(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
     BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnLoad(CGameSprite* pSprite) override;
 };
 
 class CGameEffectBounceProjectile : public CGameEffect {
@@ -1832,6 +1833,8 @@ class CGameEffectStoneSkins : public CGameEffect {
 public:
     CGameEffectStoneSkins(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    BOOL UsesDice() override;
 };
 
 class CGameEffectProtectionCircle : public CGameEffect {
