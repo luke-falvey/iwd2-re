@@ -2,6 +2,31 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-12: batches 5–12
+
+Branch `phase-a/stubs-and-layout` (local only). 7,355 of 9,831 functions without a TODO (74.8%); 78.1% of bytes. S1–S4 pass on the rebuild.
+
+**Done** (each batch translated by `iwd2-translator`, checked by `iwd2-verifier`, differences confirmed against the listing before applying)
+- `CStore` add/remove/marshal helpers, `DoItemRandomize`, and the rest of `CScreenStore::UpdateStoreItems`.
+- Spellbook screen: all main functions, `sub_66A8C0`, and the polygon call in the spell button `Render`.
+- Inventory screen: every former stub, including `SwapWithSlot` (4.4 KB), plus `CInfGame::SwapItemPersonal` and `FindEmptyItemPersonalInventory`.
+- Character screen: five panel functions.
+- Rules: starting hit points (`sub_542CB0`, `sub_542B40`, `sub_542A90`), `GetIntModMaxAllowedSpellLevel`, `sub_546B60`.
+- Sprite: `sub_718390`, `CheckQuickLists`, `SelectWeaponAbility`, `sub_723830`.
+- Video: `CVidInf::FXRender` for polygons, `CVidPoly::FillPoly` and its four helpers with the edge cache.
+- Fixes to older code that verifiers pointed at: `CStore::GetItem` lore-flag test, `CMessageColorChange` constructor NULL check.
+
+**Next**
+1. Batches 13 (fourteen `CGameSprite` stubs) and 14 (`CInfGame`, `CGameArea`, `CGameAIBase`, `CInfinity`) are in the `batch3` / `batch4` worktrees on `wip/batch3` / `wip/batch4`. Verify, merge, run S1–S4.
+2. Write scenario S5 (walk, open a container or the inventory) to find the next runtime blockers. Translation alone no longer shows what is broken.
+3. The 2,117 functions that are not in the repo at all. `tools/worklist.py` can't place about 250 KB of them in a file because nothing translated calls them yet.
+
+**Notes**
+- Unverified: the ability-score members in `FileFormat.h` may be mislabelled (the byte called `m_WISBase`, at base stats +0x262, sits where the creature format usually has Constitution). Code is translated by offset, so behaviour isn't affected.
+- Unverified: `UpdateLabel` is declared static in the repo, but the original pushes `this` as a stack argument (cdecl member). Callers and callee agree with each other.
+- Several callees are declared with `const unsigned int&` where the original reads a byte through the pointer (`sub_725270`, `sub_725110`, `sub_724FD0`, `RemoveDomainSpell`, `RemoveKnownSpell`). Value-equivalent; `const BOOLEAN&` would be faithful.
+- `CGameSprite::sub_726F20` ends with an inlined copy of `sub_723830`.
+
 ## 2026-11-11 (night): batches 3–4, spells merge, S1–S4 green
 
 Branch `phase-a/stubs-and-layout` (local only). 7,304 of 9,831 functions without a TODO (74.3%).
