@@ -631,7 +631,7 @@ public:
     void ResolveTargetPoint(const CAIAction* curAction, POSITION pos);
     BOOL sub_71CFF0();
     void sub_71D0B0();
-    CItem* sub_722740(CString sName);
+    CItem* sub_722740(const CString& sName);
     void sub_72FBF0();
     void CheckModal();
     CGameObject* sub_733340();

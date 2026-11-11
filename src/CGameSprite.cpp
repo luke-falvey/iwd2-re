@@ -10406,7 +10406,7 @@ void CGameSprite::sub_719180(CString sSpellResRef)
                 m_typeAI,
                 sSpellResRef,
                 0,
-                m_currentUseButton.m_abilityId.m_nClass | (m_currentUseButton.m_abilityId.field_1E << 8));
+                m_currentUseButton.m_abilityId.m_nClass | (static_cast<WORD>(m_currentUseButton.m_abilityId.field_1E) << 8));
             action.m_specificID3 = m_currentUseButton.m_abilityId.field_1D;
             ClearActions(FALSE);
             m_userCommandPause = 75;
@@ -13226,14 +13226,15 @@ CString CGameSprite::GetRaceString(BYTE nRace)
 // bags). See STREF #26585.
 //
 // 0x722740
-CItem* CGameSprite::sub_722740(CString sName)
+CItem* CGameSprite::sub_722740(const CString& sName)
 {
-    sName.MakeUpper();
+    CString sUpper(sName);
+    sUpper.MakeUpper();
 
     for (INT nSlot = 0; nSlot < 51; nSlot++) {
         CItem* pItem = m_equipment.m_items[nSlot];
         if (pItem != NULL && pItem->GetItemType() == 58) {
-            CItem* pRemoved = g_pBaldurChitin->GetObjectGame()->RemoveItemFromBag(pItem->GetResRef(), CResRef(sName));
+            CItem* pRemoved = g_pBaldurChitin->GetObjectGame()->RemoveItemFromBag(pItem->GetResRef(), CResRef(sUpper));
             if (pRemoved != NULL) {
                 return pRemoved;
             }
