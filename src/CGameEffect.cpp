@@ -10,6 +10,7 @@
 #include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CItem.h"
+#include "CScreenInventory.h"
 #include "CScreenWorld.h"
 #include "CSevenEyes.h"
 #include "CSpell.h"
@@ -10056,6 +10057,82 @@ CGameEffect* CGameEffectCreateWeapon::Copy()
     return copy;
 }
 
+// 0x4B81B0
+BOOL CGameEffectCreateWeapon::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_res == CResRef("DECASTA")
+        && pSprite->GetEquipment()->m_items[static_cast<BYTE>(2 * (pSprite->m_nWeaponSet + 22))] != NULL) {
+        STR_RES strRes;
+        COLORREF rgbNameColor = CVidPalette::RANGE_COLORS[pSprite->GetBaseStats()->m_colors[2]];
+        CString sText;
+
+        g_pBaldurChitin->GetTlkTable().Fetch(14796, strRes);
+        sText = strRes.szText + " : ";
+
+        g_pBaldurChitin->GetTlkTable().Fetch(9380, strRes);
+        sText += strRes.szText;
+
+        g_pBaldurChitin->GetBaldurMessage()->DisplayText(pSprite->GetName(),
+            sText,
+            rgbNameColor,
+            RGB(0xD7, 0xD7, 0xBE),
+            -1,
+            pSprite->GetId(),
+            pSprite->GetId());
+
+        m_done = TRUE;
+
+        return FALSE;
+    }
+
+    ITEM_EFFECT* effect = new ITEM_EFFECT;
+    CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_DESTROYWEAPON);
+    effect->durationType = 4;
+    effect->duration = (m_duration - g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime) / 15;
+
+    CGameEffect* pEffect = CGameEffect::DecodeEffect(effect,
+        CPoint(-1, -1),
+        -1,
+        CPoint(-1, -1));
+    pEffect->m_res = m_res;
+    pEffect->m_flags |= 0x1;
+
+    if (m_effectAmount < 1) {
+        m_effectAmount = 1;
+    }
+
+    CItem* pItem = new CItem(m_res,
+        static_cast<WORD>(m_effectAmount),
+        static_cast<WORD>(m_effectAmount),
+        static_cast<WORD>(m_effectAmount),
+        0,
+        0);
+    if (pItem == NULL) {
+        delete effect;
+        return TRUE;
+    }
+
+    if (pSprite->GetEquipment()->m_items[42] != NULL) {
+        CGameEffect::sub_4B8730(pSprite, 42);
+    }
+
+    pSprite->GetEquipment()->m_items[42] = pItem;
+    pSprite->SelectWeaponAbility(42, 0, 1, 1);
+
+    // NOTE: When the duration type is 1 `pEffect` is leaked.
+    if (m_durationType != 1) {
+        pEffect->m_casterLevel = m_casterLevel;
+        pSprite->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetButtonArray()->ResetState();
+
+    m_done = TRUE;
+    delete effect;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -10072,6 +10149,57 @@ CGameEffect* CGameEffectDestroyWeapon::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4B8580
+BOOL CGameEffectDestroyWeapon::ApplyEffect(CGameSprite* pSprite)
+{
+    pSprite->m_hasColorEffects = TRUE;
+    pSprite->m_hasColorRangeEffects = TRUE;
+    pSprite->field_5640 = TRUE;
+
+    for (INT nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+        CItem* pItem = pSprite->GetEquipment()->m_items[nSlot];
+        if (pItem != NULL && pItem->GetResRef() == m_res) {
+            if (pSprite->GetEquipment()->m_selectedWeapon == nSlot) {
+                pSprite->GetEquipment()->m_selectedWeapon = CGameSpriteEquipment::SLOT_FIST;
+            }
+
+            pSprite->GetEquipment()->m_items[nSlot] = NULL;
+            pItem->Unequip(pSprite, nSlot, TRUE, FALSE);
+            g_pBaldurChitin->GetObjectGame()->AddDisposableItem(pItem);
+
+            if (pSprite->InControl()
+                && g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
+                CMessage* message = new CMessageSpriteEquipment(pSprite,
+                    pSprite->GetId(),
+                    pSprite->GetId());
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            if (pSprite->GetEquipment()->m_selectedWeapon == nSlot) {
+                pSprite->EquipMostDamagingMelee();
+            }
+
+            // NOTE: Checks the slot after the destroyed one.
+            if (nSlot + 1 >= CGameSpriteEquipment::SLOT_WEAPON && nSlot + 1 <= 50) {
+                pSprite->EquipMostDamagingMelee();
+            }
+
+            pSprite->field_562C = 1;
+
+            PlaySound(CResRef("EFF_M02"), pSprite);
+
+            m_done = TRUE;
+
+            return TRUE;
+        }
+    }
+
+    pSprite->field_562C = 1;
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -10405,6 +10533,64 @@ CGameEffect* CGameEffectCreateItem::Copy()
     return copy;
 }
 
+// 0x4B8BE0
+BOOL CGameEffectCreateItem::ApplyEffect(CGameSprite* pSprite)
+{
+    ITEM_EFFECT* effect = new ITEM_EFFECT;
+    CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_DESTROYITEM);
+    effect->durationType = 4;
+    effect->duration = (m_duration - g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime) / 15;
+
+    CGameEffect* pEffect = CGameEffect::DecodeEffect(effect,
+        CPoint(-1, -1),
+        -1,
+        CPoint(-1, -1));
+    pEffect->m_res = m_res;
+
+    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(m_res, 1005, TRUE) == NULL) {
+        // NOTE: Leaks `effect` and `pEffect`.
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+        for (INT nSlot = 0; nSlot < CScreenInventory::PERSONAL_INVENTORY_SIZE; nSlot++) {
+            if (pSprite->GetEquipment()->m_items[18 + nSlot] == NULL) {
+                pSprite->GetEquipment()->m_items[18 + nSlot] = new CItem(m_res,
+                    static_cast<WORD>(m_effectAmount),
+                    static_cast<WORD>(m_effectAmount),
+                    static_cast<WORD>(m_effectAmount),
+                    0,
+                    0);
+                break;
+            }
+        }
+    } else if (pSprite->GetObjectType() == CGameObject::TYPE_SPRITE) {
+        for (INT nSlot = 0; nSlot < 28; nSlot++) {
+            if (pSprite->GetEquipment()->m_items[CGameSpriteEquipment::SLOT_MISC + nSlot] == NULL) {
+                pSprite->GetEquipment()->m_items[CGameSpriteEquipment::SLOT_MISC + nSlot] = new CItem(m_res,
+                    static_cast<WORD>(m_effectAmount),
+                    static_cast<WORD>(m_effectAmount),
+                    static_cast<WORD>(m_effectAmount),
+                    0,
+                    0);
+                break;
+            }
+        }
+    }
+
+    // NOTE: When the duration type is 1 `pEffect` is leaked.
+    if (m_durationType != 1) {
+        pEffect->m_casterLevel = m_casterLevel;
+        pSprite->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+    }
+
+    m_done = TRUE;
+    delete effect;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -10423,6 +10609,43 @@ CGameEffect* CGameEffectDestroyItem::Copy()
     return copy;
 }
 
+// 0x4B9010
+BOOL CGameEffectDestroyItem::ApplyEffect(CGameSprite* pSprite)
+{
+    for (INT nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+        CItem* pItem = pSprite->GetEquipment()->m_items[nSlot];
+        if (pItem != NULL && pItem->GetResRef() == m_res) {
+            pSprite->GetEquipment()->m_items[nSlot] = NULL;
+            pItem->Unequip(pSprite, nSlot, TRUE, FALSE);
+            g_pBaldurChitin->GetObjectGame()->AddDisposableItem(pItem);
+
+            pSprite->field_562C = 1;
+
+            if (nSlot == 15 || nSlot == 16 || nSlot == 17) {
+                CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+                SHORT nPortrait = pGame->GetCharacterPortraitNum(pSprite->GetId());
+                if (g_pBaldurChitin->GetActiveEngine()->GetSelectedCharacter() == nPortrait) {
+                    CButtonData buttonData;
+
+                    // NOTE: Uninline.
+                    pSprite->SetQuickItem(static_cast<BYTE>(nSlot - 15), buttonData);
+
+                    pGame->GetButtonArray()->UpdateState();
+                }
+            }
+
+            m_done = TRUE;
+
+            return TRUE;
+        }
+    }
+
+    pSprite->field_562C = 1;
+    m_done = TRUE;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -10439,6 +10662,96 @@ CGameEffect* CGameEffectTeleport::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4B92E0
+BOOL CGameEffectTeleport::ApplyEffect(CGameSprite* pSprite)
+{
+    CGameSprite* pSource;
+    CPoint ptSource;
+    CPoint ptTarget;
+
+    switch (m_dwFlags) {
+    case 0:
+        pSprite->JumpToPoint(m_target, TRUE);
+        m_done = TRUE;
+        return TRUE;
+    case 1:
+        if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSource),
+                INFINITE)
+            == CGameObjectArray::SUCCESS) {
+            pSource->JumpToPoint(pSprite->GetPos(), TRUE);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            m_done = TRUE;
+            return TRUE;
+        }
+        break;
+    case 2:
+        pSprite->JumpToPoint(CPoint(static_cast<WORD>(pSprite->GetBaseStats()->field_2E4),
+                                 static_cast<WORD>(pSprite->GetBaseStats()->field_2E6)),
+            TRUE);
+        pSprite->SetDirection(pSprite->GetBaseStats()->field_2E8);
+        m_done = TRUE;
+        return TRUE;
+    case 3:
+        if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSource),
+                INFINITE)
+            == CGameObjectArray::SUCCESS) {
+            ptSource = pSource->GetPos();
+            ptTarget = pSprite->GetPos();
+
+            pSource->sub_75F3D0(1);
+            if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+                CMessage* message = new CMessage90(pSource->GetId(), pSource->GetId(), 1);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            pSprite->sub_75F3D0(1);
+            if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+                CMessage* message = new CMessage90(pSprite->GetId(), pSprite->GetId(), 1);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            pSource->JumpToPoint(ptTarget, TRUE);
+            pSprite->JumpToPoint(ptSource, TRUE);
+
+            pSource->sub_75F3D0(0);
+            if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+                CMessage* message = new CMessage90(pSource->GetId(), pSource->GetId(), 0);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            pSprite->sub_75F3D0(0);
+            if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+                CMessage* message = new CMessage90(pSprite->GetId(), pSprite->GetId(), 0);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            m_done = TRUE;
+            return TRUE;
+        }
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
+        // __LINE__: 17926
+        UTIL_ASSERT(FALSE);
+    }
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -11126,6 +11439,49 @@ CGameEffect* CGameEffectReplaceItem::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4B8E70
+BOOL CGameEffectReplaceItem::ApplyEffect(CGameSprite* pSprite)
+{
+    ITEM_EFFECT* effect = new ITEM_EFFECT;
+    CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_DESTROYITEM);
+    effect->durationType = 4;
+    effect->duration = (m_duration - g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime) / 15;
+
+    // NOTE: Unlike `CGameEffectCreateItem` the resref of the destroy effect
+    // is not set.
+    CGameEffect* pEffect = CGameEffect::DecodeEffect(effect,
+        CPoint(-1, -1),
+        -1,
+        CPoint(-1, -1));
+
+    CItem* pItem = new CItem(m_res, 0, 0, 0, 0, 0);
+    if (pItem == NULL) {
+        return TRUE;
+    }
+
+    if (pSprite->GetEquipment()->m_items[m_effectAmount] != NULL) {
+        pSprite->Unequip(static_cast<WORD>(m_effectAmount));
+
+        if (pSprite->GetEquipment()->m_items[m_effectAmount] != NULL) {
+            delete pSprite->GetEquipment()->m_items[m_effectAmount];
+        }
+    }
+
+    pSprite->GetEquipment()->m_items[m_effectAmount] = pItem;
+    pSprite->Equip(static_cast<WORD>(m_effectAmount));
+
+    // NOTE: When the duration type is 1 `pEffect` is leaked.
+    if (m_durationType != 1) {
+        pEffect->m_casterLevel = m_casterLevel;
+        pSprite->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+    }
+
+    m_done = TRUE;
+    delete effect;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
