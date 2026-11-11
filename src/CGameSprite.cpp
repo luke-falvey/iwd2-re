@@ -9536,7 +9536,172 @@ INT CGameSprite::GetNumQuickWeaponSlots()
 // 0x71C0C0
 void CGameSprite::CheckStatsChange()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    CheckReputation();
+
+    for (UINT nClassIndex = 0; nClassIndex < CSPELLLIST_NUM_CLASSES; nClassIndex++) {
+        for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+            BYTE nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nClassIndex);
+
+            INT nBonus;
+            INT nMaxSpells = pGame->GetRuleTables().GetMaxKnownSpells(nClass,
+                m_startTypeAI,
+                m_derivedStats,
+                m_baseStats.m_specialization,
+                nLevel + 1,
+                nBonus);
+
+            CGameSpriteSpellList* pSpells = m_spells.GetSpellsAtLevel(nClassIndex, nLevel);
+
+            UINT nValue = nMaxSpells + nBonus;
+            pSpells->field_14 = nValue;
+
+            // NOTE: Unsigned compare.
+            if (pSpells->field_18 > nValue) {
+                pSpells->field_18 = nValue;
+            }
+        }
+    }
+
+    UINT nID = 0;
+    if (g_pBaldurChitin->GetObjectGame()->GetInnateSpells()->Find(SPIN970, nID) == TRUE) {
+        UINT nIndex;
+
+        // NOTE: Uninline.
+        if (m_innateSpells.Find(nID, nIndex)) {
+            INT nUses = pGame->GetRuleTables().GetAbilityScoreModifier(m_derivedStats.m_nCHR) + 3;
+            if (nUses < 1) {
+                nUses = 1;
+            }
+
+            if (sub_763150(CGAMESPRITE_FEAT_EXTRA_TURNING) == TRUE) {
+                nUses += GetFeatValue(CGAMESPRITE_FEAT_EXTRA_TURNING);
+            }
+
+            INT nDelta = nUses - m_innateSpells.Get(nIndex)->field_4;
+            if (nDelta > 0) {
+                UINT nInnateID = 0;
+                unsigned int nCount = nDelta;
+                unsigned int v1 = 0;
+                unsigned int v2 = 0;
+                if (g_pBaldurChitin->GetObjectGame()->GetInnateSpells()->Find(SPIN970, nInnateID) == TRUE) {
+                    m_innateSpells.Add(nInnateID, nCount, v2, v1);
+                }
+
+                BOOLEAN bFull = FALSE;
+                nCount = nDelta;
+                nInnateID = 0;
+                if (g_pBaldurChitin->GetObjectGame()->GetInnateSpells()->Find(SPIN970, nInnateID) == TRUE) {
+                    m_innateSpells.sub_725C50(nInnateID, nCount, bFull);
+                }
+            } else if (nDelta < 0) {
+                nDelta = -nDelta;
+
+                UINT nInnateID = 0;
+                if (g_pBaldurChitin->GetObjectGame()->GetInnateSpells()->Find(SPIN970, nInnateID) == TRUE) {
+                    UINT nInnateIndex = 0;
+
+                    // NOTE: Uninline.
+                    if (m_innateSpells.Find(nInnateID, nInnateIndex)) {
+                        CGameSpriteSpellListEntry& entry = m_innateSpells.m_List[nInnateIndex];
+
+                        INT nRemaining = entry.field_8 - nDelta;
+                        if (nRemaining < 0) {
+                            nRemaining = 0;
+                        }
+
+                        m_innateSpells.field_10 -= entry.field_8;
+                        entry.field_8 = nRemaining;
+                        m_innateSpells.field_10 += nRemaining;
+                    }
+                }
+
+                unsigned int v1 = 0;
+                unsigned int nCount = nDelta;
+                nInnateID = 0;
+                if (g_pBaldurChitin->GetObjectGame()->GetInnateSpells()->Find(SPIN970, nInnateID) == TRUE) {
+                    m_innateSpells.Remove(nInnateID, FALSE, nCount, v1);
+                }
+            }
+        }
+    }
+
+    INT nHPCONBonusTotal = pGame->GetRuleTables().GetHPCONBonusTotal(m_typeAI,
+        m_derivedStats,
+        static_cast<BYTE>(m_derivedStats.m_nCON));
+    if (nHPCONBonusTotal > m_nHPCONBonusTotalOld) {
+        if ((m_derivedStats.m_generalState & 0x8C0) == 0) {
+            m_baseStats.m_hitPoints += static_cast<SHORT>(nHPCONBonusTotal - static_cast<SHORT>(m_nHPCONBonusTotalOld));
+        } else {
+            m_baseStats.m_hitPoints = 0;
+        }
+
+        m_derivedStats.m_nMaxHitPoints += static_cast<SHORT>(nHPCONBonusTotal - static_cast<WORD>(m_nHPCONBonusTotalOld));
+        m_baseStats.m_maxHitPointsBase += static_cast<SHORT>(nHPCONBonusTotal - static_cast<WORD>(m_nHPCONBonusTotalOld));
+    } else if (nHPCONBonusTotal < m_nHPCONBonusTotalOld) {
+        if ((m_derivedStats.m_generalState & 0x8C0) == 0) {
+            m_baseStats.m_hitPoints += static_cast<SHORT>(nHPCONBonusTotal - static_cast<SHORT>(m_nHPCONBonusTotalOld));
+            if (m_baseStats.m_hitPoints <= 0) {
+                m_baseStats.m_hitPoints = 1;
+            }
+        }
+
+        m_derivedStats.m_nMaxHitPoints += static_cast<SHORT>(nHPCONBonusTotal - static_cast<WORD>(m_nHPCONBonusTotalOld));
+        m_baseStats.m_maxHitPointsBase += static_cast<SHORT>(nHPCONBonusTotal - static_cast<WORD>(m_nHPCONBonusTotalOld));
+    }
+
+    m_derivedStats.m_nMaxHitPoints = max(m_derivedStats.m_nMaxHitPoints, static_cast<SHORT>(m_derivedStats.m_nLevel));
+
+    m_derivedStats.m_nSaveVSFortitude += static_cast<SHORT>(pGame->GetRuleTables().GetAbilityScoreModifier(m_derivedStats.m_nCON));
+    m_derivedStats.m_nSaveVSReflex += static_cast<SHORT>(pGame->GetRuleTables().GetAbilityScoreModifier(m_derivedStats.m_nDEX));
+    m_derivedStats.m_nSaveVSWill += static_cast<SHORT>(pGame->GetRuleTables().GetAbilityScoreModifier(m_derivedStats.m_nWIS));
+
+    if (m_typeAI.IsClassValid(CAIObjectType::C_PALADIN)) {
+        INT nModifier = pGame->GetRuleTables().GetAbilityScoreModifier(m_derivedStats.m_nCHR);
+        if (nModifier > 0) {
+            m_derivedStats.m_nSaveVSFortitude += static_cast<SHORT>(nModifier);
+            m_derivedStats.m_nSaveVSReflex += static_cast<SHORT>(nModifier);
+            m_derivedStats.m_nSaveVSWill += static_cast<SHORT>(nModifier);
+        }
+    }
+
+    m_nHPCONBonusTotalOld = nHPCONBonusTotal;
+    m_bHPCONBonusTotalUpdate = FALSE;
+
+    if (m_baseStats.m_hitPoints > m_derivedStats.m_nMaxHitPoints) {
+        m_baseStats.m_hitPoints = m_derivedStats.m_nMaxHitPoints;
+    }
+
+    if (field_7110 < m_baseStats.m_hitPoints) {
+        field_7110 = m_baseStats.m_hitPoints;
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
+        CDerivedStats DStats;
+
+        DWORD nXPCap = pGame->GetRuleTables().GetXPCap();
+        if (m_derivedStats.m_nXP > nXPCap) {
+            m_derivedStats.m_nXP = nXPCap;
+        }
+
+        DStats = m_derivedStats;
+
+        pGame->GetRuleTables().GetNextLevel(m_startTypeAI.m_nClass, DStats, this);
+
+        BOOL bLevelUp = DStats.m_nLevel != m_derivedStats.m_nLevel;
+
+        // NOTE: Uninline `InControl`.
+        if (bLevelUp
+            && !m_bLevelUp
+            && InControl() == TRUE) {
+            FeedBack(FEEDBACK_LEVELUP, 0, 0, 0, -1, 0, 0);
+        }
+
+        m_bLevelUp = bLevelUp;
+    }
+
+    sub_71CC90();
 }
 
 // 0x71CC90
