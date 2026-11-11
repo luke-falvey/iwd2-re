@@ -1208,7 +1208,7 @@ void CScreenCharacter::ResetAbilitiesPanel(CGameSprite* pSprite, int a2)
             CRuleTables::MIN_DEX,
             CRuleTables::MAX_DEX,
             CRuleTables::MOD_DEX,
-            pSprite->GetBaseStats()->m_INTBase,
+            pSprite->GetBaseStats()->m_DEXBase,
             m_nMinDEX,
             m_nMaxDEX,
             m_nModDEX);
@@ -1216,7 +1216,7 @@ void CScreenCharacter::ResetAbilitiesPanel(CGameSprite* pSprite, int a2)
             CRuleTables::MIN_CON,
             CRuleTables::MAX_CON,
             CRuleTables::MOD_CON,
-            pSprite->GetBaseStats()->m_WISBase,
+            pSprite->GetBaseStats()->m_CONBase,
             m_nMinCON,
             m_nMaxCON,
             m_nModCON);
@@ -1224,7 +1224,7 @@ void CScreenCharacter::ResetAbilitiesPanel(CGameSprite* pSprite, int a2)
             CRuleTables::MIN_INT,
             CRuleTables::MAX_INT,
             CRuleTables::MOD_INT,
-            pSprite->GetBaseStats()->m_DEXBase,
+            pSprite->GetBaseStats()->m_INTBase,
             m_nMinINT,
             m_nMaxINT,
             m_nModINT);
@@ -1232,7 +1232,7 @@ void CScreenCharacter::ResetAbilitiesPanel(CGameSprite* pSprite, int a2)
             CRuleTables::MIN_WIS,
             CRuleTables::MAX_WIS,
             CRuleTables::MOD_WIS,
-            pSprite->GetBaseStats()->m_CONBase,
+            pSprite->GetBaseStats()->m_WISBase,
             m_nMinWIS,
             m_nMaxWIS,
             m_nModWIS);
@@ -1244,6 +1244,13 @@ void CScreenCharacter::ResetAbilitiesPanel(CGameSprite* pSprite, int a2)
             m_nMinCHR,
             m_nMaxCHR,
             m_nModCHR);
+
+        m_nMaxDEX = 40;
+        m_nMaxSTR = 40;
+        m_nMaxCHR = 40;
+        m_nMaxWIS = 40;
+        m_nMaxINT = 40;
+        m_nMaxCON = 40;
     }
 
     UpdateHelp(pPanel->m_nID, 29, 27337);
@@ -1561,57 +1568,57 @@ void CScreenCharacter::UpdateAbilitiesPanel(CGameSprite* pSprite)
     UpdateLabel(pPanel,
         0x10000004,
         "%d",
-        pSprite->m_baseStats.m_INTBase);
+        pSprite->m_baseStats.m_DEXBase);
     UpdateLabel(pPanel,
         0x10000025,
         "%+d",
-        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_INTBase));
+        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_DEXBase));
     HighlightLabel(pPanel,
         0x10000025,
-        pSprite->m_baseStats.m_INTBase != 10 && pSprite->m_baseStats.m_INTBase != 11,
-        pSprite->m_baseStats.m_INTBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
+        pSprite->m_baseStats.m_DEXBase != 10 && pSprite->m_baseStats.m_DEXBase != 11,
+        pSprite->m_baseStats.m_DEXBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
 
     // CON
     UpdateLabel(pPanel,
         0x10000005,
         "%d",
-        pSprite->m_baseStats.m_WISBase);
+        pSprite->m_baseStats.m_CONBase);
     UpdateLabel(pPanel,
         0x10000026,
         "%+d",
-        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_WISBase));
+        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_CONBase));
     HighlightLabel(pPanel,
         0x10000026,
-        pSprite->m_baseStats.m_WISBase != 10 && pSprite->m_baseStats.m_WISBase != 11,
-        pSprite->m_baseStats.m_WISBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
+        pSprite->m_baseStats.m_CONBase != 10 && pSprite->m_baseStats.m_CONBase != 11,
+        pSprite->m_baseStats.m_CONBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
 
     // INT
     UpdateLabel(pPanel,
         0x10000006,
         "%d",
-        pSprite->m_baseStats.m_DEXBase);
+        pSprite->m_baseStats.m_INTBase);
     UpdateLabel(pPanel,
         0x10000027,
         "%+d",
-        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_DEXBase));
+        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_INTBase));
     HighlightLabel(pPanel,
         0x10000027,
-        pSprite->m_baseStats.m_DEXBase != 10 && pSprite->m_baseStats.m_DEXBase != 11,
-        pSprite->m_baseStats.m_DEXBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
+        pSprite->m_baseStats.m_INTBase != 10 && pSprite->m_baseStats.m_INTBase != 11,
+        pSprite->m_baseStats.m_INTBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
 
     // WIS
     UpdateLabel(pPanel,
         0x10000007,
         "%d",
-        pSprite->m_baseStats.m_CONBase);
+        pSprite->m_baseStats.m_WISBase);
     UpdateLabel(pPanel,
         0x10000028,
         "%+d",
-        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_CONBase));
+        ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_WISBase));
     HighlightLabel(pPanel,
         0x10000028,
-        pSprite->m_baseStats.m_CONBase != 10 && pSprite->m_baseStats.m_CONBase != 11,
-        pSprite->m_baseStats.m_CONBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
+        pSprite->m_baseStats.m_WISBase != 10 && pSprite->m_baseStats.m_WISBase != 11,
+        pSprite->m_baseStats.m_WISBase < 10 ? RGB(255, 0, 0) : RGB(0, 255, 0));
 
     // CHR
     UpdateLabel(pPanel,
@@ -1660,16 +1667,16 @@ void CScreenCharacter::UpdateAbilitiesPanel(CGameSprite* pSprite)
             bCanDec = m_pTempBaseStats->m_STRBase < pSprite->m_baseStats.m_STRBase;
             break;
         case 2:
-            bCanDec = m_pTempBaseStats->m_INTBase < pSprite->m_baseStats.m_INTBase;
-            break;
-        case 4:
-            bCanDec = m_pTempBaseStats->m_WISBase < pSprite->m_baseStats.m_WISBase;
-            break;
-        case 6:
             bCanDec = m_pTempBaseStats->m_DEXBase < pSprite->m_baseStats.m_DEXBase;
             break;
-        case 8:
+        case 4:
             bCanDec = m_pTempBaseStats->m_CONBase < pSprite->m_baseStats.m_CONBase;
+            break;
+        case 6:
+            bCanDec = m_pTempBaseStats->m_INTBase < pSprite->m_baseStats.m_INTBase;
+            break;
+        case 8:
+            bCanDec = m_pTempBaseStats->m_WISBase < pSprite->m_baseStats.m_WISBase;
             break;
         case 10:
             bCanDec = m_pTempBaseStats->m_CHRBase < pSprite->m_baseStats.m_CHRBase;
@@ -2134,19 +2141,19 @@ void CScreenCharacter::UpdateMainPanel(BOOL bCharacterChanged)
 
         HighlightLabel(pPanel,
             0x10000009,
-            DStats.m_nDEX != BStats.m_INTBase,
+            DStats.m_nDEX != BStats.m_DEXBase,
             CBaldurEngine::COLOR_LABEL_HIGHLIGHT_BONUS);
         HighlightLabel(pPanel,
             0x1000000A,
-            DStats.m_nCON != BStats.m_WISBase,
+            DStats.m_nCON != BStats.m_CONBase,
             CBaldurEngine::COLOR_LABEL_HIGHLIGHT_BONUS);
         HighlightLabel(pPanel,
             0x1000000B,
-            DStats.m_nINT != BStats.m_DEXBase,
+            DStats.m_nINT != BStats.m_INTBase,
             CBaldurEngine::COLOR_LABEL_HIGHLIGHT_BONUS);
         HighlightLabel(pPanel,
             0x1000000C,
-            DStats.m_nWIS != BStats.m_CONBase,
+            DStats.m_nWIS != BStats.m_WISBase,
             CBaldurEngine::COLOR_LABEL_HIGHLIGHT_BONUS);
         HighlightLabel(pPanel,
             0x1000000D,
@@ -5630,32 +5637,32 @@ void CUIControlButtonCharacterAbilitiesPlusMinus::AdjustValue()
         case 19:
             nMin = pCharacter->m_nMinDEX;
             nMax = pCharacter->m_nMaxDEX;
-            pBase = &(pCharacter->m_pTempBaseStats->m_INTBase);
-            pValue = &(pSprite->GetBaseStats()->m_INTBase);
+            pBase = &(pCharacter->m_pTempBaseStats->m_DEXBase);
+            pValue = &(pSprite->GetBaseStats()->m_DEXBase);
             bInc = m_nID == 18;
             break;
         case 20:
         case 21:
             nMin = pCharacter->m_nMinCON;
             nMax = pCharacter->m_nMaxCON;
-            pBase = &(pCharacter->m_pTempBaseStats->m_WISBase);
-            pValue = &(pSprite->GetBaseStats()->m_WISBase);
+            pBase = &(pCharacter->m_pTempBaseStats->m_CONBase);
+            pValue = &(pSprite->GetBaseStats()->m_CONBase);
             bInc = m_nID == 20;
             break;
         case 22:
         case 23:
             nMin = pCharacter->m_nMinINT;
             nMax = pCharacter->m_nMaxINT;
-            pBase = &(pCharacter->m_pTempBaseStats->m_DEXBase);
-            pValue = &(pSprite->GetBaseStats()->m_DEXBase);
+            pBase = &(pCharacter->m_pTempBaseStats->m_INTBase);
+            pValue = &(pSprite->GetBaseStats()->m_INTBase);
             bInc = m_nID == 22;
             break;
         case 24:
         case 25:
             nMin = pCharacter->m_nMinWIS;
             nMax = pCharacter->m_nMaxWIS;
-            pBase = &(pCharacter->m_pTempBaseStats->m_CONBase);
-            pValue = &(pSprite->GetBaseStats()->m_CONBase);
+            pBase = &(pCharacter->m_pTempBaseStats->m_WISBase);
+            pValue = &(pSprite->GetBaseStats()->m_WISBase);
             bInc = m_nID == 24;
             break;
         case 26:

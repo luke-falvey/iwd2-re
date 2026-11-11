@@ -35,7 +35,8 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
     field_6 = 0;
     field_8 = 0;
     field_A = 0;
-    field_C = pCreature->field_3E;
+    // NOTE: Base armor class (`0x84EBBC`).
+    field_C = pCreature->field_3E - 10;
     m_nACCrushingMod = pCreature->m_armorClassCrushingAdjustment;
     m_nACMissileMod = pCreature->m_armorClassMissileAdjustment;
     m_nACPiercingMod = pCreature->m_armorClassPiercingAdjustment;
@@ -86,10 +87,10 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
     m_nSex = pCreature->m_sex;
 
     m_nSTR = pCreature->m_STRBase;
-    m_nINT = pCreature->m_DEXBase;
-    m_nWIS = pCreature->m_CONBase;
-    m_nDEX = pCreature->m_INTBase;
-    m_nCON = pCreature->m_WISBase;
+    m_nINT = pCreature->m_INTBase;
+    m_nWIS = pCreature->m_WISBase;
+    m_nDEX = pCreature->m_DEXBase;
+    m_nCON = pCreature->m_CONBase;
     m_nCHR = pCreature->m_CHRBase;
 
     m_nXPValue = pCreature->m_xpValue;
@@ -156,7 +157,30 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
     m_nMirrorImages = 0;
     m_bPreventAISlowDown = FALSE;
 
-    // TODO: Incomplete.
+    m_cImmunitiesProjectile.RemoveAll();
+    m_cImmunitiesEffect.ClearAll();
+    m_cImmunitiesAIType.ClearAll();
+    m_cImmunitiesSpellLevel.ClearAll();
+    m_cImmunitiesWeapon.ClearAll();
+    m_cToHitBonusList.ClearAll();
+    m_cDamageBonusList.ClearAll();
+    m_cImmunitiesItemEquip.ClearAll();
+    m_cImmunitiesItemTypeEquip.ClearAll();
+    field_290.ClearAll();
+    field_2AC.ClearAll();
+    m_cBounceProjectile.RemoveAll();
+    m_cBounceEffect.ClearAll();
+    field_3C8.RemoveAll();
+    field_3E4.RemoveAll();
+    field_400.RemoveAll();
+    field_41C.RemoveAll();
+    m_cImmunitiesItemUse.ClearAll();
+    m_cImmunitiesItemTypeUse.ClearAll();
+    m_appliedColorRanges.ClearAll();
+    m_appliedColorEffects.ClearAll();
+
+    // TODO: Incomplete. The original also clears the lists at 0x300, 0x328,
+    // 0x378, 0x4AC-0x538 and 0x554 here.
 
     m_spellImmunities.clear();
     m_naturalImmunities.clear();
@@ -221,7 +245,68 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
             m_damageReduction.insert(m_damageReduction.end(), 1, damageReduction);
         }
 
-        // TODO: Incomplete.
+        if (pSprite->m_equipment.m_selectedWeapon != 42
+            && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())] != NULL
+            && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 47
+            && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 53
+            && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 49
+            && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 41) {
+            if (m_nNumberOfAttacks < 5) {
+                m_nNumberOfAttacks++;
+            }
+        }
+
+        INT nFeatValue = pSprite->sub_726270(0x13);
+        if (nFeatValue > 0) {
+            CItem* pItem = pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon];
+            if (pItem != NULL && pItem->Demand() == TRUE) {
+                ITEM_ABILITY* pAbility = pItem->GetAbility(pSprite->m_equipment.m_selectedWeaponAbility);
+                if (pAbility != NULL && (pAbility->type & 0xFF) == 1) {
+                    field_C += static_cast<SHORT>(nFeatValue);
+                }
+
+                pItem->Release();
+            }
+        }
+
+        if (pSprite->sub_726270(0x31) > 0) {
+            BOOL bQualifies = FALSE;
+
+            CItem* pItem = pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon];
+            ITEM_ABILITY* pAbility = NULL;
+            if (pItem != NULL) {
+                pItem->Demand();
+                pAbility = pItem->GetAbility(pSprite->m_equipment.m_selectedWeaponAbility);
+            }
+
+            // NOTE: The original dereferences `pAbility` without a check.
+            if (pAbility != NULL
+                && ((pAbility->type & 0xFF) == 4 || (pAbility->type & 0xFF) == 2)) {
+                bQualifies = TRUE;
+            }
+
+            if (pItem != NULL) {
+                pItem->Release();
+            }
+
+            if (bQualifies && m_nNumberOfAttacks < 5) {
+                m_nNumberOfAttacks++;
+            }
+        }
+
+        if (pSprite->sub_763150(0x10)) {
+            field_C++;
+        }
+
+        if (pSprite->sub_763150(0xD) && pSprite->sub_727B40()) {
+            m_nACMissileMod++;
+        }
+
+        BYTE nBonus1 = static_cast<BYTE>(pSprite->sub_7240A0());
+        BYTE nBonus2 = static_cast<BYTE>(pSprite->sub_724170());
+        m_nSkills[6] += nBonus1 + nBonus2;
+        m_nSkills[9] += nBonus1 + nBonus2;
+        m_nSkills[11] += nBonus1 + nBonus2;
     }
 }
 
@@ -491,7 +576,30 @@ void CDerivedStats::BonusInit()
     m_nMirrorImages = 0;
     m_bPreventAISlowDown = FALSE;
 
-    // TODO: Incomplete.
+    m_cImmunitiesProjectile.RemoveAll();
+    m_cImmunitiesEffect.ClearAll();
+    m_cImmunitiesAIType.ClearAll();
+    m_cImmunitiesSpellLevel.ClearAll();
+    m_cImmunitiesWeapon.ClearAll();
+    m_cToHitBonusList.ClearAll();
+    m_cDamageBonusList.ClearAll();
+    m_cImmunitiesItemEquip.ClearAll();
+    m_cImmunitiesItemTypeEquip.ClearAll();
+    field_290.ClearAll();
+    field_2AC.ClearAll();
+    m_cBounceProjectile.RemoveAll();
+    m_cBounceEffect.ClearAll();
+    field_3C8.RemoveAll();
+    field_3E4.RemoveAll();
+    field_400.RemoveAll();
+    field_41C.RemoveAll();
+    m_cImmunitiesItemUse.ClearAll();
+    m_cImmunitiesItemTypeUse.ClearAll();
+    m_appliedColorRanges.ClearAll();
+    m_appliedColorEffects.ClearAll();
+
+    // TODO: Incomplete. The original also clears the lists at 0x300, 0x328,
+    // 0x378, 0x4AC-0x538 and 0x554 here.
 
     m_spellImmunities.clear();
     m_naturalImmunities.clear();

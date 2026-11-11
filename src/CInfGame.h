@@ -222,6 +222,8 @@ public:
     BOOL CheckItemForClassAndKitUsability(DWORD dwClassMask, DWORD dwKitMask, CItem* pItem);
     BOOL CheckIfSpriteCanUseItem(CGameSprite* pSprite, CItem* pItem, STRREF& strError, BOOL a4);
     INT CheckItemUsable(CGameSprite* pSprite, CItem* pItem);
+    BOOL sub_5BA230(SHORT nPortrait, SHORT nSlot, CItem*& pItem, STRREF& strError);
+    BOOL sub_5BA2E0(CGameSprite* pSprite, SHORT nSlot, CItem*& pItem, STRREF& strError);
     SHORT GetNumQuickWeaponSlots(SHORT nPortrait);
     BOOL SwapItemPersonal(SHORT nPortraitNum, SHORT nSlotNum, CItem*& pNewItem, STRREF& errorCode, WORD wCount, BOOLEAN bFromServer);
     SHORT FindEmptyItemPersonalInventory(SHORT nPortraitNum);

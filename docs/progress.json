@@ -5,8 +5,8 @@
     "0x7DA200"
   ],
   "functions_total": 9831,
-  "functions_done": 7714,
-  "functions_complete": 7396,
+  "functions_done": 7721,
+  "functions_complete": 7402,
   "incomplete_markers": 349,
   "incomplete_by_file": {
     "src/CMessage.cpp": 85,
@@ -16,10 +16,10 @@
     "src/CProjectilePart1.cpp": 16,
     "src/CGameSprite.cpp": 14,
     "src/CScreenCharacter.cpp": 11,
-    "src/CDerivedStats.cpp": 9,
-    "src/CInfGame.cpp": 9,
+    "src/CInfGame.cpp": 10,
     "src/CProjectilePart2.cpp": 9,
     "src/CProjectilePart4.cpp": 9,
+    "src/CDerivedStats.cpp": 8,
     "src/CBaldurProjector.cpp": 7,
     "src/CParticle.cpp": 6,
     "src/CScreenCreateChar.cpp": 6,
@@ -66,7 +66,7 @@
     "src/CWarp.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10252,
+  "annotations_total": 10259,
   "annotations_not_function_start": 2516,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -3787,8 +3787,8 @@
     "0xA1917C"
   ],
   "bytes_total": 3846937,
-  "bytes_done": 3421875,
-  "bytes_complete": 3053335,
+  "bytes_done": 3426537,
+  "bytes_complete": 3055558,
   "largest_stubs": [
     {
       "addr": "0x4DB160",
@@ -3976,6 +3976,11 @@
       "size": 2577
     },
     {
+      "addr": "0x5BA2E0",
+      "name": "CInfGame_B3AUTO_005ba2e0",
+      "size": 2439
+    },
+    {
       "addr": "0x715BD0",
       "name": "CGameSprite_GetInnateQuickButtons",
       "size": 2411
@@ -3984,11 +3989,6 @@
       "addr": "0x5E3B80",
       "name": "CScreenCharacter_OnBackButtonClick",
       "size": 2402
-    },
-    {
-      "addr": "0x429A90",
-      "name": "FUN_00429a90",
-      "size": 2400
     }
   ],
   "next": [

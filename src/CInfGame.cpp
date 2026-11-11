@@ -6996,6 +6996,45 @@ INT CInfGame::CheckItemUsable(CGameSprite* pSprite, CItem* pItem)
 
     return 0;
 }
+// 0x5BA230
+BOOL CInfGame::sub_5BA230(SHORT nPortrait, SHORT nSlot, CItem*& pItem, STRREF& strError)
+{
+    LONG nCharacterId = GetCharacterId(nPortrait);
+
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = m_cObjectArray.GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        strError = 0x249D;
+        return FALSE;
+    }
+
+    BOOL bResult = sub_5BA2E0(pSprite, nSlot, pItem, strError);
+
+    m_cObjectArray.ReleaseShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return bResult;
+}
+
+// 0x5BA2E0
+BOOL CInfGame::sub_5BA2E0(CGameSprite* pSprite, SHORT nSlot, CItem*& pItem, STRREF& strError)
+{
+    // TODO: Incomplete. The original checks whether `pItem` can be placed in
+    // slot `nSlot` of `pSprite` (class/race/alignment restrictions, two-handed
+    // weapon and shield conflicts, ...) and sets `strError` otherwise.
+    strError = -1;
+    return TRUE;
+}
+
 
 // 0x5BACE0
 SHORT CInfGame::GetNumQuickWeaponSlots(SHORT nPortrait)

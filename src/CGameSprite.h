@@ -470,6 +470,7 @@ public:
     /* 0058 */ void SetCursor(LONG nToolTip) override;
     /* 0064 */ BOOL EvaluateStatusTrigger(const CAITrigger& trigger) override;
     /* 0070 */ void UpdateTarget(CGameObject* pTarget) override;
+    /* 0078 */ void AddEffect(CGameEffect* pEffect, BYTE list, BOOL noSave, BOOL immediateApply) override;
     /* 007C */ void ClearAI(BOOLEAN bSetSequence) override;
     /* 0084 */ SHORT ExecuteAction() override;
     /* 008C */ void ProcessAI() override;
@@ -852,6 +853,7 @@ public:
     void sub_726330(UINT nFeatNumber, INT nValue);
     void sub_726570();
     INT sub_726800();
+    INT sub_727B40();
     void sub_723830();
     void sub_726810(BYTE nWeaponSet);
     void sub_726F20();

@@ -172,6 +172,9 @@ public:
     BOOL OnLButtonDblClk(CPoint pt) override;
     BOOL Render(BOOL bForce) override;
     void OnRButtonClick(CPoint pt) override;
+    void TimerAsynchronousUpdate(BOOLEAN bInside) override;
+    void sub_62D0B0(INT x, INT y);
+    void sub_62D1F0(INT x, INT y);
 
     /* 0666 */ BOOL field_666;
     /* 066A */ BOOL field_66A;

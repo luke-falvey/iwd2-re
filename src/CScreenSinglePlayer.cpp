@@ -2196,26 +2196,26 @@ void CScreenSinglePlayer::ResetViewCharacterPanel(CUIPanel* pPanel)
             UpdateText(pTextLeft,
                 "%s: %d  (%+d)",
                 FetchString(1151), // "Dexterity"
-                pBStats->m_INTBase,
-                ruleTables.GetAbilityScoreModifier(pBStats->m_INTBase));
-
-            UpdateText(pTextLeft,
-                "%s: %d  (%+d)",
-                FetchString(1178), // "Constitution"
-                pBStats->m_WISBase,
-                ruleTables.GetAbilityScoreModifier(pBStats->m_WISBase));
-
-            UpdateText(pTextLeft,
-                "%s: %d  (%+d)",
-                FetchString(1179), // "Intelligence"
                 pBStats->m_DEXBase,
                 ruleTables.GetAbilityScoreModifier(pBStats->m_DEXBase));
 
             UpdateText(pTextLeft,
                 "%s: %d  (%+d)",
-                FetchString(1180), // "Wisdom"
+                FetchString(1178), // "Constitution"
                 pBStats->m_CONBase,
                 ruleTables.GetAbilityScoreModifier(pBStats->m_CONBase));
+
+            UpdateText(pTextLeft,
+                "%s: %d  (%+d)",
+                FetchString(1179), // "Intelligence"
+                pBStats->m_INTBase,
+                ruleTables.GetAbilityScoreModifier(pBStats->m_INTBase));
+
+            UpdateText(pTextLeft,
+                "%s: %d  (%+d)",
+                FetchString(1180), // "Wisdom"
+                pBStats->m_WISBase,
+                ruleTables.GetAbilityScoreModifier(pBStats->m_WISBase));
 
             UpdateText(pTextLeft,
                 "%s: %d  (%+d)",

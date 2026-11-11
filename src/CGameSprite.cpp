@@ -16742,6 +16742,58 @@ BOOL CGameSprite::ProcessEffectList()
     return bResult;
 }
 
+// 0x733050
+void CGameSprite::AddEffect(CGameEffect* pEffect, BYTE list, BOOL noSave, BOOL immediateApply)
+{
+    if (pEffect->m_effectID == CGAMEEFFECT_DETECTTRAPS) {
+        delete pEffect;
+        return;
+    }
+
+    if (m_derivedStats.m_spellStates[SPLSTATE_OTILUKES_RESILIENT_SPHERE]
+        && pEffect->m_effectID != CGAMEEFFECT_DISPELEFFECTS
+        && pEffect->m_effectID != ICEWIND_CGAMEEFFECT_APPLYEFFECTSLIST
+        && pEffect->m_effectID != CGAMEEFFECT_CASTSPELL
+        && pEffect->m_effectID != CGAMEEFFECT_CASTSPELLPOINT) {
+        delete pEffect;
+        return;
+    }
+
+    // NOTE: The original leaks `pEffect` here.
+    if (GetAIType().Equal(CAIObjectType::NOT_SPRITE)) {
+        return;
+    }
+
+    if (!pEffect->CheckAdd(this, field_70F6, field_70F7, field_70F8, field_70F9, field_70FA)
+        && !noSave) {
+        delete pEffect;
+    } else {
+        field_562C = 1;
+
+        if (immediateApply) {
+            m_tempStats = m_derivedStats;
+            pEffect->ResolveEffect(this);
+
+            if (pEffect->m_done) {
+                delete pEffect;
+                return;
+            }
+        }
+
+        if (list != EFFECT_LIST_TIMED) {
+            m_equipedEffectList.AddTail(pEffect);
+        } else if (pEffect->m_durationType == 2) {
+            m_equipedEffectList.AddTail(pEffect);
+        } else {
+            m_timedEffectList.AddTail(pEffect);
+        }
+    }
+
+    if (!g_pBaldurChitin->GetObjectGame()->m_worldTime.m_active && immediateApply) {
+        ProcessEffectList();
+    }
+}
+
 // 0x733200
 BOOL CGameSprite::HandlePersistantEffects(LONG deltaT)
 {
@@ -19252,7 +19304,6 @@ void CGameSprite::CheckReputation()
 
     CInfGame* pObjectGame = g_pBaldurChitin->GetObjectGame();
 
-    // NOTE: The original passes WIS, INT and CON (in this order).
     INT nOldFortitude = pObjectGame->GetRuleTables().GetSavingThrow(m_startTypeAI,
         m_derivedStats,
         m_baseStats.m_CONBase,
@@ -31542,37 +31593,39 @@ SHORT CGameSprite::SetAtOffset(DWORD stat, DWORD value, BOOL modify)
         UTIL_ASSERT(FALSE);
     case STAT_INT:
         if (modify == TRUE) {
-            m_baseStats.m_DEXBase += static_cast<BYTE>(value);
+            m_baseStats.m_INTBase += static_cast<BYTE>(value);
             m_derivedStats.m_nINT += static_cast<SHORT>(value);
         } else {
-            m_baseStats.m_DEXBase = static_cast<BYTE>(value);
+            m_baseStats.m_INTBase = static_cast<BYTE>(value);
             m_derivedStats.m_nINT = static_cast<SHORT>(value);
         }
         return 1;
     case STAT_WIS:
         if (modify == TRUE) {
-            m_baseStats.m_CONBase += static_cast<BYTE>(value);
+            m_baseStats.m_WISBase += static_cast<BYTE>(value);
             m_derivedStats.m_nWIS += static_cast<SHORT>(value);
         } else {
-            m_baseStats.m_CONBase = static_cast<BYTE>(value);
+            m_baseStats.m_WISBase = static_cast<BYTE>(value);
             m_derivedStats.m_nWIS = static_cast<SHORT>(value);
         }
         return 1;
     case STAT_DEX:
         if (modify == TRUE) {
-            m_baseStats.m_INTBase += static_cast<BYTE>(value);
+            m_baseStats.m_DEXBase += static_cast<BYTE>(value);
             m_derivedStats.m_nDEX += static_cast<SHORT>(value);
         } else {
-            m_baseStats.m_INTBase = static_cast<BYTE>(value);
+            m_baseStats.m_DEXBase = static_cast<BYTE>(value);
             m_derivedStats.m_nDEX = static_cast<SHORT>(value);
         }
+        field_562C = 1;
+        ProcessEffectList();
         return 1;
     case STAT_CON:
         if (modify == TRUE) {
-            m_baseStats.m_WISBase += static_cast<BYTE>(value);
+            m_baseStats.m_CONBase += static_cast<BYTE>(value);
             m_derivedStats.m_nCON += static_cast<SHORT>(value);
         } else {
-            m_baseStats.m_WISBase = static_cast<BYTE>(value);
+            m_baseStats.m_CONBase = static_cast<BYTE>(value);
             m_derivedStats.m_nCON = static_cast<SHORT>(value);
         }
         return 1;
@@ -33051,9 +33104,9 @@ BOOL CGameSprite::sub_763200(UINT nFeatNumber, INT a2)
 
     if (a2 == 1) {
         nSTR = m_baseStats.m_STRBase;
-        nDEX = m_baseStats.m_INTBase;
-        nINT = m_baseStats.m_DEXBase;
-        nWIS = m_baseStats.m_CONBase;
+        nDEX = m_baseStats.m_DEXBase;
+        nINT = m_baseStats.m_INTBase;
+        nWIS = m_baseStats.m_WISBase;
     }
 
     switch (nFeatNumber) {
@@ -33424,7 +33477,7 @@ int CGameSprite::GetExtraSkillPoints(BYTE nClass)
 
     int sp = atol(ruleTables.m_tSkillPoints.GetAt(CPoint(nClass - 1, 0)));
 
-    sp += ruleTables.GetAbilityScoreModifier(m_baseStats.m_DEXBase);
+    sp += ruleTables.GetAbilityScoreModifier(m_baseStats.m_INTBase);
 
     if (sp < 1) {
         sp = 1;
@@ -35397,6 +35450,21 @@ void CGameSprite::sub_723830()
 INT CGameSprite::sub_726800()
 {
     return 2 * m_nWeaponSet + 44;
+}
+
+// 0x727B40
+INT CGameSprite::sub_727B40()
+{
+    CItem* pWeapon = m_equipment.m_items[2 * m_nWeaponSet + 43];
+    CItem* pShield = m_equipment.m_items[2 * m_nWeaponSet + 44];
+
+    if (pWeapon != NULL) {
+        if ((pWeapon->GetFlagsFile() & 0x2) != 0 || pShield != NULL) {
+            return FALSE;
+        }
+    }
+
+    return TRUE;
 }
 
 // 0x726810

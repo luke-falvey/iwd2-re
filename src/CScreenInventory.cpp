@@ -1239,7 +1239,7 @@ void CScreenInventory::UpdateMainPanel(BOOL bClearError)
         if (nCurrentWeight == 0) {
             pLabel->SetForegroundColor(RGB(255, 255, 255));
         } else {
-            float fRatio = static_cast<float>(nCurrentWeight) / static_cast<float>(nTotalSlots);
+            float fRatio = static_cast<float>(nCurrentWeight) / static_cast<float>(nTotalWeight);
             if (fRatio < 0.33f) {
                 pLabel->SetForegroundColor(RGB(0, 255, 0));
             } else if (fRatio < 0.66f) {
@@ -5518,6 +5518,271 @@ CUIControlButtonInventorySlot::CUIControlButtonInventorySlot(CUIPanel* panel, UI
 // 0x62D010
 CUIControlButtonInventorySlot::~CUIControlButtonInventorySlot()
 {
+}
+
+// 0x62D0B0
+void CUIControlButtonInventorySlot::sub_62D0B0(INT x, INT y)
+{
+    CScreenInventory* pInventory = g_pBaldurChitin->m_pEngineInventory;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+    // __LINE__: 6051
+    UTIL_ASSERT(pInventory != NULL);
+
+    CItem* pTempItem = pInventory->m_pTempItem;
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+    // __LINE__: 6056
+    UTIL_ASSERT(pGame != NULL);
+
+    if (pTempItem == NULL) {
+        if (m_cVidCell.m_nCurrentFrame != 0) {
+            m_cVidCell.FrameSet(0);
+            InvalidateRect();
+        }
+        return;
+    }
+
+    STRREF strError;
+    if (pGame->sub_5BA230(static_cast<SHORT>(pInventory->GetSelectedCharacter()),
+            static_cast<SHORT>(pInventory->MapButtonIdToInventoryId(m_nID)),
+            pTempItem,
+            strError)) {
+        if (x >= m_ptOrigin.x
+            && y >= m_ptOrigin.y
+            && x <= m_ptOrigin.x + m_size.cx
+            && y <= m_ptOrigin.y + m_size.cy) {
+            if (m_cVidCell.m_nCurrentFrame != 2) {
+                m_cVidCell.FrameSet(2);
+                InvalidateRect();
+            }
+        } else {
+            if (m_cVidCell.m_nCurrentFrame != 1) {
+                m_cVidCell.FrameSet(1);
+                InvalidateRect();
+            }
+        }
+    } else {
+        if (m_cVidCell.m_nCurrentFrame != 0) {
+            m_cVidCell.FrameSet(0);
+            InvalidateRect();
+        }
+    }
+}
+
+// 0x62D1F0
+void CUIControlButtonInventorySlot::sub_62D1F0(INT x, INT y)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+    // __LINE__: 6204
+    UTIL_ASSERT(pGame != NULL);
+
+    CScreenInventory* pInventory = g_pBaldurChitin->m_pEngineInventory;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+    // __LINE__: 6208
+    UTIL_ASSERT(pInventory != NULL);
+
+    CItem* pTempItem = pInventory->m_pTempItem;
+
+    LONG nCharacterId = pGame->GetCharacterId(static_cast<SHORT>(pInventory->GetSelectedCharacter()));
+
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        sub_62D0B0(x, y);
+        return;
+    }
+
+    INT nSlot = pInventory->MapButtonIdToInventoryId(m_nID);
+
+    BYTE nSelectedWeapon = pSprite->m_equipment.m_selectedWeapon;
+    INT nLauncherSlot = -1;
+
+    CItem* pSelectedItem = pSprite->m_equipment.m_items[nSelectedWeapon];
+    if (pSelectedItem != NULL) {
+        pSelectedItem->Demand();
+
+        ITEM_ABILITY* pAbility = pSelectedItem->GetAbility(pSprite->m_equipment.m_selectedWeaponAbility);
+
+        SHORT launcherSlot;
+        CItem* pLauncher = pSprite->GetLauncher(pAbility, launcherSlot);
+
+        pSelectedItem->Release();
+
+        if (pLauncher != NULL) {
+            nLauncherSlot = CGameSpriteEquipment::SLOT_WEAPON + 2 * pSprite->m_nWeaponSet;
+        }
+    }
+
+    if ((pSprite->m_derivedStats.m_generalState & 0x800) == 0) {
+        BOOL bFist = FALSE;
+        if ((nSlot == 43 || nSlot == 45 || nSlot == 47 || nSlot == 49)
+            && nSelectedWeapon == CGameSpriteEquipment::SLOT_FIST) {
+            bFist = TRUE;
+        }
+
+        BOOL bHighlight = TRUE;
+        if (nSlot != nSelectedWeapon && nSlot != nLauncherSlot) {
+            if ((nSlot - 43) / 2 != pSprite->m_nWeaponSet
+                || (pSprite->m_equipment.m_items[nSlot] == NULL && !bFist)) {
+                bHighlight = FALSE;
+            }
+        }
+
+        if (!bHighlight) {
+            sub_62D0B0(x, y);
+        } else if (pTempItem == NULL) {
+            if (m_cVidCell.m_nCurrentFrame != 3) {
+                m_cVidCell.FrameSet(3);
+                InvalidateRect();
+            }
+        } else {
+            STRREF strError;
+            if (pGame->sub_5BA230(static_cast<SHORT>(pInventory->GetSelectedCharacter()),
+                    static_cast<SHORT>(nSlot),
+                    pTempItem,
+                    strError)) {
+                if (x >= m_ptOrigin.x
+                    && y >= m_ptOrigin.y
+                    && x <= m_ptOrigin.x + m_size.cx
+                    && y <= m_ptOrigin.y + m_size.cy) {
+                    if (m_cVidCell.m_nCurrentFrame != 2) {
+                        m_cVidCell.FrameSet(2);
+                        InvalidateRect();
+                    }
+                } else {
+                    if (m_cVidCell.m_nCurrentFrame != 1) {
+                        m_cVidCell.FrameSet(1);
+                        InvalidateRect();
+                    }
+                }
+            } else {
+                if (m_cVidCell.m_nCurrentFrame != 3) {
+                    m_cVidCell.FrameSet(3);
+                    InvalidateRect();
+                }
+            }
+        }
+    }
+
+    pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+}
+
+// 0x62D4B0
+void CUIControlButtonInventorySlot::TimerAsynchronousUpdate(BOOLEAN bInside)
+{
+    // 0x62D6F4: Maps `m_nID - 5` to one of five update kinds.
+    static const BYTE kind[104] = {
+        0, 0, 0, 4, 4, 4, 0, 0, 0, 0, 1, 1, 1, 4, 4, 4,
+        0, 0, 0, 0, 0, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3,
+        3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 3, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        1, 1, 1, 1, 1, 1, 1, 1
+    };
+
+    CUIControlBase::TimerAsynchronousUpdate(bInside);
+
+    if (!m_bActive && !m_bInactiveRender) {
+        return;
+    }
+
+    if (!m_pPanel->m_bActive) {
+        if (m_cVidCell.m_nCurrentFrame != 3) {
+            if (m_cVidCell.m_nCurrentFrame != 0) {
+                m_cVidCell.FrameSet(0);
+                InvalidateRect();
+            }
+            return;
+        }
+    }
+
+    CScreenInventory* pInventory = g_pBaldurChitin->m_pEngineInventory;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+    // __LINE__: 6364
+    UTIL_ASSERT(pInventory != NULL);
+
+    INT x = pInventory->m_cLastMousePosition.x - m_pPanel->m_ptOrigin.x;
+    INT y = pInventory->m_cLastMousePosition.y - m_pPanel->m_ptOrigin.y;
+
+    UINT nIndex = m_nID - 5;
+    if (nIndex > 0x67) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+        // __LINE__: 6440
+        UTIL_ASSERT(FALSE);
+        return;
+    }
+
+    BOOL bOver = x >= m_ptOrigin.x
+        && y >= m_ptOrigin.y
+        && x <= m_ptOrigin.x + m_size.cx
+        && y <= m_ptOrigin.y + m_size.cy;
+
+    switch (kind[nIndex]) {
+    case 0:
+        sub_62D0B0(x, y);
+        break;
+    case 1:
+        sub_62D1F0(x, y);
+        break;
+    case 2:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+        // __LINE__: 6110
+        UTIL_ASSERT(pInventory != NULL);
+
+        if (pInventory->m_pTempItem != NULL && bOver) {
+            if (m_cVidCell.m_nCurrentFrame != 2) {
+                m_cVidCell.FrameSet(2);
+                InvalidateRect();
+            }
+        } else if (m_cVidCell.m_nCurrentFrame != 0) {
+            m_cVidCell.FrameSet(0);
+            InvalidateRect();
+        }
+        break;
+    case 3:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+        // __LINE__: 6150
+        UTIL_ASSERT(pInventory != NULL);
+
+        if (pInventory->m_pTempItem != NULL) {
+            if (bOver) {
+                if (m_cVidCell.m_nCurrentFrame != 2) {
+                    m_cVidCell.FrameSet(2);
+                    InvalidateRect();
+                }
+            } else if (m_cVidCell.m_nCurrentFrame != 1) {
+                m_cVidCell.FrameSet(1);
+                InvalidateRect();
+            }
+        } else if (m_cVidCell.m_nCurrentFrame != 0) {
+            m_cVidCell.FrameSet(0);
+            InvalidateRect();
+        }
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenInventory.cpp
+        // __LINE__: 6440
+        UTIL_ASSERT(FALSE);
+        break;
+    }
 }
 
 // 0x62D760
