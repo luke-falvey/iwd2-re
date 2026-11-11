@@ -1543,6 +1543,22 @@ BOOLEAN CGameArea::CanSaveGame(STRREF& strError)
     return TRUE;
 }
 
+// 0x46BAD0
+LONG CGameArea::sub_46BAD0(LONG startObject, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BOOL a7, BYTE nNth, BOOL a9)
+{
+    // TODO: Incomplete.
+
+    return CGameObjectArray::INVALID_INDEX;
+}
+
+// 0x46DDC0
+LONG CGameArea::sub_46DDC0(INT x, INT y, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BYTE nNth, BOOL a9)
+{
+    // TODO: Incomplete.
+
+    return CGameObjectArray::INVALID_INDEX;
+}
+
 // 0x46E130
 void CGameArea::sub_46E130(CGameEffect* pEffect, BOOL a2, BOOL bCheckSpecifics, BYTE nSpecifics, CGameObject* pExclude)
 {
@@ -5647,17 +5663,19 @@ void CGameArea::SortLists()
             } while (rc == CGameObjectArray::DENIED);
 
             if (rc == CGameObjectArray::SUCCESS) {
+                POSITION posVertList;
                 if (m_lVertSortBack.IsEmpty()) {
-                    m_lVertSortBack.AddTail(reinterpret_cast<int*>(pObject->GetId()));
+                    posVertList = m_lVertSortBack.AddTail(reinterpret_cast<int*>(pObject->GetId()));
                 } else {
-                    m_lVertSortBack.InsertBefore(m_lVertSortBack.GetTailPosition(),
+                    posVertList = m_lVertSortBack.InsertAfter(m_lVertSortBack.GetTailPosition(),
                         reinterpret_cast<int*>(pObject->GetId()));
                 }
+                pObject->SetVertListPos(posVertList);
 
                 m_pGame->GetObjectArray()->ReleaseShare(iObject,
                     CGameObjectArray::THREAD_ASYNCH,
                     INFINITE);
-            } else if (rc == CGameObjectArray::DELETED) {
+            } else if (rc != CGameObjectArray::DELETED) {
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
                 // __LINE__: 8148
                 UTIL_ASSERT(FALSE);
@@ -5679,17 +5697,19 @@ void CGameArea::SortLists()
             } while (rc == CGameObjectArray::DENIED);
 
             if (rc == CGameObjectArray::SUCCESS) {
+                POSITION posVertList;
                 if (m_lVertSortFlight.IsEmpty()) {
-                    m_lVertSortFlight.AddTail(reinterpret_cast<int*>(pObject->GetId()));
+                    posVertList = m_lVertSortFlight.AddTail(reinterpret_cast<int*>(pObject->GetId()));
                 } else {
-                    m_lVertSortFlight.InsertBefore(m_lVertSortFlight.GetTailPosition(),
+                    posVertList = m_lVertSortFlight.InsertAfter(m_lVertSortFlight.GetTailPosition(),
                         reinterpret_cast<int*>(pObject->GetId()));
                 }
+                pObject->SetVertListPos(posVertList);
 
                 m_pGame->GetObjectArray()->ReleaseShare(iObject,
                     CGameObjectArray::THREAD_ASYNCH,
                     INFINITE);
-            } else if (rc == CGameObjectArray::DELETED) {
+            } else if (rc != CGameObjectArray::DELETED) {
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
                 // __LINE__: 8195
                 UTIL_ASSERT(FALSE);

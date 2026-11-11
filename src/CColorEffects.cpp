@@ -120,7 +120,7 @@ void CColorRanges::Apply(CGameSprite* pSprite)
     while (pos != NULL) {
         CColorRange* pColorRange = GetNext(pos);
 
-        if (pColorRange->m_range != -1) {
+        if (pColorRange->m_range != static_cast<BYTE>(-1)) {
             // NOTE: Uninline.
             pSprite->GetAnimation()->SetColorRange(pColorRange->m_range,
                 pColorRange->m_color);
@@ -236,7 +236,7 @@ void CColorEffects::Apply(CGameSprite* pSprite)
     while (pos != NULL) {
         CColorEffect* pColorEffect = GetNext(pos);
 
-        if (pColorEffect->m_range != -1) {
+        if (pColorEffect->m_range != static_cast<BYTE>(-1)) {
             // NOTE: Uninline.
             pSprite->GetAnimation()->SetColorEffect(pColorEffect->m_effectType,
                 pColorEffect->m_range,

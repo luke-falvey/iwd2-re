@@ -579,6 +579,7 @@ public:
     void DisplayTextRef(STRREF nameRef, STRREF textRef, COLORREF nameColor, COLORREF textColor);
     void GetNumInventoryPersonalSlots(INT& nUsedSlots, INT& nTotalSlots);
     void SetModalState(BYTE modalState, BOOL bUpdateToolbar);
+    void sub_719180(CString sSpellResRef);
     BOOL sub_7202E0();
     void CheckSequence(BYTE& sequence);
     void sub_7204C0();

@@ -8941,6 +8941,12 @@ void CGameSprite::ReadySpell(SHORT buttonNum, INT nType, BOOLEAN firstCall)
     }
 }
 
+// 0x719180
+void CGameSprite::sub_719180(CString sSpellResRef)
+{
+    // TODO: Incomplete.
+}
+
 // 0x719860
 void CGameSprite::ReadyItem(SHORT buttonNum, BOOLEAN firstCall)
 {

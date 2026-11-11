@@ -4,8 +4,10 @@
 #include "CBaldurChitin.h"
 #include "CGameAIBase.h"
 #include "CGameArea.h"
+#include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CUtil.h"
+#include "CVariableHash.h"
 
 // 0x847C34
 const BYTE CAIObjectType::EA_ALL = CAIOBJECTTYPE_EA_ALL;
@@ -454,7 +456,7 @@ CAIObjectType::CAIObjectType(BYTE nEnemyAlly, BYTE nGeneral, BYTE nRace, BYTE nS
     m_nEnemyAlly = nEnemyAlly;
     m_nGeneral = nGeneral;
     m_nSubRace = nSubRace;
-    if (m_nSubRace == -1) {
+    if (m_nSubRace == 0xFF) {
         m_nSubRace = 0;
     }
     m_nGender = nGender;
@@ -531,7 +533,7 @@ CAIObjectType::CAIObjectType(BYTE nEnemyAlly, BYTE nGeneral, BYTE nRace, BYTE nS
     m_nEnemyAlly = nEnemyAlly;
     m_nGeneral = nGeneral;
     m_nSubRace = nSubRace;
-    if (m_nSubRace == -1) {
+    if (m_nSubRace == 0xFF) {
         m_nSubRace = 0;
     }
     m_nGender = nGender;
@@ -606,13 +608,24 @@ BOOL CAIObjectType::OfType(const CAIObjectType& type, BOOL bCheckForNonSprites, 
         return Equal(type);
     }
 
-    if (Equal(ANYONE)) {
-        if (Equal(NOT_SPRITE) && !bCheckForNonSprites) {
+    // NOTE: The `NOT_SPRITE` comparisons below are an inlined `Equal` that
+    // skips `m_nInstance`.
+    BOOL bNotSprite = m_nEnemyAlly == NOT_SPRITE.m_nEnemyAlly
+        && m_nGeneral == NOT_SPRITE.m_nGeneral
+        && m_nRace == NOT_SPRITE.m_nRace
+        && m_nSubRace == NOT_SPRITE.m_nSubRace
+        && m_nClassMask == NOT_SPRITE.m_nClassMask
+        && m_nSpecific == NOT_SPRITE.m_nSpecific
+        && m_nAlignment == NOT_SPRITE.m_nAlignment
+        && m_nGender == NOT_SPRITE.m_nGender;
+
+    if (type.Equal(ANYONE)) {
+        if (bNotSprite && !bCheckForNonSprites) {
             return FALSE;
         }
     }
 
-    if (Equal(NOT_SPRITE) && bNoNonSprites) {
+    if (bNotSprite && bNoNonSprites) {
         return FALSE;
     }
 
@@ -704,6 +717,46 @@ BOOL CAIObjectType::OfType(const CAIObjectType& type, BOOL bCheckForNonSprites, 
                 return FALSE;
             }
             break;
+        case 202: // BARD_ALL
+            if ((m_nClassMask & CLASSMASK_BARD) == 0) {
+                return FALSE;
+            }
+            break;
+        case 203: // CLERIC_ALL
+            if ((m_nClassMask & CLASSMASK_CLERIC) == 0) {
+                return FALSE;
+            }
+            break;
+        case 204: // DRUID_ALL
+            if ((m_nClassMask & CLASSMASK_DRUID) == 0) {
+                return FALSE;
+            }
+            break;
+        case 205: // FIGHTER_ALL
+            if ((m_nClassMask & (CLASSMASK_BARBARIAN | CLASSMASK_FIGHTER | CLASSMASK_MONK)) == 0) {
+                return FALSE;
+            }
+            break;
+        case 206: // PALADIN_ALL
+            if ((m_nClassMask & CLASSMASK_PALADIN) == 0) {
+                return FALSE;
+            }
+            break;
+        case 207: // RANGER_ALL
+            if ((m_nClassMask & CLASSMASK_RANGER) == 0) {
+                return FALSE;
+            }
+            break;
+        case 208: // ROGUE_ALL
+            if ((m_nClassMask & CLASSMASK_ROGUE) == 0) {
+                return FALSE;
+            }
+            break;
+        case 209: // MAGE_ALL
+            if ((m_nClassMask & (CLASSMASK_SORCERER | CLASSMASK_WIZARD)) == 0) {
+                return FALSE;
+            }
+            break;
         }
     }
 
@@ -752,6 +805,8 @@ BOOL CAIObjectType::OfType(const CAIObjectType& type, BOOL bCheckForNonSprites, 
                 return FALSE;
             }
             break;
+        default:
+            return FALSE;
         }
     }
 
@@ -797,7 +852,7 @@ void CAIObjectType::Set(const CAIObjectType& type)
     m_nGeneral = type.m_nGeneral;
     m_nRace = type.m_nRace;
     m_nSubRace = type.m_nSubRace;
-    if (m_nSubRace == -1) {
+    if (m_nSubRace == 0xFF) {
         m_nSubRace = 0;
     }
     m_nClass = type.m_nClass;
@@ -869,7 +924,616 @@ void CAIObjectType::Set(const CAIObjectType& type)
 // 0x40B880
 void CAIObjectType::Decode(CGameAIBase* caller)
 {
-    // TODO: Incomplete.
+    CGameObject* pObject;
+    BYTE rc;
+    LONG nId;
+
+    CAIObjectType typeAI;
+    CString sName = GetName();
+    BOOL bFound = FALSE;
+
+    if (strcmp(sName, "") != 0 && m_nInstance == -1) {
+        sName.MakeUpper();
+
+        CVariable* pVariable = NULL;
+        if (caller->m_pArea != NULL) {
+            pVariable = caller->GetArea()->GetNamedCreatures()->FindKey(sName);
+        }
+
+        if (pVariable == NULL) {
+            pVariable = g_pBaldurChitin->GetObjectGame()->GetNamedCreatures()->FindKey(sName);
+            if (pVariable == NULL) {
+                Set(NOONE);
+                return;
+            }
+        }
+
+        nId = pVariable->m_intValue;
+        if (nId >= 0) {
+            bFound = TRUE;
+
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pObject,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                Set(NOONE);
+                return;
+            }
+
+            // NOTE: Uninline.
+            if (!sub_40D920(pObject->GetPos())) {
+                // NOTE: Original leaks the share.
+                Set(NOONE);
+                return;
+            }
+
+            typeAI.Set(pObject->GetAIType());
+            typeAI.m_sName = sName;
+        }
+    }
+
+    if (m_SpecialCase[0] == 0) {
+        if (bFound) {
+            Set(typeAI);
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+        return;
+    }
+
+    if (!bFound) {
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(caller->GetId(),
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            Set(NOONE);
+            return;
+        }
+
+        // NOTE: Uninline.
+        if (!sub_40D920(pObject->GetPos())) {
+            // NOTE: Original leaks the share.
+            Set(NOONE);
+            return;
+        }
+    }
+
+    if (m_nInstance >= 0) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return;
+    }
+
+    typeAI.Set(*this);
+    typeAI.m_nInstance = caller->GetId();
+    memset(typeAI.m_SpecialCase, 0, sizeof(typeAI.m_SpecialCase));
+
+    // NOTE: Several cases below share tails in the original. They are
+    // expressed with `nLookup`:
+    //   0 - move to the next special case,
+    //   1 - release `pObject`, re-acquire it from `typeAI`, take its type,
+    //   2 - like 1 but also check the location,
+    //   3 - like 1 but also search the back list.
+    for (int index = 0; index < 5; index++) {
+        if (pObject == NULL) {
+            Set(NOONE);
+            return;
+        }
+
+        BYTE nSpecialCase = m_SpecialCase[index];
+        if (nSpecialCase == 0) {
+            Set(typeAI);
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            return;
+        }
+
+        int nLookup = 0;
+
+        switch (nSpecialCase) {
+        case 1:
+            // Myself
+            // NOTE: Uninline.
+            if (sub_40D920(caller->GetPos()) == TRUE) {
+                typeAI.Set(caller->GetAIType());
+                typeAI.m_nInstance = caller->GetId();
+            }
+            break;
+        case 2:
+            // LeaderOf
+            typeAI.Set(ANYONE);
+            typeAI.m_nInstance = g_pBaldurChitin->GetObjectGame()->m_characters[0];
+            if (typeAI.m_nInstance == CGameObjectArray::INVALID_INDEX) {
+                // NOTE: Original leaks the share.
+                Set(NOONE);
+                return;
+            }
+            nLookup = 1;
+            break;
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        case 28:
+        case 47:
+        case 48:
+            // WeakestOf, StrongestOf, MostDamagedOf, LeastDamagedOf,
+            // StrongestOfMale, WorstAC, BestAC
+            typeAI.Set(ANYONE);
+
+            switch (nSpecialCase) {
+            case 4:
+                // 0x851898
+                typeAI.m_nInstance = g_pBaldurChitin->GetObjectGame()->sub_5BDFE0(1);
+                break;
+            case 5:
+                // 0x85189A
+                typeAI.m_nInstance = g_pBaldurChitin->GetObjectGame()->sub_5BDFE0(2);
+                break;
+            case 6:
+                // 0x85189C
+                typeAI.m_nInstance = g_pBaldurChitin->GetObjectGame()->sub_5BDFE0(3);
+                break;
+            case 7:
+                // 0x85189E
+                typeAI.m_nInstance = g_pBaldurChitin->GetObjectGame()->sub_5BDFE0(4);
+                break;
+            case 28:
+                // 0x8518A0
+                typeAI.m_nInstance = g_pBaldurChitin->GetObjectGame()->sub_5BDFE0(5);
+                break;
+            case 47:
+                // 0x8518A2
+                typeAI.m_nInstance = g_pBaldurChitin->GetObjectGame()->sub_5BDFE0(6);
+                break;
+            case 48:
+                // 0x8518A4
+                typeAI.m_nInstance = g_pBaldurChitin->GetObjectGame()->sub_5BDFE0(7);
+                break;
+            }
+
+            if (typeAI.m_nInstance == CGameObjectArray::INVALID_INDEX) {
+                // NOTE: Original leaks the share.
+                Set(NOONE);
+                return;
+            }
+            nLookup = 1;
+            break;
+        case 8:
+            // ProtectedBy
+            typeAI.Set(static_cast<CGameAIBase*>(pObject)->field_EA);
+            nLookup = 1;
+            break;
+        case 9:
+            // ProtectorOf
+            typeAI.Set(static_cast<CGameAIBase*>(pObject)->field_126);
+            nLookup = 1;
+            break;
+        case 10:
+            // LastAttackerOf
+            typeAI.Set(static_cast<CGameAIBase*>(pObject)->m_lAttacker);
+            nLookup = 2;
+            break;
+        case 11:
+            // LastTargetedBy
+            typeAI.Set(static_cast<CGameAIBase*>(pObject)->field_162);
+            nLookup = 1;
+            break;
+        case 12:
+            // NearestEnemyOf
+            if (typeAI.m_nEnemyAlly <= EA_GOODCUTOFF) {
+                typeAI.Set(CAIObjectType(EA_EVILCUTOFF));
+            } else if (typeAI.m_nEnemyAlly >= EA_EVILCUTOFF) {
+                typeAI.Set(CAIObjectType(EA_GOODCUTOFF));
+            } else {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                Set(NOONE);
+                return;
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            pObject = typeAI.sub_40CB20(caller, CGameObject::TYPE_AIBASE, TRUE);
+            if (pObject == NULL) {
+                if (caller->GetObjectType() == CGameObject::TYPE_SPRITE
+                    && (static_cast<CGameSprite*>(caller)->m_baseStats.m_flags & 0x10000) != 0
+                    && caller->GetAIType().m_nEnemyAlly >= EA_EVILCUTOFF) {
+                    static_cast<CGameSprite*>(caller)->m_baseStats.m_flags &= ~0x10000;
+                }
+
+                Set(NOONE);
+                return;
+            }
+
+            typeAI.Set(pObject->GetAIType());
+            typeAI.m_nInstance = pObject->GetId();
+            break;
+        case 13:
+            // LastCommandedBy
+            typeAI.Set(static_cast<CGameAIBase*>(pObject)->m_lOrderedBy);
+            nLookup = 1;
+            break;
+        case 14:
+        case 38:
+        case 39:
+        case 40:
+        case 41:
+        case 42:
+        case 43:
+        case 44:
+        case 45:
+        case 46:
+            // Nearest, SecondNearest, ..., TenthNearest
+            {
+                // NOTE: `Nearest` and `SecondNearest` both pass 1.
+                BYTE nNth = static_cast<BYTE>(nSpecialCase - 38);
+                if (nSpecialCase == 14) {
+                    nNth = 0;
+                }
+
+                typeAI.m_nInstance = -1;
+
+                if (caller->GetVertListType() == CGameObject::LIST_FRONT) {
+                    nId = caller->m_pArea->sub_46BAD0(caller->GetId(),
+                        typeAI,
+                        caller->GetVisualRange(),
+                        caller->GetVisibleTerrainTable(),
+                        TRUE,
+                        caller->GetCanSeeInvisible(),
+                        FALSE,
+                        static_cast<BYTE>(nNth + 1),
+                        FALSE);
+                } else {
+                    const CPoint& pos = caller->GetPos();
+                    nId = caller->m_pArea->sub_46DDC0(pos.x,
+                        pos.y,
+                        typeAI,
+                        caller->GetVisualRange(),
+                        caller->GetVisibleTerrainTable(),
+                        TRUE,
+                        caller->GetCanSeeInvisible(),
+                        static_cast<BYTE>(nNth + 1),
+                        FALSE);
+                }
+
+                typeAI.m_nInstance = nId;
+                nLookup = 3;
+            }
+            break;
+        case 16:
+            // LastHelp
+            typeAI.Set(static_cast<CGameAIBase*>(pObject)->m_lHelp);
+            nLookup = 2;
+            break;
+        case 17:
+            // LastTrigger
+            typeAI.Set(static_cast<CGameAIBase*>(pObject)->m_lTrigger);
+            nLookup = 2;
+            break;
+        case 18:
+            // LastSeenBy
+            typeAI.Set(static_cast<CGameAIBase*>(pObject)->m_lSeen);
+            nLookup = 2;
+            break;
+        case 19:
+            // LastTalkedToBy
+            typeAI.Set(static_cast<CGameAIBase*>(pObject)->m_lTalkedTo);
+            nLookup = 2;
+            break;
+        case 20:
+            // LastHeardBy
+            typeAI.Set(static_cast<CGameAIBase*>(pObject)->m_lHeard);
+            nLookup = 1;
+            break;
+        case 21:
+        case 22:
+        case 23:
+        case 24:
+        case 25:
+        case 26:
+            // Player1, ..., Player6
+            {
+                typeAI.Set(ANYONE);
+
+                SHORT nIndex = static_cast<SHORT>(nSpecialCase - 21);
+                typeAI.m_nInstance = nIndex < 6
+                    ? g_pBaldurChitin->GetObjectGame()->m_characters[nIndex]
+                    : CGameObjectArray::INVALID_INDEX;
+                if (typeAI.m_nInstance == CGameObjectArray::INVALID_INDEX) {
+                    // NOTE: Original leaks the share.
+                    Set(NOONE);
+                    return;
+                }
+                nLookup = 2;
+            }
+            break;
+        case 27:
+            // Protagonist
+            typeAI.Set(ANYONE);
+            typeAI.m_nInstance = g_pBaldurChitin->GetObjectGame()->GetProtagonist();
+            if (typeAI.m_nInstance == CGameObjectArray::INVALID_INDEX) {
+                // NOTE: Original leaks the share.
+                Set(NOONE);
+                return;
+            }
+            nLookup = 2;
+            break;
+        case 29:
+        case 30:
+        case 31:
+        case 32:
+        case 33:
+        case 34:
+        case 35:
+        case 36:
+        case 37:
+        case 50:
+            // SecondNearestEnemyOf, ..., TenthNearestEnemyOf, FarthestEnemyOf
+            if (typeAI.m_nEnemyAlly <= EA_GOODCUTOFF) {
+                typeAI.Set(CAIObjectType(EA_EVILCUTOFF));
+            } else if (typeAI.m_nEnemyAlly >= EA_EVILCUTOFF) {
+                typeAI.Set(CAIObjectType(EA_GOODCUTOFF));
+            } else {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                Set(NOONE);
+                return;
+            }
+
+            if (nSpecialCase == 50) {
+                if (caller->GetVertListType() == CGameObject::LIST_FRONT) {
+                    nId = caller->m_pArea->GetNearest(caller->GetId(),
+                        typeAI,
+                        caller->GetVisualRange(),
+                        caller->GetVisibleTerrainTable(),
+                        TRUE,
+                        caller->GetCanSeeInvisible(),
+                        FALSE,
+                        TRUE,
+                        FALSE);
+                } else {
+                    const CPoint& pos = caller->GetPos();
+                    nId = caller->m_pArea->sub_46DAE0(pos.x,
+                        pos.y,
+                        typeAI,
+                        caller->GetVisualRange(),
+                        caller->GetVisibleTerrainTable(),
+                        TRUE,
+                        caller->GetCanSeeInvisible(),
+                        TRUE,
+                        FALSE);
+                }
+            } else {
+                if (caller->GetVertListType() == CGameObject::LIST_FRONT) {
+                    nId = caller->m_pArea->sub_46BAD0(caller->GetId(),
+                        typeAI,
+                        caller->GetVisualRange(),
+                        caller->GetVisibleTerrainTable(),
+                        TRUE,
+                        caller->GetCanSeeInvisible(),
+                        FALSE,
+                        static_cast<BYTE>(m_SpecialCase[index] - 28),
+                        FALSE);
+                } else {
+                    const CPoint& pos = caller->GetPos();
+                    nId = caller->m_pArea->sub_46DDC0(pos.x,
+                        pos.y,
+                        typeAI,
+                        caller->GetVisualRange(),
+                        caller->GetVisibleTerrainTable(),
+                        TRUE,
+                        caller->GetCanSeeInvisible(),
+                        static_cast<BYTE>(m_SpecialCase[index] - 28),
+                        FALSE);
+                }
+            }
+
+            typeAI.m_nInstance = nId;
+            nLookup = 3;
+            break;
+        case 49:
+            // Farthest
+            typeAI.m_nInstance = -1;
+
+            if (caller->GetVertListType() == CGameObject::LIST_FRONT) {
+                nId = caller->m_pArea->GetNearest(caller->GetId(),
+                    typeAI,
+                    caller->GetVisualRange(),
+                    caller->GetVisibleTerrainTable(),
+                    TRUE,
+                    caller->GetCanSeeInvisible(),
+                    FALSE,
+                    TRUE,
+                    FALSE);
+            } else {
+                const CPoint& pos = caller->GetPos();
+                nId = caller->m_pArea->sub_46DAE0(pos.x,
+                    pos.y,
+                    typeAI,
+                    caller->GetVisualRange(),
+                    caller->GetVisibleTerrainTable(),
+                    TRUE,
+                    caller->GetCanSeeInvisible(),
+                    TRUE,
+                    FALSE);
+            }
+
+            typeAI.m_nInstance = nId;
+            nLookup = 3;
+            break;
+        case 51:
+            // LastMarkedObject
+            typeAI.Set(static_cast<CGameAIBase*>(pObject)->field_342);
+            nLookup = 2;
+            break;
+        case 52:
+            // NearestPC
+            {
+                CAIObjectType typeNearest;
+                LONG nBestDistance = 0x7FFFFFFF;
+                LONG nBestId = CGameObjectArray::INVALID_INDEX;
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+
+                LONG nCharacters = g_pBaldurChitin->GetObjectGame()->m_nCharacters;
+                for (SHORT nPortrait = 0; nPortrait < nCharacters; nPortrait++) {
+                    CGameSprite* pSprite;
+
+                    do {
+                        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait),
+                            CGameObjectArray::THREAD_ASYNCH,
+                            reinterpret_cast<CGameObject**>(&pSprite),
+                            INFINITE);
+                    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                    if (rc == CGameObjectArray::SUCCESS) {
+                        // NOTE: `pObject` was released above, the original
+                        // still reads its id.
+                        if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0
+                            && pSprite->GetAIType().m_nEnemyAlly <= EA_GOODCUTOFF
+                            && pSprite->GetId() != pObject->GetId()
+                            && pSprite->IsVisibleToCaller(caller->GetCanSeeInvisible())) {
+                            const CPoint& ptSprite = pSprite->GetPos();
+                            const CPoint& ptCaller = caller->GetPos();
+                            LONG nDistance = (ptCaller.x - ptSprite.x) * (ptCaller.x - ptSprite.x)
+                                + (ptCaller.y - ptSprite.y) * (ptCaller.y - ptSprite.y);
+                            if (nDistance < nBestDistance) {
+                                nBestDistance = nDistance;
+                                typeNearest.Set(pSprite->GetAIType());
+                                nBestId = pSprite->GetId();
+                            }
+                        }
+
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait),
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                    }
+                }
+
+                if (nBestId == CGameObjectArray::INVALID_INDEX) {
+                    Set(NOONE);
+                    return;
+                }
+
+                typeAI.Set(typeNearest);
+                typeAI.m_nInstance = nBestId;
+
+                // NOTE: `pObject` is not re-acquired, the next special case
+                // works with the released object.
+            }
+            break;
+        case 53:
+            // NearestEnemySummoned
+            typeAI.Set(ANYONE);
+
+            if (caller->GetAIType().m_nEnemyAlly <= EA_GOODCUTOFF) {
+                typeAI.Set(CAIObjectType(EA_EVILCUTOFF));
+            } else if (caller->GetAIType().m_nEnemyAlly >= EA_EVILCUTOFF) {
+                typeAI.Set(CAIObjectType(EA_GOODCUTOFF));
+            } else {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                Set(NOONE);
+                return;
+            }
+
+            if (caller->GetVertListType() == CGameObject::LIST_FRONT) {
+                nId = caller->m_pArea->GetNearest(caller->GetId(),
+                    typeAI,
+                    caller->GetVisualRange(),
+                    caller->GetVisibleTerrainTable(),
+                    TRUE,
+                    caller->GetCanSeeInvisible(),
+                    FALSE,
+                    FALSE,
+                    TRUE);
+            } else {
+                const CPoint& pos = caller->GetPos();
+                nId = caller->m_pArea->sub_46DAE0(pos.x,
+                    pos.y,
+                    typeAI,
+                    caller->GetVisualRange(),
+                    caller->GetVisibleTerrainTable(),
+                    TRUE,
+                    caller->GetCanSeeInvisible(),
+                    FALSE,
+                    TRUE);
+            }
+
+            if (nId == CGameObjectArray::INVALID_INDEX) {
+                // NOTE: Original leaks the share.
+                Set(NOONE);
+                return;
+            }
+
+            typeAI.m_nInstance = nId;
+            nLookup = 3;
+            break;
+        case 54:
+            // MyTarget
+            typeAI.Set(static_cast<CGameAIBase*>(pObject)->field_37E);
+            nLookup = 2;
+            break;
+        case 55:
+            // SpellTarget
+            typeAI.Set(static_cast<CGameAIBase*>(pObject)->field_3BA);
+            nLookup = 2;
+            break;
+        case 255:
+            // Nothing
+            // NOTE: Original leaks the share.
+            Set(NOONE);
+            return;
+        default:
+            // GroupOf, LastHitter, unknown
+            typeAI.Set(caller->GetAIType());
+            break;
+        }
+
+        if (nLookup != 0) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            pObject = typeAI.sub_40CB20(caller, CGameObject::TYPE_AIBASE, nLookup == 3);
+            if (pObject == NULL) {
+                Set(NOONE);
+                return;
+            }
+
+            // NOTE: Uninline.
+            if (nLookup == 2 && sub_40D920(pObject->GetPos()) != TRUE) {
+                // NOTE: Original leaks the share.
+                Set(NOONE);
+                return;
+            }
+
+            typeAI.Set(pObject->GetAIType());
+            typeAI.m_nInstance = pObject->GetId();
+        }
+    }
+
+    // NOTE: When all five special cases are used the original neither
+    // updates `this` nor releases `pObject`.
 }
 
 // 0x40CAC0
@@ -1146,7 +1810,7 @@ void CAIObjectType::Read(CString sData)
     m_nAlignment = static_cast<BYTE>(nAlignment);
 
     m_nSubRace = static_cast<BYTE>(nSubRace);
-    if (m_nSubRace == -1) {
+    if (m_nSubRace == 0xFF) {
         m_nSubRace = 0;
     }
 
@@ -1156,7 +1820,7 @@ void CAIObjectType::Read(CString sData)
     m_SpecialCase[3] = static_cast<BYTE>(nSpecialCase[3]);
     m_SpecialCase[4] = static_cast<BYTE>(nSpecialCase[4]);
 
-    if (height > 0) {
+    if (height >= 0) {
         CRect r;
         r.left = x;
         r.top = 4 * y / 3;
@@ -1166,7 +1830,7 @@ void CAIObjectType::Read(CString sData)
 
         m_rect = r;
         m_nLocationType = CAIOBJECTTYPE_LOCATION_TYPE_RECT;
-    } else if (x > 0 && y > 0) {
+    } else if (x >= 0 && y >= 0) {
         m_ptCenter.x = x;
         m_ptCenter.y = 4 * y / 3;
         m_nRadius = width;

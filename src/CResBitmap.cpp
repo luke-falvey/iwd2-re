@@ -195,9 +195,10 @@ BOOL CResBitmap::GetPixelColor(int x, int y, RGBQUAD& color, BOOL bDoubleSize)
         color = pColorTable[GetPixelValue(x, y, bDoubleSize)];
         return TRUE;
     case 24:
+        // Double-size coordinates map back onto the single-size data.
         if (bDoubleSize) {
-            x *= 2;
-            y *= 2;
+            x >>= 1;
+            y >>= 1;
         }
 
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChDataTypes.cpp
@@ -205,6 +206,7 @@ BOOL CResBitmap::GetPixelColor(int x, int y, RGBQUAD& color, BOOL bDoubleSize)
         UTIL_ASSERT(!(x >= pBitmapInfoHeader->biWidth || x < 0 || y > pBitmapInfoHeader->biHeight || y < 0));
 
         color = *reinterpret_cast<RGBQUAD*>(pBitmapData + 3 * x + 4 * nXWords * (pBitmapInfoHeader->biHeight - y - 1));
+        return TRUE;
     }
 
     return FALSE;
@@ -213,9 +215,10 @@ BOOL CResBitmap::GetPixelColor(int x, int y, RGBQUAD& color, BOOL bDoubleSize)
 // 0x77F0B0
 BYTE CResBitmap::GetPixelValue(int x, int y, BOOL bDoubleSize)
 {
+    // Double-size coordinates map back onto the single-size data.
     if (bDoubleSize && pBitmapInfoHeader->biBitCount != 4) {
-        x *= 2;
-        y *= 2;
+        x >>= 1;
+        y >>= 1;
     }
 
     if (x >= 0 && x < pBitmapInfoHeader->biWidth

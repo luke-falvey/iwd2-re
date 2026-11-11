@@ -54,6 +54,7 @@ public:
     static const SHORT SPELLNODEC;
     static const SHORT SPELLPOINTNODEC;
     static const SHORT GIVEPARTYGOLD;
+    static const SHORT STARTCUTSCENEMODE;
     static const SHORT BERSERK;
     static const SHORT ATTACKREEVALUATE;
     static const SHORT STARTDIALOGUENOSET;

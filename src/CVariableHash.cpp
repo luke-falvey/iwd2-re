@@ -322,7 +322,7 @@ void CVariableHash::Marshal(CVariable** pList, WORD* pCount)
         int index = 0;
         while (l.GetCount() != 0) {
             CVariable* pTemp = l.RemoveHead();
-            (*pList)[index] = *pTemp;
+            (*pList)[index++] = *pTemp;
             delete pTemp;
         }
     }

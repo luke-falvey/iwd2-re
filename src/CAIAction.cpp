@@ -87,6 +87,9 @@ const SHORT CAIAction::FORCESPELLPOINT = 114;
 // 0x847860
 const SHORT CAIAction::GIVEPARTYGOLD = 118;
 
+// 0x847866
+const SHORT CAIAction::STARTCUTSCENEMODE = 121;
+
 // 0x84786C
 const SHORT CAIAction::BERSERK = 124;
 
@@ -206,7 +209,7 @@ CAIAction::CAIAction(const CAIAction& action)
     m_acteeID2.Set(action.m_acteeID2);
     m_specificID = action.m_specificID;
     m_specificID2 = action.m_specificID2;
-    m_specificID3 = action.m_specificID2;
+    m_specificID3 = action.m_specificID3;
     m_string1 = action.m_string1;
     m_string2 = action.m_string2;
     m_dest = action.m_dest;

@@ -22,6 +22,7 @@ class CUIControlTextDisplay;
 class CScreenWorld : public CBaldurEngine {
 public:
     static const LONG BORED_TIME;
+    static BOOL dword_8F85B8;
     static int dword_8F85BC;
 
     CScreenWorld();
@@ -55,6 +56,7 @@ public:
     /* 00A0 */ SHORT GetNumVirtualKeys() override;
     /* 00A4 */ CKeyInfo* GetVirtualKeys() override;
     /* 00A8 */ BYTE* GetVirtualKeysFlags() override;
+    /* 00AC */ void OnKeyDown(SHORT nKeysFlags) override;
     /* 00C0 */ void TimerAsynchronousUpdate() override;
     /* 00C4 */ void TimerSynchronousUpdate() override;
     /* 00D0 */ int GetSelectedCharacter() override;
@@ -70,12 +72,13 @@ public:
     BOOL TogglePauseGame(char a2, char a3, int a4);
     BOOLEAN ReadyMovie(const CResRef& res, BOOLEAN bForcedFromServer);
     BOOLEAN ReadyEndCredits(BOOLEAN bForcedFromServer);
-    BOOL StartDialog(CGameSprite* pNPC, CGameSprite* pCharacter, BOOLEAN bPlayerInitiated, BOOLEAN a4);
+    BOOL StartDialog(CGameSprite* pCharacter, CGameSprite* pTarget, BOOLEAN bPlayerInitiated, BOOLEAN bInteract);
     void EndDialog(BOOLEAN bForceExecution, BOOLEAN fullEnd);
     void MoveToArea(CString areaName);
     void SaveScreen();
     void SetCurrentXP(DWORD dwCurrentXP);
     void AddGold(DWORD dwGold);
+    void StartContainer();
     void StopContainer();
     INT GetActivePanelID();
     void CancelPopup();
@@ -117,6 +120,7 @@ public:
     void DeleteAreaMultiplayer();
     void DeleteArea(CGameArea* pArea);
     void CopyChatEditBox(CUIPanel* pFrom, CUIPanel* pTo);
+    void sub_694510();
     void LeaveAreaLuaPanic(CPoint ptLocation, SHORT nDirection, CString sAreaName, CString sParchment);
     void SetDialogTokens(CGameSprite* pCharacter);
     void sub_695570(BOOL bActive, BOOL bInvalidate);
@@ -143,7 +147,7 @@ public:
     /* 0132 */ BOOL m_bMenuKeyDown;
     /* 0136 */ BOOL m_bCtrlKeyDown;
     /* 013A */ BOOL m_bCapsLockKeyOn;
-    /* 013E */ BOOLEAN m_bPaused;
+    /* 013E */ BOOL m_bPaused;
     /* 0142 */ BOOL field_142;
     /* 0146 */ BOOL m_bHardPaused;
     /* 014A */ int field_14A;
@@ -165,6 +169,8 @@ public:
     /* 0EA8 */ CUIControlTextDisplay* m_pActiveDialogDisplay;
     /* 0EAC */ CUIControlTextDisplay* m_pActiveChatDisplay;
     /* 0EB0 */ CGameDialogSprite m_internalLoadedDialog;
+    /* 0F12 */ CPoint m_ptDialogViewPosition; // #guess
+    /* 0F1A */ CResRef m_cResDialogArea; // #guess
     /* 0F22 */ CRect m_newViewSize;
     /* 0F32 */ BOOL m_bForceViewSize;
     /* 0F36 */ BYTE m_waitingOnResize;
@@ -230,7 +236,7 @@ public:
     /* 11AC */ SHORT m_nLeaveAreaLuaPanicDirection;
     /* 11AE */ CString m_sLeaveAreaLuaPanicAreaName;
     /* 11B2 */ CString m_sLeaveAreaLuaPanicParchment;
-    /* 11B6 */ int field_11B6;
+    /* 11B6 */ DWORD field_11B6;
     /* 11BA */ DWORD field_11BA;
     /* 11BE */ int field_11BE;
     /* 11C2 */ LONG m_lastAmbiance;

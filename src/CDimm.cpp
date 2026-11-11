@@ -1737,6 +1737,12 @@ int CDimm::LocalReadResource(CRes* pRes, DWORD nNumberOfBytesToRead, DWORD nOffs
     return nBytesRead;
 }
 
+// 0x787400
+void CDimm::sub_787400(int a1)
+{
+    // TODO: Incomplete.
+}
+
 // #binary-identical
 // 0x787740
 BOOL CDimm::MemoryAlmostFull()

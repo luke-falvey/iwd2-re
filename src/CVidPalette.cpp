@@ -924,7 +924,7 @@ void CVidPalette::RealizeRange(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, CVI
     }
 
     for (int range = 0; range < 7; range++) {
-        RGBQUAD rgbRangeTint;
+        CVIDPALETTE_COLOR rgbRangeTint;
         if (pAffectArgs->pRangeTints[range] != NULL) {
             if (pAffectArgs->aRangeTintPeriods[range] == 1) {
                 rgbRangeTint.rgbRed = GetRValue(*pAffectArgs->pRangeTints[range]);
@@ -961,7 +961,9 @@ void CVidPalette::RealizeRange(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, CVI
             }
         }
 
-        RGBQUAD rgbRangeLight;
+        // NOTE: Ints like the original. A pulsing light reaches 255 + 8, which
+        // must not wrap to a near-black byte.
+        CVIDPALETTE_COLOR rgbRangeLight;
         if (pAffectArgs->pRangeLights[range] != NULL) {
             if (pAffectArgs->aRangeLightPeriods[range] == 1) {
                 rgbRangeLight.rgbRed = GetRValue(*pAffectArgs->pRangeLights[range]);

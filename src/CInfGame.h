@@ -94,6 +94,10 @@ public:
     /* 0048 */ UINT m_nHighestLevel;
 };
 
+// NOTE: Spell resrefs for keymap entries 53 and up (see `CInfGame::LoadKeymap`
+// and `CScreenWorld::OnKeyDown`).
+extern const char* off_8B4F84[];
+
 // NOTE: Elements of `CInfGame::field_4BDC`, keyed by area name (see
 // `CGameArea::Unmarshal`). The list is typed as `CString*` since `m_sName` is
 // the first member.
@@ -207,10 +211,14 @@ public:
     CGameArea* GetArea(CString sName);
     CGameArea* GetArea(SHORT nArea);
     LONG GetGroundPile(LONG iSprite);
+    BOOL sub_5B7730(LONG nContainerId, SHORT nSlotNum, CGameSprite* pSprite, SHORT nPortraitNum);
+    BOOL SwapItemGround(LONG nContainerId, SHORT nSlotNum, CItem*& pNewItem, STRREF& errorCode, WORD wCount, BOOLEAN bFromServer);
     SHORT GetNumGroundSlots(LONG nContainerId);
     void InventoryInfoGround(LONG nContainerId, SHORT nSlotNum, CItem*& pItem, STRREF& description, CResRef& cResIcon, CResRef& cResItem, WORD& wCount);
     WORD GetContainerType(LONG nContainerId);
     void CompressContainer(LONG nContainerId);
+    BOOL CheckIfPlayerInPortraitSlotCanUseItem(SHORT nPortraitNum, CItem* pItem, STRREF& strError, BOOL a4);
+    BOOL CheckIfSpriteCanUseItem(CGameSprite* pSprite, CItem* pItem, STRREF& strError, BOOL a4);
     INT CheckItemUsable(CGameSprite* pSprite, CItem* pItem);
     SHORT GetNumQuickWeaponSlots(SHORT nPortrait);
     BOOL SwapItemPersonalInventory(SHORT nPortraitNum, CItem*& pNewItem, SHORT nSlotNum, STRREF& errorCode, WORD wCount, BOOLEAN bFromServer, BOOL bAutoStacking);
@@ -245,7 +253,9 @@ public:
     void AddDisposableItem(CItem* pItem);
     void DestroyDisposableItems();
     void AddPartyGold(LONG dwAddPartyGold);
+    void PanicRescueItem(CItem* pItem, LONG nCharacterId);
     void SetupCharacters(BOOLEAN bProgressBarInPlace);
+    LONG sub_5BDFE0(SHORT nType);
     LONG GetProtagonist();
     void SetProtagonist(LONG nId);
     BOOLEAN FindAreaID(DWORD nAreaId);
