@@ -19551,9 +19551,147 @@ SHORT CGameSprite::Help()
 // 0x7500F0
 SHORT CGameSprite::Rest()
 {
-    // TODO: Incomplete.
+    CMessage* message;
 
-    return ACTION_ERROR;
+    ITEM_EFFECT effect;
+    CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_MAGICAL_REST);
+    // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+    effect.durationType = 1;
+
+    CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+        m_pos,
+        m_id,
+        CPoint(-1, -1));
+
+    message = new CMessageAddEffect(pEffect, m_id, m_id);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    // NOTE: Uninline.
+    RemovePortraitIcon(39);
+
+    field_722A = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+
+    CAbilityId ab;
+    ab.m_itemType = 1;
+
+    UINT nClassIndex;
+    UINT nLevel;
+    UINT nIndex;
+    UINT nID;
+
+    for (nClassIndex = 0; nClassIndex < CSPELLLIST_NUM_CLASSES; nClassIndex++) {
+        for (nLevel = 0; nLevel < m_spells.Get(nClassIndex)->m_nHighestLevel; nLevel++) {
+            if (nClassIndex != 0 && nClassIndex != 5) {
+                for (nIndex = 0; nIndex < m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+                    // NOTE: Uninline.
+                    CGameSpriteSpellListEntry* pEntry = m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->Get(nIndex);
+                    INT nChange = pEntry->field_4 - pEntry->field_8;
+                    if (nChange > 0) {
+                        nID = pEntry->m_nID;
+                        m_spells.Get(nClassIndex)->sub_726060(nID, nLevel, 0, TRUE);
+
+                        ab.m_res = g_pBaldurChitin->GetObjectGame()->m_spells.Get(pEntry->m_nID);
+                        ab.m_nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nClassIndex);
+                        ab.field_1D = static_cast<BYTE>(nLevel + 1);
+                        ab.field_1E = 0;
+                        CheckQuickLists(&ab, static_cast<SHORT>(nChange), FALSE, FALSE);
+                    }
+                }
+            } else {
+                // NOTE: Uninline.
+                CGameSpriteSpellList* pList = m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel);
+                INT nChange = pList->field_14 - pList->field_18;
+                if (nChange > 0) {
+                    m_spells.Get(nClassIndex)->sub_726150(nLevel, 0, TRUE);
+
+                    ab.m_nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nClassIndex);
+                    ab.field_1D = static_cast<BYTE>(nLevel + 1);
+                    ab.field_1E = 0;
+
+                    for (nIndex = 0; nIndex < m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+                        // NOTE: Uninline.
+                        CGameSpriteSpellListEntry* pEntry = m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->Get(nIndex);
+                        ab.m_res = g_pBaldurChitin->GetObjectGame()->m_spells.Get(pEntry->m_nID);
+                        CheckQuickLists(&ab, static_cast<SHORT>(nChange), FALSE, FALSE);
+                    }
+                }
+            }
+        }
+    }
+
+    for (nLevel = 0; nLevel < m_domainSpells.m_nHighestLevel; nLevel++) {
+        for (nIndex = 0; nIndex < m_domainSpells.GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+            // NOTE: Uninline.
+            CGameSpriteSpellListEntry* pEntry = m_domainSpells.GetSpellsAtLevel(nLevel)->Get(nIndex);
+            INT nChange = pEntry->field_4 - pEntry->field_8;
+            nID = pEntry->m_nID;
+            m_domainSpells.sub_726060(nID, nLevel, 0, TRUE);
+
+            if (nChange > 0) {
+                ab.m_res = g_pBaldurChitin->GetObjectGame()->m_spells.Get(pEntry->m_nID);
+                ab.m_nClass = CAIOBJECTTYPE_C_CLERIC;
+                ab.field_1D = static_cast<BYTE>(nLevel + 1);
+                ab.field_1E = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetSpecializationIndex(CAIOBJECTTYPE_C_CLERIC,
+                    m_baseStats.m_specialization);
+                CheckQuickLists(&ab, static_cast<SHORT>(nChange), FALSE, FALSE);
+            }
+        }
+    }
+
+    ab.m_nClass = 0;
+    ab.field_1D = 0;
+    ab.field_1E = 0;
+
+    for (nIndex = 0; nIndex < m_innateSpells.m_List.size(); nIndex++) {
+        // NOTE: Uninline.
+        CGameSpriteSpellListEntry* pEntry = m_innateSpells.Get(nIndex);
+        INT nChange = pEntry->field_4 - pEntry->field_8;
+        nID = pEntry->m_nID;
+        m_innateSpells.sub_725C50(nID, 0, TRUE);
+
+        if (nChange > 0) {
+            ab.m_res = g_pBaldurChitin->GetObjectGame()->m_innateSpells.Get(pEntry->m_nID);
+            CheckQuickLists(&ab, static_cast<SHORT>(nChange), FALSE, FALSE);
+        }
+    }
+
+    m_shapeshifts.sub_725D30(0, TRUE);
+
+    for (BYTE nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+        if (nSlot != CGameSpriteEquipment::SLOT_FIST) {
+            CItem* pItem = m_equipment.m_items[nSlot];
+            if (pItem != NULL && pItem->GetAbilityCount() > 0) {
+                for (INT nAbility = 0; nAbility < pItem->GetAbilityCount(); nAbility++) {
+                    pItem->Demand();
+
+                    ITEM_ABILITY* pAbility = pItem->GetAbility(nAbility);
+                    if (pAbility != NULL && (pAbility->abilityFlags & 0x800) != 0) {
+                        WORD nOldUsageCount = pItem->GetUsageCount(nAbility);
+                        pItem->SetUsageCount(nAbility, pAbility->maxUsageCount);
+
+                        CAbilityId itemAb;
+                        itemAb.m_itemNum = nSlot;
+                        itemAb.m_itemType = 2;
+                        itemAb.m_abilityNum = static_cast<SHORT>(nAbility);
+                        CheckQuickLists(&itemAb,
+                            static_cast<SHORT>(pItem->GetUsageCount(nAbility) - nOldUsageCount),
+                            FALSE,
+                            FALSE);
+                    }
+
+                    pItem->Release();
+                }
+            }
+        }
+    }
+
+    // NOTE: Uninline.
+    if (InControl()) {
+        message = new CMessageSpriteUpdate(this, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x750F10
