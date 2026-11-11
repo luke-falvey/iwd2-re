@@ -27,6 +27,8 @@ INV_NAME_PORTRAIT = (20, 20, 215, 395)
 INV_QUICK_WEAPONS = (570, 20, 215, 110)
 INV_AC_HP = (700, 170, 85, 230)
 INV_BACKPACK = (250, 300, 310, 115)
+# The six party portraits with their frames and status icons.
+INV_PORTRAITS = (500, 435, 300, 55)
 DETAILS = {
     "armor-class": (715, 248, 50, 24),
     "hit-points": (715, 352, 50, 42),
@@ -50,9 +52,9 @@ def finish_hedron_dialog(game):
     time.sleep(3.0)
     for _ in range(9):
         game.press("1")
-        time.sleep(2.5)
+        time.sleep(3.0)
         game.click(*CONTINUE)
-        time.sleep(2.5)
+        time.sleep(3.0)
 
 
 def test_s5_leave_dialog_inventory(game, golden_dir):
@@ -68,6 +70,7 @@ def test_s5_leave_dialog_inventory(game, golden_dir):
     checkpoint(game, golden_dir, "inventory-quick-weapons", region=INV_QUICK_WEAPONS, settle=1.0)
     checkpoint(game, golden_dir, "inventory-ac-hp", region=INV_AC_HP, settle=1.0)
     checkpoint(game, golden_dir, "inventory-backpack", region=INV_BACKPACK, settle=1.0)
+    checkpoint(game, golden_dir, "inventory-portraits", region=INV_PORTRAITS, settle=1.0, max_diff=0.004)
     # Small regions holding numbers or a single highlight: a wrong value only
     # changes a few pixels, so these use a much tighter limit.
     for name, region in DETAILS.items():
