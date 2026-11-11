@@ -11018,7 +11018,48 @@ SHORT CGameSprite::GetLayOnHandsAmount()
 // 0x71B9C0
 void CGameSprite::AddSpecialAbility(const CResRef& cResInnateSpell, BOOL feedBack)
 {
-    // TODO: Incomplete.
+    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(cResInnateSpell, 0x3EE, TRUE) != NULL) {
+        WORD nFeedBackId = FEEDBACK_GAINEDSPECIALABILITY;
+        UINT nSpellId = 0;
+
+        if (g_pBaldurChitin->GetObjectGame()->m_songs.Find(cResInnateSpell, nSpellId)) {
+            UINT nId = 0;
+            UINT nUnused1 = 0;
+            UINT nUnused2 = 1;
+            UINT nUnused3 = 1;
+            nFeedBackId = FEEDBACK_GAINEDBARDSONG;
+            if (g_pBaldurChitin->GetObjectGame()->m_songs.Find(cResInnateSpell, nId)) {
+                m_songs.Add(nId, nUnused3, nUnused2, nUnused1);
+            }
+        } else if (g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Find(cResInnateSpell, nSpellId)) {
+            UINT nId = 0;
+            UINT nUnused1 = 0;
+            UINT nUnused2 = 0;
+            UINT nUnused3 = 0;
+            if (g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Find(cResInnateSpell, nId)) {
+                m_shapeshifts.Add(nId, nUnused3, nUnused2, nUnused1);
+            }
+        } else if (g_pBaldurChitin->GetObjectGame()->m_innateSpells.Find(cResInnateSpell, nSpellId)) {
+            UINT nId = 0;
+            UINT nUnused1 = 0;
+            UINT nUnused2 = 1;
+            UINT nUnused3 = 1;
+            if (g_pBaldurChitin->GetObjectGame()->m_innateSpells.Find(cResInnateSpell, nId)) {
+                m_innateSpells.Add(nId, nUnused3, nUnused2, nUnused1);
+            }
+        }
+
+        if (feedBack == TRUE) {
+            CSpell cSpell(cResInnateSpell);
+            cSpell.Demand();
+
+            if (cSpell.pRes != NULL) {
+                FeedBack(nFeedBackId, 0, 0, 0, cSpell.GetGenericName(), 0, 0);
+            }
+
+            cSpell.Release();
+        }
+    }
 }
 
 // 0x71BC60
@@ -33782,9 +33823,80 @@ void CGameSprite::sub_726F20()
 // 0x727720
 BOOL CGameSprite::sub_727720(const CResRef& resRef, BYTE& nClass, int& a3, BYTE& nLevel)
 {
-    // TODO: Incomplete.
+    BOOL bFound = FALSE;
+    UINT nSpellId;
 
-    return FALSE;
+    if (!g_pBaldurChitin->GetObjectGame()->m_spells.Find(resRef, nSpellId)) {
+        return FALSE;
+    }
+
+    UINT nStartLevel = 0;
+    UINT nEndLevel = 9;
+    if (nLevel > 0 && nLevel <= 9) {
+        nStartLevel = nLevel - 1;
+        nEndLevel = nLevel;
+    }
+
+    if (a3 == 0) {
+        UINT nClassIndex = 0;
+        if (nClass > 0 && nClass <= 11) {
+            nClassIndex = g_pBaldurChitin->GetObjectGame()->GetSpellcasterIndex(nClass);
+        }
+
+        for (; nClassIndex < CSPELLLIST_NUM_CLASSES && !bFound; nClassIndex++) {
+            UINT nMaxLevel;
+            if (nEndLevel < m_spells.Get(nClassIndex)->m_nHighestLevel) {
+                nMaxLevel = nEndLevel;
+            } else {
+                nMaxLevel = m_spells.Get(nClassIndex)->m_nHighestLevel;
+            }
+
+            for (UINT nSpellLevel = nStartLevel; nSpellLevel < nMaxLevel && !bFound; nSpellLevel++) {
+                CGameSpriteSpellList* pList = m_spells.Get(nClassIndex)->GetSpellsAtLevel(nSpellLevel);
+
+                // NOTE: Uninline.
+                UINT nIndex;
+                if (pList->Find(nSpellId, nIndex)) {
+                    pList = m_spells.Get(nClassIndex)->GetSpellsAtLevel(nSpellLevel);
+
+                    // NOTE: Uninline.
+                    if (pList->Get(nIndex)->field_8 > 0) {
+                        nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nClassIndex);
+                        nLevel = static_cast<BYTE>(nSpellLevel + 1);
+                        a3 = 0;
+                        bFound = TRUE;
+                    }
+                }
+            }
+        }
+    }
+
+    UINT nMaxLevel;
+    if (nEndLevel < m_domainSpells.m_nHighestLevel) {
+        nMaxLevel = nEndLevel;
+    } else {
+        nMaxLevel = m_domainSpells.m_nHighestLevel;
+    }
+
+    for (UINT nSpellLevel = nStartLevel; nSpellLevel < nMaxLevel && !bFound; nSpellLevel++) {
+        CGameSpriteSpellList* pList = m_domainSpells.GetSpellsAtLevel(nSpellLevel);
+
+        // NOTE: Uninline.
+        UINT nIndex;
+        if (pList->Find(nSpellId, nIndex)) {
+            pList = m_domainSpells.GetSpellsAtLevel(nSpellLevel);
+
+            // NOTE: Uninline.
+            if (pList->Get(nIndex)->field_8 > 0) {
+                nClass = 3;
+                nLevel = static_cast<BYTE>(nSpellLevel + 1);
+                a3 = m_baseStats.m_specialization;
+                bFound = TRUE;
+            }
+        }
+    }
+
+    return bFound;
 }
 
 // 0x58FEE0
