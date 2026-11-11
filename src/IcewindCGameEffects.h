@@ -505,6 +505,8 @@ class IcewindCGameEffectFireshield : public CGameEffect {
 public:
     IcewindCGameEffectFireshield(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void AddWhenStruck(CGameSprite* pSprite);
 };
 
 class IcewindCGameEffectDeathWard : public CGameEffect {
@@ -550,6 +552,7 @@ class IcewindCGameEffectAreaOfEffect : public CGameEffect {
 public:
     IcewindCGameEffectAreaOfEffect(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectFreeAction : public CGameEffect {
@@ -564,6 +567,7 @@ class IcewindCGameEffectBleedingWounds : public CGameEffect {
 public:
     IcewindCGameEffectBleedingWounds(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectUnconsciousness : public CGameEffect {

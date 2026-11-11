@@ -5,6 +5,7 @@
 #include "CInfGame.h"
 #include "CMessage.h"
 #include "CProjectile.h"
+#include "CProjectileArea.h"
 #include "CUtil.h"
 #include "IcewindMisc.h"
 
@@ -1767,6 +1768,75 @@ CGameEffect* IcewindCGameEffectFireshield::Copy()
     return copy;
 }
 
+// 0x568D00
+BOOL IcewindCGameEffectFireshield::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_secondaryType) {
+        DisplayStringRef(pSprite, 736); // "Fireshield"
+    }
+
+    switch (m_dwFlags) {
+    case 0:
+        if (pSprite->GetDerivedStats()->m_spellStates.test(SPLSTATE_RED_FIRESHIELD) == true) {
+            return TRUE;
+        }
+
+        // NOTE: Uninline.
+        AddPortraitIcon(pSprite, 121);
+
+        pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_RED_FIRESHIELD, true);
+
+        // NOTE: Using `set` (with bounds check).
+        pSprite->GetDerivedStats()->m_visualEffects.set(IWD_VFX_FIRE_SHIELD_RED, true);
+        pSprite->GetDerivedStats()->m_visualEffects.set(IWD_VFX_28, true);
+
+        AddWhenStruck(pSprite);
+        break;
+    case 1:
+        if (pSprite->GetDerivedStats()->m_spellStates.test(SPLSTATE_BLUE_FIRESHIELD) == true) {
+            return TRUE;
+        }
+
+        // NOTE: Uninline.
+        AddPortraitIcon(pSprite, 122);
+
+        pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_BLUE_FIRESHIELD, true);
+
+        // NOTE: Using `set` (with bounds check).
+        pSprite->GetDerivedStats()->m_visualEffects.set(IWD_VFX_FIRE_SHIELD_BLUE, true);
+        pSprite->GetDerivedStats()->m_visualEffects.set(IWD_VFX_29, true);
+
+        AddWhenStruck(pSprite);
+        break;
+    }
+
+    m_done = FALSE;
+
+    return TRUE;
+}
+
+// NOTE: Inlined in both cases of `ApplyEffect`, identical to
+// `IcewindCGameEffectWhenStruck::ApplyEffect`.
+void IcewindCGameEffectFireshield::AddWhenStruck(CGameSprite* pSprite)
+{
+    CWhenStruck whenStruck;
+    whenStruck.m_sourceRes = m_sourceRes;
+    whenStruck.m_res = m_res;
+    whenStruck.m_casterLevel = static_cast<BYTE>(m_casterLevel);
+    whenStruck.m_target = m_target;
+    pSprite->GetDerivedStats()->m_whenStruckList.push_back(whenStruck);
+
+    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+        CMessage* message = new CMessage117(m_sourceRes,
+            m_res,
+            static_cast<BYTE>(m_casterLevel),
+            m_target,
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4A0E20
@@ -2010,6 +2080,57 @@ CGameEffect* IcewindCGameEffectBleedingWounds::Copy()
     return copy;
 }
 
+// 0x569A30
+BOOL IcewindCGameEffectBleedingWounds::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_secondaryType) {
+        DisplayStringRef(pSprite, 26877); // "Bleeding Wound"
+    }
+
+    // NOTE: Uninline.
+    AddPortraitIcon(pSprite, 85);
+
+    if (m_secondaryType != 0) {
+        m_special = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+    }
+
+    // NOTE: Original reads it from a constant at 0x8491AA.
+    DWORD duration = m_durationType != 1 ? m_duration : 0;
+
+    CPersistantEffect84C420* pEffect;
+    switch (m_dwFlags) {
+    case 0:
+        pEffect = new CPersistantEffect84C420(0x20000000,
+            m_effectAmount,
+            105,
+            m_special,
+            duration);
+        break;
+    case 1:
+        pEffect = new CPersistantEffect84C420(0x20000000,
+            m_effectAmount,
+            15,
+            m_special,
+            duration);
+        break;
+    case 2:
+        pEffect = new CPersistantEffect84C420(0x20000000,
+            1,
+            15 * m_effectAmount,
+            m_special,
+            duration);
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+        // __LINE__: 6408
+        UTIL_ASSERT(FALSE);
+    }
+
+    pSprite->GetDerivedStats()->m_cRegeneratedPersistantEffectList.AddTail(pEffect);
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4A13C0
@@ -2026,6 +2147,95 @@ CGameEffect* IcewindCGameEffectAreaOfEffect::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x569470
+BOOL IcewindCGameEffectAreaOfEffect::ApplyEffect(CGameSprite* pSprite)
+{
+    if (IcewindMisc::IsDead(pSprite) == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    switch (m_dwFlags) {
+    case 0:
+    case 2: {
+        CGameObject* pSource;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pSource,
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            m_done = TRUE;
+            return TRUE;
+        }
+
+        CProjectileArea* pProjectile = new CProjectileArea(static_cast<SHORT>(m_effectAmount));
+
+        if (m_dwFlags == 2) {
+            pProjectile->field_64E.insert(pSprite->GetId());
+        }
+
+        std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pSource),
+            reinterpret_cast<const char*>(m_res.GetResRef()),
+            1);
+        for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+            (*it)->m_sourceRes = m_res;
+            pProjectile->AddEffect(*it);
+        }
+
+        pProjectile->Fire(pSprite->GetArea(),
+            pSource->GetId(),
+            pSprite->GetId(),
+            pSprite->GetPos(),
+            0,
+            0);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        m_done = TRUE;
+        break;
+    }
+    case 1:
+    case 3: {
+        if (m_secondaryType != 0) {
+            m_special = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+        }
+
+        CPersistantEffect84C4B4* pEffect;
+
+        // NOTE: Original reads it from a constant at 0x8491AA.
+        if (m_durationType == 1) {
+            pEffect = new CPersistantEffect84C4B4(m_res.GetResRefStr(),
+                m_effectAmount,
+                105,
+                m_special,
+                0);
+        } else {
+            pEffect = new CPersistantEffect84C4B4(m_res.GetResRefStr(),
+                m_effectAmount,
+                105,
+                m_special,
+                m_duration);
+        }
+
+        pEffect->m_sourceID = m_sourceID;
+        strcpy(reinterpret_cast<char*>(pEffect->field_29), m_sourceRes.GetResRefStr());
+
+        if (m_dwFlags == 3) {
+            // NOTE: The original set holds signed object ids.
+            pEffect->field_58.insert(reinterpret_cast<void*>(pSprite->GetId()));
+        }
+
+        pSprite->GetDerivedStats()->m_cRegeneratedPersistantEffectList.AddTail(pEffect);
+        break;
+    }
+    }
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
