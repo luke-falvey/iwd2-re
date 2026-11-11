@@ -281,6 +281,7 @@ public:
     CGameEffect* Copy() override;
     void OnAdd(CGameSprite* pSprite) override;
     void OnRemove(CGameSprite* pSprite) override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectStaticCharge : public CGameEffect {

@@ -1567,6 +1567,205 @@ CGameEffect* IcewindCGameEffectDominate::Copy()
     return copy;
 }
 
+// 0x5645A0
+BOOL IcewindCGameEffectDominate::ApplyEffect(CGameSprite* pSprite)
+{
+    CAIObjectType typeAI(pSprite->GetAIType());
+    CAIObjectType liveTypeAI(pSprite->m_liveTypeAI);
+    CAIObjectType startTypeAI(pSprite->m_startTypeAI);
+    CAIObjectType casterTypeAI;
+    BOOL bPartyCharm = FALSE;
+
+    // Only creatures of the given general type (or any if `0`) are affected.
+    BYTE nGeneral = pSprite->GetAIType().m_nGeneral;
+    if (nGeneral != m_effectAmount && m_effectAmount != 0) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    pSprite->sub_761650();
+
+    BYTE nEnemyAlly = 0;
+
+    if (m_numDice != -1) {
+        // Effect is being reapplied (e.g. after load), restore the cached
+        // values.
+        nEnemyAlly = static_cast<BYTE>(m_numDice);
+        bPartyCharm = m_diceSize;
+
+        CAIObjectType charmedTypeAI;
+        charmedTypeAI.m_nEnemyAlly = static_cast<BYTE>(m_numDice);
+        casterTypeAI.Set(charmedTypeAI.GetEnemyOf());
+    } else if (m_sourceID != CGameObjectArray::INVALID_INDEX) {
+        CGameObject* pObject;
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            CGameSprite* pSource = static_cast<CGameSprite*>(pObject);
+
+            if (!Icewind586B70::Instance()->sub_586CF0(pSource, pSprite)) {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                m_done = TRUE;
+                return TRUE;
+            }
+
+            Icewind586B70::Instance()->sub_586F20(pSource, pSprite);
+
+            CMessage* message = new CMessage95(pSprite->GetId(),
+                pSource->GetId(),
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            if (pSource->GetAIType().m_nEnemyAlly > CAIObjectType::EA_GOODCUTOFF) {
+                nEnemyAlly = CAIObjectType::EA_ENEMY;
+            }
+
+            casterTypeAI.Set(pSource->GetAIType().GetEnemyOf());
+
+            CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+            if (pGame->GetCharacterPortraitNum(pSprite->GetId()) != -1
+                && pGame->GetCharacterPortraitNum(pSource->GetId()) != -1) {
+                bPartyCharm = TRUE;
+            }
+
+            // NOTE: The original keeps this action in a function-level
+            // static and resets it field by field.
+            static CAIAction action;
+            action.m_actionID = CAIAction::ATTACKREEVALUATE;
+            action.m_specificID = 0;
+            action.m_dest.x = -1;
+            action.m_specificID2 = -1;
+            action.m_specificID3 = 0;
+            action.m_string1 = "";
+            action.m_string2 = "";
+            action.m_dest.y = -1;
+            action.m_internalFlags = 0;
+
+            CAIObjectType actee;
+            actee.m_nEnemyAlly = nEnemyAlly;
+            action.m_acteeID.Set(actee);
+            action.m_specificID = 45;
+
+            pSprite->ClearActions(FALSE);
+            pSprite->DropPath();
+            pSprite->m_interrupt = TRUE;
+            pSprite->AddAction(action);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    // NOTE: Original reads the permanent duration type from a constant at
+    // 0x8491AA.
+    BOOL bUpdate = TRUE;
+    BOOL bStart = FALSE;
+    BOOL bStartFromCaster = FALSE;
+    switch (m_dwFlags) {
+    case 0:
+        if (nEnemyAlly == 0) {
+            nEnemyAlly = CAIObjectType::EA_0x847C3A;
+        }
+
+        if (nEnemyAlly == CAIObjectType::EA_ENEMY) {
+            nEnemyAlly = CAIObjectType::EA_CHARMED_PC;
+        }
+
+        if (m_durationType == 1) {
+            bStart = TRUE;
+        } else {
+            m_done = FALSE;
+        }
+        break;
+    case 1:
+        if (nEnemyAlly == 0) {
+            nEnemyAlly = CAIObjectType::EA_0x847C3A;
+        }
+
+        if (nEnemyAlly == CAIObjectType::EA_ENEMY) {
+            nEnemyAlly = CAIObjectType::EA_CHARMED_PC;
+        }
+
+        if (m_durationType == 1) {
+            bStart = TRUE;
+        } else if (!bPartyCharm
+            && g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) == -1) {
+            bStartFromCaster = TRUE;
+        }
+        break;
+    case 2:
+        if (nEnemyAlly == 0) {
+            nEnemyAlly = CAIObjectType::EA_CONTROLLED;
+        }
+
+        if (m_durationType == 1) {
+            bStart = TRUE;
+        } else {
+            m_done = FALSE;
+        }
+        break;
+    case 3:
+    case 4:
+        if (nEnemyAlly == 0) {
+            nEnemyAlly = CAIObjectType::EA_CONTROLLED;
+        }
+
+        if (m_durationType == 1) {
+            bStart = TRUE;
+        } else if (!bPartyCharm
+            && g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) == -1) {
+            bStartFromCaster = TRUE;
+        }
+        break;
+    default:
+        bUpdate = FALSE;
+        break;
+    }
+
+    if (bStart) {
+        // NOTE: Uninline.
+        startTypeAI.SetEnemyAlly(nEnemyAlly);
+        pSprite->m_startTypeAI.Set(startTypeAI);
+        m_done = TRUE;
+    } else if (bStartFromCaster) {
+        // NOTE: Uninline.
+        startTypeAI.SetEnemyAlly(casterTypeAI.m_nEnemyAlly);
+        pSprite->m_startTypeAI.Set(startTypeAI);
+        m_done = FALSE;
+    }
+
+    if (bUpdate) {
+        // NOTE: Uninline.
+        typeAI.SetEnemyAlly(nEnemyAlly);
+        pSprite->SetAIType(typeAI, FALSE, FALSE);
+
+        // NOTE: Uninline.
+        liveTypeAI.SetEnemyAlly(nEnemyAlly);
+        pSprite->m_liveTypeAI.Set(liveTypeAI);
+    }
+
+    pSprite->GetDerivedStats()->m_generalState |= STATE_CHARMED;
+
+    if (m_durationType == 1) {
+        pSprite->GetBaseStats()->m_generalState |= STATE_CHARMED;
+    }
+
+    m_numDice = nEnemyAlly;
+    m_diceSize = bPartyCharm;
+
+    return TRUE;
+}
+
 // 0x4A6220
 void IcewindCGameEffectDominate::OnAdd(CGameSprite* pSprite)
 {
