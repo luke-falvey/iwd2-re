@@ -1985,7 +1985,8 @@ BOOL CScreenInventory::IsAbilitiesButtonActive()
                     case 108: {
                         pItem->Demand();
                         ITEM_ABILITY* pAbility = pItem->GetAbility(0);
-                        if (pAbility != NULL && pAbility->type == 4) {
+                        // NOTE: The original compares the low byte of `type` only.
+                        if (pAbility != NULL && static_cast<BYTE>(pAbility->type) == 4) {
                             pItem->Release();
                             break;
                         }
