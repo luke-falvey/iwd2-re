@@ -1,10 +1,17 @@
 #include "CProjectilePart3.h"
 
 #include "CBaldurChitin.h"
+#include "CCreatureFile.h"
 #include "CGameArea.h"
+#include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
+#include "CInfinity.h"
+#include "CParticle.h"
+#include "CPathSearch.h"
+#include "CProjectilePart6.h"
 #include "CUtil.h"
+#include "IcewindMisc.h"
 
 // 0x529CE0
 CProjectile84DAD4::CProjectile84DAD4()
@@ -14,7 +21,79 @@ CProjectile84DAD4::CProjectile84DAD4()
 // 0x5818F0
 void CProjectile84DAD4::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        CPoint pt;
+
+        pt.x = 0xB72;
+        pt.y = 0x737;
+        sub_5819B0(pArea, pt, 0xE);
+
+        pt.x = 0xAE1;
+        pt.y = 0x6FA;
+        sub_5819B0(pArea, pt, 0xE);
+
+        pt.x = 0xAE8;
+        pt.y = 0x772;
+        sub_5819B0(pArea, pt, 0xE);
+
+        pt.x = 0xA61;
+        pt.y = 0x7F5;
+        sub_5819B0(pArea, pt, 0xC);
+
+        pt.x = 0xB00;
+        pt.y = 0x814;
+        sub_5819B0(pArea, pt, 0xC);
+    }
+}
+
+// 0x5819B0
+void CProjectile84DAD4::sub_5819B0(CGameArea* pArea, const CPoint& pt, SHORT nFacing)
+{
+    static CString sCreature("corcat");
+
+    CCreatureFile creatureFile;
+
+    // NOTE: Uninline.
+    creatureFile.SetResRef(CResRef(sCreature), TRUE, TRUE);
+
+    CGameSprite* pSprite = new CGameSprite(creatureFile.GetData(),
+        creatureFile.GetDataSize(),
+        0,
+        0,
+        -1,
+        0,
+        0,
+        0x7FFFFFFF,
+        CPoint(-1, -1),
+        0);
+
+    // NOTE: The original `SetResRef` (0x42FDC0) takes a `CString` by value,
+    // here it's converted through `CResRef`.
+    pSprite->SetResRef(CResRef(creatureFile.GetResRef().GetResRefStr()));
+    creatureFile.ReleaseData();
+
+    if (pSprite != NULL) {
+        pSprite->SetResRef(CResRef(sCreature));
+
+        LONG nSpriteId = pSprite->GetId();
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nSpriteId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            BYTE listType = pSprite->m_animation.GetListType();
+            pSprite->AddToArea(pArea,
+                CPoint(pt.x * CPathSearch::GRID_SQUARE_SIZEX, pt.y * CPathSearch::GRID_SQUARE_SIZEY),
+                0,
+                listType);
+            pSprite->SetFacing(nFacing);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nSpriteId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
 }
 
 // 0x530790
@@ -261,7 +340,7 @@ void CProjectile84E8C0::Fire(CGameArea* pArea, LONG source, LONG target, CPoint 
             INFINITE);
     }
 
-    AddToArea(pArea, pt, 0, CGameObject::LIST_FRONT);
+    CGameObject::AddToArea(pArea, pt, 0, CGameObject::LIST_FRONT);
 
     // NOTE: Uninline.
     PlaySound(m_fireSoundRef, m_loopFireSound, FALSE);
@@ -461,7 +540,7 @@ void CProjectile84E940::Fire(CGameArea* pArea, LONG source, LONG target, CPoint 
     sub_52A640(m_targetId, pt, FALSE);
     pt.y--;
 
-    AddToArea(pArea, pt, 0, CGameObject::LIST_FRONT);
+    CGameObject::AddToArea(pArea, pt, 0, CGameObject::LIST_FRONT);
 
     // NOTE: Uninline.
     PlaySound(m_fireSoundRef, m_loopFireSound, FALSE);
@@ -616,7 +695,7 @@ void CProjectile84E9C0::Fire(CGameArea* pArea, LONG source, LONG target, CPoint 
 
     pt.y++;
 
-    AddToArea(pArea, pt, nHeight, CGameObject::LIST_FRONT);
+    CGameObject::AddToArea(pArea, pt, nHeight, CGameObject::LIST_FRONT);
 }
 
 // 0x57CAC0
@@ -660,19 +739,151 @@ CProjectile850F9C::CProjectile850F9C(const CString& sVidCell, const CString& sSo
 // 0x57CEE0
 void CProjectile850F9C::AIUpdate()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (pGame->m_nTimeStop == 0 || pGame->m_nTimeStopCaster == m_id) {
+        if (field_32D > 0) {
+            field_32D--;
+            return;
+        }
+
+        if (field_32C > 0) {
+            field_32C--;
+
+            if (m_vidCell.IsEndOfSequence(FALSE)) {
+                m_vidCell.SequenceSet(1);
+                m_vidCell.FrameSet(0);
+            } else {
+                m_vidCell.FrameAdvance();
+            }
+        } else {
+            if (m_vidCell.m_nCurrentSequence != 2) {
+                m_vidCell.SequenceSet(2);
+                m_vidCell.FrameSet(0);
+            } else {
+                if (m_vidCell.IsEndOfSequence(FALSE)) {
+                    OnArrival();
+                    return;
+                }
+
+                m_vidCell.FrameAdvance();
+            }
+        }
+
+        m_sound.SetCoordinates(m_pos.x, m_pos.y, m_posZ);
+    }
 }
 
 // 0x57CFB0
 void CProjectile850F9C::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
 {
-    // TODO: Incomplete.
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCProjectiles.cpp
+    // __LINE__: 821
+    UTIL_ASSERT(pVidMode != NULL);
+
+    CInfinity* pInfinity = &field_EA->m_cInfinity;
+
+    if (field_32D > 0) {
+        return;
+    }
+
+    // NOTE: Uninline.
+    if (!field_EA->m_visibility.IsTileVisible(field_EA->m_visibility.PointToTile(m_pos))) {
+        return;
+    }
+
+    CRect rScreen;
+    rScreen.left = pInfinity->nCurrentX;
+    rScreen.top = pInfinity->nCurrentY;
+    rScreen.right = pInfinity->rViewPort.right - pInfinity->rViewPort.left + pInfinity->nCurrentX;
+    rScreen.bottom = pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + pInfinity->nCurrentY;
+
+    CPoint pos;
+    pos.x = m_pos.x;
+    pos.y = field_EA->GetHeightOffset(m_pos, m_listType) + (m_pos.y - m_posZ);
+
+    CPoint ptRef;
+    m_vidCell.GetCurrentCenterPoint(ptRef, FALSE);
+
+    CSize size;
+    m_vidCell.GetCurrentFrameSize(size, FALSE);
+
+    CRect rFx;
+    rFx.SetRect(0, 0, size.cx, size.cy);
+
+    CRect rGCBounds;
+    rGCBounds.left = pos.x - ptRef.x;
+    rGCBounds.top = pos.y - ptRef.y;
+    rGCBounds.right = rFx.right - rFx.left + rGCBounds.left;
+    rGCBounds.bottom = rFx.bottom - rFx.top + rGCBounds.top;
+
+    CRect rIntersect;
+    IntersectRect(&rIntersect, &rGCBounds, &rScreen);
+
+    CRect rClip(rIntersect.left, rIntersect.top, rIntersect.right, rIntersect.bottom);
+    if (IsRectEmpty(&rClip)) {
+        return;
+    }
+
+    DWORD dwFlags = CInfinity::FXPREP_COPYFROMBACK;
+    if (m_vfx.m_dwFlags == 0) {
+        dwFlags = CInfinity::FXPREP_CLEARFILL;
+    }
+
+    pInfinity->FXPrep(rFx, dwFlags, a3, pos, ptRef);
+
+    if (pInfinity->FXLock(rFx, dwFlags)) {
+        pInfinity->FXRender(&m_vidCell, ptRef.x, ptRef.y, m_vfx.m_dwFlags, m_vfx.m_nTransValue);
+        pInfinity->FXRenderClippingPolys(pos.x, pos.y, 0, ptRef, rGCBounds, FALSE, dwFlags);
+        pInfinity->FXUnlock(dwFlags, NULL, CPoint(0, 0));
+        pInfinity->FXBltFrom(a3, rFx, pos.x, pos.y, ptRef.x, ptRef.y, m_vfx.m_dwFlags | 0x1);
+    }
 }
 
 // 0x57D230
 void CProjectile850F9C::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    CGameObject* pTarget;
+    CPoint ptTarget;
+    CPoint pt;
+    BYTE rc;
+
+    m_sourceId = source;
+    m_targetId = target;
+    field_EA = pArea;
+
+    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(target,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pTarget,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    ptTarget = pTarget->GetPos();
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    sub_52A640(m_sourceId, pt, TRUE);
+
+    m_sound.Play(pt.x, pt.y, 0, FALSE);
+
+    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Add(&m_id, this, INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        delete this;
+        return;
+    }
+
+    CGameObject::AddToArea(pArea, pt, nHeight, CGameObject::LIST_FRONT);
+
+    m_posDest.x = ptTarget.x;
+    m_posExact.x = pt.x << CParticle::RESOLUTION_INC;
+    m_posExact.y = 4 * (pt.y << CParticle::RESOLUTION_INC) / 3;
+    m_posDest.y = ptTarget.y;
+
+    DeliverEffects();
 }
 
 // 0x57E860
@@ -699,19 +910,238 @@ CProjectile8512BC::CProjectile8512BC(const CString& sVidCell, const CString& sSo
 // 0x57EB30
 void CProjectile8512BC::AIUpdate()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (pGame->m_nTimeStop == 0 || pGame->m_nTimeStopCaster == m_id) {
+        field_298--;
+
+        if (field_298 == 0) {
+            field_29A = 2;
+            m_vidCell.FrameSet(0);
+        }
+
+        if (field_294 != 0) {
+            BYTE nLength = m_vidCell.GetSequenceLength(0, FALSE);
+            if (nLength != 0) {
+                m_vidCell.FrameSet(rand() % nLength);
+            } else {
+                m_vidCell.FrameSet(0);
+            }
+        } else {
+            if (m_vidCell.IsEndOfSequence(FALSE)) {
+                switch (field_29A) {
+                case 0:
+                    field_29A = 1;
+                    // FALLTHROUGH
+                case 1:
+                    m_vidCell.FrameSet(0);
+                    break;
+                case 2:
+                    // NOTE: Inlined `CProjectile::RemoveSelf`.
+                    RemoveFromArea();
+
+                    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        NULL,
+                        INFINITE);
+                    if (rc == CGameObjectArray::SUCCESS) {
+                        delete this;
+                    }
+
+                    return;
+                }
+            } else {
+                m_vidCell.FrameAdvance();
+            }
+        }
+
+        if (m_targetId != CGameObjectArray::INVALID_INDEX) {
+            CGameObject* pTarget;
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pTarget,
+                INFINITE);
+            if (rc != CGameObjectArray::SUCCESS) {
+                RemoveSelf();
+                return;
+            }
+
+            if (field_EA != pTarget->m_pArea) {
+                LONG nTargetId = m_targetId;
+
+                RemoveSelf();
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return;
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        m_sound.SetCoordinates(m_pos.x, m_pos.y, m_posZ);
+    }
 }
 
 // 0x57ED30
 void CProjectile8512BC::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
 {
-    // TODO: Incomplete.
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCProjectiles.cpp
+    // __LINE__: 1867
+    UTIL_ASSERT(pVidMode != NULL);
+
+    CInfinity* pInfinity = &field_EA->m_cInfinity;
+
+    CRect rScreen;
+    rScreen.left = pInfinity->nCurrentX;
+    rScreen.top = pInfinity->nCurrentY;
+    rScreen.right = pInfinity->rViewPort.right - pInfinity->rViewPort.left + pInfinity->nCurrentX;
+    rScreen.bottom = pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + pInfinity->nCurrentY;
+
+    DWORD dwFlags = 0;
+
+    CPoint pos;
+    pos.x = m_pos.x;
+    pos.y = field_EA->GetHeightOffset(m_pos, m_listType) + m_pos.y;
+    if (pos.y >= pInfinity->nAreaY) {
+        pos.y = pInfinity->nAreaY - 1;
+    }
+
+    CPoint ptStart(pos.x, pos.y);
+
+    BYTE nSequence = 0;
+
+    do {
+        if (pos.y < 0) {
+            return;
+        }
+
+        // NOTE: Uninline.
+        if (!field_EA->m_visibility.IsTileVisible(field_EA->m_visibility.PointToTile(pos))) {
+            return;
+        }
+
+        m_vidCell.SequenceSet(static_cast<WORD>(field_29A << 2) + nSequence);
+
+        CPoint ptRef;
+        m_vidCell.GetCurrentCenterPoint(ptRef, FALSE);
+
+        CSize size;
+        m_vidCell.GetCurrentFrameSize(size, FALSE);
+
+        CRect rFx;
+        rFx.SetRect(0, 0, size.cx, size.cy);
+
+        CRect rGCBounds;
+        rGCBounds.left = pos.x - ptRef.x;
+        rGCBounds.top = pos.y - ptRef.y + m_posZ;
+        rGCBounds.right = rFx.right - rFx.left + rGCBounds.left;
+        rGCBounds.bottom = rFx.bottom - rFx.top + rGCBounds.top;
+
+        CRect rIntersect;
+        IntersectRect(&rIntersect, &rGCBounds, &rScreen);
+
+        CRect rClip(rIntersect.left, rIntersect.top, rIntersect.right, rIntersect.bottom);
+        if (IsRectEmpty(&rClip)) {
+            return;
+        }
+
+        if (field_290 != 0) {
+            dwFlags |= CInfinity::FXPREP_COPYFROMBACK | 0x20200;
+        } else {
+            dwFlags |= CInfinity::FXPREP_CLEARFILL | 0x20000;
+        }
+
+        pInfinity->FXPrep(rFx, dwFlags, a3, pos, ptRef);
+
+        if (pInfinity->FXLock(rFx, dwFlags)) {
+            pInfinity->FXRender(&m_vidCell, ptRef.x, ptRef.y, dwFlags, 0);
+
+            CRect rClipPolys(rGCBounds.left,
+                m_posZ + rGCBounds.top,
+                rGCBounds.right,
+                m_posZ + rGCBounds.bottom);
+
+            pInfinity->FXRenderClippingPolys(ptStart.x,
+                m_posZ + ptStart.y,
+                -m_posZ,
+                ptRef,
+                rClipPolys,
+                FALSE,
+                dwFlags);
+
+            pInfinity->FXUnlock(dwFlags, NULL, CPoint(0, 0));
+            pInfinity->FXBltFrom(a3, rFx, pos.x, pos.y, ptRef.x, ptRef.y, dwFlags | 0x1);
+        }
+
+        pos.y -= ptRef.y;
+        nSequence++;
+    } while (nSequence < 4);
 }
 
 // 0x57F050
 void CProjectile8512BC::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    CPoint pt;
+    CGameObject* pTarget;
+    BYTE rc;
+
+    m_sourceId = source;
+    m_targetId = target;
+    field_EA = pArea;
+
+    DeliverEffects();
+
+    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Add(&m_id, this, INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        delete this;
+        return;
+    }
+
+    if (m_targetId == CGameObjectArray::INVALID_INDEX) {
+        pt.x = targetPos.x;
+        pt.y = targetPos.y + 13;
+    } else {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pTarget,
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            return;
+        }
+
+        pt.x = pTarget->GetPos().x;
+        pt.y = pTarget->GetPos().y + 13;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    CGameObject::AddToArea(pArea, pt, 0, CGameObject::LIST_FRONT);
+
+    PlaySound(m_fireSoundRef, m_loopFireSound, FALSE);
+
+    if (m_callBackProjectile != CGameObjectArray::INVALID_INDEX) {
+        CProjectile* pProjectile;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_callBackProjectile,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pProjectile),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            pProjectile->CallBack();
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_callBackProjectile,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
 }
 
 // 0x57F210
@@ -722,7 +1152,57 @@ CProjectile85133C::CProjectile85133C()
 // 0x57F390
 void CProjectile85133C::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    CGameObject* pSource;
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(source,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pSource,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    CPoint ptSource = pSource->GetPos();
+
+    LONG dy = targetPos.y - ptSource.y;
+    LONG dx = targetPos.x - ptSource.x;
+    LONG nDistance = static_cast<LONG>(sqrt(static_cast<double>(dy * dy + dx * dx)));
+
+    CPoint pt[4];
+    pt[0] = targetPos;
+    pt[1] = IcewindMisc::sub_5847B0(ptSource, -dy, dx, nDistance);
+    pt[2] = IcewindMisc::sub_5847B0(ptSource, dy, -dx, nDistance);
+    pt[3] = IcewindMisc::sub_5847B0(ptSource, -dx, -dy, nDistance);
+
+    for (int index = 0; index < 4; index++) {
+        CProjectileSingleTarget8513BC* pSingleTarget = new CProjectileSingleTarget8513BC("LightnT");
+        pSingleTarget->field_2AE = 300;
+        pSingleTarget->field_2B2.field_32 = 50;
+        pSingleTarget->m_speed = 20;
+        pSingleTarget->field_1D8 = 16;
+        pSingleTarget->m_vfx.sub_586A90(TRUE);
+        pSingleTarget->m_bHasHeight = TRUE;
+        pSingleTarget->field_1C2 = 1;
+        pSingleTarget->m_fireSoundRef = CResRef("TRA_09");
+
+        POSITION pos = m_effectList.GetHeadPosition();
+        while (pos != NULL) {
+            CGameEffect* pEffect = m_effectList.GetNext(pos);
+            pSingleTarget->AddEffect(pEffect->Copy());
+        }
+
+        pSingleTarget->Fire(pSource->m_pArea,
+            pSource->m_id,
+            CGameObjectArray::INVALID_INDEX,
+            pt[index],
+            0,
+            0);
+    }
+
+    // NOTE: `this` is not deleted.
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(source,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x57E1B0
@@ -733,7 +1213,65 @@ CProjectile85112C::CProjectile85112C()
 // 0x57E1D0
 void CProjectile85112C::DeliverEffects()
 {
-    // TODO: Incomplete.
+    CGameObject* pSource;
+    CGameObject* pTarget;
+    BYTE rc;
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pSource,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pTarget,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return;
+    }
+
+    if (pSource->GetObjectType() != CGameObject::TYPE_SPRITE) {
+        CProjectile::DeliverEffects();
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return;
+    }
+
+    LONG nSaveMod = 0;
+
+    // NOTE: The result is compared with `TRUE` and nothing is done with it.
+    IcewindMisc::sub_585230(static_cast<CGameSprite*>(pSource), static_cast<CGameSprite*>(pTarget));
+
+    if (IcewindMisc::sub_5852A0(static_cast<CGameSprite*>(pSource), static_cast<CGameSprite*>(pTarget)) == TRUE) {
+        nSaveMod = 8;
+    }
+
+    POSITION pos = m_effectList.GetHeadPosition();
+    while (pos != NULL) {
+        CGameEffect* pEffect = m_effectList.GetNext(pos);
+        pEffect->m_saveMod = nSaveMod;
+    }
+
+    // NOTE: The shares of `pSource` and `pTarget` are not released.
+    CProjectile::DeliverEffects();
 }
 
 // 0x5367C0
@@ -753,7 +1291,7 @@ void CProjectile84D838::Fire(CGameArea* pArea, LONG source, LONG target, CPoint 
         return;
     }
 
-    AddToArea(pArea, targetPos, nHeight, CGameObject::LIST_FRONT);
+    CGameObject::AddToArea(pArea, targetPos, nHeight, CGameObject::LIST_FRONT);
 
     // NOTE: Uninline.
     PlaySound(m_fireSoundRef, m_loopFireSound, FALSE);

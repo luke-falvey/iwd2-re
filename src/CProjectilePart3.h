@@ -11,6 +11,8 @@ class CProjectile84DAD4 : public CProjectile {
 public:
     CProjectile84DAD4();
     /* 006C */ void Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType) override;
+
+    void sub_5819B0(CGameArea* pArea, const CPoint& pt, SHORT nFacing);
 };
 
 class CProjectile84D8B8 : public CProjectile {
