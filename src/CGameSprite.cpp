@@ -23382,9 +23382,338 @@ SHORT CGameSprite::UseItem(CGameAIBase* pTarget)
 // 0x7473E0
 SHORT CGameSprite::UseItemPoint()
 {
-    // TODO: Incomplete.
+    field_55A0 = 0;
 
-    return ACTION_ERROR;
+    CPoint ptDest = m_curAction.m_dest;
+    ITEM_ABILITY* pAbility = NULL;
+
+    if (m_actionCount == 0) {
+        m_curItem = NULL;
+    }
+
+    if (m_curItem == NULL) {
+        if (m_curAction.GetString1() == "") {
+            if (m_curAction.m_specificID == -1) {
+                return ACTION_ERROR;
+            }
+
+            m_curItem = m_equipment.m_items[m_curAction.m_specificID];
+            if (m_curItem == NULL) {
+                return ACTION_ERROR;
+            }
+
+            field_559E = static_cast<short>(m_curAction.m_specificID);
+            m_curItem->Demand();
+
+            pAbility = m_curItem->GetAbility(m_curAction.m_specificID2);
+            field_55A0 = static_cast<short>(m_curAction.m_specificID2);
+            if (pAbility == NULL) {
+                m_curItem->Release();
+                return ACTION_ERROR;
+            }
+        } else {
+            for (INT nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+                if (m_equipment.m_items[nSlot] != NULL
+                    && m_equipment.m_items[nSlot]->GetResRef() == m_curAction.GetString1()) {
+                    m_curItem = m_equipment.m_items[nSlot];
+                    field_559E = static_cast<short>(nSlot);
+                    if (m_curItem == NULL) {
+                        return ACTION_ERROR;
+                    }
+
+                    m_curItem->Demand();
+
+                    pAbility = m_curItem->GetAbility(m_curAction.m_specificID2);
+                    field_55A0 = static_cast<short>(m_curAction.m_specificID2);
+                    if (pAbility == NULL) {
+                        m_curItem->Release();
+                        return ACTION_ERROR;
+                    }
+
+                    break;
+                }
+            }
+        }
+    } else {
+        m_curItem->Demand();
+    }
+
+    if (m_curItem == NULL) {
+        return ACTION_ERROR;
+    }
+
+    if (pAbility == NULL) {
+        pAbility = m_curItem->GetAbility(m_curAction.m_specificID2);
+        field_55A0 = static_cast<short>(m_curAction.m_specificID2);
+        if (pAbility == NULL) {
+            m_curItem->Release();
+            return ACTION_ERROR;
+        }
+    }
+
+    if (pAbility->usageFlags == 3
+        && m_curItem->GetUsageCount(field_55A0) == 0
+        && pAbility->maxUsageCount > 0) {
+        CString sResRef;
+        m_curItem->GetResRef().CopyToString(sResRef);
+
+        CAITrigger trigger(CAITRIGGER_UNUSABLE, 0);
+        trigger.m_string1 = sResRef;
+
+        CMessage* message = new CMessageSetTrigger(trigger, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        m_curItem->Release();
+        return ACTION_ERROR;
+    }
+
+    LONG nDestY = ptDest.y / CPathSearch::GRID_SQUARE_SIZEY;
+    LONG nDestX = ptDest.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+    CPoint& myPos = GetPos();
+    LONG dy = myPos.y / CPathSearch::GRID_SQUARE_SIZEY - nDestY;
+    LONG dx = myPos.x / CPathSearch::GRID_SQUARE_SIZEX - nDestX;
+    LONG nDistanceSq = dx * dx + dy * dy;
+
+    LONG nRange = pAbility->range + 1;
+
+    // NOTE: Inlined `CGameAnimation::GetPersonalSpace`.
+    BYTE nPersonalSpace = (m_animation.GetPersonalSpace() - 1) >> 1;
+    LONG nReach = nPersonalSpace + nRange;
+
+    // NOTE: The original reads the extra reach (1) from a `SHORT`
+    // constant at 0x85BC86.
+    if ((nDistanceSq <= nReach * nReach || field_7118 != 0)
+        && nDistanceSq <= (nReach + 1) * (nReach + 1)
+        && m_pArea->CheckLOS(ptDest,
+            GetPos(),
+            m_visibleTerrainTable,
+            FALSE)) {
+        if (m_pPath != NULL) {
+            CMessage* message = new CMessageDropPath(m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        SHORT nDirection = m_nDirection;
+        field_7118 = 1;
+
+        if (nDirection != GetDirection(ptDest)) {
+            CMessage* message = new CMessageSetDirection(ptDest, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            m_curItem->Release();
+            return ACTION_NORMAL;
+        }
+
+        if (m_pPath != NULL) {
+            CMessage* message = new CMessageDropPath(m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        if (m_actionCount == 0) {
+            if (m_castCounter != -1) {
+                m_bStartedCasting = FALSE;
+            }
+        }
+
+        if (m_castCounter == -1) {
+            m_castCounter = 0;
+            m_bStartedCasting = TRUE;
+        }
+
+        if (m_actionCount < 20 || !m_bStartedCasting) {
+            m_curItem->Release();
+            return ACTION_INTERRUPTABLE;
+        }
+
+        BOOL bBlocked = FALSE;
+        if (g_pBaldurChitin->GetObjectGame()->CheckItemUsable(this, m_curItem) == 2) {
+            if (g_pBaldurChitin->GetObjectGame()->GetRuleTables().sub_5468B0(this, m_curItem) != 1) {
+                bBlocked = TRUE;
+            } else {
+                FeedBack(0x42, 0, 0, 0, -1, 0, 0);
+            }
+        }
+
+        if (!bBlocked) {
+            if (!IsVisibleToCaller(FALSE)) {
+                ITEM_EFFECT effect;
+                CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+                // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+                effect.durationType = 1;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    m_pos,
+                    m_id,
+                    CPoint(-1, -1));
+
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            if (m_derivedStats.m_spellStates[SPLSTATE_SANCTUARY]) {
+                ITEM_EFFECT effect;
+                CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_DISPELSANCTUARY);
+                // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+                effect.durationType = 1;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    m_pos,
+                    m_id,
+                    CPoint(-1, -1));
+
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            m_curProjectile = CProjectile::DecodeProjectile(pAbility->missileType, this, FALSE);
+            m_curProjectile->field_18A = m_curItem->GetResRef();
+            m_curProjectile->field_186 = 0;
+
+            if (pAbility->effectCount > 0) {
+                INT nEffect = 0;
+                do {
+                    CGameEffect* pEffect = m_curItem->GetAbilityEffect(field_55A0, nEffect, this);
+                    pEffect->m_source = m_pos;
+                    pEffect->m_sourceID = m_id;
+                    pEffect->m_target = ptDest;
+                    IcewindMisc::sub_5860F0(this, pEffect);
+
+                    switch (pEffect->m_targetType) {
+                    case 1:
+                        {
+                            pEffect->m_flags |= 0x2;
+                            CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                        }
+                        break;
+                    case 2:
+                        m_curProjectile->AddEffect(pEffect);
+                        break;
+                    case 3:
+                        ApplyEffectToParty(pEffect);
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    case 4:
+                        m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, NULL);
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    case 5:
+                        m_pArea->sub_46E130(pEffect, TRUE, FALSE, 0, NULL);
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    case 6:
+                        m_pArea->sub_46E130(pEffect, FALSE, TRUE, m_typeAI.m_nSpecific, NULL);
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    case 7:
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    case 8:
+                        m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, this);
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    default:
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    }
+
+                    nEffect++;
+                } while (nEffect < pAbility->effectCount);
+            }
+
+            CMessageFireProjectile* pMessage = new CMessageFireProjectile(m_curProjectile->m_projectileType,
+                CGameObjectArray::INVALID_INDEX,
+                ptDest,
+                m_curProjectile->DetermineHeight(this),
+                m_id,
+                m_id,
+                0);
+
+            if (m_curProjectile->m_projectileType == 304) {
+                int nRandom = rand() % 1000000;
+                static_cast<CProjectileSingleTarget851444*>(m_curProjectile)->field_356 = nRandom;
+                // NOTE: No NULL check on `pMessage`.
+                pMessage->field_20 = nRandom;
+            }
+
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+            // NOTE: The last argument is read from an unnamed `const WORD`
+            // at 0x84D5E8.
+            m_curProjectile->Fire(m_pArea,
+                m_id,
+                CGameObjectArray::INVALID_INDEX,
+                ptDest,
+                m_curProjectile->DetermineHeight(this),
+                0);
+
+            m_curProjectile = NULL;
+        } else {
+            FeedBack(0x41, 0, 0, 0, -1, 0, 0);
+
+            DWORD nValue = m_curItem->sub_4EA3F0();
+            CGameEffect* pEffect = IcewindMisc::sub_585380(this,
+                2 * (nValue < 1 ? 1 : nValue),
+                6,
+                0,
+                static_cast<BYTE>(nValue),
+                0);
+            pEffect->m_flags |= 0x2;
+
+            CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        WORD nUsageCount = m_curItem->GetUsageCount(field_55A0);
+        m_curItem->SetUsageCount(field_55A0, nUsageCount - 1);
+        m_curItem->Release();
+
+        BOOL bRemove = FALSE;
+        if (pAbility->usageFlags == 1) {
+            bRemove = TRUE;
+        }
+
+        bRemove &= sub_75D450(static_cast<WORD>(field_559E), static_cast<WORD>(field_55A0));
+
+        if (pAbility->maxUsageCount > 0) {
+            CAbilityId ab;
+            ab.m_itemType = 2;
+            ab.m_itemNum = field_559E;
+            ab.m_abilityNum = field_55A0;
+            CheckQuickLists(&ab, -1, bRemove, FALSE);
+
+            SHORT nPortrait = g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id);
+            if (nPortrait == g_pBaldurChitin->m_pEngineWorld->GetSelectedCharacter()) {
+                g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateButtons();
+            }
+        }
+
+        AutoPause(0x40);
+        return ACTION_DONE;
+    }
+
+    SHORT rc = sub_73FEC0(ptDest, 0);
+    if (rc == ACTION_DONE) {
+        rc = ACTION_INTERRUPTABLE;
+    }
+
+    m_curItem->Release();
+    return rc;
 }
 
 // 0x747F80
