@@ -348,6 +348,7 @@ public:
     void SetFormation(SHORT formation);
     BOOL IsFamiliar(LONG id);
     BOOL IsAlly(LONG id);
+    STRREF GetTrackingText(CGameSprite* pSprite, CString& sAreaName);
 
     static const CString FOGOWAR_RESREF;
     static const CString SAVE_OBJECT_LIST_NAME;

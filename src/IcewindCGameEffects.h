@@ -129,13 +129,13 @@
 #define ICEWIND_CGAMEEFFECT_FEATHAMSTRING 456
 #define ICEWIND_CGAMEEFFECT_FEATRAPIDSHOT 457
 
-extern const char RESREF_EYE_OF_THE_MIND[];
-extern const char RESREF_EYE_OF_THE_SWORD[];
-extern const char RESREF_EYE_OF_THE_MAGE[];
-extern const char RESREF_EYE_OF_VENOM[];
-extern const char RESREF_EYE_OF_THE_SPIRIT[];
-extern const char RESREF_EYE_OF_FORTITUDE[];
-extern const char RESREF_EYE_OF_STONE[];
+extern const char* RESREF_EYE_OF_THE_MIND;
+extern const char* RESREF_EYE_OF_THE_SWORD;
+extern const char* RESREF_EYE_OF_THE_MAGE;
+extern const char* RESREF_EYE_OF_VENOM;
+extern const char* RESREF_EYE_OF_THE_SPIRIT;
+extern const char* RESREF_EYE_OF_FORTITUDE;
+extern const char* RESREF_EYE_OF_STONE;
 
 class IcewindCGameEffectBeltynsBurningBlood : public CGameEffect {
 public:
@@ -147,6 +147,7 @@ class IcewindCGameEffectCastingGlow : public CGameEffect {
 public:
     IcewindCGameEffectCastingGlow(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectPrayer : public CGameEffect {
@@ -195,6 +196,7 @@ class IcewindCGameEffectVampiricTouch : public CGameEffect {
 public:
     IcewindCGameEffectVampiricTouch(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectColorGlowDissipate : public CGameEffect {
@@ -207,11 +209,18 @@ public:
 class IcewindCGameEffectSummon : public CGameEffect {
 public:
     IcewindCGameEffectSummon(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
+    /* 0000 */ ~IcewindCGameEffectSummon() override;
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    /* 0028 */ virtual void sub_560140();
+    /* 002C */ virtual CGameSprite* SummonCreature(const CString& sResRef, const CPoint& ptTarget);
 
     void sub_49DB60(int a1);
+    void sub_55F930(INT nProjectile);
+    void sub_55FA10(CGameSprite* pSummoned, DWORD nVisual);
+    void sub_55FF40(CGameSprite* pSprite);
 
-    /* 018C */ int field_18C;
+    /* 018C */ CGameSprite* field_18C;
     /* 0190 */ int field_190;
 };
 
@@ -219,6 +228,7 @@ class IcewindCGameEffectVisualSpellHit : public CGameEffect {
 public:
     IcewindCGameEffectVisualSpellHit(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectRemoveEffectOfResource : public CGameEffect {
@@ -280,6 +290,7 @@ class IcewindCGameEffectCloakOfFear : public CGameEffect {
 public:
     IcewindCGameEffectCloakOfFear(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectForceMovementRate : public CGameEffect {
@@ -363,18 +374,21 @@ class IcewindCGameEffectShroudOfFlame : public CGameEffect {
 public:
     IcewindCGameEffectShroudOfFlame(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectAnimalRage : public CGameEffect {
 public:
     IcewindCGameEffectAnimalRage(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectTurnUndead : public CGameEffect {
 public:
     IcewindCGameEffectTurnUndead(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
     void OnRemove(CGameSprite* pSprite) override;
 };
 
@@ -382,6 +396,7 @@ class IcewindCGameEffectVitriolicSphere : public CGameEffect {
 public:
     IcewindCGameEffectVitriolicSphere(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectSuppressHPDisplay : public CGameEffect {
@@ -395,18 +410,21 @@ class IcewindCGameEffectFloatText : public CGameEffect {
 public:
     IcewindCGameEffectFloatText(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectMaceOfDisruption : public CGameEffect {
 public:
     IcewindCGameEffectMaceOfDisruption(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectRangerTracking : public CGameEffect {
 public:
     IcewindCGameEffectRangerTracking(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectImmunityToBackstab : public CGameEffect {
@@ -427,36 +445,42 @@ class IcewindCGameEffectRodOfSmiting : public CGameEffect {
 public:
     IcewindCGameEffectRodOfSmiting(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectMagicalRest : public CGameEffect {
 public:
     IcewindCGameEffectMagicalRest(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectBeholderDispelMagic : public CGameEffect {
 public:
     IcewindCGameEffectBeholderDispelMagic(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectHarpyWail : public CGameEffect {
 public:
     IcewindCGameEffectHarpyWail(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectJackalwereGaze : public CGameEffect {
 public:
     IcewindCGameEffectJackalwereGaze(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectSetGlobal : public CGameEffect {
 public:
     IcewindCGameEffectSetGlobal(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectHopelessness : public CGameEffect {
