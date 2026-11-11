@@ -395,6 +395,8 @@ class CGameEffectCharm : public CGameEffect {
 public:
     CGameEffectCharm(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnAdd(CGameSprite* pSprite) override;
     void OnRemove(CGameSprite* pSprite) override;
 };
 
@@ -402,6 +404,7 @@ class CGameEffectSlipperyMind : public CGameEffect {
 public:
     CGameEffectSlipperyMind(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    void OnRemove(CGameSprite* pSprite) override;
 };
 
 class CGameEffectCHR : public CGameEffect {

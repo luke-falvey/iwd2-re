@@ -748,6 +748,13 @@ CGameEffect* IcewindCGameEffectDominate::Copy()
     return copy;
 }
 
+// 0x4A6220
+void IcewindCGameEffectDominate::OnAdd(CGameSprite* pSprite)
+{
+    m_numDice = -1;
+    m_diceSize = -1;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49EB60

@@ -2910,6 +2910,172 @@ void CGameEffectCharm::OnRemove(CGameSprite* pSprite)
     pSprite->GetDerivedStats()->m_generalState &= ~STATE_CHARMED;
 }
 
+// 0x4A6220
+void CGameEffectCharm::OnAdd(CGameSprite* pSprite)
+{
+    m_numDice = -1;
+    m_diceSize = -1;
+}
+
+// 0x4A6230
+BOOL CGameEffectCharm::ApplyEffect(CGameSprite* pSprite)
+{
+    switch (m_dwFlags) {
+    case 0:
+        if (m_secondaryType) {
+            // NOTE: Uninline.
+            DisplayStringRef(pSprite, 14672);
+        }
+
+        // NOTE: Uninline.
+        AddPortraitIcon(pSprite, 0);
+        break;
+    case 1:
+        if (m_secondaryType) {
+            // NOTE: Uninline.
+            DisplayStringRef(pSprite, 1691);
+        }
+
+        // NOTE: Uninline.
+        AddPortraitIcon(pSprite, 53);
+
+        pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_MENTAL_DOMINATION, true);
+        break;
+    case 2:
+        if (m_secondaryType) {
+            // NOTE: Uninline.
+            DisplayStringRef(pSprite, 39887);
+        }
+
+        // NOTE: Uninline.
+        AddPortraitIcon(pSprite, 53);
+
+        pSprite->GetDerivedStats()->m_nTHAC0 -= 2;
+        pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_MENTAL_DOMINATION, true);
+        break;
+    }
+
+    pSprite->sub_761650();
+
+    CAIObjectType typeAI(pSprite->GetAIType());
+    CAIObjectType liveTypeAI(pSprite->m_liveTypeAI);
+    CAIObjectType startTypeAI(pSprite->m_startTypeAI);
+    CAIObjectType casterTypeAI;
+    BYTE nEnemyAlly = 0;
+    BOOL bPartyCharm = FALSE;
+
+    if (m_numDice != -1) {
+        // Effect is being reapplied (e.g. after load), restore the cached
+        // values.
+        bPartyCharm = m_diceSize;
+        nEnemyAlly = static_cast<BYTE>(m_numDice);
+
+        CAIObjectType charmedTypeAI;
+        charmedTypeAI.m_nEnemyAlly = static_cast<BYTE>(m_numDice);
+        casterTypeAI.Set(charmedTypeAI.GetEnemyOf());
+    } else {
+        if (m_sourceID != CGameObjectArray::INVALID_INDEX) {
+            CGameObject* pSource;
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pSource,
+                INFINITE);
+            if (rc == CGameObjectArray::SHARED
+                || rc == CGameObjectArray::DENIED
+                || rc == CGameObjectArray::SUCCESS) {
+                if (pSource->GetAIType().m_nEnemyAlly > CAIObjectType::EA_GOODCUTOFF) {
+                    nEnemyAlly = CAIObjectType::EA_ENEMY;
+                }
+
+                casterTypeAI.Set(pSource->GetAIType().GetEnemyOf());
+
+                CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+                if (pGame->GetCharacterPortraitNum(pSprite->GetId()) != -1
+                    && pGame->GetCharacterPortraitNum(pSource->GetId()) != -1) {
+                    bPartyCharm = TRUE;
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+
+        if (m_secondaryType
+            && pSprite->GetDerivedStats()->GetClassLevel(CAIOBJECTTYPE_C_ROGUE) > 0
+            && pSprite->sub_763150(CGAMESPRITE_FEAT_SLIPPERY_MIND) == TRUE) {
+            // NOTE: `res` is left uninitialized in the original.
+            ITEM_EFFECT effect;
+            effect.effectID = ICEWIND_CGAMEEFFECT_SLIPPERYMIND;
+            effect.targetType = 1;
+            effect.spellLevel = static_cast<BYTE>(m_spellLevel);
+            effect.effectAmount = m_effectAmount;
+            effect.dwFlags = m_flags;
+            effect.durationType = 0;
+            effect.duration = 7;
+            effect.probabilityUpper = 100;
+            effect.probabilityLower = 0;
+            effect.numDice = m_numDice;
+            effect.diceSize = m_diceSize;
+            effect.savingThrow = m_savingThrow;
+            effect.saveMod = m_saveMod;
+            effect.special = m_special;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                CPoint(-1, -1),
+                -1,
+                CPoint(-1, -1));
+            pEffect->m_source = pSprite->GetPos();
+            pEffect->m_sourceID = pSprite->GetId();
+            pEffect->m_effectAmount2 = typeAI.m_nEnemyAlly;
+            pEffect->m_effectAmount3 = liveTypeAI.m_nEnemyAlly;
+            pEffect->m_effectAmount4 = startTypeAI.m_nEnemyAlly;
+            pEffect->m_flags &= ~0x1;
+
+            CMessage* message = new CMessageAddEffect(pEffect,
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    }
+
+    if (nEnemyAlly == 0) {
+        nEnemyAlly = CAIObjectType::EA_0x847C3A;
+    }
+
+    if (nEnemyAlly == CAIObjectType::EA_ENEMY) {
+        nEnemyAlly = CAIObjectType::EA_CHARMED_PC;
+    }
+
+    if (m_durationType == 1) {
+        // NOTE: Uninline.
+        startTypeAI.SetEnemyAlly(nEnemyAlly);
+        pSprite->m_startTypeAI.Set(startTypeAI);
+        m_done = TRUE;
+    } else if (!bPartyCharm
+        && g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) == -1) {
+        // NOTE: Uninline.
+        startTypeAI.SetEnemyAlly(casterTypeAI.m_nEnemyAlly);
+        pSprite->m_startTypeAI.Set(startTypeAI);
+        m_done = FALSE;
+    }
+
+    // NOTE: Uninline.
+    typeAI.SetEnemyAlly(nEnemyAlly);
+    pSprite->SetAIType(typeAI, FALSE, FALSE);
+
+    // NOTE: Uninline.
+    liveTypeAI.SetEnemyAlly(nEnemyAlly);
+    pSprite->m_liveTypeAI.Set(liveTypeAI);
+
+    pSprite->GetDerivedStats()->m_generalState |= STATE_CHARMED;
+
+    m_diceSize = bPartyCharm;
+    m_numDice = nEnemyAlly;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x493970
@@ -2926,6 +3092,77 @@ CGameEffect* CGameEffectSlipperyMind::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4A5EF0
+void CGameEffectSlipperyMind::OnRemove(CGameSprite* pSprite)
+{
+    BYTE fortitudeRoll = pSprite->field_70F6;
+    BYTE reflexRoll = pSprite->field_70F7;
+    BYTE willRoll = pSprite->field_70F8;
+    BYTE resistMagicRoll = pSprite->field_70F9;
+
+    if (!CheckSave(pSprite, fortitudeRoll, reflexRoll, willRoll, resistMagicRoll)) {
+        CAIObjectType typeAI(pSprite->GetAIType());
+        CAIObjectType liveTypeAI(pSprite->m_liveTypeAI);
+        CAIObjectType startTypeAI(pSprite->m_startTypeAI);
+
+        // NOTE: Uninline.
+        startTypeAI.SetEnemyAlly(static_cast<BYTE>(m_effectAmount4));
+        pSprite->m_startTypeAI.Set(startTypeAI);
+
+        // NOTE: Uninline.
+        typeAI.SetEnemyAlly(static_cast<BYTE>(m_effectAmount2));
+        pSprite->SetAIType(typeAI, FALSE, FALSE);
+
+        // NOTE: Uninline.
+        liveTypeAI.SetEnemyAlly(static_cast<BYTE>(m_effectAmount3));
+        pSprite->m_liveTypeAI.Set(liveTypeAI);
+
+        pSprite->GetDerivedStats()->m_generalState &= ~STATE_CHARMED;
+
+        // FIXME: `icon` is uninitialized in the original when `m_dwFlags`
+        // is out of range (and is then also used as string reference).
+        int icon = 0;
+        STRREF strRef;
+        switch (m_dwFlags) {
+        case 0:
+            strRef = 39884;
+            icon = 0;
+            break;
+        case 1:
+            pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_MENTAL_DOMINATION, false);
+            strRef = 39885;
+            icon = 53;
+            break;
+        case 2:
+            pSprite->GetDerivedStats()->m_nTHAC0 -= 2;
+            pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_MENTAL_DOMINATION, false);
+            strRef = 39886;
+            icon = 53;
+            break;
+        default:
+            strRef = icon;
+            break;
+        }
+
+        // NOTE: Uninline.
+        DisplayStringRef(pSprite, strRef);
+
+        // NOTE: Uninline.
+        pSprite->RemovePortraitIcon(icon);
+
+        CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+        pGame->UpdatePortrait(pGame->GetCharacterPortraitNum(pSprite->GetId()), 1);
+
+        CGameEffect* pEffect = IcewindMisc::CreateEffectRemoveAllOfType(pSprite, 5, 0);
+        CMessage* message = new CMessageAddEffect(pEffect, pSprite->GetId(), pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    m_done = TRUE;
+
+    PlaySound(CResRef("EFF_E05"), pSprite);
 }
 
 // -----------------------------------------------------------------------------
