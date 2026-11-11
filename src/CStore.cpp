@@ -453,8 +453,7 @@ BOOL CStore::GetItem(INT nIndex, CItem& cItem)
         cItem.m_flags |= 0x1;
     }
 
-    // NOTE: Similar condition?
-    if ((pStoreItem->m_nStoreFlags & 0x1) != 0 || cItem.GetLoreValue() > 0) {
+    if ((pStoreItem->m_nStoreFlags & 0x1) == 0 && cItem.GetLoreValue() > 0) {
         cItem.m_flags |= 0x8;
     }
 
@@ -929,6 +928,8 @@ void CStore::InvalidateStore(const CResRef& resRef)
             }
         }
     }
+
+    storeData.Release();
 }
 
 // 0x54CF80
