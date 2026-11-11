@@ -42,6 +42,9 @@ const SHORT CAIAction::WAIT = 63;
 // 0x8477F2
 const SHORT CAIAction::SMALLWAIT = 83;
 
+// 0x847818
+const SHORT CAIAction::CREATEITEM = 82;
+
 // 0x84781A
 const SHORT CAIAction::FACE = 84;
 
@@ -273,6 +276,23 @@ CAIAction::CAIAction(SHORT actionID, const CString& string1, CPoint pt, LONG spe
     m_internalFlags = 0;
     m_specificID2 = specificID2;
     m_specificID = specificID;
+}
+
+// 0x75AAC0
+CAIAction::CAIAction(SHORT actionID, LONG specificID)
+{
+    // NOTE: For unknown reason it creates and immediately destroys `CAIAction`
+    // instance. This instance and its properties are not used.
+    // FIXME: Remove.
+    if (1) {
+        CAIAction action;
+    }
+
+    m_actionID = actionID;
+    m_specificID = specificID;
+    m_specificID2 = 0;
+    m_specificID3 = 0;
+    m_internalFlags = 0;
 }
 
 // 0x403B40

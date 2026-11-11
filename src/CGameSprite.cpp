@@ -195,8 +195,17 @@ const ITEM_ABILITY CGameSprite::DEFAULT_ATTACK = {
     { 0 }, // attackProbability
 };
 
+// 0x85BC9C
+const BYTE CGameSprite::TRAP_CRITICAL_FAILURE_MARGIN = 25;
+
 // 0x85BCA0
 const LONG CGameSprite::STANDARD_VERBAL_CONSTANT_LENGTH = 300;
+
+// 0x85BD14
+const LONG CGameSprite::PICKPOCKET_GOLD_CHANCE = 3;
+
+// 0x85BD18
+const LONG CGameSprite::PICKPOCKET_GOLD_MAX = 5;
 
 // 0x85BD1C
 const LONG CGameSprite::STEALTH_GREYOUT_DURATION = 90;
@@ -21016,9 +21025,147 @@ SHORT CGameSprite::Help()
 // 0x7500F0
 SHORT CGameSprite::Rest()
 {
-    // TODO: Incomplete.
+    CMessage* message;
 
-    return ACTION_ERROR;
+    ITEM_EFFECT effect;
+    CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_MAGICAL_REST);
+    // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+    effect.durationType = 1;
+
+    CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+        m_pos,
+        m_id,
+        CPoint(-1, -1));
+
+    message = new CMessageAddEffect(pEffect, m_id, m_id);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    // NOTE: Uninline.
+    RemovePortraitIcon(39);
+
+    field_722A = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+
+    CAbilityId ab;
+    ab.m_itemType = 1;
+
+    UINT nClassIndex;
+    UINT nLevel;
+    UINT nIndex;
+    UINT nID;
+
+    for (nClassIndex = 0; nClassIndex < CSPELLLIST_NUM_CLASSES; nClassIndex++) {
+        for (nLevel = 0; nLevel < m_spells.Get(nClassIndex)->m_nHighestLevel; nLevel++) {
+            if (nClassIndex != 0 && nClassIndex != 5) {
+                for (nIndex = 0; nIndex < m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+                    // NOTE: Uninline.
+                    CGameSpriteSpellListEntry* pEntry = m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->Get(nIndex);
+                    INT nChange = pEntry->field_4 - pEntry->field_8;
+                    if (nChange > 0) {
+                        nID = pEntry->m_nID;
+                        m_spells.Get(nClassIndex)->sub_726060(nID, nLevel, 0, TRUE);
+
+                        ab.m_res = g_pBaldurChitin->GetObjectGame()->m_spells.Get(pEntry->m_nID);
+                        ab.m_nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nClassIndex);
+                        ab.field_1D = static_cast<BYTE>(nLevel + 1);
+                        ab.field_1E = 0;
+                        CheckQuickLists(&ab, static_cast<SHORT>(nChange), FALSE, FALSE);
+                    }
+                }
+            } else {
+                // NOTE: Uninline.
+                CGameSpriteSpellList* pList = m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel);
+                INT nChange = pList->field_14 - pList->field_18;
+                if (nChange > 0) {
+                    m_spells.Get(nClassIndex)->sub_726150(nLevel, 0, TRUE);
+
+                    ab.m_nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nClassIndex);
+                    ab.field_1D = static_cast<BYTE>(nLevel + 1);
+                    ab.field_1E = 0;
+
+                    for (nIndex = 0; nIndex < m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+                        // NOTE: Uninline.
+                        CGameSpriteSpellListEntry* pEntry = m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->Get(nIndex);
+                        ab.m_res = g_pBaldurChitin->GetObjectGame()->m_spells.Get(pEntry->m_nID);
+                        CheckQuickLists(&ab, static_cast<SHORT>(nChange), FALSE, FALSE);
+                    }
+                }
+            }
+        }
+    }
+
+    for (nLevel = 0; nLevel < m_domainSpells.m_nHighestLevel; nLevel++) {
+        for (nIndex = 0; nIndex < m_domainSpells.GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+            // NOTE: Uninline.
+            CGameSpriteSpellListEntry* pEntry = m_domainSpells.GetSpellsAtLevel(nLevel)->Get(nIndex);
+            INT nChange = pEntry->field_4 - pEntry->field_8;
+            nID = pEntry->m_nID;
+            m_domainSpells.sub_726060(nID, nLevel, 0, TRUE);
+
+            if (nChange > 0) {
+                ab.m_res = g_pBaldurChitin->GetObjectGame()->m_spells.Get(pEntry->m_nID);
+                ab.m_nClass = CAIOBJECTTYPE_C_CLERIC;
+                ab.field_1D = static_cast<BYTE>(nLevel + 1);
+                ab.field_1E = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetSpecializationIndex(CAIOBJECTTYPE_C_CLERIC,
+                    m_baseStats.m_specialization);
+                CheckQuickLists(&ab, static_cast<SHORT>(nChange), FALSE, FALSE);
+            }
+        }
+    }
+
+    ab.m_nClass = 0;
+    ab.field_1D = 0;
+    ab.field_1E = 0;
+
+    for (nIndex = 0; nIndex < m_innateSpells.m_List.size(); nIndex++) {
+        // NOTE: Uninline.
+        CGameSpriteSpellListEntry* pEntry = m_innateSpells.Get(nIndex);
+        INT nChange = pEntry->field_4 - pEntry->field_8;
+        nID = pEntry->m_nID;
+        m_innateSpells.sub_725C50(nID, 0, TRUE);
+
+        if (nChange > 0) {
+            ab.m_res = g_pBaldurChitin->GetObjectGame()->m_innateSpells.Get(pEntry->m_nID);
+            CheckQuickLists(&ab, static_cast<SHORT>(nChange), FALSE, FALSE);
+        }
+    }
+
+    m_shapeshifts.sub_725D30(0, TRUE);
+
+    for (BYTE nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+        if (nSlot != CGameSpriteEquipment::SLOT_FIST) {
+            CItem* pItem = m_equipment.m_items[nSlot];
+            if (pItem != NULL && pItem->GetAbilityCount() > 0) {
+                for (INT nAbility = 0; nAbility < pItem->GetAbilityCount(); nAbility++) {
+                    pItem->Demand();
+
+                    ITEM_ABILITY* pAbility = pItem->GetAbility(nAbility);
+                    if (pAbility != NULL && (pAbility->abilityFlags & 0x800) != 0) {
+                        WORD nOldUsageCount = pItem->GetUsageCount(nAbility);
+                        pItem->SetUsageCount(nAbility, pAbility->maxUsageCount);
+
+                        CAbilityId itemAb;
+                        itemAb.m_itemNum = nSlot;
+                        itemAb.m_itemType = 2;
+                        itemAb.m_abilityNum = static_cast<SHORT>(nAbility);
+                        CheckQuickLists(&itemAb,
+                            static_cast<SHORT>(pItem->GetUsageCount(nAbility) - nOldUsageCount),
+                            FALSE,
+                            FALSE);
+                    }
+
+                    pItem->Release();
+                }
+            }
+        }
+    }
+
+    // NOTE: Uninline.
+    if (InControl()) {
+        message = new CMessageSpriteUpdate(this, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x750F10
@@ -22540,17 +22687,445 @@ SHORT CGameSprite::Panic()
 // 0x7586E0
 SHORT CGameSprite::PickPockets(CGameSprite* pTarget)
 {
-    // TODO: Incomplete.
+    CMessage* message;
+    INT nSlot;
 
-    return ACTION_ERROR;
+    if (pTarget == NULL) {
+        return ACTION_ERROR;
+    }
+
+    if (m_derivedStats.m_disabledButtons[1]) {
+        FeedBack(30, 0, 0, 0, -1, 0, 0);
+        return ACTION_ERROR;
+    }
+
+    CAIObjectType enemy = m_typeAI.GetEnemyOf();
+
+    if (pTarget->GetAIType().OfType(enemy, FALSE, FALSE)) {
+        FeedBack(31, 0, 0, 0, -1, 0, 0);
+        return ACTION_ERROR;
+    }
+
+    const CPoint& ptTargetPos = pTarget->GetPos();
+    CPoint ptTarget(ptTargetPos.x / CPathSearch::GRID_SQUARE_SIZEX,
+        ptTargetPos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    const CPoint& ptSelfPos = GetPos();
+    CPoint ptSelf(ptSelfPos.x / CPathSearch::GRID_SQUARE_SIZEX,
+        ptSelfPos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    LONG nSquares = CAIUtil::CountSquares(ptSelf, ptTarget);
+    if (nSquares * nSquares <= 4
+        && m_pArea->CheckLOS(pTarget->GetPos(),
+            GetPos(),
+            m_visibleTerrainTable,
+            static_cast<BOOLEAN>(pTarget->Orderable(FALSE)))) {
+        if (pTarget->field_70F2 == 1) {
+            FeedBack(32, 0, 0, 0, -1, 0, 0);
+            return ACTION_DONE;
+        }
+
+        if (!IsVisibleToCaller(FALSE)) {
+            ITEM_EFFECT effect;
+            CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+            // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+            effect.durationType = 1;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                m_pos,
+                m_id,
+                CPoint(-1, -1));
+
+            message = new CMessageAddEffect(pEffect, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        INT nBonus = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetAbilityScoreModifier(pTarget->m_derivedStats.m_nWIS);
+        INT nRoll = rand() % 20 + 1 + max(nBonus + pTarget->m_derivedStats.m_nLevel, 0);
+
+        if (pTarget->GetObjectType() != CGameObject::TYPE_SPRITE) {
+            nRoll = rand() % 20 + 1;
+        }
+
+        INT nSkill = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_PICK_POCKET]) + 10;
+
+        FeedBack(83, nSkill, nRoll, nBonus, 0x9986, 0, 0);
+
+        if (nRoll >= 20 || nRoll > nSkill) {
+            CAITrigger trigger(CAITRIGGER_PICKPOCKETFAILED, m_typeAI, 0);
+
+            FeedBack(32, 0, 0, 0, -1, 0, 0);
+
+            // NOTE: Original stores 0 again after the feedback.
+            trigger.m_specificID = 0;
+
+            message = new CMessageSetTrigger(trigger, m_id, pTarget->m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            return ACTION_DONE;
+        }
+
+        // NOTE: `CGameSpriteEquipment::NUM_SLOT` entries.
+        BOOL bSkipSlot[51];
+        for (nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+            bSkipSlot[nSlot] = FALSE;
+        }
+
+        bSkipSlot[CGameSpriteEquipment::SLOT_FIST] = TRUE;
+        bSkipSlot[CGameSpriteEquipment::SLOT_ARMOR] = TRUE;
+        bSkipSlot[CGameSpriteEquipment::SLOT_BELT] = TRUE;
+        bSkipSlot[CGameSpriteEquipment::SLOT_BOOTS] = TRUE;
+        bSkipSlot[CGameSpriteEquipment::SLOT_CLOAK] = TRUE;
+        bSkipSlot[CGameSpriteEquipment::SLOT_GAUNTLETS] = TRUE;
+        bSkipSlot[CGameSpriteEquipment::SLOT_HELMET] = TRUE;
+        bSkipSlot[pTarget->m_equipment.m_selectedWeapon] = TRUE;
+
+        // NOTE: Called on `this` with the target's weapon.
+        SHORT nLauncherSlot = GetLauncherSlot(pTarget->m_equipment.m_selectedWeapon,
+            pTarget->m_equipment.m_selectedWeaponAbility);
+        if (nLauncherSlot != -1) {
+            bSkipSlot[nLauncherSlot] = TRUE;
+        }
+
+        // Weapon slots.
+        for (nSlot = 43; nSlot < 50; nSlot++) {
+            bSkipSlot[nSlot] = TRUE;
+        }
+
+        // Quiver slots.
+        bSkipSlot[11] = TRUE;
+        bSkipSlot[12] = TRUE;
+        bSkipSlot[13] = TRUE;
+
+        if (pTarget->GetAIType().m_nEnemyAlly == CAIObjectType::EA_PC) {
+            bSkipSlot[15] = TRUE;
+            bSkipSlot[16] = TRUE;
+            bSkipSlot[17] = TRUE;
+        } else {
+            bSkipSlot[21] = TRUE;
+            bSkipSlot[22] = TRUE;
+            bSkipSlot[23] = TRUE;
+        }
+
+        // NOTE: Unused.
+        CString sName(pTarget->m_scriptName);
+
+        SHORT nStart = CGameSpriteEquipment::NUM_SLOT != 0
+            ? static_cast<SHORT>(rand() % CGameSpriteEquipment::NUM_SLOT)
+            : CGameSpriteEquipment::NUM_SLOT;
+        SHORT nCurrent = nStart;
+
+        do {
+            CItem* pItem = pTarget->m_equipment.m_items[nCurrent];
+            if (!bSkipSlot[nCurrent]
+                && pItem != NULL
+                && (pItem->m_flags & 0x2) == 0
+                && (pItem->GetFlagsFile() & 0x4) != 0) {
+                if (PICKPOCKET_GOLD_CHANCE == 0
+                    || rand() % PICKPOCKET_GOLD_CHANCE == 0) {
+                    LONG nGold = (PICKPOCKET_GOLD_MAX != 0
+                                     ? rand() % PICKPOCKET_GOLD_MAX
+                                     : 0)
+                        + 1;
+
+                    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pTarget->m_id) == -1) {
+                        message = new CMessagePartyGold(TRUE, TRUE, nGold, m_id, m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                        FeedBack(35, 0, 0, 0, -1, 0, 0);
+                        return ACTION_DONE;
+                    }
+
+                    // NOTE: Unsigned compare.
+                    if (g_pBaldurChitin->GetObjectGame()->m_gameSave.m_nPartyGold > static_cast<DWORD>(nGold)) {
+                        message = new CMessagePartyGold(TRUE, TRUE, -nGold, m_id, m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                        CAIAction createItem;
+                        createItem.m_actionID = CAIAction::CREATEITEM;
+                        createItem.SetString1(CString("MISC07"));
+                        createItem.SetString2(CString(""));
+                        createItem.m_specificID = nGold;
+                        createItem.m_specificID2 = 0;
+                        createItem.m_specificID3 = 0;
+                        createItem.m_internalFlags = 0;
+
+                        message = new CMessageAddAction(createItem, pTarget->m_id, m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                        FeedBack(35, 0, 0, 0, -1, 0, 0);
+                        return ACTION_DONE;
+                    }
+                }
+
+                SHORT nIndex;
+                if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
+                    for (nIndex = 0; nIndex < CScreenInventory::PERSONAL_INVENTORY_SIZE; nIndex++) {
+                        if (m_equipment.m_items[18 + nIndex] == NULL) {
+                            break;
+                        }
+                    }
+
+                    if (nIndex >= CScreenInventory::PERSONAL_INVENTORY_SIZE) {
+                        FeedBack(34, 0, 0, 0, -1, 0, 0);
+                        return ACTION_ERROR;
+                    }
+
+                    m_equipment.m_items[18 + nIndex] = new CItem(*pItem);
+                } else {
+                    for (nIndex = 0; nIndex < 28; nIndex++) {
+                        if (m_equipment.m_items[15 + nIndex] == NULL) {
+                            break;
+                        }
+                    }
+
+                    if (nIndex >= 28) {
+                        FeedBack(34, 0, 0, 0, -1, 0, 0);
+                        return ACTION_ERROR;
+                    }
+
+                    m_equipment.m_items[15 + nIndex] = new CItem(*pItem);
+                }
+
+                message = new CMessageRemoveInventoryItem(nCurrent, m_id, pTarget->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                FeedBack(35, 0, 0, 0, -1, 0, 0);
+                return ACTION_DONE;
+            }
+
+            if (nStart % 2 == 0) {
+                nCurrent++;
+                if (nCurrent >= CGameSpriteEquipment::NUM_SLOT) {
+                    nCurrent = 0;
+                }
+            } else {
+                nCurrent--;
+                if (nCurrent < 0) {
+                    nCurrent = CGameSpriteEquipment::NUM_SLOT - 1;
+                }
+            }
+        } while (nCurrent != nStart);
+
+        FeedBack(33, 0, 0, 0, -1, 0, 0);
+        return ACTION_DONE;
+    }
+
+    SHORT rc = MoveToObject(pTarget);
+    if (rc == ACTION_DONE) {
+        rc = ACTION_INTERRUPTABLE;
+    }
+
+    return rc;
 }
 
 // 0x759240
 SHORT CGameSprite::RemoveTraps(CGameAIBase* pTarget)
 {
-    // TODO: Incomplete.
+    CMessage* message;
+    SHORT rc = ACTION_DONE;
 
-    return ACTION_ERROR;
+    if (pTarget == NULL) {
+        return ACTION_ERROR;
+    }
+
+    if (pTarget->GetObjectType() != CGameObject::TYPE_DOOR
+        && pTarget->GetObjectType() != CGameObject::TYPE_CONTAINER
+        && pTarget->GetObjectType() != CGameObject::TYPE_TRIGGER) {
+        return ACTION_ERROR;
+    }
+
+    message = new CMessageSetForceActionPick(TRUE, m_id, pTarget->m_id);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    LONG nMaxDistance;
+    if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE
+        && !g_pChitin->cNetwork.m_bIsHost) {
+        nMaxDistance = 32;
+    } else {
+        nMaxDistance = 16;
+    }
+
+    LONG nSelfY = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+    LONG nSelfX = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+    const CPoint& ptTargetPos = pTarget->GetPos();
+    LONG nTargetY = ptTargetPos.y / CPathSearch::GRID_SQUARE_SIZEY;
+    LONG nTargetX = ptTargetPos.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+    if ((nTargetX - nSelfX) * (nTargetX - nSelfX) + (nTargetY - nSelfY) * (nTargetY - nSelfY) > nMaxDistance) {
+        m_curAction.m_dest = pTarget->GetPos();
+        rc = sub_73FEC0(pTarget->GetPos(), 0);
+    }
+
+    if (rc != ACTION_DONE) {
+        return rc;
+    }
+
+    if (m_pPath != NULL) {
+        message = new CMessageDropPath(m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    INT nSkill = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_DISABLE_DEVICE]);
+    INT nRoll = rand() % 20 + 1;
+    INT nSkillBonus = GetSkillBonus(CGAMESPRITE_SKILL_DISABLE_DEVICE);
+    INT nTotal = nRoll + nSkill;
+
+    CAITrigger trigger(CAITrigger::NO_TRIGGER, 0);
+
+    BOOLEAN bUpdate;
+    INT nDifficulty;
+    INT nDC;
+
+    if (pTarget->GetObjectType() == CGameObject::TYPE_DOOR) {
+        CGameDoor* pDoor = static_cast<CGameDoor*>(pTarget);
+
+        bUpdate = FALSE;
+        if (pDoor->m_trapActivated != 0) {
+            nDifficulty = pDoor->m_trapDisarmingDifficulty;
+            nDC = nDifficulty / 7 + 10;
+
+            if (nTotal > nDC && nDifficulty != 100) {
+                trigger = CAITrigger(CAITRIGGER_DISARMED, m_typeAI, 0);
+                message = new CMessageSetTrigger(trigger, m_id, pDoor->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                pDoor->m_trapActivated = 0;
+                pDoor->SetDrawPoly(0);
+
+                FeedBack(83, nRoll, nSkill - nSkillBonus, nSkillBonus, 0x9962, nDC, 0);
+                FeedBack(10, 0, 0, 0, -1, 0, 0);
+
+                bUpdate = TRUE;
+            } else {
+                FeedBack(83, nRoll, nSkill - nSkillBonus, nSkillBonus, 0x9963, nDC, 0);
+
+                if (nDifficulty - nTotal > TRAP_CRITICAL_FAILURE_MARGIN) {
+                    trigger = CAITrigger(CAITrigger::OPENED, m_typeAI, 0);
+                    message = new CMessageSetTrigger(trigger, m_id, pDoor->m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                    if ((pDoor->m_dwFlags & 0x4) == 0) {
+                        pDoor->m_trapActivated = 0;
+                        bUpdate = TRUE;
+                    }
+                }
+
+                trigger = CAITrigger(CAITRIGGER_DISARMFAILED, m_typeAI, 0);
+                message = new CMessageSetTrigger(trigger, m_id, pDoor->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                FeedBack(39, 0, 0, 0, -1, 0, 0);
+            }
+
+            if (bUpdate == TRUE) {
+                message = new CMessageDoorStatus(pDoor, m_id, pDoor->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    }
+
+    if (pTarget->GetObjectType() == CGameObject::TYPE_TRIGGER) {
+        CGameTrigger* pTrigger = static_cast<CGameTrigger*>(pTarget);
+
+        if (pTrigger->m_trapActivated != 0 && (pTrigger->m_dwFlags & 0x100) == 0) {
+            nDifficulty = pTrigger->m_trapDisarmingDifficulty;
+            nDC = nDifficulty / 7 + 10;
+
+            if (nTotal > nDC && nDifficulty != 100) {
+                trigger = CAITrigger(CAITRIGGER_DISARMED, m_typeAI, 0);
+                message = new CMessageSetTrigger(trigger, m_id, pTrigger->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                pTrigger->m_trapActivated = 0;
+                pTrigger->SetDrawPoly(0);
+
+                FeedBack(83, nRoll, nSkill - nSkillBonus, nSkillBonus, 0x9962, nDC, 0);
+                FeedBack(10, 0, 0, 0, -1, 0, 0);
+
+                message = new CMessageTriggerStatus(pTrigger->m_dwFlags,
+                    pTrigger->m_trapActivated,
+                    pTrigger->m_trapDetected,
+                    m_id,
+                    pTrigger->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            } else {
+                FeedBack(83, nRoll, nSkill - nSkillBonus, nSkillBonus, 0x9963, nDC, 0);
+
+                if (nDifficulty - nTotal > TRAP_CRITICAL_FAILURE_MARGIN) {
+                    trigger = CAITrigger(CAITRIGGER_ENTERED, m_typeAI, 0);
+                    message = new CMessageSetTrigger(trigger, m_id, pTrigger->m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                    if ((pTrigger->m_dwFlags & 0x2) == 0) {
+                        pTrigger->m_trapActivated = 0;
+                    }
+                }
+
+                trigger = CAITrigger(CAITRIGGER_DISARMFAILED, m_typeAI, 0);
+                message = new CMessageSetTrigger(trigger, m_id, pTrigger->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                FeedBack(39, 0, 0, 0, -1, 0, 0);
+            }
+        }
+    }
+
+    if (pTarget->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+        CGameContainer* pContainer = static_cast<CGameContainer*>(pTarget);
+
+        bUpdate = FALSE;
+        if (pContainer->m_trapActivated != 0) {
+            nDifficulty = pContainer->m_trapRemovalDifficulty;
+            nDC = nDifficulty / 7 + 10;
+
+            if (nTotal > nDC && nDifficulty != 100) {
+                trigger = CAITrigger(CAITRIGGER_DISARMED, m_typeAI, 0);
+                message = new CMessageSetTrigger(trigger, m_id, pContainer->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                pContainer->SetDrawPoly(0);
+                pContainer->SetTrapActivated(0);
+                pContainer->SetTrapDetected(0);
+
+                FeedBack(83, nRoll, nSkill - nSkillBonus, nSkillBonus, 0x9962, nDC, 0);
+                FeedBack(10, 0, 0, 0, -1, 0, 0);
+
+                bUpdate = TRUE;
+            } else {
+                FeedBack(83, nRoll, nSkill - nSkillBonus, nSkillBonus, 0x9963, nDC, 0);
+
+                if (nDifficulty - nTotal > TRAP_CRITICAL_FAILURE_MARGIN) {
+                    trigger = CAITrigger(CAITrigger::OPENED, m_typeAI, 0);
+                    message = new CMessageSetTrigger(trigger, m_id, pContainer->m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                    if ((pContainer->m_dwFlags & 0x8) == 0) {
+                        pContainer->SetTrapActivated(0);
+                        bUpdate = TRUE;
+                    }
+                }
+
+                trigger = CAITrigger(CAITRIGGER_DISARMFAILED, m_typeAI, 0);
+                message = new CMessageSetTrigger(trigger, m_id, pContainer->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                FeedBack(39, 0, 0, 0, -1, 0, 0);
+            }
+
+            if (bUpdate == TRUE) {
+                message = new CMessageContainerStatus(pContainer->m_dwFlags,
+                    pContainer->m_trapActivated,
+                    pContainer->m_trapDetected,
+                    m_id,
+                    pContainer->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x75A3F0
@@ -22576,9 +23151,61 @@ SHORT CGameSprite::Turn()
 // 0x75A4B0
 SHORT CGameSprite::Berserk()
 {
-    // TODO: Incomplete.
+    m_curAction.m_specificID--;
 
-    return ACTION_ERROR;
+    if (!m_berserkActive || m_curAction.m_specificID <= 0) {
+        return ACTION_DONE;
+    }
+
+    CAIObjectType type(0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0);
+    CAIAction action;
+
+    if (rand() % 100 < 25) {
+        LONG nNearest = m_pArea->GetNearest(m_id,
+            CAIObjectType::ANYONE,
+            GetVisualRange(),
+            m_terrainTable,
+            TRUE,
+            GetCanSeeInvisible(),
+            FALSE,
+            FALSE,
+            FALSE);
+        if (nNearest != CGameObjectArray::INVALID_INDEX) {
+            AddAction(m_curAction);
+
+            type.m_nInstance = nNearest;
+            action = CAIAction(CAIAction::ATTACK, type, 0, 0, 0);
+        }
+
+        // NOTE: Original code adds `action` even when no target was found
+        // (in which case it is still `NO_ACTION`).
+        AddAction(action);
+    } else {
+        CAIObjectType enemy = m_typeAI.GetEnemyOf();
+
+        LONG nNearest = m_pArea->GetNearest(m_id,
+            enemy,
+            GetVisualRange(),
+            m_terrainTable,
+            TRUE,
+            GetCanSeeInvisible(),
+            FALSE,
+            FALSE,
+            FALSE);
+
+        AddAction(m_curAction);
+
+        if (nNearest != CGameObjectArray::INVALID_INDEX) {
+            type.m_nInstance = nNearest;
+            action = CAIAction(CAIAction::ATTACK, type, 0, 0, 0);
+            AddAction(action);
+        } else {
+            action = CAIAction(CAIAction::WAIT, 6);
+            AddAction(action);
+        }
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x75ACB0
