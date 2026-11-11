@@ -266,6 +266,7 @@ public:
 
     static const ITEM_ABILITY DEFAULT_ATTACK;
 
+    static const BYTE TRAP_CRITICAL_FAILURE_MARGIN;
     static const LONG STANDARD_VERBAL_CONSTANT_LENGTH;
     static const LONG PICKPOCKET_GOLD_CHANCE;
     static const LONG PICKPOCKET_GOLD_MAX;
