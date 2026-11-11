@@ -21,6 +21,7 @@
 #include "CResFile.h"
 #include "CScreenChapter.h"
 #include "CScreenCharacter.h"
+#include "CScreenCreateChar.h"
 #include "CScreenInventory.h"
 #include "CScreenJournal.h"
 #include "CScreenLoad.h"
@@ -10773,7 +10774,67 @@ STRREF CInfGame::sub_5C3770(CString a1)
 // 0x5C3790
 void CInfGame::ChangeBiography(BYTE nFixedPartyId, CString szBiography)
 {
-    // TODO: Incomplete.
+    STR_RES strRes;
+    CString sString1;
+    CString sString2;
+    CGameSprite* pSprite;
+    BYTE rc;
+
+    if (g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
+        if (!g_pChitin->cNetwork.m_bIsHost) {
+            if (!g_pBaldurChitin->m_cBaldurMessage.m_bInOnAnnounceBiography) {
+                g_pBaldurChitin->GetBaldurMessage()->SendBiographyToServer(nFixedPartyId, szBiography);
+                return;
+            }
+        } else {
+            g_pBaldurChitin->GetBaldurMessage()->AnnounceBiography(nFixedPartyId, szBiography);
+        }
+    }
+
+    CScreenCharacter* pEngineCharacter = g_pBaldurChitin->m_pEngineCharacter;
+
+    // NOTE: Both strings are unused.
+    sString1 = CBaldurEngine::FetchString(15882);
+    sString2 = CBaldurEngine::FetchString(11863);
+
+    // NOTE: Uninline.
+    LONG nCharacterId = GetFixedOrderCharacterId(nFixedPartyId);
+
+    if (nCharacterId == -1) {
+        if (g_pChitin->pActiveEngine != g_pBaldurChitin->m_pEngineCreateChar) {
+            return;
+        }
+
+        nCharacterId = g_pBaldurChitin->m_pEngineCreateChar->m_nGameSprite;
+    }
+
+    do {
+        rc = m_cObjectArray.GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (g_pBaldurChitin->GetTlkTable().m_override.Fetch(pSprite->m_baseStats.m_biography, strRes)) {
+            g_pBaldurChitin->GetTlkTable().m_override.Remove(pSprite->m_baseStats.m_biography);
+        }
+
+        pSprite->m_baseStats.m_biography = nFixedPartyId + 0xF240;
+        strRes.szText = szBiography;
+        g_pBaldurChitin->GetTlkTable().m_override.AddUserEntry(pSprite->m_baseStats.m_biography, strRes);
+
+        m_cObjectArray.ReleaseShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    if (g_pChitin->cNetwork.GetSessionOpen() == TRUE
+        && g_pChitin->pActiveEngine == pEngineCharacter
+        && pEngineCharacter->GetTopPopup() != NULL
+        && pEngineCharacter->GetTopPopup()->m_nID == 12) {
+        pEngineCharacter->GetManager()->GetPanel(12)->GetControl(0);
+    }
 }
 
 // 0x5C72D0
