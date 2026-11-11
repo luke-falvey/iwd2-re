@@ -27065,7 +27065,60 @@ void CGameSprite::sub_755A70(CSpell* pSpell, SPELL_ABILITY* pAbility, const CPoi
 // 0x7564E0
 void CGameSprite::ApplyCastingEffectPost(CSpell* pSpell, SPELL_ABILITY* pAbility)
 {
-    // TODO: Incomplete.
+    // NOTE: Result is not used.
+    pSpell->GetCasterType();
+
+    if (pSpell == NULL || pAbility == NULL) {
+        return;
+    }
+
+    CString sSound("CAS_");
+
+    if (pSpell->GetCasterType() == 2) {
+        sSound += 'P';
+    } else {
+        // NOTE: Result is not used.
+        pSpell->GetCasterType();
+        sSound += 'M';
+    }
+
+    switch (pSpell->GetAnimationType()) {
+    case 9:
+        sSound += "07";
+        break;
+    case 10:
+        sSound += "08";
+        break;
+    case 11:
+        sSound += "05";
+        break;
+    case 12:
+        sSound += "02";
+        break;
+    case 13:
+        sSound += "01";
+        break;
+    case 14:
+        sSound += "03";
+        break;
+    case 15:
+        sSound += "06";
+        break;
+    case 16:
+        sSound += "04";
+        break;
+    default:
+        return;
+    }
+
+    m_sndCasting.Stop();
+    m_sndCasting.SetChannel(4, reinterpret_cast<DWORD>(m_pArea));
+    m_sndCasting.SetResRef(CResRef(sSound), TRUE, TRUE);
+    m_sndCasting.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+
+    CMessagePlaySoundRef* message = new CMessagePlaySoundRef(CResRef(sSound), m_id, m_id);
+    message->m_nChannel = 4;
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
 }
 
 // 0x756770
@@ -27090,17 +27143,95 @@ void CGameSprite::sub_756930(CItem* pItem, CItem* pLauncher)
 // 0x757540
 SHORT CGameSprite::GiveItem(CGameSprite* pTarget)
 {
-    // TODO: Incomplete.
+    if (pTarget == NULL) {
+        return ACTION_ERROR;
+    }
 
-    return ACTION_ERROR;
+    CItem* pItem;
+    SHORT slotNum = FindItemPersonal(m_curAction.GetString1(), 0, FALSE);
+    if (slotNum == -1) {
+        pItem = sub_722740(m_curAction.GetString1());
+        if (pItem == NULL) {
+            return ACTION_ERROR;
+        }
+    } else {
+        pItem = m_equipment.m_items[slotNum];
+    }
+
+    // NOTE: `slotNum` is still -1 when the item was taken from a bag.
+    Unequip(slotNum);
+    m_equipment.m_items[slotNum] = NULL;
+
+    if (pTarget->m_objectType == CGameObject::TYPE_SPRITE) {
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pTarget->m_id) != -1) {
+            g_pBaldurChitin->GetObjectGame()->FeedBack(CInfGame::FEEDBACK_ITEMGAINED, 0, TRUE);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->AddDisposableItem(pItem);
+
+        CMessage* message = new CMessageAddInventoryItem(*pItem, m_id, pTarget->m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x757720
 SHORT CGameSprite::sub_757720()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
-    return ACTION_ERROR;
+    for (INT nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+        if (m_equipment.m_items[nSlot] == NULL || nSlot == CGameSpriteEquipment::SLOT_FIST) {
+            continue;
+        }
+
+        if ((m_equipment.m_items[nSlot]->GetFlagsFile() & 0x4) == 0) {
+            continue;
+        }
+
+        CItem* pItem = m_equipment.m_items[nSlot];
+        Unequip(nSlot);
+        m_equipment.m_items[nSlot] = NULL;
+
+        BOOL bGiven = FALSE;
+
+        for (INT nCharacter = static_cast<SHORT>(pGame->m_nCharacters) - 1; nCharacter >= 0 && !bGiven; nCharacter--) {
+            // NOTE: Uninline.
+            LONG nCharacterId = pGame->GetCharacterId(static_cast<SHORT>(nCharacter));
+
+            CGameSprite* pSprite;
+            BYTE rc;
+
+            do {
+                rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                // NOTE: `nSlot` is advanced by this loop, and the sprite
+                // obtained above is not used.
+                for (; nSlot < CGameSpriteEquipment::NUM_SLOT && !bGiven; nSlot++) {
+                    if (m_equipment.m_items[0] == NULL && CGameSpriteEquipment::SLOT_FIST != 0) {
+                        bGiven = TRUE;
+
+                        pGame->AddDisposableItem(pItem);
+
+                        CMessage* message = new CMessageAddInventoryItem(*pItem, m_id, nCharacterId);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                    }
+                }
+
+                pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x7579C0
