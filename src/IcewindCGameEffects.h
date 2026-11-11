@@ -402,6 +402,7 @@ class IcewindCGameEffectMaceOfDisruption : public CGameEffect {
 public:
     IcewindCGameEffectMaceOfDisruption(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectRangerTracking : public CGameEffect {
@@ -429,6 +430,7 @@ class IcewindCGameEffectRodOfSmiting : public CGameEffect {
 public:
     IcewindCGameEffectRodOfSmiting(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectMagicalRest : public CGameEffect {

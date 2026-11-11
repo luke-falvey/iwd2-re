@@ -1350,6 +1350,91 @@ CGameEffect* IcewindCGameEffectMaceOfDisruption::Copy()
     return copy;
 }
 
+// 0x566580
+BOOL IcewindCGameEffectMaceOfDisruption::ApplyEffect(CGameSprite* pSprite)
+{
+    INT nChance = 0;
+
+    if (pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_GHOUL
+        || pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_SKELETON
+        || pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_UNDEAD) {
+        BYTE nLevel = pSprite->GetBaseStats()->m_characterLevel;
+        if (nLevel < 4) {
+            nChance = 100;
+        } else if (nLevel == 5) {
+            nChance = 95;
+        } else if (nLevel == 6) {
+            nChance = 80;
+        } else if (nLevel == 7) {
+            nChance = 65;
+        } else if (nLevel == 8 || nLevel == 9) {
+            nChance = 50;
+        } else if (nLevel == 10) {
+            nChance = 35;
+        } else if (nLevel >= 11) {
+            nChance = 20;
+        }
+        // NOTE: Level 4 gets no chance at all.
+    }
+
+    if (pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_TANARI) {
+        nChance = 5;
+    }
+
+    if (rand() % 100 < nChance) {
+        CGameObject* pSource;
+        if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pSource,
+                INFINITE)
+            == CGameObjectArray::SUCCESS) {
+            CGameEffect* pVisual = IcewindMisc::CreateEffectVisualSpellHit(pSource,
+                84,
+                static_cast<BYTE>(m_spellLevel),
+                0);
+
+            CMessage* message = new CMessageAddEffect(pVisual,
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            ITEM_EFFECT* effect = new ITEM_EFFECT;
+            CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_DEATH);
+            effect->dwFlags = 8;
+            // NOTE: Original reads it from a constant at 0x8491AA.
+            effect->durationType = 1;
+            effect->duration = 0;
+
+            CGameEffect* pDeath = CGameEffect::DecodeEffect(effect,
+                pSprite->GetPos(),
+                pSprite->GetId(),
+                CPoint(-1, -1));
+
+            CGameEffect* pCopy = pDeath->Copy();
+            pCopy->m_sourceID = m_sourceID;
+
+            message = new CMessageAddEffect(pCopy,
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            if (pDeath != NULL) {
+                delete pDeath;
+            }
+
+            delete effect;
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49FF20
@@ -1499,6 +1584,65 @@ CGameEffect* IcewindCGameEffectRodOfSmiting::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x566960
+BOOL IcewindCGameEffectRodOfSmiting::ApplyEffect(CGameSprite* pSprite)
+{
+    if (IcewindMisc::IsGolem(pSprite) == TRUE) {
+        if (rand() % 100 < 5) {
+            ITEM_EFFECT* effect = new ITEM_EFFECT;
+            CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_DEATH);
+            effect->dwFlags = 8;
+            // NOTE: Original reads it from a constant at 0x8491AA.
+            effect->durationType = 1;
+            effect->duration = 0;
+
+            CGameEffect* pDeath = CGameEffect::DecodeEffect(effect,
+                pSprite->GetPos(),
+                pSprite->GetId(),
+                CPoint(-1, -1));
+            pDeath->m_flags |= 0x2;
+
+            CGameEffect* pCopy = pDeath->Copy();
+            pCopy->m_sourceID = m_sourceID;
+
+            CMessage* message = new CMessageAddEffect(pCopy,
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            if (pDeath != NULL) {
+                delete pDeath;
+            }
+
+            delete effect;
+        } else {
+            CGameEffect* pEffect = IcewindMisc::sub_585410(pSprite, 1, 8, 3, 0, 0);
+            pEffect->m_flags |= 0x2;
+            pEffect->m_sourceRes = m_sourceRes;
+
+            CMessage* message = new CMessageAddEffect(pEffect,
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    } else {
+        if (pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_TANARI && rand() % 100 < 5) {
+            CGameEffect* pEffect = IcewindMisc::sub_585410(pSprite, 8, 3, 0, 0, 0);
+            pEffect->m_flags |= 0x2;
+            pEffect->m_sourceRes = m_sourceRes;
+
+            CMessage* message = new CMessageAddEffect(pEffect,
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    }
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
