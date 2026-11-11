@@ -223,6 +223,7 @@ public:
     BOOL CheckIfSpriteCanUseItem(CGameSprite* pSprite, CItem* pItem, STRREF& strError, BOOL a4);
     INT CheckItemUsable(CGameSprite* pSprite, CItem* pItem);
     SHORT GetNumQuickWeaponSlots(SHORT nPortrait);
+    BOOL SwapItemPersonal(SHORT nPortraitNum, SHORT nSlotNum, CItem*& pNewItem, STRREF& errorCode, WORD wCount, BOOLEAN bFromServer);
     BOOL SwapItemPersonalInventory(SHORT nPortraitNum, CItem*& pNewItem, SHORT nSlotNum, STRREF& errorCode, WORD wCount, BOOLEAN bFromServer, BOOL bAutoStacking);
     void InventoryInfoPersonal(SHORT nPortraitNum, SHORT nSlotNum, CItem*& pItem, STRREF& description, CResRef& cResIcon, CResRef& cResItem, WORD& wCount, BOOL a8);
     BOOL Is3DSound(int nSoundChannel);

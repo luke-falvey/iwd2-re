@@ -4304,6 +4304,7 @@ void CScreenCreateChar::CompleteCharacterAbilities(CGameSprite* pSprite)
     pSprite->ProcessEffectList();
 
     INT nHitPoints = ruleTables.GetStartingHitPoints(typeAI,
+        DStats,
         *pSprite->GetDerivedStats(),
         pSprite->GetBaseStats()->m_CONBase);
 

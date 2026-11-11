@@ -385,7 +385,9 @@ public:
     INT FindSavingThrow(CDerivedStats& stats, const CString& sSavingThrow) const;
     INT GetSavingThrow(const CAIObjectType& typeAI, CDerivedStats& DStats, BYTE nCON, const CString& sSavingThrow) const;
     INT GetHPCONBonusTotal(const CAIObjectType& typeAI, CDerivedStats& DStats, BYTE nCON) const;
-    INT GetStartingHitPoints(const CAIObjectType& typeAI, CDerivedStats& DStats, BYTE nCON) const;
+    INT sub_542B40(const C2DArray* pTable, BYTE nLevelFrom, BYTE nLevelTo, INT a4, INT a5, INT a6, INT a7) const;
+    INT sub_542CB0(INT nClass, CDerivedStats& DStatsOld, CDerivedStats& DStats, INT a4, INT a5) const;
+    INT GetStartingHitPoints(const CAIObjectType& typeAI, CDerivedStats& DStatsOld, CDerivedStats& DStats, BYTE nCON) const;
     INT GetStartingGold(CGameSprite* pSprite) const;
     INT GetStartingExperiencePoints(CGameSprite* pSprite) const;
     INT GetMaxKnownSpells(const BYTE& nClass, const CAIObjectType& typeAI, CDerivedStats& DStats, DWORD nSpecialization, UINT nLevel, INT& nMaxSpells) const;
