@@ -9,6 +9,7 @@
 #include "CTiledObject.h"
 #include "CUtil.h"
 #include "CVidInf.h"
+#include "CVidPoly.h"
 #include "CVideo3d.h"
 #include "CVisibility.h"
 
@@ -1902,9 +1903,167 @@ BOOL CInfinity::FXRender(CVidCell* pVidCell, INT nRefPointX, INT nRefPointY, DWO
 // 0x5CE350
 BOOL CInfinity::FXRenderClippingPolys(INT nPosX, INT nPosY, INT nPosZ, const CPoint& ptRef, const CRect& rGCBounds, BOOLEAN bDithered, DWORD dwBlitFlags)
 {
-    // TODO: Incomplete.
+    // NOTE: Uninline.
+    if (g_pChitin->GetCurrentVideoMode()->m_nFade == 0) {
+        return TRUE;
+    }
 
-    return FALSE;
+    CVidPoly vidPoly;
+    BOOLEAN bRendered = FALSE;
+    INT nUsed = 0;
+    LONG aUsed[5];
+
+    if (pResWED == NULL) {
+        return FALSE;
+    }
+
+    DWORD dwFillFlags = bDithered ? 2 : 1;
+
+    if ((dwBlitFlags & 0x10) != 0) {
+        dwFillFlags |= 0x4;
+    }
+
+    if ((dwBlitFlags & 0x20) != 0) {
+        dwFillFlags |= 0x8;
+    }
+
+    WORD* pScreenPolyData = pResWED->GetScreenPolyData();
+    if (pScreenPolyData == NULL) {
+        return FALSE;
+    }
+
+    INT nScreensX = nAreaX / 640;
+    if (nAreaX % 640 != 0) {
+        nScreensX++;
+    }
+
+    INT nScreensY = nAreaY / 480;
+    if (nAreaY % 480 != 0) {
+        nScreensY++;
+    }
+
+    for (INT k = 0; k < 5; k++) {
+        aUsed[k] = -1;
+    }
+
+    INT nScreenLeft = rGCBounds.left / 640;
+    INT nScreenTop = rGCBounds.top / 480;
+    INT nScreenRight = rGCBounds.right / 640;
+    INT nScreenBottom = rGCBounds.bottom / 480;
+
+    INT nRowOffset = nScreenTop * nScreensX;
+    for (INT nScreenY = nScreenTop; nScreenY <= nScreenBottom && nScreenY < nScreensY; nScreenY++, nRowOffset += nScreensX) {
+        for (INT nScreenX = nScreenLeft; nScreenX <= nScreenRight && nScreenX < nScreensX; nScreenX++) {
+            INT nSection = nRowOffset + nScreenX;
+            WED_SCREENSECTIONLIST* pSection = &pResWED->m_pScreenSectionList[nSection];
+
+            for (INT nPoly = 0; nPoly < pSection->nNumPolys; nPoly++) {
+                WORD nPolyIndex = pScreenPolyData[pSection->nStartingPoly + nPoly];
+                WED_POLYLIST* pPoly = &pResWED->m_pPolyList[nPolyIndex];
+
+                if ((pPoly->nType & 0x2) != 0) {
+                    continue;
+                }
+
+                WED_POLYPOINT* pPoint1 = &pResWED->m_pPolyPoints[pPoly->nStartingPoint];
+                WED_POLYPOINT* pPoint2 = &pResWED->m_pPolyPoints[pPoly->nStartingPoint + 1];
+                if (pPoint1->x > pPoint2->x) {
+                    WED_POLYPOINT* pTemp = pPoint1;
+                    pPoint1 = pPoint2;
+                    pPoint2 = pTemp;
+                }
+
+                CRect rPoly(pPoly->nLeft, pPoly->nTop, pPoly->nRight, pPoly->nBottom);
+                CRect rIntersect;
+                if (!rIntersect.IntersectRect(&rPoly, &rGCBounds)) {
+                    continue;
+                }
+
+                if ((pPoly->nType & 0x1) != 0) {
+                    if ((dwBlitFlags & 0x400) != 0) {
+                        continue;
+                    }
+
+                    if (pPoint1->y == pPoint2->y) {
+                        if (nPosY >= pPoint1->y) {
+                            continue;
+                        }
+                    } else {
+                        if (pPoint1->x == pPoint2->x) {
+                            continue;
+                        }
+
+                        INT nCross = (nPosX - pPoint1->x) * (pPoint2->y - pPoint1->y)
+                            + (nPosY - pPoint1->y) * (pPoint1->x - pPoint2->x);
+                        if (nCross < 0) {
+                            continue;
+                        }
+                    }
+                }
+
+                // NOTE: Only the first entry of `aUsed` is ever compared, and
+                // it is never `-1`, so a polygon is never detected as a duplicate.
+                BOOL bFound = FALSE;
+                for (INT i = 0; i < nUsed; i++) {
+                    if (aUsed[i] != -1) {
+                        break;
+                    }
+
+                    if (aUsed[i] == nPolyIndex) {
+                        bFound = TRUE;
+                    }
+                }
+
+                if (bFound) {
+                    continue;
+                }
+
+                if (nUsed < 5) {
+                    aUsed[nUsed] = nPolyIndex;
+                    nUsed++;
+                }
+
+                if ((pPoly->nType & 0x4) != 0) {
+                    vidPoly.SetPoly(reinterpret_cast<WORD*>(&pResWED->m_pPolyPoints[pPoly->nStartingPoint + 2]),
+                        static_cast<WORD>(pPoly->nNumPoints - 2));
+                } else {
+                    vidPoly.SetPoly(reinterpret_cast<WORD*>(&pResWED->m_pPolyPoints[pPoly->nStartingPoint]),
+                        static_cast<WORD>(pPoly->nNumPoints));
+                }
+
+                CRect rClip(rGCBounds.left,
+                    rGCBounds.top + nPosZ,
+                    rGCBounds.right,
+                    rGCBounds.bottom + nPosZ);
+
+                if ((pPoly->nType & 0x8) != 0) {
+                    CPoint ptDest(ptRef.x + nPosX, ptRef.y + nPosY);
+
+                    // NOTE: Uninline (both).
+                    vidPoly.FillConvexPoly(static_cast<WORD*>(static_cast<CVidInf*>(g_pChitin->GetCurrentVideoMode())->GetLockedSurface()),
+                        static_cast<CVidInf*>(g_pChitin->GetCurrentVideoMode())->GetSurfacePitch(),
+                        rClip,
+                        pVidMode->field_24,
+                        dwFillFlags,
+                        ptDest);
+                } else {
+                    CPoint ptDest(ptRef.x + nPosX, ptRef.y + nPosY);
+
+                    // NOTE: Uninline (both).
+                    vidPoly.FillPoly(static_cast<WORD*>(static_cast<CVidInf*>(g_pChitin->GetCurrentVideoMode())->GetLockedSurface()),
+                        static_cast<CVidInf*>(g_pChitin->GetCurrentVideoMode())->GetSurfacePitch(),
+                        rClip,
+                        pVidMode->field_24,
+                        dwFillFlags,
+                        ptDest);
+                }
+
+                bRendered = TRUE;
+            }
+        }
+    }
+
+    return bRendered;
 }
 
 // 0x5CE930
@@ -2664,7 +2823,207 @@ BOOL CInfinity::RequestRect(int x1, int y1, int x2, int y2)
 // 0x5D00C0
 BOOL CInfinity::ScrollingRequestRect(int x1, int y1, int x2, int y2, INT nScrollState)
 {
-    // TODO: Incomplete.
+    CancelRequestRect(field_15E);
+
+    BYTE nFlags;
+    if ((m_areaType & 0x40) != 0) {
+        nFlags = m_requestDayNightCode;
+    } else {
+        nFlags = 1;
+    }
+
+    if ((m_areaType & 0x4) != 0 && nCurrentRainLevel != 0) {
+        nFlags |= 0x4;
+    }
+
+    field_15E = nFlags;
+
+    {
+        int nStartX = (x1 + 1 < 0 ? 0 : x1 + 1);
+        int nEndX = (nTilesX - 1 < x2 - 1 ? nTilesX - 1 : x2 - 1);
+        int nStartY = (y1 + 1 < 0 ? 0 : y1 + 1);
+        int nEndY = (nTilesY - 1 < y2 - 1 ? nTilesY - 1 : y2 - 1);
+
+        for (int nY = nStartY; nY < nEndY; nY++) {
+            for (int nX = nStartX; nX < nEndX; nX++) {
+                RequestTile(nX, nY, nFlags, 2);
+            }
+        }
+    }
+
+    switch (nScrollState) {
+    case 1:
+        {
+            int nStartX = (x1 < 0 ? 0 : x1);
+            int nEndX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nStartY = (y1 - 1 < 0 ? 0 : y1 - 1);
+            int nEndY = (y1 < 0 ? 0 : y1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 2:
+        {
+            int nStartX = (x1 < 0 ? 0 : x1);
+            int nEndX = (nTilesX - 1 < x2 + 1 ? nTilesX - 1 : x2 + 1);
+            int nStartY = (y1 - 1 < 0 ? 0 : y1 - 1);
+            int nEndY = (y1 < 0 ? 0 : y1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        {
+            int nStartX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nEndX = (nTilesX - 1 < x2 + 1 ? nTilesX - 1 : x2 + 1);
+            int nStartY = (y1 < 0 ? 0 : y1);
+            int nEndY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 3:
+        {
+            int nStartX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nEndX = (nTilesX - 1 < x2 + 1 ? nTilesX - 1 : x2 + 1);
+            int nStartY = (y1 < 0 ? 0 : y1);
+            int nEndY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 4:
+        {
+            int nStartX = (x1 < 0 ? 0 : x1);
+            int nEndX = (nTilesX - 1 < x2 + 1 ? nTilesX - 1 : x2 + 1);
+            int nStartY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+            int nEndY = (nTilesY - 1 < y2 + 1 ? nTilesY - 1 : y2 + 1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        {
+            int nStartX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nEndX = (nTilesX - 1 < x2 + 1 ? nTilesX - 1 : x2 + 1);
+            int nStartY = (y1 < 0 ? 0 : y1);
+            int nEndY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 5:
+        {
+            int nStartX = (x1 < 0 ? 0 : x1);
+            int nEndX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nStartY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+            int nEndY = (nTilesY - 1 < y2 + 1 ? nTilesY - 1 : y2 + 1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 6:
+        {
+            int nStartX = (x1 - 1 < 0 ? 0 : x1 - 1);
+            int nEndX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nStartY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+            int nEndY = (nTilesY - 1 < y2 + 1 ? nTilesY - 1 : y2 + 1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        {
+            int nStartX = (x1 - 1 < 0 ? 0 : x1 - 1);
+            int nEndX = (x1 < 0 ? 0 : x1);
+            int nStartY = (y1 < 0 ? 0 : y1);
+            int nEndY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 7:
+        {
+            int nStartX = (x1 - 1 < 0 ? 0 : x1 - 1);
+            int nEndX = (x1 < 0 ? 0 : x1);
+            int nStartY = (y1 < 0 ? 0 : y1);
+            int nEndY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 8:
+        {
+            int nStartX = (x1 - 1 < 0 ? 0 : x1 - 1);
+            int nEndX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nStartY = (y1 - 1 < 0 ? 0 : y1 - 1);
+            int nEndY = (y1 < 0 ? 0 : y1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        {
+            int nStartX = (x1 - 1 < 0 ? 0 : x1 - 1);
+            int nEndX = (x1 < 0 ? 0 : x1);
+            int nStartY = (y1 < 0 ? 0 : y1);
+            int nEndY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\Infinity.cpp
+        // __LINE__: 5161
+        UTIL_ASSERT(FALSE);
+        break;
+    }
+
+    field_196 = nScrollState;
+    field_68 = x1;
+    field_6C = y1;
+    field_70 = x2;
+    field_74 = y2;
 
     return TRUE;
 }
@@ -3134,7 +3493,80 @@ void CInfinity::CallLightning(INT xWorldPos, INT yWorldPos)
 // 0x5D1380
 void CInfinity::Scroll(CPoint ptDest, SHORT speed)
 {
-    // TODO: Incomplete.
+    // NOTE: Positions are fixed point with a factor of 10000.
+    INT nDestX = ptDest.x * 10000;
+    INT nDestY = ptDest.y * 10000;
+    INT dx = nDestX - m_ptCurrentPosExact.x;
+    INT dy = nDestY - m_ptCurrentPosExact.y;
+    INT nSpeedDiagX = speed * 30000 / 4;
+    INT nSpeedStraight = speed * 10000;
+    INT nSpeedDiagY = nSpeedStraight / 2;
+
+    DWORD nNow = GetTickCount();
+    DWORD nElapsed;
+    if (nNow < m_nLastTickCount || nNow - m_nLastTickCount > 500) {
+        nElapsed = 500;
+    } else {
+        nElapsed = nNow - m_nLastTickCount;
+    }
+
+    m_nLastTickCount = nNow;
+
+    INT nStepStraight = nElapsed * nSpeedStraight / 50;
+    INT nStepDiagX = nElapsed * nSpeedDiagX / 50;
+
+    if (speed == 0) {
+        SetViewPosition(ptDest.x, ptDest.y, TRUE);
+        m_ptScrollDest.x = -1;
+        m_ptScrollDest.y = -1;
+        return;
+    }
+
+    if (dx <= nStepStraight && dx >= -nStepStraight) {
+        if (dy <= nStepDiagX && dy >= -nStepDiagX) {
+            m_ptCurrentPosExact.y = nDestY;
+            m_ptCurrentPosExact.x = nDestX;
+            SetViewPosition(nDestX / 10000, nDestY / 10000, FALSE);
+            m_ptScrollDest.x = -1;
+            m_ptScrollDest.y = -1;
+        } else if (dy > 0) {
+            m_ptCurrentPosExact.y += nStepDiagX;
+            m_ptCurrentPosExact.x = nDestX;
+            SetViewPosition(nDestX / 10000, m_ptCurrentPosExact.y / 10000, FALSE);
+        } else if (dy < 0) {
+            m_ptCurrentPosExact.y -= nStepDiagX;
+            m_ptCurrentPosExact.x = nDestX;
+            SetViewPosition(nDestX / 10000, m_ptCurrentPosExact.y / 10000, FALSE);
+        }
+
+        return;
+    }
+
+    if (dx > 0 && dy <= 6 && dy >= -nStepDiagX) {
+        m_ptCurrentPosExact.x += nStepStraight;
+        m_ptCurrentPosExact.y = nDestY;
+        SetViewPosition(m_ptCurrentPosExact.x / 10000, nDestY / 10000, FALSE);
+    } else if (dx < 0 && dy <= 6 && dy >= -nStepDiagX) {
+        m_ptCurrentPosExact.x -= nStepStraight;
+        m_ptCurrentPosExact.y = nDestY;
+        SetViewPosition(m_ptCurrentPosExact.x / 10000, nDestY / 10000, FALSE);
+    } else if (dx > 0 && dy > 0) {
+        m_ptCurrentPosExact.x += nStepDiagX;
+        m_ptCurrentPosExact.y += nElapsed * nSpeedDiagY / 50;
+        SetViewPosition(m_ptCurrentPosExact.x / 10000, m_ptCurrentPosExact.y / 10000, FALSE);
+    } else if (dx < 0 && dy > 0) {
+        m_ptCurrentPosExact.x -= nStepDiagX;
+        m_ptCurrentPosExact.y += nElapsed * nSpeedDiagY / 50;
+        SetViewPosition(m_ptCurrentPosExact.x / 10000, m_ptCurrentPosExact.y / 10000, FALSE);
+    } else if (dx > 0 && dy < 0) {
+        m_ptCurrentPosExact.x += nStepDiagX;
+        m_ptCurrentPosExact.y -= nElapsed * nSpeedDiagY / 50;
+        SetViewPosition(m_ptCurrentPosExact.x / 10000, m_ptCurrentPosExact.y / 10000, FALSE);
+    } else if (dx < 0 && dy < 0) {
+        m_ptCurrentPosExact.x -= nStepDiagX;
+        m_ptCurrentPosExact.y -= nElapsed * nSpeedDiagY / 50;
+        SetViewPosition(m_ptCurrentPosExact.x / 10000, m_ptCurrentPosExact.y / 10000, FALSE);
+    }
 }
 
 // 0x5D1750
