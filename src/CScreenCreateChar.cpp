@@ -4303,9 +4303,12 @@ void CScreenCreateChar::CompleteCharacterAbilities(CGameSprite* pSprite)
     pSprite->field_562C = 1;
     pSprite->ProcessEffectList();
 
+    // NOTE: The original passes the byte at base stats +0x262, which this repo
+    // names `m_WISBase`. The callee never reads it.
     INT nHitPoints = ruleTables.GetStartingHitPoints(typeAI,
+        DStats,
         *pSprite->GetDerivedStats(),
-        pSprite->GetBaseStats()->m_CONBase);
+        pSprite->GetBaseStats()->m_WISBase);
 
     pSprite->GetBaseStats()->m_maxHitPointsBase = nHitPoints;
     pSprite->GetBaseStats()->m_hitPoints = nHitPoints;

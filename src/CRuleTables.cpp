@@ -1954,12 +1954,86 @@ INT CRuleTables::GetHPCONBonusTotal(const CAIObjectType& typeAI, CDerivedStats& 
     return DStats.m_nLevel * static_cast<INT>((fCON - 10.0f) / 2.0f);
 }
 
-// 0x542FA0
-INT CRuleTables::GetStartingHitPoints(const CAIObjectType& typeAI, CDerivedStats& DStats, BYTE nCON) const
+// 0x542B40
+INT CRuleTables::sub_542B40(const C2DArray* pTable, BYTE nLevelFrom, BYTE nLevelTo, INT a4, INT a5, INT a6, INT a7) const
 {
     // TODO: Incomplete.
 
     return 0;
+}
+
+// 0x542CB0
+INT CRuleTables::sub_542CB0(INT nClass, CDerivedStats& DStatsOld, CDerivedStats& DStats, INT a4, INT a5) const
+{
+    INT nResult = 0;
+    INT nSpecial = 0;
+    INT nFlag = 0;
+
+    DStatsOld.GetClassLevel(nClass);
+
+    // NOTE: Only the low byte of the level is tested.
+    if (static_cast<BYTE>(DStats.GetClassLevel(nClass)) == 0) {
+        return 0;
+    }
+
+    switch (nClass) {
+    case CAIOBJECTTYPE_C_BARBARIAN:
+        nFlag = 1;
+        nSpecial = 12;
+        // FALLTHROUGH
+    case CAIOBJECTTYPE_C_FIGHTER:
+    case CAIOBJECTTYPE_C_PALADIN:
+    case CAIOBJECTTYPE_C_RANGER: {
+        BYTE nLevelOld = static_cast<BYTE>(DStatsOld.GetClassLevel(nClass));
+        BYTE nLevel = static_cast<BYTE>(DStats.GetClassLevel(nClass));
+        // NOTE: Barbarians use the warrior table.
+        nResult = sub_542B40(&m_tHitPointsWarrior, nLevelOld, nLevel, a4, a5, nFlag, nSpecial);
+        break;
+    }
+    case CAIOBJECTTYPE_C_BARD:
+    case CAIOBJECTTYPE_C_ROGUE: {
+        BYTE nLevelOld = static_cast<BYTE>(DStatsOld.GetClassLevel(nClass));
+        BYTE nLevel = static_cast<BYTE>(DStats.GetClassLevel(nClass));
+        nResult = sub_542B40(&m_tHitPointsRogue, nLevelOld, nLevel, a4, a5, 0, 0);
+        break;
+    }
+    case CAIOBJECTTYPE_C_CLERIC:
+    case CAIOBJECTTYPE_C_DRUID: {
+        BYTE nLevelOld = static_cast<BYTE>(DStatsOld.GetClassLevel(nClass));
+        BYTE nLevel = static_cast<BYTE>(DStats.GetClassLevel(nClass));
+        nResult = sub_542B40(&m_tHitPointsPriest, nLevelOld, nLevel, a4, a5, 0, 0);
+        break;
+    }
+    case CAIOBJECTTYPE_C_MONK: {
+        BYTE nLevelOld = static_cast<BYTE>(DStatsOld.GetClassLevel(nClass));
+        BYTE nLevel = static_cast<BYTE>(DStats.GetClassLevel(nClass));
+        nResult = sub_542B40(&m_tHitPointsMonk, nLevelOld, nLevel, a4, a5, 0, 0);
+        break;
+    }
+    case CAIOBJECTTYPE_C_SORCERER:
+    case CAIOBJECTTYPE_C_WIZARD: {
+        BYTE nLevelOld = static_cast<BYTE>(DStatsOld.GetClassLevel(nClass));
+        BYTE nLevel = static_cast<BYTE>(DStats.GetClassLevel(nClass));
+        nResult = sub_542B40(&m_tHitPointsWizard, nLevelOld, nLevel, a4, a5, 0, 0);
+        break;
+    }
+    }
+
+    return nResult;
+}
+
+// 0x542FA0
+INT CRuleTables::GetStartingHitPoints(const CAIObjectType& typeAI, CDerivedStats& DStatsOld, CDerivedStats& DStats, BYTE nCON) const
+{
+    INT nHitPoints = 0;
+
+    for (INT nClass = 1; nClass <= CAIOBJECT_CLASS_MAX; nClass++) {
+        if (static_cast<INT>(DStats.GetClassLevel(nClass)) > 0) {
+            nHitPoints += sub_542CB0(nClass, DStatsOld, DStats, 1, 1);
+        }
+    }
+
+    return nHitPoints;
 }
 
 // 0x542FE0

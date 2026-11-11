@@ -6968,6 +6968,14 @@ SHORT CInfGame::GetNumQuickWeaponSlots(SHORT nPortrait)
     return nSlots;
 }
 
+// 0x5B81C0
+BOOL CInfGame::SwapItemPersonal(SHORT nPortraitNum, SHORT nSlotNum, CItem*& pNewItem, STRREF& errorCode, WORD wCount, BOOLEAN bFromServer)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x5BAD70
 BOOL CInfGame::SwapItemPersonalInventory(SHORT nPortraitNum, CItem*& pNewItem, SHORT nSlotNum, STRREF& errorCode, WORD wCount, BOOLEAN bFromServer, BOOL bAutoStacking)
 {

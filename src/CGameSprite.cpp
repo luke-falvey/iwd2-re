@@ -9626,9 +9626,60 @@ CGameButtonList* CGameSprite::sub_717FC0(const CResRef& cResRef, INT nCount)
 // 0x718390
 BOOL CGameSprite::sub_718390(const CResRef& cResRef, int a2, int a3, CButtonData& cButtonData)
 {
-    // TODO: Incomplete.
+    BOOL bResult = FALSE;
 
-    return FALSE;
+    CSpell cSpell;
+    cSpell.SetResRef(cResRef, TRUE, TRUE);
+
+    if (!cSpell.Demand()) {
+        return FALSE;
+    }
+
+    if (cSpell.pRes == NULL) {
+        cSpell.Release();
+        return FALSE;
+    }
+
+    SHORT nCasterLevel = GetCasterLevel(&cSpell, a2, a3);
+    if (nCasterLevel <= 1) {
+        nCasterLevel = 1;
+    }
+
+    SPELL_ABILITY* pAbility = NULL;
+
+    if (cSpell.GetAbilityCount() > 0) {
+        INT nLevel = nCasterLevel;
+        INT nIndex = 0;
+
+        do {
+            if (cSpell.GetAbility(nIndex)->minCasterLevel > nLevel) {
+                break;
+            }
+
+            pAbility = cSpell.GetAbility(nIndex);
+            nIndex++;
+        } while (nIndex < cSpell.GetAbilityCount());
+    }
+
+    if (pAbility != NULL) {
+        CString sIcon;
+        sIcon = pAbility->quickSlotIcon;
+
+        cButtonData.m_icon = sIcon;
+        cButtonData.m_name = cSpell.GetGenericName();
+        cButtonData.m_abilityId.m_itemType = 1;
+        cButtonData.m_abilityId.m_res = cResRef;
+        cButtonData.m_abilityId.m_targetType = pAbility->actionType;
+        cButtonData.m_abilityId.field_10 = cSpell.GetGenericName();
+        cButtonData.m_bDisabled = FALSE;
+        cButtonData.m_count = 0;
+
+        bResult = TRUE;
+    }
+
+    cSpell.Release();
+
+    return bResult;
 }
 
 // 0x717620
@@ -10277,7 +10328,142 @@ void CGameSprite::sub_71A550(CButtonData buttonData, BOOLEAN firstCall)
 // 0x71ABA0
 void CGameSprite::CheckQuickLists(CAbilityId* ab, SHORT changeAmount, BOOL remove, BOOL removeSpellIfZero)
 {
-    // TODO: Incomplete.
+    INT nIndex;
+
+    if (!m_bGlobal) {
+        if (g_pBaldurChitin->GetObjectGame()->m_allies.Find(reinterpret_cast<int*>(m_id), 0) == NULL) {
+            return;
+        }
+    }
+
+    for (nIndex = 0; nIndex < 8; nIndex++) {
+        if (m_quickWeapons[nIndex].m_abilityId.m_itemType == ab->m_itemType
+            && m_quickWeapons[nIndex].m_abilityId.m_itemNum == ab->m_itemNum
+            && m_quickWeapons[nIndex].m_abilityId.m_abilityNum == ab->m_abilityNum
+            && m_quickWeapons[nIndex].m_abilityId.m_res == ab->m_res
+            && m_quickWeapons[nIndex].m_abilityId.m_nClass == ab->m_nClass
+            && m_quickWeapons[nIndex].m_abilityId.field_1D == ab->field_1D
+            && m_quickWeapons[nIndex].m_abilityId.field_1E == ab->field_1E) {
+            m_quickWeapons[nIndex].m_count += changeAmount;
+            if (m_quickWeapons[nIndex].m_count < 0) {
+                m_quickWeapons[nIndex].m_count = 0;
+            }
+
+            if (m_quickWeapons[nIndex].m_count <= 0 || remove) {
+                CButtonData buttonData;
+                m_quickWeapons[nIndex] = buttonData;
+                field_3D3A[nIndex] = 0;
+            }
+        }
+    }
+
+    for (nIndex = 0; nIndex < 9; nIndex++) {
+        if (m_quickSpells[nIndex].m_abilityId.m_itemType == ab->m_itemType
+            && m_quickSpells[nIndex].m_abilityId.m_itemNum == ab->m_itemNum
+            && m_quickSpells[nIndex].m_abilityId.m_abilityNum == ab->m_abilityNum
+            && m_quickSpells[nIndex].m_abilityId.m_res == ab->m_res
+            && m_quickSpells[nIndex].m_abilityId.m_nClass == ab->m_nClass
+            && m_quickSpells[nIndex].m_abilityId.field_1D == ab->field_1D
+            && m_quickSpells[nIndex].m_abilityId.field_1E == ab->field_1E) {
+            m_quickSpells[nIndex].m_count += changeAmount;
+            if (m_quickSpells[nIndex].m_count < 0) {
+                m_quickSpells[nIndex].m_count = 0;
+            }
+
+            if (remove) {
+                CButtonData buttonData;
+                m_quickSpells[nIndex] = buttonData;
+            } else if (m_quickSpells[nIndex].m_count > 0) {
+                m_quickSpells[nIndex].m_bDisabled = FALSE;
+            } else if (removeSpellIfZero) {
+                CButtonData buttonData;
+                m_quickSpells[nIndex] = buttonData;
+            } else {
+                m_quickSpells[nIndex].m_bDisabled = TRUE;
+            }
+        }
+    }
+
+    for (nIndex = 0; nIndex < 3; nIndex++) {
+        if (m_quickItems[nIndex].m_abilityId.m_itemType == ab->m_itemType
+            && m_quickItems[nIndex].m_abilityId.m_itemNum == ab->m_itemNum
+            && m_quickItems[nIndex].m_abilityId.m_abilityNum == ab->m_abilityNum
+            && m_quickItems[nIndex].m_abilityId.m_res == ab->m_res
+            && m_quickItems[nIndex].m_abilityId.m_nClass == ab->m_nClass
+            && m_quickItems[nIndex].m_abilityId.field_1D == ab->field_1D
+            && m_quickItems[nIndex].m_abilityId.field_1E == ab->field_1E) {
+            m_quickItems[nIndex].m_count += changeAmount;
+            if (m_quickItems[nIndex].m_count < 0) {
+                m_quickItems[nIndex].m_count = 0;
+            }
+
+            if (remove || (m_quickItems[nIndex].m_count <= 0 && removeSpellIfZero)) {
+                CButtonData buttonData;
+                m_quickItems[nIndex] = buttonData;
+            }
+
+            break;
+        }
+    }
+
+    for (nIndex = 0; nIndex < 9; nIndex++) {
+        if (m_quickInnates[nIndex].m_abilityId.m_itemType == ab->m_itemType
+            && m_quickInnates[nIndex].m_abilityId.m_itemNum == ab->m_itemNum
+            && m_quickInnates[nIndex].m_abilityId.m_abilityNum == ab->m_abilityNum
+            && m_quickInnates[nIndex].m_abilityId.m_res == ab->m_res
+            && m_quickInnates[nIndex].m_abilityId.m_nClass == ab->m_nClass
+            && m_quickInnates[nIndex].m_abilityId.field_1D == ab->field_1D
+            && m_quickInnates[nIndex].m_abilityId.field_1E == ab->field_1E) {
+            m_quickInnates[nIndex].m_count += changeAmount;
+            if (m_quickInnates[nIndex].m_count < 0) {
+                m_quickInnates[nIndex].m_count = 0;
+            }
+
+            if (remove) {
+                CButtonData buttonData;
+                m_quickInnates[nIndex] = buttonData;
+            } else if (m_quickInnates[nIndex].m_count > 0) {
+                m_quickInnates[nIndex].m_bDisabled = FALSE;
+            } else if (removeSpellIfZero) {
+                CButtonData buttonData;
+                m_quickInnates[nIndex] = buttonData;
+            } else {
+                m_quickInnates[nIndex].m_bDisabled = TRUE;
+            }
+        }
+    }
+
+    // NOTE: Only the first 6 songs are checked.
+    for (nIndex = 0; nIndex < 6; nIndex++) {
+        if (m_quickSongs[nIndex].m_abilityId.m_itemType == ab->m_itemType
+            && m_quickSongs[nIndex].m_abilityId.m_itemNum == ab->m_itemNum
+            && m_quickSongs[nIndex].m_abilityId.m_abilityNum == ab->m_abilityNum
+            && m_quickSongs[nIndex].m_abilityId.m_res == ab->m_res
+            && m_quickSongs[nIndex].m_abilityId.m_nClass == ab->m_nClass
+            && m_quickSongs[nIndex].m_abilityId.field_1D == ab->field_1D
+            && m_quickSongs[nIndex].m_abilityId.field_1E == ab->field_1E) {
+            m_quickSongs[nIndex].m_count += changeAmount;
+            if (m_quickSongs[nIndex].m_count < 0) {
+                m_quickSongs[nIndex].m_count = 0;
+            }
+
+            if (remove || (m_quickSongs[nIndex].m_count <= 0 && removeSpellIfZero)) {
+                CButtonData buttonData;
+                m_quickSongs[nIndex] = buttonData;
+            }
+        }
+    }
+
+    if (g_pBaldurChitin->GetActiveEngine()->GetSelectedCharacter() == g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id)) {
+        g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateState();
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->m_group.InList(m_id)) {
+        CUIPanel* pPanel = g_pBaldurChitin->m_pEngineWorld->GetManager()->GetPanel(3);
+        if (pPanel != NULL) {
+            pPanel->InvalidateRect(NULL);
+        }
+    }
 }
 
 // 0x71B3B0
