@@ -29639,8 +29639,15 @@ SHORT CGameSprite::StartStore(CGameSprite* pTarget)
             g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
                 CGameObjectArray::THREAD_ASYNCH,
                 INFINITE);
+
+            return ACTION_DONE;
         }
-    } else {
+
+        // NOTE: When the share fails the original falls through to the
+        // code below.
+    }
+
+    {
         if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pTarget->m_id) == -1) {
             g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(-1,
                 0x1D41,
@@ -29859,21 +29866,21 @@ SHORT CGameSprite::ChangeAnimation()
         effect.durationType = 1;
         effect.dwFlags = 14;
         pEffect = CGameEffect::DecodeEffect(&effect, m_pos, m_id, CPoint(-1, -1));
-        pMessage = new CMessageAddEffect(pEffect, nNewSpriteId, m_id);
+        pMessage = new CMessageAddEffect(pEffect, m_id, nNewSpriteId);
         g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
 
         CGameEffect::ClearItemEffect(&effect, 0x8D);
         effect.durationType = 1;
         effect.dwFlags = 12;
         pEffect = CGameEffect::DecodeEffect(&effect, m_pos, m_id, CPoint(-1, -1));
-        pMessage = new CMessageAddEffect(pEffect, nNewSpriteId, m_id);
+        pMessage = new CMessageAddEffect(pEffect, m_id, nNewSpriteId);
         g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
 
         CGameEffect::ClearItemEffect(&effect, 0x8D);
         effect.durationType = 1;
         effect.dwFlags = 13;
         pEffect = CGameEffect::DecodeEffect(&effect, m_pos, m_id, CPoint(-1, -1));
-        pMessage = new CMessageAddEffect(pEffect, nNewSpriteId, m_id);
+        pMessage = new CMessageAddEffect(pEffect, m_id, nNewSpriteId);
         g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
     }
 
