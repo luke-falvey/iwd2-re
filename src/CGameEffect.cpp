@@ -12927,6 +12927,29 @@ CGameEffect* CGameEffectImmunitySpell::Copy()
     return copy;
 }
 
+// 0x4BFE20
+BOOL CGameEffectImmunitySpell::ApplyEffect(CGameSprite* pSprite)
+{
+    if (Evaluate(pSprite) == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    std::string sRes(static_cast<LPCSTR>(m_res.GetResRefStr()));
+    if (sRes.length() != 0) {
+        pSprite->GetDerivedStats()->m_spellImmunities.insert(sRes);
+
+        if (m_secondaryType != 0 && m_effectID == ICEWIND_CGAMEEFFECT_IMMUNITYSPELL) {
+            // NOTE: Uninline.
+            FeedBackImmuneToResource(pSprite, m_sourceRes);
+        }
+    } else {
+        m_done = TRUE;
+    }
+
+    return TRUE;
+}
+
 // 0x4BF140
 BOOL CGameEffectImmunitySpell::Evaluate(CGameSprite* pSprite)
 {
