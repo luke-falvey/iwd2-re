@@ -18,6 +18,8 @@
 #include "CInfGame.h"
 #include "CItem.h"
 #include "CPathSearch.h"
+#include "CProjectile.h"
+#include "CProjectilePart6.h"
 #include "CScreenChapter.h"
 #include "CScreenConnection.h"
 #include "CScreenCreateChar.h"
@@ -21174,7 +21176,54 @@ BOOL CMessageFireProjectile::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 // 0x5007F0
 void CMessageFireProjectile::Run()
 {
-    // TODO: Incomplete.
+    CGameAIBase* pSprite;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        // NOTE: Uninline.
+        if (pSprite->InControl()) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            return;
+        }
+
+        if (pSprite->m_pArea == NULL) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            return;
+        }
+
+        CProjectile* pProjectile;
+        if ((pSprite->GetObjectType() & CGameObject::TYPE_AIBASE) != 0) {
+            pProjectile = CProjectile::DecodeProjectile(m_projectileType, pSprite, field_1E);
+        } else {
+            pProjectile = CProjectile::DecodeProjectile(m_projectileType, NULL, field_1E);
+        }
+
+        if (pProjectile->m_projectileType == 304) {
+            static_cast<CProjectileSingleTarget851444*>(pProjectile)->field_356 = field_20;
+        }
+
+        pProjectile->Fire(pSprite->m_pArea,
+            pSprite->m_id,
+            m_projectileTargetId,
+            m_projectileTarget,
+            m_height,
+            0);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -24016,7 +24065,144 @@ BOOL CMessageEnterDialogMode::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 // 0x4FE5B0
 void CMessageEnterDialogMode::Run()
 {
-    // TODO: Incomplete.
+    if (!g_pChitin->cNetwork.GetSessionHosting()
+        && g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+        g_pBaldurChitin->GetBaldurMessage()->sub_436C00();
+    }
+
+    g_pBaldurChitin->pActiveEngine->SelectEngine(g_pBaldurChitin->m_pEngineWorld);
+
+    g_pBaldurChitin->m_pEngineWorld->m_bInControlOfDialog = FALSE;
+
+    PLAYER_ID remotePlayerID = 0;
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (pObject->GetAIType().m_nGender == CAIObjectType::SEX_FEMALE) {
+            g_pBaldurChitin->GetTlkTable().field_58 = byte_8BA28C;
+        } else {
+            g_pBaldurChitin->GetTlkTable().field_58 = byte_8FB954;
+        }
+
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            g_pBaldurChitin->m_pEngineWorld->SetDialogTokens(static_cast<CGameSprite*>(pObject));
+        }
+
+        remotePlayerID = pObject->m_remotePlayerID;
+
+        // NOTE: Uninline.
+        if (pObject->InControl()) {
+            g_pBaldurChitin->m_pEngineWorld->m_bInControlOfDialog = TRUE;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    if (g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
+        g_pBaldurChitin->GetObjectGame()->GetMultiplayerSettings()->m_nHostPermittedDialogDelay = 0;
+        g_pBaldurChitin->GetObjectGame()->GetMultiplayerSettings()->m_bHostPermittedDialog = TRUE;
+        g_pBaldurChitin->GetObjectGame()->GetMultiplayerSettings()->m_idHostPermittedDialog = remotePlayerID;
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->StopTime();
+
+    g_pBaldurChitin->m_pEngineWorld->m_bPaused = TRUE;
+
+    g_pBaldurChitin->m_pEngineWorld->sub_695650(TRUE);
+
+    g_pBaldurChitin->m_pEngineWorld->sub_695570(FALSE, FALSE);
+
+    g_pBaldurChitin->m_pEngineWorld->GetManager()->GetPanel(9)->SetActive(TRUE);
+    g_pBaldurChitin->m_pEngineWorld->GetManager()->GetPanel(9)->GetControl(0)->SetActive(FALSE);
+    g_pBaldurChitin->m_pEngineWorld->GetManager()->GetPanel(9)->InvalidateRect(NULL);
+
+    if (g_pBaldurChitin->m_pEngineWorld->GetManager()->GetPanel(g_pBaldurChitin->m_pEngineWorld->GetPanel_21_7())->m_bActive == TRUE) {
+        g_pBaldurChitin->m_pEngineWorld->field_114C = g_pBaldurChitin->m_pEngineWorld->GetPanel_21_7();
+    } else if (g_pBaldurChitin->m_pEngineWorld->GetManager()->GetPanel(g_pBaldurChitin->m_pEngineWorld->GetPanel_22_0())->m_bActive == TRUE) {
+        g_pBaldurChitin->m_pEngineWorld->field_114C = g_pBaldurChitin->m_pEngineWorld->GetPanel_22_0();
+    } else {
+        g_pBaldurChitin->m_pEngineWorld->field_114C = g_pBaldurChitin->m_pEngineWorld->GetPanel_21_7();
+    }
+
+    CUIPanel* pDialogPanel = g_pBaldurChitin->m_pEngineWorld->GetManager()->GetPanel(g_pBaldurChitin->m_pEngineWorld->GetPanel_21_0());
+
+    g_pBaldurChitin->m_pEngineWorld->GetManager()->GetPanel(g_pBaldurChitin->m_pEngineWorld->GetPanel_21_7())->SetActive(FALSE);
+    g_pBaldurChitin->m_pEngineWorld->GetManager()->GetPanel(g_pBaldurChitin->m_pEngineWorld->GetPanel_19_0())->SetActive(FALSE);
+    g_pBaldurChitin->m_pEngineWorld->GetManager()->GetPanel(g_pBaldurChitin->m_pEngineWorld->GetPanel_21_0())->SetActive(FALSE);
+    g_pBaldurChitin->m_pEngineWorld->GetManager()->GetPanel(g_pBaldurChitin->m_pEngineWorld->GetPanel_22_0())->SetActive(FALSE);
+
+    pDialogPanel->SetActive(TRUE);
+
+    CUIControlTextDisplay* pOldDialogDisplay = g_pBaldurChitin->m_pEngineWorld->m_pActiveDialogDisplay;
+    g_pBaldurChitin->m_pEngineWorld->m_pActiveDialogDisplay = static_cast<CUIControlTextDisplay*>(pDialogPanel->GetControl(1));
+    static_cast<CUIControlTextDisplay*>(pDialogPanel->GetControl(1))->CopyDisplay(pOldDialogDisplay);
+
+    g_pBaldurChitin->m_pEngineWorld->m_pActiveChatDisplay = static_cast<CUIControlTextDisplay*>(pDialogPanel->GetControl(3));
+
+    g_pBaldurChitin->m_pEngineWorld->CopyChatEditBox(pOldDialogDisplay->m_pPanel, pDialogPanel);
+
+    g_pBaldurChitin->m_pEngineWorld->UpdateLabel(pDialogPanel, 0x10000009, "%d", field_C);
+
+    if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+        CResRef cResPortrait;
+
+        CUIControlButtonMultiPlayerPortrait* pPortrait = static_cast<CUIControlButtonMultiPlayerPortrait*>(pDialogPanel->GetControl(11));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 10583
+        UTIL_ASSERT(pPortrait != NULL);
+
+        pPortrait->SetEnabled(FALSE);
+        cResPortrait = static_cast<CGameSprite*>(pObject)->m_baseStats.m_portraitSmall;
+        pPortrait->SetPortrait(cResPortrait);
+    }
+
+    g_pBaldurChitin->m_pEngineWorld->SetNewViewSize(CInfinity::stru_8E7958, FALSE);
+
+    INT x;
+    INT y;
+    g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->GetInfinity()->GetViewPosition(x, y);
+    g_pBaldurChitin->m_pEngineWorld->m_ptDialogViewPosition.x = x;
+    g_pBaldurChitin->m_pEngineWorld->m_ptDialogViewPosition.y = y;
+
+    g_pBaldurChitin->GetObjectCursor()->SetCursor(0, FALSE);
+
+    // NOTE: Uninline.
+    g_pBaldurChitin->GetObjectGame()->SetTempCursor(4);
+
+    g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_nScrollState = 0;
+
+    if (g_pBaldurChitin->m_pEngineWorld->m_bInControlOfDialog) {
+        g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_mode = 0x502;
+    } else {
+        g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_mode = 0x182;
+    }
+
+    INT x2;
+    INT y2;
+    g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->GetInfinity()->GetViewPosition(x2, y2);
+    g_pBaldurChitin->m_pEngineWorld->m_ptDialogViewPosition.x = x2;
+    g_pBaldurChitin->m_pEngineWorld->m_ptDialogViewPosition.y = y2;
+
+    CResRef cResArea;
+    cResArea = g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_resRef;
+    g_pBaldurChitin->m_pEngineWorld->m_cResDialogArea = cResArea;
+
+    // NOTE: Original reads it from a constant at 0x84C960.
+    g_pBaldurChitin->m_pEngineWorld->DisplayText(CString(""), CString(""), RGB(0, 0, 0), RGB(0, 0, 0), -1, TRUE);
+
+    g_pBaldurChitin->m_pEngineWorld->m_internalLoadedDialog.field_54 = TRUE;
 }
 
 // -----------------------------------------------------------------------------
