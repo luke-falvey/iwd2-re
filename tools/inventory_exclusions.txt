@@ -75,3 +75,11 @@
 
 # std::set<std::string> m_spellImmunities: iterator::operator++ (nil sentinel 0x8D13E8)
 0x44B230
+
+# CResHelper<CResCell, 1000>::SetResRef (the repo template in CRes.h; called from
+# the inlined CVidCell::SetResRef in CProjectile84E940::AIUpdate etc.)
+0x4428A0
+
+# CTypedPtrList<CPtrList, T*> constructor (implicit): CPtrList(nBlockSize) then
+# store of the vtable 0x84EA40; returns this.
+0x5371A0
