@@ -10063,7 +10063,7 @@ CGameEffect* CGameEffectCreateWeapon::Copy()
 // 0x4B81B0
 BOOL CGameEffectCreateWeapon::ApplyEffect(CGameSprite* pSprite)
 {
-    if (m_res == CResRef("DECASTA")
+    if (m_res.GetResRefStr() == CString("DECASTA")
         && pSprite->GetEquipment()->m_items[static_cast<BYTE>(2 * (pSprite->m_nWeaponSet + 22))] != NULL) {
         STR_RES strRes;
         COLORREF rgbNameColor = CVidPalette::RANGE_COLORS[pSprite->GetBaseStats()->m_colors[2]];
