@@ -6,10 +6,12 @@
 #include "CInfGame.h"
 #include "CScreenWorld.h"
 #include "CSpell.h"
+#include "CUIControlFactory.h"
 #include "CUIControlTextDisplay.h"
 #include "CUIPanel.h"
 #include "CUtil.h"
 #include "CVidInf.h"
+#include "CVidPoly.h"
 
 // 0x667EC0
 CScreenSpellbook::CScreenSpellbook()
@@ -468,7 +470,226 @@ BYTE* CScreenSpellbook::GetVirtualKeysFlags()
 // 0x669830
 void CScreenSpellbook::sub_669830(DWORD nPortrait)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    LONG nCharacterId = pGame->GetCharacterId(m_nSelectedCharacter);
+
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        BYTE nLastSpellLevel = pSprite->m_nLastSpellbookSpellLevel;
+
+        UINT nLevel = 0;
+        if (nLastSpellLevel < 9) {
+            nLevel = nLastSpellLevel;
+        }
+
+        pSprite->m_nLastSpellbookSpellLevel = static_cast<BYTE>(nLevel);
+        m_nSpellLevel = nLevel;
+
+        BOOLEAN bHaveSpells = FALSE;
+
+        m_nNumberOfSpellClasses = 0;
+        field_1670 = -1;
+
+        for (UINT nClassIndex = 0; nClassIndex < CSPELLLIST_NUM_CLASSES; nClassIndex++) {
+            BYTE nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nClassIndex);
+
+            if (pSprite->GetAIType().IsClassValid(nClass)
+                && pSprite->GetNumSpells() > 0) {
+                field_1654[m_nNumberOfSpellClasses] = nClass;
+                m_nNumberOfSpellClasses++;
+
+                if (nClassIndex == 1) {
+                    field_1670 = m_nNumberOfSpellClasses;
+                    field_1654[m_nNumberOfSpellClasses] = 7;
+                    m_nNumberOfSpellClasses++;
+                }
+
+                bHaveSpells = TRUE;
+            }
+        }
+
+        if (m_nNumberOfSpellClasses != 0) {
+            BYTE nLastClassIndex = pSprite->m_nLastSpellbookClassIndex;
+            BYTE nNewClassIndex = nLastClassIndex < m_nNumberOfSpellClasses ? nLastClassIndex : 0;
+            pSprite->m_nLastSpellbookClassIndex = nNewClassIndex;
+            m_nClassIndex = nNewClassIndex;
+        } else {
+            m_nClassIndex = 0;
+            pSprite->m_nLastSpellbookClassIndex = 0;
+        }
+
+        DWORD nNumberOfSpellClasses = m_nNumberOfSpellClasses;
+
+        field_1488 = 0;
+
+        for (INT nIndex = 0; nIndex < 24; nIndex++) {
+            field_148C[nIndex] = CResRef();
+            field_154C[nIndex] = 0;
+            field_15AC[nIndex] = 0;
+        }
+
+        if (bHaveSpells == TRUE) {
+            UINT nSpellLevel = m_nSpellLevel;
+
+            CGameSpriteSpellList* pSpellList;
+            if (field_1670 == m_nClassIndex) {
+                // __FILE__: .\Include\ObjCreature.h
+                // __LINE__: 1763
+                UTIL_ASSERT(nSpellLevel < CSPELLLIST_MAX_LEVELS);
+
+                // NOTE: Uninline.
+                pSpellList = pSprite->m_domainSpells.GetSpellsAtLevel(nSpellLevel);
+            } else {
+                BYTE nClass = static_cast<BYTE>(sub_66A010(m_nClassIndex));
+                pSpellList = pSprite->GetSpellsAtLevel(nClass, nSpellLevel);
+            }
+
+            for (UINT nIndex = 0; nIndex < 24; nIndex++) {
+                if (nIndex < pSpellList->m_List.size()) {
+                    // __FILE__: .\Include\FileFormat.h
+                    // __LINE__: 2428
+                    UTIL_ASSERT(pSpellList->m_List.size() > 0);
+
+                    // __FILE__: .\Include\FileFormat.h
+                    // __LINE__: 2429
+                    UTIL_ASSERT(nIndex < pSpellList->m_List.size());
+
+                    UINT nField4 = pSpellList->m_List[nIndex].field_4;
+
+                    // __FILE__: .\Include\FileFormat.h
+                    // __LINE__: 2428
+                    UTIL_ASSERT(pSpellList->m_List.size() > 0);
+
+                    // __FILE__: .\Include\FileFormat.h
+                    // __LINE__: 2429
+                    UTIL_ASSERT(nIndex < pSpellList->m_List.size());
+
+                    UINT nField8 = pSpellList->m_List[nIndex].field_8;
+
+                    if (nField4 > 0) {
+                        // __FILE__: .\Include\FileFormat.h
+                        // __LINE__: 2428
+                        UTIL_ASSERT(pSpellList->m_List.size() > 0);
+
+                        // __FILE__: .\Include\FileFormat.h
+                        // __LINE__: 2429
+                        UTIL_ASSERT(nIndex < pSpellList->m_List.size());
+
+                        if ((pSpellList->m_List[nIndex].field_C & 1) == 0) {
+                            // __FILE__: .\Include\FileFormat.h
+                            // __LINE__: 2428
+                            UTIL_ASSERT(pSpellList->m_List.size() > 0);
+
+                            // __FILE__: .\Include\FileFormat.h
+                            // __LINE__: 2429
+                            UTIL_ASSERT(nIndex < pSpellList->m_List.size());
+
+                            UINT nSpellId = pSpellList->m_List[nIndex].m_nID;
+
+                            // NOTE: Uninline.
+                            field_148C[field_1488] = g_pBaldurChitin->GetObjectGame()->m_spells.Get(nSpellId);
+                            field_154C[field_1488] = nField8;
+                            field_15AC[field_1488] = nField4;
+                            field_1488++;
+                        }
+                    }
+                }
+            }
+        }
+
+        CString sText;
+
+        UINT nSelectedClassIndex = m_nClassIndex;
+        UINT nStart = 0;
+        if (nSelectedClassIndex >= 4) {
+            nStart = 4;
+        }
+
+        CUIPanel* pPanel = m_cUIManager.GetPanel(2);
+
+        UINT nDomainClassIndex = field_1670;
+
+        CUIControlButtonSpellbookClassSelection* pButton;
+
+        for (UINT nButton = 0; nButton < 4; nButton++) {
+            UINT nClassSlot = nStart + nButton;
+
+            pButton = static_cast<CUIControlButtonSpellbookClassSelection*>(pPanel->GetControl(0x58 + nButton));
+            pButton->SetSelected(FALSE);
+
+            if (nClassSlot < nNumberOfSpellClasses) {
+                pButton->SetEnabled(TRUE);
+
+                if (nClassSlot == nDomainClassIndex) {
+                    STR_RES strRes;
+                    g_pBaldurChitin->GetTlkTable().Fetch(0x9B2A, strRes);
+                    sText = strRes.szText;
+                } else {
+                    // __FILE__: .\Include\InfScreenSpellbook.h
+                    // __LINE__: 76
+                    UTIL_ASSERT(nClassSlot < CSPELLLIST_NUM_CLASSES);
+
+                    pGame->GetRuleTables().GetClassStringMixed(static_cast<BYTE>(field_1654[nClassSlot]),
+                        0,
+                        0,
+                        sText,
+                        TRUE);
+                }
+            } else {
+                sText = " ";
+                pButton->SetEnabled(FALSE);
+            }
+
+            pButton->SetText(sText);
+        }
+
+        UINT nSelectedButton = nSelectedClassIndex;
+        if (nSelectedButton >= 4) {
+            nSelectedButton -= 4;
+        }
+
+        if (m_nNumberOfSpellClasses > 0) {
+            pButton = static_cast<CUIControlButtonSpellbookClassSelection*>(pPanel->GetControl(0x58 + nSelectedButton));
+            pButton->SetSelected(TRUE);
+        }
+
+        // NOTE: Unused.
+        CString sUnused;
+
+        for (UINT nSpellLevelButton = 0; nSpellLevelButton < 9; nSpellLevelButton++) {
+            pButton->SetEnabled(m_nNumberOfSpellClasses > 0);
+
+            static_cast<CUIControlButtonSpellbookLevelSelection*>(pPanel->GetControl(0x37 + nSpellLevelButton))->SetSelected(FALSE);
+        }
+
+        static_cast<CUIControlButtonSpellbookLevelSelection*>(pPanel->GetControl(0x37 + nLevel))->SetSelected(m_nNumberOfSpellClasses > 0);
+
+        m_nTopKnownSpell = 0;
+
+        CUIControlScrollBar* pScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(0x36));
+
+        CScreenSpellbook* pSpellbook = g_pBaldurChitin->m_pEngineSpellbook;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
+        // __LINE__: 3973
+        UTIL_ASSERT(pSpellbook != NULL);
+
+        pScrollBar->AdjustScrollBar(pSpellbook->m_nTopKnownSpell, pSpellbook->m_nNumKnownSpells, 8);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
 }
 
 // 0x66A010
@@ -766,7 +987,238 @@ void CScreenSpellbook::EnableMainPanel(BOOL bEnable)
 // 0x66A980
 void CScreenSpellbook::UpdateMainPanel()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
+    // __LINE__: 1803
+    UTIL_ASSERT(pGame != NULL);
+
+    LONG nCharacterId = pGame->GetCharacterId(m_nSelectedCharacter);
+
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        // NOTE: Result is unused.
+        pSprite->GetAIType();
+
+        // NOTE: Uninline.
+        BOOLEAN bInControl = pSprite->InControl();
+
+        CUIPanel* pPanel = m_cUIManager.GetPanel(2);
+
+        m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(54));
+
+        CUIControlScrollBar* pScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(54));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
+        // __LINE__: 1826
+        UTIL_ASSERT(pScrollBar != NULL);
+
+        CScreenSpellbook* pSpellbook = g_pBaldurChitin->m_pEngineSpellbook;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
+        // __LINE__: 3973
+        UTIL_ASSERT(pSpellbook != NULL);
+
+        pScrollBar->AdjustScrollBar(pSpellbook->m_nTopKnownSpell, pSpellbook->m_nNumKnownSpells, 8);
+
+        if (pSprite->m_baseStats.m_name == 0xFFFFFFFF) {
+            UpdateLabel(pPanel, 0xFFFFFFF, "%s", (LPCSTR)pSprite->GetName());
+        } else {
+            UpdateLabel(pPanel, 0xFFFFFFF, "%s", (LPCSTR)FetchString(pSprite->m_baseStats.m_name));
+        }
+
+        CUIControlButtonCharacterPortrait* pPortrait = static_cast<CUIControlButtonCharacterPortrait*>(pPanel->GetControl(1));
+        pPortrait->SetPortrait(pSprite->m_baseStats.m_portraitLarge);
+
+        if (m_nNumberOfSpellClasses != 0) {
+            UINT nLevel = m_nSpellLevel;
+
+            CGameSpriteSpellList* pSpellList;
+            if (field_1670 == m_nClassIndex) {
+                // __FILE__: .\Include\ObjCreature.h
+                // __LINE__: 1763
+                UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+                // NOTE: Uninline.
+                pSpellList = pSprite->m_domainSpells.GetSpellsAtLevel(nLevel);
+            } else {
+                DWORD nClassIndex = m_nClassIndex;
+
+                // __FILE__: .\Include\InfScreenSpellbook.h
+                // __LINE__: 76
+                UTIL_ASSERT(nClassIndex < CSPELLLIST_NUM_CLASSES);
+
+                BYTE nClass = static_cast<BYTE>(field_1654[nClassIndex]);
+                pSpellList = pSprite->GetSpellsAtLevel(nClass, nLevel);
+            }
+
+            INT nMaxSpells = pSpellList->field_10;
+
+            DWORD nClassIndex = m_nClassIndex;
+
+            // __FILE__: .\Include\InfScreenSpellbook.h
+            // __LINE__: 76
+            UTIL_ASSERT(nClassIndex < CSPELLLIST_NUM_CLASSES);
+
+            INT nClassType = field_1654[nClassIndex];
+
+            INT nMemorizable = sub_66C4B0();
+            if (nMemorizable < 0) {
+                nMemorizable = 0;
+            }
+
+            INT bCanMemorize = 1;
+            if (nClassType == 2 || nClassType == 10) {
+                bCanMemorize = 0;
+                UpdateLabel(pPanel, 0x10000004, "%d/%d", nMemorizable, pSpellList->field_14);
+            } else {
+                UpdateLabel(pPanel, 0x10000004, "%d", nMemorizable);
+            }
+
+            UINT nSpellListSize = pSpellList->m_List.size();
+
+            for (INT nButton = 0; nButton < 24; nButton++) {
+                if (static_cast<UINT>(nButton) < nSpellListSize && bCanMemorize == 1) {
+                    CUIControlButtonSpellbookSpell* pButton = static_cast<CUIControlButtonSpellbookSpell*>(pPanel->GetControl(6 + nButton));
+
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
+                    // __LINE__: 1886
+                    UTIL_ASSERT(pButton != NULL);
+
+                    BOOL bEnable = nButton < nMaxSpells && m_bMultiPlayerViewable && bInControl;
+                    if (pButton->field_67A != bEnable) {
+                        pButton->field_67A = bEnable;
+                        pButton->InvalidateRect();
+                    }
+
+                    if (field_148C[nButton] != CResRef()) {
+                        pButton->SetSpell(field_148C[nButton]);
+
+                        if (pButton->field_676 != 1) {
+                            pButton->field_676 = 1;
+                            pButton->InvalidateRect();
+                        }
+
+                        pButton->SetEnabled(TRUE);
+
+                        UpdateLabel(pPanel,
+                            0x1000003F + nButton,
+                            "%d/%d",
+                            field_154C[nButton],
+                            field_15AC[nButton]);
+                    } else {
+                        if (pButton->field_676 != 0) {
+                            pButton->field_676 = 0;
+                            pButton->InvalidateRect();
+                        }
+
+                        pButton->SetSpell(CResRef(""));
+                        pButton->SetEnabled(FALSE);
+
+                        UpdateLabel(pPanel, 0x1000003F + nButton, " ");
+                    }
+                } else {
+                    CUIControlButtonSpellbookSpell* pButton = static_cast<CUIControlButtonSpellbookSpell*>(pPanel->GetControl(6 + nButton));
+
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
+                    // __LINE__: 1912
+                    UTIL_ASSERT(pButton != NULL);
+
+                    if (pButton->field_676 != 0) {
+                        pButton->field_676 = 0;
+                        pButton->InvalidateRect();
+                    }
+
+                    pButton->SetSpell(CResRef(""));
+                    pButton->SetEnabled(FALSE);
+
+                    UpdateLabel(pPanel, 0x1000003F + nButton, " ");
+                }
+            }
+
+            UINT nKnownSpellListSize = pSpellList->m_List.size();
+
+            for (INT nButton = 0; nButton < 8; nButton++) {
+                UINT nIndex = m_nTopKnownSpell + nButton;
+                if (nIndex < nKnownSpellListSize) {
+                    // NOTE: Uninline.
+                    UINT nSpellId = pSpellList->Get(nIndex)->m_nID;
+
+                    // NOTE: Uninline.
+                    const CResRef& spellResRef = g_pBaldurChitin->GetObjectGame()->m_spells.Get(nSpellId);
+
+                    CSpell cSpell(spellResRef);
+                    cSpell.Demand();
+
+                    UpdateLabel(pPanel,
+                        0x10000025 + nButton,
+                        "%s",
+                        (LPCSTR)FetchString(cSpell.GetGenericName()));
+
+                    static_cast<CUIControlButtonSpellbookSpell*>(pPanel->GetControl(46 + nButton))->SetEnabled(bCanMemorize);
+
+                    field_160C[nButton] = spellResRef;
+
+                    CUIControlButtonSpellbookSpell* pKnownButton = static_cast<CUIControlButtonSpellbookSpell*>(pPanel->GetControl(30 + nButton));
+                    pKnownButton->SetSpell(field_160C[nButton]);
+                    pKnownButton->SetEnabled(TRUE);
+
+                    cSpell.Release();
+                } else {
+                    UpdateLabel(pPanel, 0x10000025 + nButton, "");
+
+                    static_cast<CUIControlButtonSpellbookSpell*>(pPanel->GetControl(46 + nButton))->SetEnabled(FALSE);
+
+                    CUIControlButtonSpellbookSpell* pKnownButton = static_cast<CUIControlButtonSpellbookSpell*>(pPanel->GetControl(30 + nButton));
+                    pKnownButton->SetEnabled(FALSE);
+                    pKnownButton->SetSpell(CResRef(""));
+                }
+            }
+
+            m_nNumKnownSpells = nSpellListSize;
+        } else {
+            UpdateLabel(pPanel, 0x10000004, " ");
+
+            for (INT nButton = 0; nButton < 24; nButton++) {
+                CUIControlButtonSpellbookSpell* pButton = static_cast<CUIControlButtonSpellbookSpell*>(pPanel->GetControl(6 + nButton));
+
+                if (pButton->field_676 != 0) {
+                    pButton->field_676 = 0;
+                    pButton->InvalidateRect();
+                }
+
+                pButton->SetSpell(CResRef(""));
+                pButton->SetEnabled(FALSE);
+
+                UpdateLabel(pPanel, 0x1000003F + nButton, " ");
+            }
+
+            for (INT nButton = 0; nButton < 8; nButton++) {
+                UpdateLabel(pPanel, 0x10000025 + nButton, "");
+
+                static_cast<CUIControlButtonSpellbookSpell*>(pPanel->GetControl(46 + nButton))->SetEnabled(FALSE);
+
+                CUIControlButtonSpellbookSpell* pKnownButton = static_cast<CUIControlButtonSpellbookSpell*>(pPanel->GetControl(30 + nButton));
+                pKnownButton->SetEnabled(FALSE);
+                pKnownButton->SetSpell(CResRef(""));
+            }
+
+            m_nNumKnownSpells = 0;
+        }
+
+        pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
 }
 
 // NOTE: Inlined.
@@ -1304,10 +1756,452 @@ void CScreenSpellbook::CheckMultiPlayerViewable()
     }
 }
 
+// 0x66C4B0
+int CScreenSpellbook::sub_66C4B0()
+{
+    CSingleLock renderLock(&(m_cUIManager.GetPanel(2)->m_pManager->field_36), FALSE);
+    renderLock.Lock(INFINITE);
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // FIXME: Unncessary access via global var.
+    LONG nCharacterId = pGame->GetCharacterId(g_pBaldurChitin->m_pEngineSpellbook->GetSelectedCharacter());
+
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = pGame->GetObjectArray()->GetDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        renderLock.Unlock();
+        return 0;
+    }
+
+    DWORD nClassIndex = m_nClassIndex;
+
+    // __FILE__: .\Include\InfScreenSpellbook.h
+    // __LINE__: 76
+    UTIL_ASSERT(nClassIndex < CSPELLLIST_NUM_CLASSES);
+
+    UINT nLevel = m_nSpellLevel;
+
+    CGameSpriteSpellList* pSpellList;
+    if (field_1670 == m_nClassIndex) {
+        // __FILE__: .\Include\ObjCreature.h
+        // __LINE__: 1763
+        UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+        // NOTE: Uninline.
+        pSpellList = pSprite->m_domainSpells.GetSpellsAtLevel(nLevel);
+    } else {
+        BYTE nClass = static_cast<BYTE>(sub_66A010(m_nClassIndex));
+        pSpellList = pSprite->GetSpellsAtLevel(nClass, nLevel);
+    }
+
+    int nResult;
+    if (field_1654[nClassIndex] == 2 || field_1654[nClassIndex] == 10) {
+        // NOTE: Uninline.
+        nResult = pSpellList->sub_58FE70();
+    } else {
+        INT nTotal = 0;
+
+        UINT nCount = pSpellList->m_List.size();
+        for (UINT nIndex = 0; nIndex < nCount; nIndex++) {
+            // __FILE__: .\Include\FileFormat.h
+            // __LINE__: 2437
+            UTIL_ASSERT(pSpellList->m_List.size() > 0);
+
+            // __FILE__: .\Include\FileFormat.h
+            // __LINE__: 2438
+            UTIL_ASSERT(nIndex < pSpellList->m_List.size());
+
+            CGameSpriteSpellListEntry entry = pSpellList->m_List[nIndex];
+
+            nTotal += entry.field_4;
+        }
+
+        // TODO: Incomplete. The minuend should be `sub_66A8C0(pSprite)`
+        // (0x66A8C0), which is not in the repo yet.
+        nResult = 0 - nTotal;
+    }
+
+    pGame->GetObjectArray()->ReleaseDeny(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    renderLock.Unlock();
+
+    return nResult;
+}
+
+// 0x66C790
+BOOLEAN CScreenSpellbook::sub_66C790(CGameSprite* pSprite, DWORD nIndex)
+{
+    int nDomainClassIndex = field_1670;
+    UINT nSpellLevel = m_nSpellLevel;
+    BOOLEAN bResult = FALSE;
+
+    DWORD nClassIndex = m_nClassIndex;
+
+    // __FILE__: .\Include\InfScreenSpellbook.h
+    // __LINE__: 76
+    UTIL_ASSERT(nClassIndex < CSPELLLIST_NUM_CLASSES);
+
+    int nClassType = field_1654[nClassIndex];
+
+    int nAvailable = sub_66C4B0();
+    if (nAvailable <= 0) {
+        return FALSE;
+    }
+
+    UINT nLevel = m_nSpellLevel;
+
+    // NOTE: Result is unused.
+    CGameSpriteSpellList* pSpellList;
+    if (field_1670 == m_nClassIndex) {
+        // __FILE__: .\Include\ObjCreature.h
+        // __LINE__: 1763
+        UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+        // NOTE: Uninline.
+        pSpellList = pSprite->m_domainSpells.GetSpellsAtLevel(nLevel);
+    } else {
+        BYTE nClass = static_cast<BYTE>(sub_66A010(m_nClassIndex));
+        pSpellList = pSprite->GetSpellsAtLevel(nClass, nLevel);
+    }
+
+    CResRef resRef = field_160C[nIndex];
+
+    if (resRef != CResRef()) {
+        if (nDomainClassIndex == nClassIndex) {
+            UINT nExtra3 = 1;
+            UINT nExtra4 = 0;
+            UINT nExtra5 = 0;
+            bResult = pSprite->AddDomainSpell(nSpellLevel, resRef, nExtra3, nExtra4, nExtra5);
+        } else {
+            BYTE nClass = static_cast<BYTE>(nClassType);
+            UINT nExtra4 = 1;
+            UINT nExtra5 = 0;
+            UINT nExtra6 = 0;
+            bResult = pSprite->AddKnownSpell(nClass, nSpellLevel, resRef, nExtra4, nExtra5, nExtra6);
+        }
+
+        if (bResult) {
+            nLevel = m_nSpellLevel;
+
+            if (field_1670 == m_nClassIndex) {
+                // __FILE__: .\Include\ObjCreature.h
+                // __LINE__: 1763
+                UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+                // NOTE: Uninline.
+                pSpellList = pSprite->m_domainSpells.GetSpellsAtLevel(nLevel);
+            } else {
+                BYTE nClass = static_cast<BYTE>(sub_66A010(m_nClassIndex));
+                pSpellList = pSprite->GetSpellsAtLevel(nClass, nLevel);
+            }
+
+            UINT nSpellId = 0;
+            UINT nSpellIndex = 0;
+            if (g_pBaldurChitin->GetObjectGame()->m_spells.Find(resRef, nSpellId) == TRUE) {
+                if (pSpellList->Find(nSpellId, nSpellIndex)) {
+                    // __FILE__: .\Include\FileFormat.h
+                    // __LINE__: 2428
+                    UTIL_ASSERT(pSpellList->m_List.size() > 0);
+
+                    // __FILE__: .\Include\FileFormat.h
+                    // __LINE__: 2429
+                    UTIL_ASSERT(nSpellIndex < pSpellList->m_List.size());
+
+                    CGameSpriteSpellListEntry* pEntry = &(pSpellList->m_List[nSpellIndex]);
+
+                    UINT nSlot;
+                    for (nSlot = 0; nSlot < static_cast<UINT>(field_1488); nSlot++) {
+                        if (field_148C[nSlot] == resRef) {
+                            break;
+                        }
+                    }
+
+                    if (nSlot < static_cast<UINT>(field_1488)) {
+                        field_148C[nSlot] = resRef;
+                        field_154C[nSlot] = pEntry->field_8;
+                        field_15AC[nSlot] = pEntry->field_4;
+                    } else {
+                        field_148C[field_1488] = resRef;
+                        field_154C[field_1488] = pEntry->field_8;
+                        field_15AC[field_1488] = pEntry->field_4;
+                        field_1488++;
+                    }
+                }
+            }
+        }
+    }
+
+    return bResult;
+}
+
 // 0x66CAF0
 void CScreenSpellbook::UnmemorizeSpell(CGameSprite* pSprite, int a2)
 {
-    // TODO: Incomplete.
+    DWORD nClassIndex = m_nClassIndex;
+    int nDomainClassIndex = field_1670;
+    UINT nSpellLevel = m_nSpellLevel;
+
+    // __FILE__: .\Include\InfScreenSpellbook.h
+    // __LINE__: 76
+    UTIL_ASSERT(nClassIndex < CSPELLLIST_NUM_CLASSES);
+
+    int nClassType = field_1654[nClassIndex];
+
+    CUIPanel* pPanel = m_cUIManager.GetPanel(2);
+
+    // NOTE: Uninline.
+    BOOLEAN bInControl = pSprite->InControl();
+
+    CResRef resRef = field_148C[a2];
+
+    if (resRef != CResRef()) {
+        BOOLEAN bRemoved;
+        if (nDomainClassIndex == nClassIndex) {
+            // NOTE: Third param is `BOOLEAN` in the original (passed by
+            // address of a byte).
+            UINT nExtra3 = 0;
+            UINT nExtra4 = 1;
+            UINT nExtra5 = 0;
+            bRemoved = pSprite->RemoveDomainSpell(nSpellLevel, resRef, nExtra3, nExtra4, nExtra5);
+        } else {
+            BYTE nClass = static_cast<BYTE>(nClassType);
+
+            // NOTE: Fourth param is `BOOLEAN` in the original (passed by
+            // address of a byte).
+            UINT nExtra4 = 0;
+            UINT nExtra5 = 1;
+            UINT nExtra6 = 0;
+            bRemoved = pSprite->RemoveKnownSpell(nClass, nSpellLevel, resRef, nExtra4, nExtra5, nExtra6);
+        }
+
+        if (bRemoved) {
+            UINT nLevel = m_nSpellLevel;
+
+            CGameSpriteSpellList* pSpellList;
+            if (field_1670 == m_nClassIndex) {
+                // __FILE__: .\Include\ObjCreature.h
+                // __LINE__: 1763
+                UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+                // NOTE: Uninline.
+                pSpellList = pSprite->m_domainSpells.GetSpellsAtLevel(nLevel);
+            } else {
+                BYTE nClass = static_cast<BYTE>(sub_66A010(m_nClassIndex));
+                pSpellList = pSprite->GetSpellsAtLevel(nClass, nLevel);
+            }
+
+            UINT nSpellListSize = pSpellList->m_List.size();
+
+            BOOL bFound = FALSE;
+            UINT nListIndex;
+            for (nListIndex = 0; nListIndex < nSpellListSize; nListIndex++) {
+                // __FILE__: .\Include\FileFormat.h
+                // __LINE__: 2428
+                UTIL_ASSERT(pSpellList->m_List.size() > 0);
+
+                // __FILE__: .\Include\FileFormat.h
+                // __LINE__: 2429
+                UTIL_ASSERT(nListIndex < pSpellList->m_List.size());
+
+                UINT nSpellId = pSpellList->m_List[nListIndex].m_nID;
+
+                // NOTE: Uninline.
+                if (resRef == g_pBaldurChitin->GetObjectGame()->m_spells.Get(nSpellId)) {
+                    bFound = TRUE;
+                    break;
+                }
+            }
+
+            if (!bFound) {
+                BOOL bShifting = FALSE;
+
+                for (UINT nSlot = 0; nSlot < 24; nSlot++) {
+                    if (bShifting == TRUE) {
+                        field_148C[nSlot - 1] = field_148C[nSlot];
+                        field_154C[nSlot - 1] = field_154C[nSlot];
+                        field_15AC[nSlot - 1] = field_15AC[nSlot];
+
+                        field_148C[nSlot] = CResRef();
+                        field_154C[nSlot] = 0;
+                        field_15AC[nSlot] = 0;
+
+                        CUIControlButtonSpellbookSpell* pButton = static_cast<CUIControlButtonSpellbookSpell*>(pPanel->GetControl(6 + nSlot));
+
+                        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
+                        // __LINE__: 3249
+                        UTIL_ASSERT(pButton != NULL);
+
+                        CUIControlButtonSpellbookSpell* pLastButton = static_cast<CUIControlButtonSpellbookSpell*>(pPanel->GetControl(5 + nSlot));
+
+                        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
+                        // __LINE__: 3253
+                        UTIL_ASSERT(pLastButton != NULL);
+
+                        BOOL bEnable = nSlot < static_cast<UINT>(field_1488) && m_bMultiPlayerViewable && bInControl;
+                        if (pLastButton->field_67A != bEnable) {
+                            pLastButton->field_67A = bEnable;
+                            pLastButton->InvalidateRect();
+                        }
+
+                        pLastButton->SetSpell(field_148C[nSlot]);
+
+                        if (pLastButton->field_676 != 1) {
+                            pLastButton->field_676 = 1;
+                            pLastButton->InvalidateRect();
+                        }
+
+                        UpdateLabel(pPanel,
+                            0x1000003E + nSlot,
+                            "%d/%d",
+                            field_154C[nSlot],
+                            field_15AC[nSlot]);
+
+                        if (pButton->field_676 != 0) {
+                            pButton->field_676 = 0;
+                            pButton->InvalidateRect();
+                        }
+
+                        pButton->SetSpell(CResRef(""));
+
+                        UpdateLabel(pPanel, 0x1000003F + nSlot, " ");
+                    }
+
+                    if (field_148C[nSlot] == resRef) {
+                        field_148C[nSlot] = CResRef();
+                        field_154C[nSlot] = 0;
+                        field_15AC[nSlot] = 0;
+                        bShifting = TRUE;
+                    }
+                }
+
+                if (bShifting == TRUE) {
+                    field_1488--;
+
+                    CUIControlButtonSpellbookSpell* pFlashButton = static_cast<CUIControlButtonSpellbookSpell*>(pPanel->GetControl(a2 + 6));
+
+                    m_bFlashUnmemorize = TRUE;
+                    m_pFlashMemorizeDestSpell = pFlashButton;
+                    m_pFlashCurrentSpell = pFlashButton;
+                    m_bFlash = TRUE;
+
+                    m_vcFlash.FrameSet(0);
+
+                    pFlashButton->InvalidateRect();
+
+                    PlayGUISound(CResRef("GAM_24"));
+                }
+            } else {
+                // NOTE: Result of inlined accessor is unused.
+                //
+                // __FILE__: .\Include\FileFormat.h
+                // __LINE__: 2428
+                UTIL_ASSERT(pSpellList->m_List.size() > 0);
+
+                // __FILE__: .\Include\FileFormat.h
+                // __LINE__: 2429
+                UTIL_ASSERT(nListIndex < pSpellList->m_List.size());
+
+                BOOL bShifted = FALSE;
+                BOOL bFlash = FALSE;
+
+                for (UINT nSlot = 0; nSlot < 24; nSlot++) {
+                    if (bShifted == TRUE) {
+                        field_148C[nSlot - 1] = field_148C[nSlot];
+                        field_154C[nSlot - 1] = field_154C[nSlot];
+                        field_15AC[nSlot - 1] = field_15AC[nSlot];
+
+                        field_148C[nSlot] = CResRef();
+                        field_154C[nSlot] = 0;
+                        field_15AC[nSlot] = 0;
+                    }
+
+                    if (field_148C[nSlot] == resRef) {
+                        // __FILE__: .\Include\FileFormat.h
+                        // __LINE__: 2428
+                        UTIL_ASSERT(pSpellList->m_List.size() > 0);
+
+                        // __FILE__: .\Include\FileFormat.h
+                        // __LINE__: 2429
+                        UTIL_ASSERT(nListIndex < pSpellList->m_List.size());
+
+                        CGameSpriteSpellListEntry* pEntry = &(pSpellList->m_List[nListIndex]);
+
+                        UINT nField4 = pEntry->field_4;
+                        UINT nField8 = pEntry->field_8;
+
+                        CAbilityId ab;
+                        ab.m_itemType = 1;
+                        ab.m_res = resRef;
+
+                        if (nDomainClassIndex == nClassIndex) {
+                            ab.m_nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nClassIndex);
+                        } else {
+                            // __FILE__: .\Include\InfScreenSpellbook.h
+                            // __LINE__: 76
+                            UTIL_ASSERT(nClassIndex < CSPELLLIST_NUM_CLASSES);
+
+                            ab.m_nClass = static_cast<BYTE>(field_1654[nClassIndex]);
+                        }
+
+                        ab.field_1D = static_cast<BYTE>(nSpellLevel + 1);
+
+                        if (ab.m_nClass == 3 && nDomainClassIndex == nClassIndex) {
+                            ab.field_1E = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetSpecializationIndex(3, pSprite->m_baseStats.m_specialization);
+                        } else {
+                            ab.field_1E = 0;
+                        }
+
+                        pSprite->CheckQuickLists(&ab, -1, FALSE, TRUE);
+
+                        g_pBaldurChitin->GetObjectGame()->m_cButtonArray.UpdateButtons();
+
+                        if (nField8 == 0 && nField4 == 0) {
+                            field_148C[nSlot] = CResRef();
+                            field_154C[nSlot] = 0;
+                            field_15AC[nSlot] = 0;
+
+                            field_1488--;
+
+                            bShifted = TRUE;
+                        } else {
+                            field_148C[nSlot] = resRef;
+                            field_154C[nSlot] = pEntry->field_8;
+                            field_15AC[nSlot] = pEntry->field_4;
+
+                            bFlash = TRUE;
+                            break;
+                        }
+                    }
+                }
+
+                if (bFlash || bShifted == TRUE) {
+                    CUIControlButtonSpellbookSpell* pFlashButton = static_cast<CUIControlButtonSpellbookSpell*>(pPanel->GetControl(a2 + 6));
+
+                    m_bFlashUnmemorize = TRUE;
+                    m_pFlashMemorizeDestSpell = pFlashButton;
+                    m_pFlashCurrentSpell = pFlashButton;
+                    m_bFlash = TRUE;
+
+                    m_vcFlash.FrameSet(0);
+
+                    pFlashButton->InvalidateRect();
+
+                    PlayGUISound(CResRef("GAM_24"));
+                }
+            }
+        }
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -1385,7 +2279,111 @@ BOOL CUIControlButtonSpellbookSpell::OnLButtonDown(CPoint pt)
 // 0x66D7E0
 void CUIControlButtonSpellbookSpell::OnLButtonClick(CPoint pt)
 {
-    // TODO: Incomplete.
+    CScreenSpellbook* pSpellbook = g_pBaldurChitin->m_pEngineSpellbook;
+
+    CSingleLock renderLock(&(m_pPanel->m_pManager->field_36), FALSE);
+    renderLock.Lock(INFINITE);
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // FIXME: Unncessary access via global var.
+    LONG nCharacterId = pGame->GetCharacterId(g_pBaldurChitin->m_pEngineSpellbook->GetSelectedCharacter());
+
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = pGame->GetObjectArray()->GetDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        // NOTE: Uninline.
+        if (pSprite->InControl()) {
+            DWORD nClassIndex = pSpellbook->m_nClassIndex;
+            DWORD nID = m_nID;
+
+            if (nID >= 46 && nID <= 53) {
+                nID -= 16;
+            }
+
+            if (nID >= 30 && nID <= 37) {
+                DWORD nSlot = nID - 30;
+
+                if (pSpellbook->sub_66C790(pSprite, nSlot)) {
+                    CResRef resRef = pSpellbook->field_160C[nSlot];
+
+                    CUIControlButtonSpellbookSpell* pFoundButton = NULL;
+
+                    if (resRef != CResRef()) {
+                        for (DWORD nIndex = 0; nIndex < static_cast<DWORD>(pSpellbook->field_1488); nIndex++) {
+                            if (pSpellbook->field_148C[nIndex] == resRef && 6 + nIndex <= 29) {
+                                pFoundButton = static_cast<CUIControlButtonSpellbookSpell*>(m_pPanel->GetControl(6 + nIndex));
+                                break;
+                            }
+                        }
+                    }
+
+                    // __FILE__: .\Include\InfScreenSpellbook.h
+                    // __LINE__: 76
+                    UTIL_ASSERT(nClassIndex < CSPELLLIST_NUM_CLASSES);
+
+                    int nClassType = pSpellbook->field_1654[nClassIndex];
+                    if (nClassType != 2 && nClassType != 10) {
+                        if (pFoundButton == NULL) {
+                            pFoundButton = static_cast<CUIControlButtonSpellbookSpell*>(m_pPanel->GetControl(nID));
+                        }
+
+                        CUIControlButtonSpellbookSpell* pCurrentButton = static_cast<CUIControlButtonSpellbookSpell*>(m_pPanel->GetControl(nID));
+
+                        pSpellbook->m_bFlashMemorize = TRUE;
+                        pSpellbook->m_bFlash = TRUE;
+                        pSpellbook->m_pFlashMemorizeDestSpell = pFoundButton;
+                        pSpellbook->m_pFlashMemorizeSourceSpell = pCurrentButton;
+                        pSpellbook->m_pFlashCurrentSpell = pCurrentButton;
+
+                        pSpellbook->m_vcFlash.FrameSet(0);
+
+                        InvalidateRect();
+
+                        pSpellbook->PlayGUISound(CResRef("GAM_24"));
+                    }
+                }
+            } else if (nID >= 6 && nID <= 29) {
+                DWORD nSlot = nID - 6;
+
+                CResRef resRef = pSpellbook->field_148C[nSlot];
+
+                if (resRef != CResRef()) {
+                    if (pSpellbook->field_154C[nSlot] != 0
+                        && pSpellbook->field_154C[nSlot] == pSpellbook->field_15AC[nSlot]) {
+                        pSpellbook->field_582 = nSlot;
+                        pSpellbook->m_nErrorState = 2;
+                        pSpellbook->m_dwErrorTextId = 11824;
+                        pSpellbook->m_strErrorButtonText[0] = 17507;
+                        pSpellbook->m_strErrorButtonText[1] = 13727;
+                        pSpellbook->SummonPopup(5);
+                    } else {
+                        pSpellbook->UnmemorizeSpell(pSprite, nSlot);
+                    }
+                }
+            } else {
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
+                // __LINE__: 3694
+                UTIL_ASSERT(FALSE);
+            }
+        }
+
+        pGame->GetObjectArray()->ReleaseDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        pSpellbook->UpdateMainPanel();
+    }
+
+    renderLock.Unlock();
 }
 
 // 0x66DB60
@@ -1411,9 +2409,119 @@ void CUIControlButtonSpellbookSpell::OnRButtonClick(CPoint pt)
 // 0x66DC30
 BOOL CUIControlButtonSpellbookSpell::Render(BOOL bForce)
 {
-    // TODO: Incomplete.
+    CScreenSpellbook* pSpellbook = g_pBaldurChitin->m_pEngineSpellbook;
 
-    return FALSE;
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
+    // __LINE__: 3770
+    UTIL_ASSERT(pSpellbook != NULL);
+
+    CVidPoly vidPoly;
+    CVidCell vcIcon;
+
+    // NOTE: Unused.
+    CVidCell vcUnused;
+
+    if (!m_bActive && !m_bInactiveRender) {
+        return FALSE;
+    }
+
+    if (m_nRenderCount == 0 && !bForce) {
+        return FALSE;
+    }
+
+    if (m_nRenderCount != 0) {
+        CSingleLock lock(&(m_pPanel->m_pManager->field_56), FALSE);
+        lock.Lock(INFINITE);
+        m_nRenderCount--;
+        lock.Unlock();
+    }
+
+    CVidInf* pVidInf = static_cast<CVidInf*>(g_pBaldurChitin->GetCurrentVideoMode());
+
+    if (field_67A != 0 || m_iconResRef != "") {
+        CPoint pt = m_pPanel->m_ptOrigin + m_ptOrigin;
+        CRect rControlFrame(pt, m_size);
+
+        CRect rClip;
+        rClip.IntersectRect(rControlFrame, m_rDirty);
+
+        CRect rFXClip(rClip);
+        CRect rFXRect(0, 0, m_size.cx, m_size.cy);
+
+        CPoint ptZero(0, 0);
+        pVidInf->FXPrep(rFXRect, CVIDCELL_FXPREP_COPYFROMBACK, pt, ptZero, rFXClip);
+
+        if (!pVidInf->FXLock(rFXRect, CVIDCELL_FXPREP_COPYFROMBACK)) {
+            return FALSE;
+        }
+
+        INT nOffsetX = 0;
+        INT nOffsetY = 0;
+
+        if (m_iconResRef != "") {
+            // NOTE: Uninline.
+            vcIcon.SetResRef(m_iconResRef, m_pPanel->m_pManager->m_bDoubleSize, TRUE, TRUE);
+
+            CSize frameSize;
+            vcIcon.GetCurrentFrameSize(frameSize, FALSE);
+
+            CPoint ptReference;
+            vcIcon.GetCurrentCenterPoint(ptReference, FALSE);
+
+            if (m_size.cx > frameSize.cx) {
+                nOffsetX = (m_size.cx - frameSize.cx) / 2;
+            }
+
+            if (m_size.cy > frameSize.cy) {
+                nOffsetY = (m_size.cy - frameSize.cy) / 2;
+            }
+
+            if (vcIcon.pRes != NULL) {
+                vcIcon.pRes->Demand();
+                vcIcon.RealizePalette(1);
+
+                pVidInf->FXRender(&vcIcon,
+                    ptReference.x + nOffsetX,
+                    ptReference.y + nOffsetY,
+                    rFXRect,
+                    TRUE,
+                    CVIDCELL_FXPREP_COPYFROMBACK);
+
+                vcIcon.pRes->Release();
+            }
+
+            if (field_676 == 0) {
+                CVIDPOLY_VERTEX vertices[4];
+
+                vertices[0].x = static_cast<WORD>(nOffsetX);
+                vertices[0].y = static_cast<WORD>(nOffsetY);
+                vertices[1].x = static_cast<WORD>(nOffsetX + frameSize.cx);
+                vertices[1].y = static_cast<WORD>(nOffsetY);
+                vertices[2].x = static_cast<WORD>(nOffsetX + frameSize.cx);
+                vertices[2].y = static_cast<WORD>(nOffsetY + frameSize.cy);
+                vertices[3].x = static_cast<WORD>(nOffsetX);
+                vertices[3].y = static_cast<WORD>(nOffsetY + frameSize.cy);
+
+                vidPoly.SetPoly(vertices, 4);
+
+                // TODO: Incomplete. Missing call to 0x79D680 on `pVidInf`
+                // (RET 0x18, six arguments: `&vidPoly`, `&rFXRect`,
+                // `pVidInf->field_24`, 2, `&ptZero` (0, 0), 0).
+            }
+
+        }
+
+        ptZero = CPoint(0, 0);
+        pVidInf->FXUnlock(CVIDCELL_FXPREP_COPYFROMBACK, NULL, ptZero);
+
+        pVidInf->FXBltToBack(rFXRect, pt.x, pt.y, 0, 0, rFXClip, CVIDCELL_FXPREP_COPYFROMBACK);
+    }
+
+    if (pSpellbook->m_bFlash != 0 && this == pSpellbook->m_pFlashCurrentSpell) {
+        pSpellbook->DrawFlash();
+    }
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
