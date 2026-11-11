@@ -4,6 +4,7 @@
 #include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CMessage.h"
+#include "CProjectile.h"
 #include "CUtil.h"
 #include "IcewindMisc.h"
 
@@ -2345,6 +2346,64 @@ CGameEffect* IcewindCGameEffectAegis::Copy()
     return copy;
 }
 
+// 0x56A230
+BOOL IcewindCGameEffectAegis::ApplyEffect(CGameSprite* pSprite)
+{
+    if (pSprite->GetDerivedStats()->m_spellStates.test(SPLSTATE_AEGIS) == true) {
+        return TRUE;
+    }
+
+    pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_AEGIS, true);
+
+    // NOTE: Uninline.
+    AddPortraitIcon(pSprite, 119);
+
+    pSprite->GetDerivedStats()->m_nResistFire += 15;
+    pSprite->GetDerivedStats()->m_nResistCold += 15;
+    pSprite->GetDerivedStats()->m_nResistElectricity += 15;
+    pSprite->GetDerivedStats()->m_nResistAcid += 15;
+
+    sub_4C3F30(pSprite, 5);
+
+    pSprite->GetDerivedStats()->m_nResistMagic += 3;
+    pSprite->GetDerivedStats()->m_nSaveVSFortitude += 2;
+    pSprite->GetDerivedStats()->m_nSaveVSReflex += 2;
+    pSprite->GetDerivedStats()->m_nSaveVSWill += 2;
+
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_STONESKINS);
+
+    if (m_secondaryType) {
+        m_effectAmount = 8;
+    }
+
+    pSprite->GetDerivedStats()->m_nStoneSkins = max(pSprite->GetDerivedStats()->m_nStoneSkins, m_effectAmount);
+    if (pSprite->GetDerivedStats()->m_nStoneSkins > 0) {
+        pSprite->SetColorRange(14);
+    }
+
+    pSprite->GetDerivedStats()->m_nResistCrushing += 10;
+    pSprite->GetDerivedStats()->m_nResistPiercing += 10;
+    pSprite->GetDerivedStats()->m_nResistSlashing += 10;
+
+    // NOTE: Using `set` (with bounds check).
+    pSprite->GetDerivedStats()->m_visualEffects.set(IWD_VFX_MINOR_GLOBE_OF_INVULNERABILITY, true);
+
+    pSprite->GetDerivedStats()->field_1E0 = 1;
+    pSprite->GetDerivedStats()->field_1E4 = 1;
+    pSprite->GetDerivedStats()->field_1E8 = 1;
+
+    AddColorEffect(pSprite, 128, 96, 96, 30);
+
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_ENTANGLE);
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_GREASEPOOL);
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_WEBHOLD);
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_HOLDCREATURE);
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_SLOW);
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_MOVEMENTRATE_176);
+
+    return TRUE;
+}
+
 // 0x56B6E0
 void IcewindCGameEffectAegis::OnRemove(CGameSprite* pSprite)
 {
@@ -2448,6 +2507,48 @@ CGameEffect* IcewindCGameEffectProjectile::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x56A730
+BOOL IcewindCGameEffectProjectile::ApplyEffect(CGameSprite* pSprite)
+{
+    CGameObject* pSource;
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pSource,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    CProjectile* pProjectile = CProjectile::DecodeProjectile(static_cast<WORD>(m_dwFlags + 1), pSprite, FALSE);
+
+    std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pSource),
+        reinterpret_cast<const char*>(m_res.GetResRef()),
+        1);
+    for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+        (*it)->m_sourceRes = m_res;
+        (*it)->m_target = m_target;
+        (*it)->m_casterLevel = m_casterLevel;
+        pProjectile->AddEffect(*it);
+    }
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pSource->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        0,
+        0);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
