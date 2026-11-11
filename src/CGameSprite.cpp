@@ -14066,7 +14066,501 @@ void CGameSprite::sub_72FBF0()
 // 0x72FD20
 void CGameSprite::CheckModal()
 {
-    // TODO: Incomplete.
+    if (static_cast<DWORD>(field_44A) % 100 != static_cast<DWORD>(m_id) % 100) {
+        return;
+    }
+
+    m_modalCounter++;
+
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
+        CAITrigger trigger(CAITrigger::NO_TRIGGER, 0);
+        CTypedPtrList<CPtrList, LONG*> targets;
+
+        INT nSearch = sub_71F6E0();
+        INT nRoll = CUtil::UtilRandInt(100, -m_derivedStats.m_nLuck);
+
+        m_pArea->GetAllInRange(m_pos,
+            CAIObjectType::ANYONE,
+            GetVisualRange() >> 1,
+            GetVisibleTerrainTable(),
+            targets,
+            FALSE,
+            TRUE);
+
+        POSITION pos = targets.GetHeadPosition();
+        while (pos != NULL) {
+            LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+            CGameObject* pObject;
+
+            BYTE rc;
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nTargetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pObject,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                continue;
+            }
+
+            if (pObject->GetObjectType() != CGameObject::TYPE_DOOR) {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nTargetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                continue;
+            }
+
+            CGameDoor* pDoor = static_cast<CGameDoor*>(pObject);
+            if ((pDoor->m_dwFlags & 0x80) != 0) {
+                if ((pDoor->m_dwFlags & 0x100) == 0) {
+                    INT nDetectionDifficulty = pDoor->m_detectionDifficulty;
+                    if (nDetectionDifficulty == 0) {
+                        nDetectionDifficulty = 100;
+                    }
+
+                    if (nSearch >= nDetectionDifficulty + nRoll - 101) {
+                        PlaySound(CResRef("ACT_09"));
+                        pDoor->SetDrawPoly(400);
+                        pDoor->m_dwFlags |= 0x100;
+
+                        CMessage* message = new CMessageDoorStatus(pDoor, m_id, pDoor->m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                    }
+                } else {
+                    pDoor->SetDrawPoly(400);
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nTargetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    switch (m_nModalState) {
+    case 1:
+        if ((m_derivedStats.m_generalState & STATE_SILENCED) == 0
+            && (m_baseStats.m_generalState & STATE_SILENCED) == 0
+            && g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_cutScene != TRUE) {
+            if (!IsVisibleToCaller(FALSE)) {
+                ITEM_EFFECT effect;
+                CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+                effect.durationType = 1;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    m_pos,
+                    m_id,
+                    CPoint(-1, -1));
+
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            UINT nSongIndex = m_nLastSong;
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+            // __LINE__: 4072
+            UTIL_ASSERT_MSG(nSongIndex < g_pBaldurChitin->GetObjectGame()->GetMasterSongLookup().m_nCount, "Invalid Song Index.");
+
+            CResRef songResRef = g_pBaldurChitin->GetObjectGame()->GetMasterSongLookup().Get(nSongIndex);
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+            // __LINE__: 4074
+            UTIL_ASSERT(songResRef != "");
+
+            // NOTE: Uninline.
+            CSpell cSpell;
+            cSpell.SetResRef(songResRef, TRUE, TRUE);
+
+            cSpell.Demand();
+
+            if (cSpell.GetCasterType() != 5) {
+                cSpell.Release();
+            } else {
+                FeedBack(FEEDBACK_BATTLESONGSTART,
+                    0,
+                    0,
+                    0,
+                    cSpell.GetGenericName(),
+                    0,
+                    0);
+
+                SPELL_ABILITY* pAbility = cSpell.GetAbility(0);
+
+                CTypedPtrList<CPtrList, LONG*> targets;
+
+                m_pArea->GetAllInRange(GetVertListPos(),
+                    GetPos(),
+                    CAIObjectType::ANYONE,
+                    400,
+                    GetTerrainTable(),
+                    targets,
+                    TRUE,
+                    FALSE);
+
+                m_pArea->GetAllInRangeBack(GetPos(),
+                    CAIObjectType::ANYONE,
+                    400,
+                    GetTerrainTable(),
+                    targets,
+                    TRUE,
+                    FALSE,
+                    FALSE);
+
+                targets.AddTail(reinterpret_cast<LONG*>(m_id));
+
+                POSITION pos = targets.GetHeadPosition();
+                while (pos != NULL) {
+                    LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+                    CGameSprite* pSprite;
+                    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                    if (rc != CGameObjectArray::SUCCESS) {
+                        continue;
+                    }
+
+                    if (pSprite->GetObjectType() != CGameObject::TYPE_SPRITE) {
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                        continue;
+                    }
+
+                    std::list<CMessageAddEffect*> effects;
+
+                    for (INT nEffect = 0; nEffect < pAbility->effectCount; nEffect++) {
+                        CGameEffect* pEffect = cSpell.DecodeEffect(0, nEffect, this, 0, 0, 0);
+                        pEffect->m_source = m_pos;
+                        pEffect->m_sourceID = m_id;
+
+                        IcewindMisc::sub_5860F0(this, pEffect);
+
+                        if (pEffect->m_durationType == 0 && pEffect->m_duration == 7) {
+                            pEffect->m_durationType = 0x1000;
+                            pEffect->m_duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + 100;
+                        }
+
+                        CMessageAddEffect* pAddEffect = new CMessageAddEffect(pEffect, m_id, pSprite->m_id);
+                        effects.push_back(pAddEffect);
+                    }
+
+                    CMessage105* pMessage = new CMessage105(effects, m_id, pSprite->m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                }
+
+                cSpell.Release();
+            }
+        }
+        break;
+    case 2:
+        if (1) {
+            CAITrigger trigger(CAITrigger::NO_TRIGGER, 0);
+            CTypedPtrList<CPtrList, LONG*> targets;
+
+            m_pArea->GetAllInRange(m_pos,
+                CAIObjectType::ANYONE,
+                GetVisualRange() >> 1,
+                GetVisibleTerrainTable(),
+                targets,
+                TRUE,
+                TRUE);
+
+            m_pArea->GetAllInRangeBack(m_pos,
+                CAIObjectType::ANYONE,
+                GetVisualRange() >> 1,
+                GetVisibleTerrainTable(),
+                targets,
+                TRUE,
+                TRUE,
+                TRUE);
+
+            POSITION pos = targets.GetHeadPosition();
+            while (pos != NULL) {
+                LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+                CGameObject* pObject;
+
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        &pObject,
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    continue;
+                }
+
+                if (pObject->GetObjectType() != CGameObject::TYPE_DOOR
+                    && pObject->GetObjectType() != CGameObject::TYPE_CONTAINER
+                    && pObject->GetObjectType() != CGameObject::TYPE_TRIGGER) {
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    continue;
+                }
+
+                INT nSearchSkill = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_SEARCH]);
+
+                if (pObject->GetObjectType() == CGameObject::TYPE_DOOR) {
+                    CGameDoor* pDoor = static_cast<CGameDoor*>(pObject);
+                    if (pDoor->m_trapActivated != 0) {
+                        BOOLEAN bDetected = FALSE;
+
+                        if (pDoor->m_trapDetected == 0) {
+                            INT nDifficulty = pDoor->m_trapDetectionDifficulty;
+
+                            // NOTE: The original only sign-extends the skill
+                            // to 16 bits.
+                            FeedBack(FEEDBACK_ROLL,
+                                static_cast<WORD>(nSearchSkill),
+                                nDifficulty / 5,
+                                GetSkillBonus(CGAMESPRITE_SKILL_SEARCH),
+                                39303,
+                                0,
+                                0);
+
+                            if (7 * nSearchSkill >= nDifficulty
+                                && nDifficulty != 100
+                                && (pDoor->m_dwFlags & 0x8) != 0) {
+                                trigger = CAITrigger(CAITRIGGER_DETECTED, m_typeAI, 0);
+
+                                CMessage* message = new CMessageSetTrigger(trigger, m_id, pDoor->m_id);
+                                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                                pDoor->m_trapDetected = 1;
+                                AutoPause(0x80);
+                                bDetected = TRUE;
+                            }
+                        }
+
+                        if (pDoor->m_trapDetected != 0) {
+                            pDoor->SetDrawPoly(400);
+                        }
+
+                        if (bDetected == TRUE) {
+                            CMessage* message = new CMessageDoorStatus(pDoor, m_id, pDoor->m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                        }
+                    }
+                }
+
+                if (pObject->GetObjectType() == CGameObject::TYPE_TRIGGER) {
+                    CGameTrigger* pTrigger = static_cast<CGameTrigger*>(pObject);
+                    if (pTrigger->m_trapActivated != 0
+                        && (pTrigger->m_dwFlags & 0x100) == 0) {
+                        BOOLEAN bDetected = FALSE;
+
+                        if (pTrigger->m_trapDetected == 0) {
+                            INT nDifficulty = pTrigger->m_trapDetectionDifficulty;
+                            if (7 * nSearchSkill >= nDifficulty
+                                && nDifficulty != 100
+                                && (pTrigger->m_dwFlags & 0x8) != 0) {
+                                trigger = CAITrigger(CAITRIGGER_DETECTED, m_typeAI, 0);
+
+                                CMessage* message = new CMessageSetTrigger(trigger, m_id, pTrigger->m_id);
+                                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                                pTrigger->m_trapDetected = 1;
+                                AutoPause(0x80);
+                                bDetected = TRUE;
+                            }
+                        }
+
+                        if (pTrigger->m_trapDetected != 0) {
+                            pTrigger->SetDrawPoly(400);
+                        }
+
+                        if (bDetected == TRUE) {
+                            CMessage* message = new CMessageTriggerStatus(pTrigger->m_dwFlags,
+                                pTrigger->m_trapActivated,
+                                pTrigger->m_trapDetected,
+                                m_id,
+                                pTrigger->m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                        }
+                    }
+                }
+
+                if (pObject->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+                    CGameContainer* pContainer = static_cast<CGameContainer*>(pObject);
+                    if (pContainer->m_trapActivated != 0) {
+                        BOOLEAN bDetected = FALSE;
+
+                        if (pContainer->m_trapDetected == 0) {
+                            INT nDifficulty = pContainer->m_trapDetectionDifficulty;
+                            if (7 * nSearchSkill >= nDifficulty && nDifficulty != 100) {
+                                trigger = CAITrigger(CAITRIGGER_DETECTED, m_typeAI, 0);
+
+                                CMessage* message = new CMessageSetTrigger(trigger, m_id, pContainer->m_id);
+                                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                                pContainer->SetTrapDetected(1);
+                                pContainer->SetDrawPoly(400);
+                                AutoPause(0x80);
+                                bDetected = TRUE;
+                            }
+                        }
+
+                        if (pContainer->m_trapDetected != 0) {
+                            pContainer->SetDrawPoly(400);
+                        }
+
+                        if (bDetected == TRUE) {
+                            CMessage* message = new CMessageContainerStatus(pContainer->m_dwFlags,
+                                pContainer->m_trapActivated,
+                                pContainer->m_trapDetected,
+                                pContainer->m_id,
+                                pContainer->m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                        }
+                    }
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+        break;
+    case 3:
+        // NOTE: 3 is the dword at 0x85BD08.
+        if (m_modalCounter % 3 == 0) {
+            Hide();
+        }
+        break;
+    case 4:
+        if (1) {
+            CAIAction action;
+            CAIObjectType type(CAIObjectType::ANYONE);
+            CAITrigger trigger(CAITrigger::NO_TRIGGER, 0);
+            CTypedPtrList<CPtrList, LONG*> targets;
+
+            type.m_nGeneral = CAIObjectType::G_UNDEAD;
+            type.m_nEnemyAlly = CAIObjectType::EA_ENEMY;
+
+            m_pArea->GetAllInRange(m_pos,
+                type,
+                GetVisualRange() >> 1,
+                m_visibleTerrainTable,
+                targets,
+                TRUE,
+                FALSE);
+
+            BOOL bTurned = FALSE;
+
+            POSITION pos = targets.GetHeadPosition();
+            INT nCount = rand() % 4 + rand() % 4 + 2;
+            while (pos != NULL) {
+                if (nCount-- == 0) {
+                    break;
+                }
+
+                LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+                CGameSprite* pSprite;
+
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    continue;
+                }
+
+                if (pSprite->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                    INT nRandom = rand() % 4;
+                    if (nRandom != 4) {
+                        INT nHitDice = nRandom + pSprite->m_derivedStats.m_nLevel;
+                        if (m_derivedStats.m_nTurnUndeadLevel >= nHitDice + 5) {
+                            bTurned = TRUE;
+
+                            if (m_typeAI.m_nAlignment == CAIOBJECTTYPE_LAWFUL_EVIL
+                                || m_typeAI.m_nAlignment == CAIOBJECTTYPE_NEUTRAL_EVIL
+                                || m_typeAI.m_nAlignment == CAIOBJECTTYPE_CHAOTIC_EVIL) {
+                                ITEM_EFFECT effect;
+                                CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_DOMINATE);
+                                effect.durationType = 0;
+                                effect.dwFlags = 4;
+                                effect.duration = 60;
+
+                                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                                    m_pos,
+                                    m_id,
+                                    CPoint(-1, -1));
+
+                                CMessage* message = new CMessageAddEffect(pEffect, m_id, pSprite->m_id);
+                                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                            } else {
+                                CGameEffectDeath* pEffect = new CGameEffectDeath();
+                                // NOTE: The inlined constructor here stores 0
+                                // (the default constructor stores 1).
+                                pEffect->field_18C = 0;
+                                pEffect->m_effectAmount = 0;
+                                pEffect->m_dwFlags = 0x8;
+                                pEffect->m_sourceID = m_id;
+
+                                CMessage* message = new CMessageAddEffect(pEffect, m_id, pSprite->m_id);
+                                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                            }
+                        } else if (m_derivedStats.m_nTurnUndeadLevel >= nHitDice) {
+                            bTurned = TRUE;
+
+                            ITEM_EFFECT effect;
+                            CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_VISUALSPELLHIT);
+                            effect.dwFlags = 0;
+
+                            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                                m_pos,
+                                m_id,
+                                CPoint(-1, -1));
+
+                            CMessage* message = new CMessageAddEffect(pEffect, m_id, pSprite->m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                            trigger = CAITrigger(CAITRIGGER_TURNEDBY, m_typeAI, 0);
+
+                            message = new CMessageSetTrigger(trigger, m_id, pSprite->m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                            // 184: RunAwayFromNoInterrupt(O:Creature*,I:Time*)
+                            action = CAIAction(184,
+                                m_typeAI,
+                                100 * m_derivedStats.m_nTurnUndeadLevel,
+                                0,
+                                0);
+
+                            message = new CMessageAddAction(action, m_id, pSprite->m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                        }
+                    }
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+
+            if (bTurned) {
+                PlaySound(CResRef("ACT_06"));
+            }
+        }
+        break;
+    }
 }
 
 // 0x731B30
