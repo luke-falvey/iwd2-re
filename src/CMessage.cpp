@@ -22,6 +22,7 @@
 #include "CProjectilePart6.h"
 #include "CScreenChapter.h"
 #include "CScreenConnection.h"
+#include "CScreenCharacter.h"
 #include "CScreenCreateChar.h"
 #include "CScreenInventory.h"
 #include "CScreenLoad.h"
@@ -26865,7 +26866,79 @@ BOOL CMessageSaveGame::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 // 0x504CA0
 void CMessageSaveGame::Run()
 {
-    // TODO: Incomplete.
+    if (g_pChitin->cNetwork.m_bConnectionEstablished
+        && g_pChitin->cNetwork.GetSessionHosting() != TRUE) {
+        return;
+    }
+
+    STR_RES strRes;
+    CString sSaveName;
+
+    BOOLEAN bStrrefOn = CTlkTable::STRREF_ON;
+    if (bStrrefOn == TRUE) {
+        CTlkTable::STRREF_ON = FALSE;
+    }
+
+    g_pBaldurChitin->GetTlkTable().Fetch(m_strText, strRes);
+
+    sSaveName.Format("000000000-%s - %s",
+        CBaldurEngine::FetchString(0x9BFF),
+        strRes.szText);
+
+    if (g_pBaldurChitin->GetObjectGame()->m_cOptions.m_nNightmareMode == 1) {
+        STR_RES strResNightmare;
+
+        if (g_pBaldurChitin->GetTlkTable().Fetch(0xA193, strResNightmare) == TRUE) {
+            CString sNightmare;
+            sNightmare.Format(" (%s)", strResNightmare.szText);
+            sSaveName += sNightmare;
+        }
+    }
+
+    if (bStrrefOn == TRUE) {
+        CTlkTable::STRREF_ON = TRUE;
+    }
+
+    DWORD areaFlags[CINFGAME_MAX_AREAS];
+
+    for (INT nArea = 0; nArea < CINFGAME_MAX_AREAS; nArea++) {
+        // NOTE: Uninline.
+        CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(nArea);
+        if (pArea != NULL) {
+            areaFlags[nArea] = pArea->m_header.m_flags;
+            pArea->m_header.m_flags &= ~0x1;
+        }
+    }
+
+    g_pBaldurChitin->GetObjectGame()->m_sSaveGame = sSaveName;
+    CScreenCharacter::SAVE_NAME = sSaveName;
+
+    g_pBaldurChitin->GetObjectGame()->field_366E = 1;
+    g_pBaldurChitin->GetObjectGame()->field_50DC = 0;
+
+    if (!g_pChitin->cVideo.Is3dAccelerated()) {
+        if (!g_pBaldurChitin->GetObjectGame()->field_50D8) {
+            g_pBaldurChitin->GetObjectGame()->SynchronousUpdate();
+        }
+
+        g_pBaldurChitin->GetObjectGame()->field_50D8 = 1;
+    }
+
+    if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL) {
+        g_pBaldurChitin->GetObjectGame()->field_50D8 = 1;
+    } else {
+        g_pBaldurChitin->GetObjectGame()->field_50D8 = 0;
+    }
+
+    g_pBaldurChitin->GetObjectGame()->SaveGame(FALSE, FALSE, TRUE);
+
+    for (INT nArea = 0; nArea < CINFGAME_MAX_AREAS; nArea++) {
+        // NOTE: Uninline.
+        CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(nArea);
+        if (pArea != NULL) {
+            pArea->m_header.m_flags = areaFlags[nArea];
+        }
+    }
 }
 
 // -----------------------------------------------------------------------------
