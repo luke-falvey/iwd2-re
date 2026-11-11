@@ -2,6 +2,35 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-12 (S5): finish the dialogue, open the inventory
+
+Branch `phase-a/stubs-and-layout` (local only). 7,402 of 9,831 functions without a TODO (75.3%). S1–S5 pass on the rebuild.
+
+**S5** (`tests/e2e/scenarios/test_s5_leave_dialog_inventory.py`) finishes Hedron's dialogue and opens the inventory. It compares small regions around each number with a 0.4% limit, because a wrong digit changes too few pixels to fail the default 2%.
+
+**Bugs it found** (all fixed and checked against the asm)
+- `CUIControlTextDisplay::RemoveString` left deleted lines in the list and `Render` never took the display's lock: crash when the dialogue ended.
+- `CDerivedStats::Reload`: ability scores copied from the wrong bytes, base AC not reduced by 10, immunity lists not cleared, missing tail (Dodge and other bonuses).
+- `CGameSprite::AddEffect` was missing, so item effects were discarded; `CGameEffect`'s `ITEM_EFFECT` constructor left `m_done` uninitialised.
+- Inventory: weight colour ratio, missing slot-button update (selected weapon highlight).
+- All 24 functions that use the ability-score members were audited by offset after the rename; older code had used several of them by name.
+
+**Still different from the original on the inventory screen** (not covered by S5 yet)
+- Dark wedges are drawn beside the first and third portraits. Probably `CUIPanel`'s dimming polygon (0x4D3610, `BKRenderConvexPoly`) for a panel that should not be dimmed, or a bad polygon fill. Varies from run to run.
+- The fifth portrait has a small status icon in the original and none in the rebuild.
+- The paper doll holds the staff horizontally in the rebuild and diagonally in the original.
+- `CInfGame::sub_5BA2E0` ("can this item go in this slot", 2.4 KB) is a stub returning TRUE.
+- `CDerivedStats::Reload` and `BonusInit` still don't clear the lists at 0x300, 0x328, 0x378, 0x4AC–0x538 and 0x554.
+
+**Next**
+1. The three visible differences above, then extend S5 to cover them.
+2. S6: walk the party off the ship (pathfinding, scrolling, the newly translated wall-polygon renderer).
+3. More translation batches from `tools/worklist.py`.
+
+**Notes**
+- Runtime debugging on Sonnet works when the brief lists the symptoms with exact values, the test command, and suspects. This one cost 413k tokens and changed 12 files, so everything it touched went through verifiers before commit (three verifiers, about 350k tokens).
+- After any rename of members that older code might have used by meaning, audit every use against the asm.
+
 ## 2026-11-12 (later): batches 13–18
 
 Branch `phase-a/stubs-and-layout` (local only). 7,396 of 9,831 functions without a TODO (75.2%); 79.4% of bytes. S1–S4 pass on the rebuild.
