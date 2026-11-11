@@ -72,3 +72,6 @@
 
 # std::list<CDerivedStatsWhenStruck> element copy (placement copy of 0x1C bytes)
 0x44BA70
+
+# std::set<std::string> m_spellImmunities: iterator::operator++ (nil sentinel 0x8D13E8)
+0x44B230
