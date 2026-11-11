@@ -576,6 +576,7 @@ class CGameEffectRemoveCurse : public CGameEffect {
 public:
     CGameEffectRemoveCurse(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectResistAcid : public CGameEffect {
@@ -1348,6 +1349,7 @@ class CGameEffectPolymorph : public CGameEffect {
 public:
     CGameEffectPolymorph(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectForceVisible : public CGameEffect {
@@ -1375,6 +1377,7 @@ class CGameEffectVisualSpellHit : public CGameEffect {
 public:
     CGameEffectVisualSpellHit(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectPortraitIcon : public CGameEffect {
@@ -1416,6 +1419,7 @@ class CGameEffectLearnSpell : public CGameEffect {
 public:
     CGameEffectLearnSpell(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectCastSpellPoint : public CGameEffect {
@@ -1441,6 +1445,7 @@ class CGameEffectReplaceSelf : public CGameEffect {
 public:
     CGameEffectReplaceSelf(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectPlayMovie : public CGameEffect {
@@ -1566,6 +1571,7 @@ class CGameEffectAddInnateAbility : public CGameEffect {
 public:
     CGameEffectAddInnateAbility(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectRemoveInnateAbility : public CGameEffect {
@@ -1600,6 +1606,7 @@ class CGameEffectApplyEffect : public CGameEffect {
 public:
     CGameEffectApplyEffect(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSelectiveToHitBonus : public CGameEffect {
@@ -1634,12 +1641,14 @@ class CGameEffectApplyEffectEquipItem : public CGameEffect {
 public:
     CGameEffectApplyEffectEquipItem(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectApplyEffectEquipItemType : public CGameEffect {
 public:
     CGameEffectApplyEffectEquipItemType(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSetDoNoJump : public CGameEffect {
