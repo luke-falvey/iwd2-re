@@ -8,8 +8,10 @@
 #include "FileFormat.h"
 
 #include <bitset>
+#include <list>
 #include <set>
 #include <string>
+#include <vector>
 
 // STATE.IDS
 
@@ -517,6 +519,38 @@ public:
 
 #pragma pack(pop)
 
+// NOTE: Element of the "when struck" list (0x1C bytes), filled by
+// `IcewindCGameEffectWhenStruck`.
+class CWhenStruck {
+public:
+    CResRef m_sourceRes;
+    CResRef m_res;
+    LONG m_casterLevel;
+    CPoint m_target;
+};
+
+// NOTE: Element of the damage reduction list (0x24 bytes in the original,
+// constructed by 0x447B60). Not annotated because the STL layout differs.
+class CDamageReduction {
+public:
+    // 0x447B60
+    CDamageReduction(LONG nAmount, DWORD nEnchantment)
+        : m_nAmount(nAmount)
+        , m_nEnchantment(nEnchantment)
+        , field_18(0)
+        , field_1C(0)
+        , field_20(0)
+    {
+    }
+
+    LONG m_nAmount;
+    DWORD m_nEnchantment;
+    std::set<int> m_damageTypes;
+    int field_18;
+    int field_1C;
+    int field_20;
+};
+
 class CPersistantEffectListRegenerated : public CTypedPtrList<CPtrList, CPersistantEffect*> {
 public:
     CPersistantEffectListRegenerated();
@@ -577,6 +611,10 @@ public:
     std::set<std::string> m_spellImmunities;
     /* 04AC */ CPtrList field_4AC;
     /* 0480 */ std::set<int> m_naturalImmunities;
+    // NOTE: At 0x0490 in the original (STL layout differs).
+    std::list<CWhenStruck> m_whenStruckList;
+    // NOTE: At 0x049C in the original (STL layout differs).
+    std::vector<CDamageReduction> m_damageReduction;
     /* 04C8 */ CPtrList field_4C8;
     /* 04E4 */ CPtrList field_4E4;
     /* 0500 */ CPtrList field_500;

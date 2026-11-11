@@ -3,6 +3,7 @@
 #include "CBaldurChitin.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
+#include "CMessage.h"
 #include "CUtil.h"
 #include "IcewindMisc.h"
 
@@ -2408,6 +2409,29 @@ CGameEffect* IcewindCGameEffectWhenStruck::Copy()
     return copy;
 }
 
+// 0x56A5A0
+BOOL IcewindCGameEffectWhenStruck::ApplyEffect(CGameSprite* pSprite)
+{
+    CWhenStruck whenStruck;
+    whenStruck.m_sourceRes = m_sourceRes;
+    whenStruck.m_res = m_res;
+    whenStruck.m_casterLevel = static_cast<BYTE>(m_casterLevel);
+    whenStruck.m_target = m_target;
+    pSprite->GetDerivedStats()->m_whenStruckList.push_back(whenStruck);
+
+    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+        CMessage* message = new CMessage117(m_sourceRes,
+            m_res,
+            static_cast<BYTE>(m_casterLevel),
+            m_target,
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4A1C30
@@ -2587,6 +2611,35 @@ CGameEffect* IcewindCGameEffectPersistantEffect::Copy()
     return copy;
 }
 
+// 0x56AC20
+BOOL IcewindCGameEffectPersistantEffect::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_secondaryType != 0) {
+        m_special = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+    }
+
+    CPersistantEffect84C4C4* pEffect;
+
+    // NOTE: Original reads it from a constant at 0x8491AA.
+    if (m_durationType == 1) {
+        pEffect = new CPersistantEffect84C4C4(m_res.GetResRefStr(),
+            15 * m_effectAmount,
+            m_special,
+            0);
+    } else {
+        pEffect = new CPersistantEffect84C4C4(m_res.GetResRefStr(),
+            15 * m_effectAmount,
+            m_special,
+            m_duration);
+    }
+
+    pEffect->m_sourceID = m_sourceID;
+    strcpy(reinterpret_cast<char*>(pEffect->field_29), m_sourceRes.GetResRefStr());
+    pSprite->GetDerivedStats()->m_cRegeneratedPersistantEffectList.AddTail(pEffect);
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4A20E0
@@ -2605,6 +2658,34 @@ CGameEffect* IcewindCGameEffectDamageReduction::Copy()
     return copy;
 }
 
+// 0x56ADC0
+BOOL IcewindCGameEffectDamageReduction::ApplyEffect(CGameSprite* pSprite)
+{
+    LONG nAmount;
+    if (m_effectAmount == 0) {
+        if (m_dwFlags == 6) {
+            m_dwFlags = 3;
+        }
+        nAmount = m_dwFlags * 5;
+    } else {
+        // FIXME: The original leaves the amount uninitialized here (the
+        // compiler reuses the stack slot of `pSprite`), so `m_effectAmount`
+        // is never used.
+        nAmount = reinterpret_cast<LONG>(pSprite);
+    }
+
+    CDamageReduction damageReduction(nAmount, m_dwFlags);
+    damageReduction.m_damageTypes.insert(0);
+    damageReduction.m_damageTypes.insert(0x100000);
+    damageReduction.m_damageTypes.insert(0x1000000);
+    damageReduction.m_damageTypes.insert(0x2000000);
+    damageReduction.m_damageTypes.insert(0x4000000);
+    damageReduction.m_damageTypes.insert(0x8000000);
+    pSprite->GetDerivedStats()->m_damageReduction.push_back(damageReduction);
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4A21D0
@@ -2621,6 +2702,17 @@ CGameEffect* IcewindCGameEffectProtectionFromArrows::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x56AF80
+BOOL IcewindCGameEffectProtectionFromArrows::ApplyEffect(CGameSprite* pSprite)
+{
+    CDamageReduction damageReduction(10, m_dwFlags);
+    damageReduction.m_damageTypes.insert(0x4000000);
+    damageReduction.m_damageTypes.insert(0x2000000);
+    pSprite->GetDerivedStats()->m_damageReduction.push_back(damageReduction);
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------

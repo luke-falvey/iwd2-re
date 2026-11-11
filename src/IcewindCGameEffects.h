@@ -613,6 +613,7 @@ class IcewindCGameEffectWhenStruck : public CGameEffect {
 public:
     IcewindCGameEffectWhenStruck(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectProjectile : public CGameEffect {
@@ -646,18 +647,21 @@ class IcewindCGameEffectPersistantEffect : public CGameEffect {
 public:
     IcewindCGameEffectPersistantEffect(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectDamageReduction : public CGameEffect {
 public:
     IcewindCGameEffectDamageReduction(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectProtectionFromArrows : public CGameEffect {
 public:
     IcewindCGameEffectProtectionFromArrows(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class IcewindCGameEffectTensersTransformation : public CGameEffect {
