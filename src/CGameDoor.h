@@ -3,6 +3,7 @@
 
 #include "CGameAIBase.h"
 #include "CResRef.h"
+#include "CSound.h"
 #include "CTiledObject.h"
 #include "FileFormat.h"
 
@@ -44,6 +45,7 @@ public:
     /* 05E8 */ CPoint m_ptDest2;
     /* 05F0 */ RESREF m_scriptRes;
     /* 05F8 */ CTiledObject m_tiledObject;
+    /* 0610 */ SCRIPTNAME m_scriptName;
     /* 0630 */ STRREF m_strNotPickable;
     /* 0634 */ SHORT m_hitPoints;
     /* 0636 */ SHORT m_armourClass;
@@ -61,6 +63,7 @@ public:
     /* 0664 */ SHORT m_drawPoly;
     /* 0666 */ CPoint m_ptOpenDest;
     /* 066E */ CPoint m_ptClosedDest;
+    /* 0676 */ CSound m_sndDoor;
     /* 06DA */ CArray<CRect*> field_6DA;
     /* 06EE */ CAreaPoint* field_6EE;
     /* 06F2 */ CArray<CRect*> field_6F2;

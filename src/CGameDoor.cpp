@@ -587,7 +587,326 @@ void CGameDoor::SetCursor(LONG nToolTip)
 // 0x489680
 void CGameDoor::ToggleDoor(const CAIObjectType& cause, BOOL bIgnoreLock)
 {
-    // TODO: Incomplete.
+    BOOLEAN bCanToggle = TRUE;
+
+    // NOTE: Unused.
+    CString sUnused;
+    CSound sndUnused;
+
+    if (!bIgnoreLock && (m_dwFlags & 0x2) != 0) {
+        if (m_keyType == "") {
+            STRREF strNotPickable;
+            if ((m_dwFlags & 0x200) != 0 && m_strNotPickable > -1) {
+                strNotPickable = m_strNotPickable;
+            } else {
+                strNotPickable = 15874;
+            }
+
+            if (strNotPickable != -1) {
+                CMessageDisplayTextRefSend* pMessage = new CMessageDisplayTextRefSend(-1,
+                    strNotPickable,
+                    0,
+                    RGB(215, 215, 190),
+                    -1,
+                    m_id,
+                    cause.m_nInstance);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+            }
+            return;
+        }
+
+        if (!PartyHasItem(m_keyType)) {
+            CGameObject* pObject;
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(cause.m_nInstance,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+            if (rc != CGameObjectArray::SUCCESS) {
+                STRREF strNotPickable;
+                if ((m_dwFlags & 0x200) != 0 && m_strNotPickable > -1) {
+                    strNotPickable = m_strNotPickable;
+                } else {
+                    strNotPickable = 15874;
+                }
+
+                if (strNotPickable != -1) {
+                    CMessageDisplayTextRefSend* pMessage = new CMessageDisplayTextRefSend(-1,
+                        strNotPickable,
+                        0,
+                        RGB(215, 215, 190),
+                        -1,
+                        m_id,
+                        cause.m_nInstance);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+                }
+                return;
+            }
+
+            if (pObject->GetObjectType() != CGameObject::TYPE_SPRITE) {
+                STRREF strNotPickable;
+                if ((m_dwFlags & 0x200) != 0 && m_strNotPickable > -1) {
+                    strNotPickable = m_strNotPickable;
+                } else {
+                    strNotPickable = 15874;
+                }
+
+                if (strNotPickable != -1) {
+                    CMessageDisplayTextRefSend* pMessage = new CMessageDisplayTextRefSend(-1,
+                        strNotPickable,
+                        0,
+                        RGB(215, 215, 190),
+                        -1,
+                        m_id,
+                        cause.m_nInstance);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(cause.m_nInstance,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return;
+            }
+
+            CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+
+            CString sKey;
+            m_keyType.CopyToString(sKey);
+
+            if (pSprite->FindItemPersonal(sKey, 0, FALSE) == -1
+                && pSprite->FindItemBags(sKey, 0, FALSE) == -1) {
+                STRREF strNotPickable;
+                if ((m_dwFlags & 0x200) != 0 && m_strNotPickable > -1) {
+                    strNotPickable = m_strNotPickable;
+                } else {
+                    strNotPickable = 15874;
+                }
+
+                if (strNotPickable != -1) {
+                    CMessageDisplayTextRefSend* pMessage = new CMessageDisplayTextRefSend(-1,
+                        strNotPickable,
+                        0,
+                        RGB(215, 215, 190),
+                        -1,
+                        m_id,
+                        cause.m_nInstance);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(cause.m_nInstance,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return;
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(cause.m_nInstance,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    if ((m_dwFlags & 0x1) != 0) {
+        // Close the door.
+        if (_strnicmp(reinterpret_cast<char*>(m_pArea->m_header.m_areaName), "ar5004", 7) == 0) {
+            if (!m_pArea->m_search.CanToggleDoor(m_pClosedSearch, m_nClosedSearch)) {
+                // NOTE: Unused.
+                CAIObjectType typeUnused;
+                typeUnused.Set(CAIObjectType::ANYONE);
+
+                CAIAction action;
+
+                CGameObject* pObject = m_pArea->sub_47A1C0(m_id, m_pClosedSearch, m_nClosedSearch);
+                if (pObject != NULL) {
+                    // ChunkCreature(O:Object*)
+                    action.m_actionID = 292;
+                    action.m_acteeID.Set(pObject->GetAIType());
+
+                    CMessageAddAction* pAddAction = new CMessageAddAction(action, m_id, m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pAddAction, FALSE);
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+
+                    // CloseDoor(O:Object*)
+                    action.m_actionID = 144;
+                    action.m_acteeID.Set(m_typeAI);
+
+                    pAddAction = new CMessageAddAction(action, m_id, cause.m_nInstance);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pAddAction, FALSE);
+                }
+                return;
+            }
+        } else {
+            bCanToggle = m_pArea->m_search.CanToggleDoor(m_pClosedSearch, m_nClosedSearch);
+            if (!bCanToggle) {
+                return;
+            }
+        }
+
+        if (!m_sndDoor.IsSoundPlaying()) {
+            // NOTE: Uninline.
+            if (m_closeSound != "") {
+                m_sndDoor.SetResRef(m_closeSound, TRUE, TRUE);
+            } else if ((m_dwFlags & 0x80) != 0) {
+                m_sndDoor.SetResRef(CResRef("AMB_D04B"), TRUE, TRUE);
+            } else {
+                m_sndDoor.SetResRef(CResRef("AMB_D03B"), TRUE, TRUE);
+            }
+
+            m_sndDoor.SetChannel(2, reinterpret_cast<DWORD>(m_pArea));
+
+            CPoint ear;
+            LONG earZ;
+            g_pBaldurChitin->cSoundMixer.GetListenPosition(ear, earZ);
+
+            LONG priority = max(99 - 99 * ((ear.x - m_pos.x) * (ear.x - m_pos.x) / 256 + (ear.y - m_pos.y) * (ear.y - m_pos.y) / 144) / 6400, 0);
+            m_sndDoor.SetPriority(static_cast<BYTE>(priority));
+
+            m_sndDoor.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+
+            CMessagePlaySoundRef* pPlaySound = new CMessagePlaySoundRef(m_sndDoor.GetResRef(), m_id, m_id);
+
+            // NOTE: The original writes the channel without a NULL check.
+            pPlaySound->m_nChannel = 2;
+
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pPlaySound, FALSE);
+        }
+
+        m_dwFlags &= ~0x1;
+        m_pos = m_ptOpenDest;
+        m_tiledObject.m_wAIState = CTiledObject::STATE_SECONDARY_TILE;
+
+        if (m_pOpenSearch != NULL) {
+            m_pArea->m_search.RemoveDoor(m_pOpenSearch, m_nOpenSearch);
+        }
+
+        if (m_pClosedSearch != NULL) {
+            m_pArea->m_search.AddDoor(m_pClosedSearch,
+                m_nClosedSearch,
+                (m_dwFlags & 0x400) != 0);
+        }
+
+        if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+            || g_pChitin->cNetwork.m_idLocalPlayer == m_remotePlayerID) {
+            CMessageDoorStatus* pDoorStatus = new CMessageDoorStatus(this, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pDoorStatus, FALSE);
+        }
+
+        if (m_trapActivated != 0) {
+            CAITrigger trigger(CAITrigger::CLOSED, cause, 0);
+            m_pendingTriggers.AddTail(new CAITrigger(trigger));
+
+            if ((m_dwFlags & 0x4) == 0) {
+                m_trapActivated = 0;
+
+                CMessageDoorStatus* pDoorStatus = new CMessageDoorStatus(this, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pDoorStatus, FALSE);
+            }
+        }
+
+        if (!bCanToggle) {
+            return;
+        }
+    } else {
+        // Open the door.
+        if ((m_dwFlags & 0x1800) == 0x800) {
+            STRREF strNotPickable = m_strNotPickable;
+            if (strNotPickable > -1) {
+                if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+                    CMessageFloatText* pFloatText = new CMessageFloatText(m_id, m_id, strNotPickable, FALSE);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(pFloatText, FALSE);
+                } else {
+                    FloatText(strNotPickable, 10, 5);
+                }
+
+                CMessageDisplayTextRefSend* pMessage = new CMessageDisplayTextRefSend(-1,
+                    strNotPickable,
+                    0,
+                    RGB(215, 215, 190),
+                    -1,
+                    m_id,
+                    cause.m_nInstance);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+            }
+
+            m_dwFlags |= 0x1000;
+            return;
+        }
+
+        if (!m_sndDoor.IsSoundPlaying()) {
+            // NOTE: Uninline.
+            if (m_openSound != "") {
+                m_sndDoor.SetResRef(m_openSound, TRUE, TRUE);
+            } else if ((m_dwFlags & 0x80) != 0) {
+                m_sndDoor.SetResRef(CResRef("AMB_D04A"), TRUE, TRUE);
+            } else {
+                m_sndDoor.SetResRef(CResRef("AMB_D03A"), TRUE, TRUE);
+            }
+
+            m_sndDoor.SetChannel(2, reinterpret_cast<DWORD>(m_pArea));
+
+            CPoint ear;
+            LONG earZ;
+            g_pBaldurChitin->cSoundMixer.GetListenPosition(ear, earZ);
+
+            LONG priority = max(99 - 99 * ((ear.x - m_pos.x) * (ear.x - m_pos.x) / 256 + (ear.y - m_pos.y) * (ear.y - m_pos.y) / 144) / 6400, 0);
+            m_sndDoor.SetPriority(static_cast<BYTE>(priority));
+
+            m_sndDoor.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+
+            CMessagePlaySoundRef* pPlaySound = new CMessagePlaySoundRef(m_sndDoor.GetResRef(), m_id, m_id);
+
+            // NOTE: The original writes the channel without a NULL check.
+            pPlaySound->m_nChannel = 2;
+
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pPlaySound, FALSE);
+        }
+
+        m_dwFlags |= 0x1;
+        m_pos = m_ptClosedDest;
+        m_tiledObject.m_wAIState = CTiledObject::STATE_PRIMARY_TILE;
+
+        if (m_pClosedSearch != NULL) {
+            m_pArea->m_search.RemoveDoor(m_pClosedSearch, m_nClosedSearch);
+        }
+
+        if (m_pOpenSearch != NULL) {
+            m_pArea->m_search.AddDoor(m_pOpenSearch,
+                m_nOpenSearch,
+                (m_dwFlags & 0x400) != 0);
+        }
+
+        if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+            || g_pChitin->cNetwork.m_idLocalPlayer == m_remotePlayerID) {
+            CMessageDoorStatus* pDoorStatus = new CMessageDoorStatus(this, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pDoorStatus, FALSE);
+        }
+
+        if (m_trapActivated != 0) {
+            CAITrigger trigger(CAITrigger::OPENED, cause, 0);
+            m_pendingTriggers.AddTail(new CAITrigger(trigger));
+
+            if ((m_dwFlags & 0x4) == 0) {
+                m_trapActivated = 0;
+
+                CMessageDoorStatus* pDoorStatus = new CMessageDoorStatus(this, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pDoorStatus, FALSE);
+            }
+        }
+    }
+
+    if ((m_dwFlags & 0x2) != 0) {
+        m_dwFlags &= ~0x2;
+
+        if ((m_dwFlags & 0x4000) != 0
+            && m_keyType != ""
+            && PartyHasItem(m_keyType)) {
+            // TakePartyItem(S:Item*)
+            m_curAction.m_actionID = 116;
+            m_curAction.SetString1(m_keyType.GetResRefStr());
+            TakePartyItem();
+        }
+    }
 }
 
 // 0x48AC80

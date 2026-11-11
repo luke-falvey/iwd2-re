@@ -6034,6 +6034,129 @@ void CGameArea::sub_47A190()
     g_pBaldurChitin->AddMusicPosition(m_resRef, g_pBaldurChitin->cSoundMixer.m_nCurrentSong);
 }
 
+// 0x47A1C0
+//
+// NOTE: Returns the first active sprite near `nId` in the vertical list whose
+// personal space overlaps one of `pPoints`. The returned object is still
+// shared (the caller releases it).
+CGameObject* CGameArea::sub_47A1C0(LONG nId, const CPoint* pPoints, USHORT nPoints)
+{
+    CAIObjectType type;
+    CGameObject* pObject;
+    BYTE rc;
+
+    rc = m_pGame->GetObjectArray()->GetShare(nId,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pObject,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return NULL;
+    }
+
+    // NOTE: Unused.
+    type.Set(pObject->GetAIType());
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
+    // __LINE__: 9002
+    UTIL_ASSERT(pObject->GetVertListType() == CGameObject::LIST_FRONT);
+
+    // NOTE: Result is unused.
+    pObject->GetPos();
+
+    // NOTE: The original reads `pNext` and `pPrev` directly from the node
+    // at `posVertList` (which belongs to `m_lVertSort`).
+    POSITION posVertList = pObject->GetVertListPos();
+
+    m_pGame->GetObjectArray()->ReleaseShare(nId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    POSITION posFront = posVertList;
+    m_lVertSort.GetNext(posFront);
+
+    POSITION posBack = posVertList;
+    m_lVertSort.GetPrev(posBack);
+
+    while (TRUE) {
+        if (posBack != NULL) {
+            nId = reinterpret_cast<LONG>(m_lVertSort.GetPrev(posBack));
+
+            rc = m_pGame->GetObjectArray()->GetShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+            if (rc != CGameObjectArray::SUCCESS) {
+                // NOTE: Skips the front direction for this round.
+                continue;
+            }
+
+            if (pObject->GetObjectType() != CGameObject::TYPE_SPRITE) {
+                m_pGame->GetObjectArray()->ReleaseShare(nId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                continue;
+            }
+
+            CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+            if (pSprite->m_active
+                && pSprite->m_activeAI
+                && pSprite->m_activeImprisonment
+                && pSprite->GetVertListPos() != NULL) {
+                const CPoint& pos = pSprite->GetPos();
+                CPoint ptGrid(pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                    pos.y / CPathSearch::GRID_SQUARE_SIZEY);
+                if (m_search.sub_54A210(ptGrid, pSprite->m_animation.GetPersonalSpace(), pPoints, nPoints) == TRUE) {
+                    return pObject;
+                }
+            }
+
+            m_pGame->GetObjectArray()->ReleaseShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            if (posFront == NULL) {
+                continue;
+            }
+        } else if (posFront == NULL) {
+            return NULL;
+        }
+
+        nId = reinterpret_cast<LONG>(m_lVertSort.GetNext(posFront));
+
+        rc = m_pGame->GetObjectArray()->GetShare(nId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            continue;
+        }
+
+        if (pObject->GetObjectType() != CGameObject::TYPE_SPRITE) {
+            m_pGame->GetObjectArray()->ReleaseShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            continue;
+        }
+
+        CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+        if (pSprite->m_active
+            && pSprite->m_activeAI
+            && pSprite->m_activeImprisonment
+            && pSprite->GetVertListPos() != NULL) {
+            const CPoint& pos = pSprite->GetPos();
+            CPoint ptGrid(pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                pos.y / CPathSearch::GRID_SQUARE_SIZEY);
+            if (m_search.sub_54A210(ptGrid, pSprite->m_animation.GetPersonalSpace(), pPoints, nPoints) == TRUE) {
+                return pObject;
+            }
+        }
+
+        m_pGame->GetObjectArray()->ReleaseShare(nId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
 // NOTE: Inlined.
 void CGameArea::AddToMarkers(LONG id)
 {
