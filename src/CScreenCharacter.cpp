@@ -1128,7 +1128,43 @@ void CScreenCharacter::ResetClassDescriptionPanel(CGameSprite* pSprite)
 // 0x5D8B50
 void CScreenCharacter::sub_5D8B50(CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    const CRuleTables& ruleTables = pGame->GetRuleTables();
+
+    CUIPanel* pPanel = m_cUIManager.GetPanel(53);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 2777
+    UTIL_ASSERT(pPanel != NULL);
+
+    CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(pPanel->GetControl(0));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 2780
+    UTIL_ASSERT(pText != NULL);
+
+    pText->RemoveAll();
+
+    CString sText;
+
+    CString sRace = ruleTables.GetRaceString(pSprite->m_startTypeAI.m_nRace, 0);
+    CString sSrFile = ruleTables.m_tSrTable.GetAt("SRFILE", sRace);
+
+    C2DArray tSrFile;
+    tSrFile.Load(CResRef(sSrFile));
+
+    BYTE nIndex = static_cast<BYTE>(atol(tSrFile.GetAt(CPoint(0, pSprite->m_startTypeAI.m_nSubRace))));
+
+    // NOTE: The column is a constant 3 at 0x84EB2E.
+    sText = FetchString(atol(ruleTables.m_tSrList.GetAt(CPoint(3, nIndex))));
+
+    pText->DisplayString("",
+        sText,
+        pText->m_rgbLabelColor,
+        pText->m_rgbTextColor,
+        -1,
+        FALSE,
+        TRUE);
 }
 
 // 0x5D9610
@@ -5067,7 +5103,134 @@ void CScreenCharacter::sub_5F89B0(CGameSprite* pSprite)
 // 0x5F8C90
 void CScreenCharacter::sub_5F8C90(int a1)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    const CRuleTables& ruleTables = pGame->GetRuleTables();
+
+    CUIPanel* pPanel = m_cUIManager.GetPanel(57);
+
+    INT nIndex = 0;
+    INT nCount;
+
+    switch (a1) {
+    case 0:
+        field_184E = ruleTables.m_tHelp01.GetHeight();
+        nCount = field_184E;
+        if (nCount >= 11) {
+            nCount = 11;
+        }
+
+        for (nIndex = 0; nIndex < nCount; nIndex++) {
+            UpdateLabel(pPanel,
+                0x10000030 + nIndex,
+                "%s",
+                (LPCSTR)FetchString(atol(ruleTables.m_tHelp01.GetAt(CPoint(0, nIndex)))));
+        }
+        break;
+    case 1:
+        field_184E = ruleTables.m_tHelp02.GetHeight();
+        nCount = field_184E;
+        if (nCount >= 11) {
+            nCount = 11;
+        }
+
+        for (nIndex = 0; nIndex < nCount; nIndex++) {
+            UpdateLabel(pPanel,
+                0x10000030 + nIndex,
+                "%s",
+                (LPCSTR)FetchString(atol(ruleTables.m_tHelp02.GetAt(CPoint(0, nIndex)))));
+        }
+        break;
+    case 2:
+        // NOTE: Constant at 0x84EA66.
+        field_184E = 75;
+        nCount = field_184E;
+        if (nCount >= 11) {
+            nCount = 11;
+        }
+
+        for (nIndex = 0; nIndex < nCount; nIndex++) {
+            UpdateLabel(pPanel,
+                0x10000030 + nIndex,
+                "%s",
+                (LPCSTR)FetchString(ruleTables.GetFeatName(ruleTables.GetFeatId(field_1852 + nIndex))));
+        }
+        break;
+    case 3:
+        field_184E = ruleTables.m_tHelp03.GetHeight();
+        nCount = field_184E;
+        if (nCount >= 11) {
+            nCount = 11;
+        }
+
+        for (nIndex = 0; nIndex < nCount; nIndex++) {
+            UpdateLabel(pPanel,
+                0x10000030 + nIndex,
+                "%s",
+                (LPCSTR)FetchString(atol(ruleTables.m_tHelp03.GetAt(CPoint(0, field_1852 + nIndex)))));
+        }
+        break;
+    case 4:
+        field_184E = ruleTables.m_tHelp04.GetHeight();
+        nCount = field_184E;
+        if (nCount >= 11) {
+            nCount = 11;
+        }
+
+        for (nIndex = 0; nIndex < nCount; nIndex++) {
+            UpdateLabel(pPanel,
+                0x10000030 + nIndex,
+                "%s",
+                (LPCSTR)FetchString(atol(ruleTables.m_tHelp04.GetAt(CPoint(0, field_1852 + nIndex)))));
+        }
+        break;
+    case 5:
+        // NOTE: Constant at 0x84EA68.
+        field_184E = 16;
+        nCount = field_184E;
+        if (nCount >= 11) {
+            nCount = 11;
+        }
+
+        for (nIndex = 0; nIndex < nCount; nIndex++) {
+            UpdateLabel(pPanel,
+                0x10000030 + nIndex,
+                "%s",
+                (LPCSTR)FetchString(ruleTables.GetSkillName(ruleTables.GetSkillId(field_1852 + nIndex))));
+        }
+        break;
+    }
+
+    for (; nIndex < 11; nIndex++) {
+        UpdateLabel(pPanel, 0x10000030 + nIndex, "");
+    }
+
+    for (nIndex = 0; nIndex < 6; nIndex++) {
+        if (a1 == nIndex) {
+            HighlightLabel(pPanel, 0x10000004 + nIndex, TRUE, COLOR_LABEL_HIGHLIGHT_BONUS);
+        } else {
+            HighlightLabel(pPanel, 0x10000004 + nIndex, FALSE, COLOR_LABEL_HIGHLIGHT_BONUS);
+        }
+    }
+
+    if (field_1846 != a1) {
+        field_1846 = a1;
+        field_1852 = 0;
+        sub_5F91F0(0);
+
+        CUIControlScrollBar* pScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(4));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 19090
+        UTIL_ASSERT(pScrollBar != NULL);
+
+        CScreenCharacter* pCharacter = g_pBaldurChitin->m_pEngineCharacter;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 19222
+        UTIL_ASSERT(pCharacter != NULL);
+
+        pScrollBar->AdjustScrollBar(pCharacter->field_1852, pCharacter->field_184E, 11);
+    }
 }
 
 // 0x5F91F0
