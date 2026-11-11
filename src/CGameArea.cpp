@@ -1631,17 +1631,320 @@ BOOLEAN CGameArea::CanSaveGame(STRREF& strError)
 // 0x46BAD0
 LONG CGameArea::sub_46BAD0(LONG startObject, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BOOL a7, BYTE nNth, BOOL a9)
 {
-    // TODO: Incomplete.
+    CGameObject* pObject;
+    LONG nId;
+    BYTE rc;
+    LONG aDistance[12];
+    LONG aId[12];
+    CAIObjectType startType;
+    DWORD dwStateMask = STATE_DEAD;
 
-    return CGameObjectArray::INVALID_INDEX;
+    if (a7) {
+        dwStateMask = STATE_DEAD | STATE_SLEEPING;
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
+    // __LINE__: 1188
+    UTIL_ASSERT(terrainTable != NULL);
+
+    rc = m_pGame->GetObjectArray()->GetShare(startObject,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pObject,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return CGameObjectArray::INVALID_INDEX;
+    }
+
+    startType.Set(pObject->GetAIType());
+
+    if (pObject->GetPos().x < 0 || pObject->GetPos().y < 0) {
+        m_pGame->GetObjectArray()->ReleaseShare(startObject,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return CGameObjectArray::INVALID_INDEX;
+    }
+
+    if (pObject->GetVertListType() != CGameObject::LIST_FRONT) {
+        CPoint pos = pObject->GetPos();
+        m_pGame->GetObjectArray()->ReleaseShare(startObject,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return sub_46DDC0(pos.x,
+            pos.y,
+            type,
+            range,
+            terrainTable,
+            checkLOS,
+            seeInvisible,
+            nNth,
+            a9);
+    }
+
+    CPoint ptStart = pObject->GetPos();
+
+    CPoint pt;
+    pt.x = pObject->GetPos().x;
+    pt.y = 4 * pObject->GetPos().y / 3;
+
+    if (m_visibility.PointToTile(ptStart) >= m_visibility.m_nWidth * m_visibility.m_nHeight) {
+        // NOTE: Leftover of a stripped debug message.
+        char* szError = new char[128];
+        if (szError != NULL) {
+            sprintf(szError, "Illegal position: (%d,%d)\n", ptStart.x, ptStart.y);
+            delete[] szError;
+        }
+
+        m_pGame->GetObjectArray()->ReleaseShare(startObject,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return CGameObjectArray::INVALID_INDEX;
+    }
+
+    POSITION posVertList = pObject->GetVertListPos();
+
+    m_pGame->GetObjectArray()->ReleaseShare(startObject,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    if (posVertList == NULL) {
+        return CGameObjectArray::INVALID_INDEX;
+    }
+
+    if (checkLOS) {
+        if (m_pGame->GetCharacterPortraitNum(startObject) != -1) {
+            if (!m_visibility.IsTileVisible(m_visibility.PointToTile(ptStart))) {
+                return CGameObjectArray::INVALID_INDEX;
+            }
+        } else {
+            if (!m_visibility.IsTileExplored(m_visibility.PointToTile(ptStart))) {
+                return CGameObjectArray::INVALID_INDEX;
+            }
+        }
+    }
+
+    INT nNthIndex = nNth;
+    for (SHORT k = 0; k < nNthIndex + 1; k++) {
+        aDistance[k] = range * range + 1;
+        aId[k] = CGameObjectArray::INVALID_INDEX;
+    }
+
+    // NOTE: The original reads `pNext` and `pPrev` directly from the node
+    // at `posVertList` (which belongs to `m_lVertSort`).
+    POSITION posFront = posVertList;
+    m_lVertSort.GetNext(posFront);
+
+    POSITION posBack = posVertList;
+    m_lVertSort.GetPrev(posBack);
+
+    while (posBack != NULL || posFront != NULL) {
+        if (posBack != NULL) {
+            nId = reinterpret_cast<LONG>(m_lVertSort.GetPrev(posBack));
+
+            rc = m_pGame->GetObjectArray()->GetShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+            if (rc != CGameObjectArray::SUCCESS) {
+                continue;
+            }
+
+            if (pObject->GetVertListPos() != NULL) {
+                const CPoint& ptObject = pObject->GetPos();
+                LONG x = ptObject.x;
+                LONG dy = pt.y - 4 * ptObject.y / 3;
+                if (dy * dy < aDistance[nNthIndex]) {
+                    if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                        CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+                        if ((pSprite->GetDerivedStats()->m_generalState & dwStateMask) == 0
+                            && pSprite->IsVisibleToCaller(seeInvisible)
+                            && pSprite->GetAnimation()->GetAboveGround()
+                            && !pSprite->GetDerivedStats()->m_cImmunitiesAIType.OnList(startType)
+                            && pSprite->GetBaseStats()->field_294 != 1
+                            && (a9 != TRUE
+                                || (pSprite->GetDerivedStats()->m_generalState & STATE_SUMMONED_CREATURE) != 0)
+                            && (pSprite->GetObjectType() != CGameObject::TYPE_SPRITE
+                                || (pSprite->m_active
+                                    && pSprite->m_activeAI
+                                    && pSprite->m_activeImprisonment))
+                            && pSprite->GetAIType().OfType(type, FALSE, FALSE)
+                            && (!checkLOS
+                                || CheckLOS(ptStart, pSprite->GetPos(), terrainTable, TRUE))) {
+                            LONG nDistance = (pt.x - x) * (pt.x - x) + dy * dy;
+                            for (SHORT i = 0; i < nNthIndex + 1; i++) {
+                                if (nDistance < aDistance[i]) {
+                                    memmove(&aDistance[i + 1], &aDistance[i], (nNthIndex - i) * sizeof(LONG));
+                                    memmove(&aId[i + 1], &aId[i], (nNthIndex - i) * sizeof(LONG));
+                                    aDistance[i] = nDistance;
+                                    aId[i] = nId;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    posBack = NULL;
+                }
+            }
+
+            m_pGame->GetObjectArray()->ReleaseShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        if (posFront != NULL) {
+            nId = reinterpret_cast<LONG>(m_lVertSort.GetNext(posFront));
+
+            rc = m_pGame->GetObjectArray()->GetShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+            if (rc != CGameObjectArray::SUCCESS) {
+                continue;
+            }
+
+            if (pObject->GetVertListPos() != NULL) {
+                const CPoint& ptObject = pObject->GetPos();
+                LONG x = ptObject.x;
+                LONG dy = pt.y - 4 * ptObject.y / 3;
+                if (dy * dy < aDistance[nNthIndex]) {
+                    if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                        CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+                        if ((pSprite->GetDerivedStats()->m_generalState & dwStateMask) == 0
+                            && pSprite->IsVisibleToCaller(seeInvisible)
+                            && pSprite->GetAnimation()->GetAboveGround()
+                            && !pSprite->GetDerivedStats()->m_cImmunitiesAIType.OnList(startType)
+                            && pSprite->GetBaseStats()->field_294 != 1
+                            && (a9 != TRUE
+                                || (pSprite->GetDerivedStats()->m_generalState & STATE_SUMMONED_CREATURE) != 0)
+                            && (pSprite->GetObjectType() != CGameObject::TYPE_SPRITE
+                                || (pSprite->m_active
+                                    && pSprite->m_activeAI
+                                    && pSprite->m_activeImprisonment))
+                            && pSprite->GetAIType().OfType(type, FALSE, FALSE)
+                            && (!checkLOS
+                                || CheckLOS(ptStart, pSprite->GetPos(), terrainTable, TRUE))) {
+                            LONG nDistance = (pt.x - x) * (pt.x - x) + dy * dy;
+                            for (SHORT i = 0; i < nNthIndex + 1; i++) {
+                                if (nDistance < aDistance[i]) {
+                                    memmove(&aDistance[i + 1], &aDistance[i], (nNthIndex - i) * sizeof(LONG));
+                                    memmove(&aId[i + 1], &aId[i], (nNthIndex - i) * sizeof(LONG));
+                                    aDistance[i] = nDistance;
+                                    aId[i] = nId;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    posFront = NULL;
+                }
+            }
+
+            m_pGame->GetObjectArray()->ReleaseShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    if (nNth > 0) {
+        do {
+            if (aId[nNth] != CGameObjectArray::INVALID_INDEX) {
+                break;
+            }
+            nNth--;
+        } while (nNth != 0);
+    }
+
+    return aId[nNth];
 }
 
 // 0x46DDC0
 LONG CGameArea::sub_46DDC0(INT x, INT y, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BYTE nNth, BOOL a9)
 {
-    // TODO: Incomplete.
+    CGameObject* pObject;
+    LONG aDistance[12];
+    LONG aId[12];
 
-    return CGameObjectArray::INVALID_INDEX;
+    if (x < 0 || y < 0) {
+        return CGameObjectArray::INVALID_INDEX;
+    }
+
+    INT nNthIndex = nNth;
+    for (SHORT k = 0; k < nNthIndex + 1; k++) {
+        aDistance[k] = range * range + 1;
+        aId[k] = CGameObjectArray::INVALID_INDEX;
+    }
+
+    CPoint pt(x, y);
+    LONG nY = 4 * y / 3;
+
+    POSITION pos = m_lVertSort.GetHeadPosition();
+    while (pos != NULL) {
+        LONG nId = reinterpret_cast<LONG>(m_lVertSort.GetNext(pos));
+
+        BYTE rc = m_pGame->GetObjectArray()->GetShare(nId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            LONG nObjectX = pObject->GetPos().x;
+            LONG nObjectY = 4 * pObject->GetPos().y / 3;
+
+            if (nY - nObjectY <= range) {
+                LONG dy = nObjectY - nY;
+                if (dy > range) {
+                    m_pGame->GetObjectArray()->ReleaseShare(nId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    break;
+                }
+
+                CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+                if ((pObject->GetObjectType() != CGameObject::TYPE_SPRITE
+                        || (pSprite->m_active
+                            && pSprite->m_activeAI
+                            && pSprite->m_activeImprisonment))
+                    && (pObject->GetObjectType() != CGameObject::TYPE_SPRITE
+                        || pSprite->GetAnimation()->GetAboveGround())
+                    && (pObject->GetObjectType() != CGameObject::TYPE_SPRITE
+                        || pSprite->IsVisibleToCaller(seeInvisible))
+                    && pObject->GetAIType().OfType(type, FALSE, FALSE)
+                    && (!a9
+                        || (pSprite->GetDerivedStats()->m_generalState & STATE_SUMMONED_CREATURE) != 0)) {
+                    LONG nDistance = (nObjectX - x) * (nObjectX - x) + dy * dy;
+                    for (SHORT i = 0; i < nNthIndex + 1; i++) {
+                        if (nDistance > aDistance[i]) {
+                            continue;
+                        }
+
+                        if (!checkLOS
+                            || CheckLOS(pt, pObject->GetPos(), terrainTable, FALSE)) {
+                            memmove(&aDistance[i + 1], &aDistance[i], (nNthIndex - i) * sizeof(LONG));
+                            memmove(&aId[i + 1], &aId[i], (nNthIndex - i) * sizeof(LONG));
+                            aDistance[i] = nDistance;
+                            aId[i] = nId;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            m_pGame->GetObjectArray()->ReleaseShare(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    if (nNth > 0) {
+        do {
+            if (aId[nNth] != CGameObjectArray::INVALID_INDEX) {
+                break;
+            }
+            nNth--;
+        } while (nNth != 0);
+    }
+
+    return aId[nNth];
 }
 
 // 0x46E130
