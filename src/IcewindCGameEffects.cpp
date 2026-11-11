@@ -6,6 +6,7 @@
 #include "CInfGame.h"
 #include "CMessage.h"
 #include "CProjectileArea.h"
+#include "CProjectilePart6.h"
 #include "CScreenWorld.h"
 #include "CUtil.h"
 #include "IcewindMisc.h"
@@ -32,6 +33,9 @@ const char RESREF_EYE_OF_FORTITUDE[] = "SpIn131";
 
 // 0x8AEBE4
 const char RESREF_EYE_OF_STONE[] = "SpIn132";
+
+// 0x8AEBE8
+const char* RESREF_BEHOLDER_DISPEL_MAGIC = "SpIn164";
 
 // 0x8AEBEC
 const char* RESREF_HARPY_WAIL = "SpIn166";
@@ -1708,6 +1712,41 @@ CGameEffect* IcewindCGameEffectBeholderDispelMagic::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x566C20
+BOOL IcewindCGameEffectBeholderDispelMagic::ApplyEffect(CGameSprite* pSprite)
+{
+    if (IcewindMisc::IsDead(pSprite) == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    CProjectileSingleTarget850DDC* pProjectile = new CProjectileSingleTarget850DDC("", "");
+    pProjectile->field_2CE = 600;
+    pProjectile->field_2D2 = 300;
+    pProjectile->m_speed *= 5;
+
+    CPoint ptDirection = IcewindMisc::sub_584610(pSprite->m_nDirection);
+    CPoint ptTarget = IcewindMisc::sub_5847B0(pSprite->GetPos(), ptDirection.x, ptDirection.y, 300);
+
+    std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(pSprite, RESREF_BEHOLDER_DISPEL_MAGIC, 1);
+    for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+        (*it)->m_sourceRes = CResRef(CString(RESREF_BEHOLDER_DISPEL_MAGIC));
+        (*it)->m_casterLevel = m_casterLevel;
+        pProjectile->AddEffect(*it);
+    }
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pSprite->GetId(),
+        pSprite->GetId(),
+        ptTarget,
+        0,
+        0);
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
