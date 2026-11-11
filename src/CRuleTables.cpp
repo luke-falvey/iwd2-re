@@ -3596,7 +3596,100 @@ INT CRuleTables::GetEncumbranceMod(CGameSprite* pSprite) const
 // 0x546B60
 void CRuleTables::sub_546B60(CGameSprite* pSprite, int& a2, int& a3, int& a4, BOOL a5) const
 {
-    // TODO: Incomplete.
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CRuleTables.cpp
+    // __LINE__: 6731
+    UTIL_ASSERT(pSprite != NULL);
+
+    const CAIObjectType& typeAI = pSprite->GetAIType();
+    CDerivedStats& DStats = pSprite->m_derivedStats;
+
+    a2 = 0;
+    a3 = 0;
+    a4 = 5;
+
+    if ((typeAI.m_nClassMask & 0x1) != 0) {
+        a2 = a2 + atol(m_tBAATFGT.GetAt(CPoint(0, DStats.GetClassLevel(1) - 1)));
+    }
+
+    if ((typeAI.m_nClassMask & 0x2) != 0) {
+        a2 = a2 + atol(m_tBAATNFG.GetAt(CPoint(0, DStats.GetClassLevel(2) - 1)));
+    }
+
+    if ((typeAI.m_nClassMask & 0x4) != 0) {
+        a2 = a2 + atol(m_tBAATNFG.GetAt(CPoint(0, DStats.GetClassLevel(3) - 1)));
+    }
+
+    if ((typeAI.m_nClassMask & 0x8) != 0) {
+        a2 = a2 + atol(m_tBAATNFG.GetAt(CPoint(0, DStats.GetClassLevel(4) - 1)));
+    }
+
+    if ((typeAI.m_nClassMask & 0x10) != 0) {
+        a2 = a2 + atol(m_tBAATFGT.GetAt(CPoint(0, DStats.GetClassLevel(5) - 1)));
+    }
+
+    if ((typeAI.m_nClassMask & 0x40) != 0) {
+        a2 = a2 + atol(m_tBAATFGT.GetAt(CPoint(0, DStats.GetClassLevel(7) - 1)));
+    }
+
+    if ((typeAI.m_nClassMask & 0x80) != 0) {
+        a2 = a2 + atol(m_tBAATFGT.GetAt(CPoint(0, DStats.GetClassLevel(8) - 1)));
+    }
+
+    if ((typeAI.m_nClassMask & 0x100) != 0) {
+        a2 = a2 + atol(m_tBAATNFG.GetAt(CPoint(0, DStats.GetClassLevel(9) - 1)));
+    }
+
+    if ((typeAI.m_nClassMask & 0x200) != 0) {
+        a2 = a2 + atol(m_tBAATMAG.GetAt(CPoint(0, DStats.GetClassLevel(10) - 1)));
+    }
+
+    if ((typeAI.m_nClassMask & 0x400) != 0) {
+        a2 = a2 + atol(m_tBAATMAG.GetAt(CPoint(0, DStats.GetClassLevel(11) - 1)));
+    }
+
+    if ((typeAI.m_nClassMask & 0x20) != 0) {
+        INT nMonkLevel = DStats.GetClassLevel(6);
+
+        const C2DArray* pTable;
+        if (a2 == 0
+            && pSprite->m_equipment.m_selectedWeapon == CGameSpriteEquipment::SLOT_FIST
+            && pSprite->m_equipment.m_items[CGameSpriteEquipment::SLOT_ARMOR] == NULL) {
+            a4 = 3;
+            pTable = &m_tBAATMKU;
+        } else {
+            pTable = &m_tBAATNFG;
+        }
+
+        a2 = a2 + atol(pTable->GetAt(CPoint(0, nMonkLevel - 1)));
+    }
+
+    if (a5 == TRUE) {
+        if (pSprite->m_derivedStats.m_spellStates.test(SPLSTATE_FEAT_RAPID_SHOT)) {
+            CItem* pItem = pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon];
+
+            ITEM_ABILITY* pAbility;
+            if (pItem != NULL) {
+                pItem->Demand();
+                pAbility = pItem->GetAbility(pSprite->m_equipment.m_selectedWeaponAbility);
+            } else {
+                pAbility = NULL;
+            }
+
+            // NOTE: `pAbility` is dereferenced without a NULL check.
+            WORD nType = pAbility->type & 0xFF;
+            if (nType == 4 || nType == 2) {
+                a2 = a2 + 5;
+            }
+
+            if (pItem != NULL) {
+                pItem->Release();
+            }
+        }
+    }
+
+    a3 = (a2 - 1) / a4 + 1;
+    a3 = min(a3, 4);
+    a3 = max(a3, 0);
 }
 
 // 0x547020

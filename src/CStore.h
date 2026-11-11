@@ -23,11 +23,18 @@ public:
     BOOL GetItem(INT nIndex, CItem& cItem);
     CResRef GetItemId(INT nIndex);
     INT GetItemIndex(const CResRef& itemId);
-    INT RemoveItemExt(CResRef resRef, int a2, int a3, int a4, BOOLEAN* a5);
+    INT RemoveItemExt(CResRef resRef, DWORD dwFlags, INT nIndex, INT nCount, BOOLEAN* pRemoved);
+    INT RemoveStoreItem(CResRef resRef, DWORD dwFlags, INT nIndex, INT nCount, BOOLEAN* pRemoved);
+    INT RemoveContainerItem(CResRef resRef, DWORD dwFlags, INT nIndex, INT nCount, BOOLEAN* pRemoved);
     INT AddItemExt(CItem& cItem, DWORD storeFlags);
+    INT AddContainerItem(CItem& cItem);
+    INT AddStoreItem(CItem& cItem);
     BOOL IsItemAllowed(CItem& cItem);
     BOOL IsValidIdentifyItem(CItem* pItem);
     void CompressItems();
+    void sub_54CF80();
+    BOOLEAN DoItemRandomize(INT nIndex, CItem& cItem);
+    BOOLEAN MergeStoreItemFlags(INT nIndex, CItem& cItem);
     BOOL GetSpell(INT nIndex, CResRef& spellResRef, DWORD& dwCost);
     BOOL GetDrink(INT nIndex, STRREF& strName, DWORD& dwCost, DWORD& dwRumorChance);
 
