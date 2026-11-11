@@ -545,6 +545,40 @@ public:
     CGameEffect* m_sourceEffectPtr;
 };
 
+// NOTE: The original `CDerivedStats` embeds MSVC 6 STL containers and MFC
+// template lists. Their template instantiations have no counterpart here
+// because this repo uses the standard library; the functions below are
+// those instantiations.
+//
+// - 0x4482F0, 0x448310, 0x448330, 0x448350, 0x448370, 0x448390, 0x4483B0,
+//   0x4483D0, 0x4483F0 and 0x448410 are `CTypedPtrList<CPtrList, T*>`
+//   constructors (`CPtrList::CPtrList(0xA)` then a vtable store). Each owner
+//   (`CImmunities*`, `CSelectiveBonusList`, ...) stores its own vtable
+//   afterwards, so they are implicit here. 0x448330 is the base of
+//   `CPersistantEffectListRegenerated`.
+// - 0x4486D0 is `std::bitset<256>::bitset(0)` (`m_spellStates`) and 0x4486F0
+//   is `std::bitset<32>::bitset(0)` (`m_visualEffects`).
+// - 0x444D10 is `CGameSpriteGroupedSpellList::operator=` (copies `m_lists`
+//   and `m_nHighestLevel`, used for `field_CAC`) and 0x4450A0 is
+//   `CGameSpriteSpells::operator=` (used for `m_spells`). Both are compiler
+//   generated.
+// - 0x448550 (`size`), 0x448AD0 (`capacity`), 0x448B00 (`erase(first,
+//   last)`), 0x448BD0 (`_Destroy`), 0x448C00 (`copy`) and 0x449B80
+//   (`_Insert_n`) are `std::vector<CDamageReduction>` members
+//   (`CDamageReduction` is 0x24 bytes there).
+// - 0x448700 (constructor), 0x448470 (destructor), 0x448740 (`insert`),
+//   0x448A50 (`find`) and 0x449880 (head node allocation) are the
+//   `std::set<int>` instantiation used by `CDamageReduction` (also built
+//   as a local by `CDerivedStats::Reload`).
+// - 0x448C40 (constructor), 0x448C70 (`erase(first, last)`), 0x449ED0
+//   (`erase(iterator)`), 0x44A3F0 (`_Erase`, releases the node's string),
+//   0x44A300 (tree copy) and 0x44A4F0 (`iterator::operator++`) are the
+//   `std::set<std::string>` of `m_spellImmunities`.
+// - 0x448DA0 (constructor), 0x449010 (`erase(first, last)`) are the
+//   `std::set<int>` of `m_naturalImmunities`.
+// - 0x4490E0 is `std::list<CDerivedStatsWhenStruck>::_Buynode`
+//   (`m_lWhenStruck`).
+
 class CDamageReductionList : public std::vector<CDamageReduction> {
 public:
     LONG Apply(LONG nDamage, LONG nEnchantment, DWORD nDamageType);
@@ -553,6 +587,7 @@ public:
 class CPersistantEffectListRegenerated : public CTypedPtrList<CPtrList, CPersistantEffect*> {
 public:
     CPersistantEffectListRegenerated();
+    void ClearAll();
     void AIUpdate(CGameSprite* pSprite, LONG deltaT);
 
     /* 001C */ LONG m_nCounter;
@@ -567,6 +602,34 @@ public:
     /* 0008 */ CResRef m_res;
     /* 0010 */ DWORD m_nCasterLevel;
     /* 0014 */ CPoint m_target;
+};
+
+// NOTE: Ten pairs of values, cleared by 0x4E7050 and zeroed by an inlined
+// constructor in `CDerivedStats::CDerivedStats`.
+class CDerivedStatsLevelPairs {
+public:
+    CDerivedStatsLevelPairs();
+    void ClearAll();
+
+    /* 0000 */ DWORD m_entries[10][2];
+};
+
+// NOTE: Entry of `CDerivedStatsPairList` (8 bytes, copied by 0x4E7720).
+class CDerivedStatsPair {
+public:
+    /* 0000 */ DWORD field_0;
+    /* 0004 */ DWORD field_4;
+};
+
+// NOTE: List of `CResRef` (copied by 0x4E7680).
+class CDerivedStatsResRefList : public CTypedPtrList<CPtrList, CResRef*> {
+public:
+    void ClearAll();
+};
+
+class CDerivedStatsPairList : public CTypedPtrList<CPtrList, CDerivedStatsPair*> {
+public:
+    void ClearAll();
 };
 
 class CDerivedStats : public CDerivedStatsTemplate {
@@ -596,11 +659,18 @@ public:
     /* 0188 */ CImmunitiesProjectile m_cImmunitiesProjectile;
     /* 01A4 */ CImmunitiesEffect m_cImmunitiesEffect;
     /* 01C0 */ CImmunitiesAIType m_cImmunitiesAIType;
-    /* 01DC */ CImmunitiesSpellLevel m_cImmunitiesSpellLevel;
-    /* 01E0 */ int field_1E0;
-    /* 01E4 */ int field_1E4;
-    /* 01E8 */ int field_1E8;
-    /* 01EC */ int field_1EC;
+    // NOTE: `field_1E0`-`field_1EC` alias `m_cImmunitiesSpellLevel.m_levels[1]`
+    // to `m_levels[4]` (set directly by the globe effects).
+    union {
+        /* 01DC */ CImmunitiesSpellLevel m_cImmunitiesSpellLevel;
+        struct {
+            BYTE m_spellLevelPadding[4];
+            /* 01E0 */ int field_1E0;
+            /* 01E4 */ int field_1E4;
+            /* 01E8 */ int field_1E8;
+            /* 01EC */ int field_1EC;
+        };
+    };
     /* 0204 */ CImmunitiesWeapon m_cImmunitiesWeapon;
     /* 0220 */ CSelectiveBonusList m_cToHitBonusList;
     /* 023C */ CSelectiveBonusList m_cDamageBonusList;
@@ -610,6 +680,9 @@ public:
     /* 02AC */ CImmunitiesItemTypeEquipList field_2AC;
     /* 02C8 */ CImmunitiesProjectile m_cBounceProjectile;
     /* 02E4 */ CImmunitiesEffect m_cBounceEffect;
+    /* 0300 */ CImmunitiesSpellLevel field_300;
+    /* 0328 */ CDerivedStatsLevelPairs field_328;
+    /* 0378 */ CDerivedStatsLevelPairs field_378;
     /* 03C8 */ CImmunitiesProjectile field_3C8;
     /* 03E4 */ CImmunitiesProjectile field_3E4;
     /* 0400 */ CImmunitiesProjectile field_400;
@@ -619,21 +692,23 @@ public:
     // NOTE: At 0x0470 in the original (not annotated because the STL
     // container layout differs, see known layout mismatches around it).
     std::set<std::string> m_spellImmunities;
-    /* 04AC */ CPtrList field_4AC;
+    /* 04AC */ CDerivedStatsResRefList field_4AC;
     /* 0480 */ std::set<int> m_naturalImmunities;
     /* 0490 */ std::list<CDerivedStatsWhenStruck> m_lWhenStruck;
     // NOTE: At 0x049C in the original (STL layout differs).
     CDamageReductionList m_damageReduction;
-    /* 04C8 */ CPtrList field_4C8;
-    /* 04E4 */ CPtrList field_4E4;
-    /* 0500 */ CPtrList field_500;
-    /* 051C */ CPtrList field_51C;
-    /* 0538 */ CPtrList field_538;
+    /* 04C8 */ CDerivedStatsResRefList field_4C8;
+    /* 04E4 */ CDerivedStatsPairList field_4E4;
+    /* 0500 */ CDerivedStatsPairList field_500;
+    /* 051C */ CDerivedStatsPairList field_51C;
+    /* 0538 */ CDerivedStatsPairList field_538;
     /* 0554 */ CPersistantEffectListRegenerated m_cRegeneratedPersistantEffectList;
     /* 0574 */ CColorRanges m_appliedColorRanges;
     /* 0590 */ CColorEffects m_appliedColorEffects;
     /* 05AC */ CGameSpriteSpells m_spells;
-    /* 0DA8 */ int field_DA8;
+    // NOTE: Nine spell lists, the same layout as `CGameSpriteGroupedSpellList`
+    // (`m_nHighestLevel` is at 0x0DA8).
+    /* 0CAC */ CGameSpriteGroupedSpellList field_CAC;
     /* 0DAC */ BOOL m_disabledButtons[40];
     /* 0E4C */ BOOL m_disabledSpellTypes[3];
 };
