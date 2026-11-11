@@ -2823,7 +2823,207 @@ BOOL CInfinity::RequestRect(int x1, int y1, int x2, int y2)
 // 0x5D00C0
 BOOL CInfinity::ScrollingRequestRect(int x1, int y1, int x2, int y2, INT nScrollState)
 {
-    // TODO: Incomplete.
+    CancelRequestRect(field_15E);
+
+    BYTE nFlags;
+    if ((m_areaType & 0x40) != 0) {
+        nFlags = m_requestDayNightCode;
+    } else {
+        nFlags = 1;
+    }
+
+    if ((m_areaType & 0x4) != 0 && nCurrentRainLevel != 0) {
+        nFlags |= 0x4;
+    }
+
+    field_15E = nFlags;
+
+    {
+        int nStartX = (x1 + 1 < 0 ? 0 : x1 + 1);
+        int nEndX = (nTilesX - 1 < x2 - 1 ? nTilesX - 1 : x2 - 1);
+        int nStartY = (y1 + 1 < 0 ? 0 : y1 + 1);
+        int nEndY = (nTilesY - 1 < y2 - 1 ? nTilesY - 1 : y2 - 1);
+
+        for (int nY = nStartY; nY < nEndY; nY++) {
+            for (int nX = nStartX; nX < nEndX; nX++) {
+                RequestTile(nX, nY, nFlags, 2);
+            }
+        }
+    }
+
+    switch (nScrollState) {
+    case 1:
+        {
+            int nStartX = (x1 < 0 ? 0 : x1);
+            int nEndX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nStartY = (y1 - 1 < 0 ? 0 : y1 - 1);
+            int nEndY = (y1 < 0 ? 0 : y1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 2:
+        {
+            int nStartX = (x1 < 0 ? 0 : x1);
+            int nEndX = (nTilesX - 1 < x2 + 1 ? nTilesX - 1 : x2 + 1);
+            int nStartY = (y1 - 1 < 0 ? 0 : y1 - 1);
+            int nEndY = (y1 < 0 ? 0 : y1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        {
+            int nStartX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nEndX = (nTilesX - 1 < x2 + 1 ? nTilesX - 1 : x2 + 1);
+            int nStartY = (y1 < 0 ? 0 : y1);
+            int nEndY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 3:
+        {
+            int nStartX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nEndX = (nTilesX - 1 < x2 + 1 ? nTilesX - 1 : x2 + 1);
+            int nStartY = (y1 < 0 ? 0 : y1);
+            int nEndY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 4:
+        {
+            int nStartX = (x1 < 0 ? 0 : x1);
+            int nEndX = (nTilesX - 1 < x2 + 1 ? nTilesX - 1 : x2 + 1);
+            int nStartY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+            int nEndY = (nTilesY - 1 < y2 + 1 ? nTilesY - 1 : y2 + 1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        {
+            int nStartX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nEndX = (nTilesX - 1 < x2 + 1 ? nTilesX - 1 : x2 + 1);
+            int nStartY = (y1 < 0 ? 0 : y1);
+            int nEndY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 5:
+        {
+            int nStartX = (x1 < 0 ? 0 : x1);
+            int nEndX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nStartY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+            int nEndY = (nTilesY - 1 < y2 + 1 ? nTilesY - 1 : y2 + 1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 6:
+        {
+            int nStartX = (x1 - 1 < 0 ? 0 : x1 - 1);
+            int nEndX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nStartY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+            int nEndY = (nTilesY - 1 < y2 + 1 ? nTilesY - 1 : y2 + 1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        {
+            int nStartX = (x1 - 1 < 0 ? 0 : x1 - 1);
+            int nEndX = (x1 < 0 ? 0 : x1);
+            int nStartY = (y1 < 0 ? 0 : y1);
+            int nEndY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 7:
+        {
+            int nStartX = (x1 - 1 < 0 ? 0 : x1 - 1);
+            int nEndX = (x1 < 0 ? 0 : x1);
+            int nStartY = (y1 < 0 ? 0 : y1);
+            int nEndY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    case 8:
+        {
+            int nStartX = (x1 - 1 < 0 ? 0 : x1 - 1);
+            int nEndX = (nTilesX - 1 < x2 ? nTilesX - 1 : x2);
+            int nStartY = (y1 - 1 < 0 ? 0 : y1 - 1);
+            int nEndY = (y1 < 0 ? 0 : y1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        {
+            int nStartX = (x1 - 1 < 0 ? 0 : x1 - 1);
+            int nEndX = (x1 < 0 ? 0 : x1);
+            int nStartY = (y1 < 0 ? 0 : y1);
+            int nEndY = (nTilesY - 1 < y2 ? nTilesY - 1 : y2);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    RequestTile(nX, nY, nFlags, 1);
+                }
+            }
+        }
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\Infinity.cpp
+        // __LINE__: 5161
+        UTIL_ASSERT(FALSE);
+        break;
+    }
+
+    field_196 = nScrollState;
+    field_68 = x1;
+    field_6C = y1;
+    field_70 = x2;
+    field_74 = y2;
 
     return TRUE;
 }
