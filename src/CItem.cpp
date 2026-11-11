@@ -374,6 +374,14 @@ WORD CItem::GetItemType()
     return nType;
 }
 
+// 0x4E9840
+WORD CItem::sub_4E9840(const ITEM_ABILITY* ability)
+{
+    // TODO: Incomplete.
+
+    return 0;
+}
+
 // 0x4E9910
 DWORD CItem::GetCriticalHitMultiplier()
 {
