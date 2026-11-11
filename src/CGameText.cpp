@@ -276,3 +276,10 @@ CGameText::~CGameText()
         }
     }
 }
+
+// 0x47C830
+BOOLEAN CGameText::CanSaveGame(STRREF& strError)
+{
+    strError = -1;
+    return TRUE;
+}

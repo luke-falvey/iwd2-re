@@ -3138,7 +3138,7 @@ BOOL CVidCell::Blt8To32(DWORD* pSurface, LONG lPitch, const CPoint& pt, const CR
             nBltW -= rClip.left - pt.x;
             nSrcJump += rClip.left - pt.x;
             pFrameData += rClip.left - pt.x;
-            pSurface += rClip.left - pt.x;
+            pDest += rClip.left - pt.x;
         }
 
         if (pt.x + nBltWidth > rClip.right) {
@@ -3156,7 +3156,7 @@ BOOL CVidCell::Blt8To32(DWORD* pSurface, LONG lPitch, const CPoint& pt, const CR
                     pFrameData++;
                     pDest++;
                 }
-                pDest += lPitch / 4 - nBltWidth;
+                pDest += lPitch / 4 - nBltW;
                 pFrameData += nSrcJump;
             }
         } else {
@@ -3171,7 +3171,7 @@ BOOL CVidCell::Blt8To32(DWORD* pSurface, LONG lPitch, const CPoint& pt, const CR
                     pFrameData++;
                     pDest++;
                 }
-                pDest += lPitch / 4 - nBltWidth;
+                pDest += lPitch / 4 - nBltW;
                 pFrameData += nSrcJump;
             }
         }

@@ -2101,6 +2101,8 @@ void CGameSprite::AIUpdate()
                 if (InControl() && !m_timedEffectList.IsTypeOnList(ICEWIND_CGAMEEFFECT_DAYBLINDNESS)) {
                     ITEM_EFFECT effect;
                     CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_DAYBLINDNESS);
+                    // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+                    effect.durationType = 1;
 
                     CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
                         GetPos(),
@@ -12735,6 +12737,33 @@ void CGameSprite::SetModalState(BYTE modalState, BOOL bUpdateToolbar)
             g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateButtons();
         }
     }
+}
+
+// 0x75E890
+BOOLEAN CGameSprite::CanSaveGame(STRREF& strError)
+{
+    if (!m_baseStats.field_294
+        && m_typeAI.m_nEnemyAlly >= CAIObjectType::EA_EVILCUTOFF
+        && m_canBeSeen > 0
+        && (m_derivedStats.m_generalState & STATE_DEAD) == 0
+        && (m_baseStats.m_flags & 0x8000) == 0) {
+        // "You cannot save while enemies are present." (0x4075)
+        strError = 16501;
+        return FALSE;
+    }
+
+    if (sub_7202E0()
+        && m_curAction.m_actionID != CAIAction::DIALOGUE
+        && m_curAction.m_actionID != CAIAction::STARTDIALOG
+        && m_currentActionId != CAIAction::DIALOGUE
+        && m_currentActionId != CAIAction::STARTDIALOG) {
+        strError = -1;
+        return TRUE;
+    }
+
+    // 0x4076
+    strError = 16502;
+    return FALSE;
 }
 
 // 0x7202E0
