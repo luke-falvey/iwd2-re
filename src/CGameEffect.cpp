@@ -2534,6 +2534,88 @@ CGameEffect* CGameEffectAttackNo::Copy()
     return copy;
 }
 
+// 0x4A52F0
+BOOL CGameEffectAttackNo::ApplyEffect(CGameSprite* pSprite)
+{
+    switch (m_dwFlags) {
+    case 0:
+        if (m_durationType == 1) {
+            if (pSprite->GetBaseStats()->m_numberOfAttacksBase < 5) {
+                pSprite->GetBaseStats()->m_numberOfAttacksBase += static_cast<BYTE>(m_effectAmount);
+                if (pSprite->GetBaseStats()->m_numberOfAttacksBase > 5) {
+                    pSprite->GetBaseStats()->m_numberOfAttacksBase = 5;
+                }
+            } else {
+                pSprite->GetBaseStats()->m_numberOfAttacksBase += static_cast<BYTE>(m_effectAmount);
+            }
+            m_forceRepass = TRUE;
+            m_done = TRUE;
+        } else {
+            pSprite->GetDerivedStats()->m_nNumberOfAttacks += static_cast<SHORT>(m_effectAmount);
+            m_done = FALSE;
+        }
+        break;
+    case 1:
+        if (m_durationType == 1) {
+            pSprite->GetBaseStats()->m_numberOfAttacksBase = static_cast<BYTE>(m_effectAmount);
+            m_forceRepass = TRUE;
+            m_done = TRUE;
+        } else {
+            pSprite->GetDerivedStats()->m_nNumberOfAttacks = static_cast<BYTE>(m_effectAmount);
+            m_done = FALSE;
+        }
+        break;
+    case 2:
+        if (m_durationType == 1) {
+            BYTE nBase = pSprite->GetBaseStats()->m_numberOfAttacksBase;
+            if (nBase <= 5) {
+                pSprite->GetBaseStats()->m_numberOfAttacksBase = static_cast<BYTE>(static_cast<SHORT>(m_effectAmount) * nBase / 100);
+                if (pSprite->GetBaseStats()->m_numberOfAttacksBase > 5) {
+                    pSprite->GetBaseStats()->m_numberOfAttacksBase = 5;
+                }
+            } else {
+                pSprite->GetBaseStats()->m_numberOfAttacksBase = static_cast<BYTE>((nBase - 5) * static_cast<SHORT>(m_effectAmount) / 100 + 5);
+            }
+
+            if (pSprite->GetBaseStats()->m_numberOfAttacksBase <= 1) {
+                pSprite->GetBaseStats()->m_numberOfAttacksBase = 1;
+            }
+
+            m_forceRepass = TRUE;
+            m_done = TRUE;
+        } else {
+            BYTE nBase = pSprite->GetBaseStats()->m_numberOfAttacksBase;
+            if (pSprite->GetDerivedStats()->m_nNumberOfAttacks <= 5) {
+                pSprite->GetDerivedStats()->m_nNumberOfAttacks = static_cast<SHORT>(nBase * static_cast<SHORT>(m_effectAmount) / 100);
+                if (pSprite->GetDerivedStats()->m_nNumberOfAttacks > 5) {
+                    pSprite->GetDerivedStats()->m_nNumberOfAttacks = 5;
+                }
+                if (pSprite->GetDerivedStats()->m_nNumberOfAttacks < 0) {
+                    pSprite->GetDerivedStats()->m_nNumberOfAttacks = 0;
+                }
+            } else {
+                pSprite->GetDerivedStats()->m_nNumberOfAttacks = static_cast<SHORT>((nBase - 5) * static_cast<SHORT>(m_effectAmount) / 100 + 5);
+            }
+
+            if (pSprite->GetDerivedStats()->m_nNumberOfAttacks <= 1) {
+                pSprite->GetDerivedStats()->m_nNumberOfAttacks = 1;
+            }
+
+            m_done = FALSE;
+        }
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
+        // __LINE__: 3417
+        UTIL_ASSERT(FALSE);
+    }
+
+    pSprite->GetBaseStats()->m_numberOfAttacksBase = min(pSprite->GetBaseStats()->m_numberOfAttacksBase, 5);
+    pSprite->GetDerivedStats()->m_nNumberOfAttacks = min(pSprite->GetDerivedStats()->m_nNumberOfAttacks, 5);
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -2599,6 +2681,109 @@ CGameEffect* CGameEffectBerserk::Copy()
     return copy;
 }
 
+// 0x4A55E0
+BOOL CGameEffectBerserk::ApplyEffect(CGameSprite* pSprite)
+{
+    pSprite->GetDerivedStats()->m_generalState |= STATE_BERSERK;
+
+    switch (m_dwFlags) {
+    case 1:
+        if (m_secondaryType) {
+            // NOTE: Uninline.
+            DisplayStringRef(pSprite, 14036);
+
+            pSprite->EquipMostDamagingMelee();
+        }
+
+        // NOTE: Uninline.
+        pSprite->AddPortraitIcon(4);
+
+        pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_BERSERK_ALWAYS_ACTIVE, true);
+        break;
+    case 2:
+        if (m_secondaryType) {
+            // NOTE: Uninline.
+            DisplayStringRef(pSprite, 14036);
+
+            pSprite->EquipMostDamagingMelee();
+        }
+
+        // NOTE: Uninline.
+        pSprite->AddPortraitIcon(76);
+
+        pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_BERSERK_ALWAYS_ACTIVE, true);
+        pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_BLOOD_RAGE, true);
+
+        pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_HEAL);
+        pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_CHARM);
+        pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_SLEEP);
+        pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_PANIC);
+        pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_HOLDCREATURE);
+        pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_STUN);
+        pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_CONFUSION);
+        pSprite->GetDerivedStats()->m_naturalImmunities.insert(ICEWIND_CGAMEEFFECT_HOPELESSNESS);
+
+        // NOTE: The original compares the bonus stats but adjusts the derived
+        // ones.
+        if (pSprite->m_bonusStats.field_128 < 6) {
+            pSprite->m_bonusStats.m_nSTR += 6 - static_cast<SHORT>(pSprite->GetDerivedStats()->field_128);
+            pSprite->GetDerivedStats()->field_128 = 6;
+        }
+
+        if (pSprite->m_bonusStats.field_130 < 2) {
+            pSprite->m_bonusStats.m_nCON += 2 - static_cast<SHORT>(pSprite->GetDerivedStats()->field_130);
+            pSprite->GetDerivedStats()->field_130 = 2;
+        }
+
+        pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_SUPPRESS_HP_INFO, true);
+
+        if (pSprite->GetAnimation()->GetMoveScale()) {
+            pSprite->GetAnimation()->SetMoveScale(pSprite->GetAnimation()->GetMoveScaleDefault() + 2);
+        }
+
+        if (m_secondaryType) {
+            pSprite->DropPath();
+        }
+
+        AddColorEffect(pSprite, 0x80, 0, 0, 15);
+        break;
+    default:
+        if (m_secondaryType) {
+            // NOTE: Uninline.
+            DisplayStringRef(pSprite, 14036);
+        }
+
+        // NOTE: Uninline.
+        pSprite->AddPortraitIcon(4);
+        break;
+    }
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    pGame->UpdatePortrait(pGame->GetCharacterPortraitNum(pSprite->GetId()), 1);
+
+    pSprite->sub_761650();
+
+    return TRUE;
+}
+
+// 0x4A5AB0
+void CGameEffectBerserk::OnRemove(CGameSprite* pSprite)
+{
+    if (m_dwFlags == 2) {
+        std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(pSprite,
+            "EffBR",
+            static_cast<BYTE>(m_casterLevel));
+        for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+            (*it)->m_sourceRes = m_sourceRes;
+            (*it)->m_target = m_target;
+            (*it)->m_casterLevel = m_casterLevel;
+            pSprite->AddEffect(*it, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+        }
+
+        PlaySound(CResRef("EFF_E05"), pSprite);
+    }
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4936E0
@@ -2615,6 +2800,25 @@ CGameEffect* CGameEffectBarbarianRage::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4A5C50
+void CGameEffectBarbarianRage::OnRemove(CGameSprite* pSprite)
+{
+    if (pSprite->GetDerivedStats()->GetClassLevel(CAIOBJECTTYPE_C_BARBARIAN) < 20
+        && pSprite->GetDerivedStats()->m_naturalImmunities.find(CGAMEEFFECT_FATIGUE) == pSprite->GetDerivedStats()->m_naturalImmunities.end()) {
+        std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(pSprite,
+            "EffBBR",
+            static_cast<BYTE>(m_casterLevel));
+        for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+            (*it)->m_sourceRes = m_sourceRes;
+            (*it)->m_target = m_target;
+            (*it)->m_casterLevel = m_casterLevel;
+            pSprite->AddEffect(*it, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+        }
+
+        PlaySound(CResRef("EFF_E05"), pSprite);
+    }
 }
 
 // 0x4A5BF0

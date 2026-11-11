@@ -358,6 +358,7 @@ class CGameEffectAttackNo : public CGameEffect {
 public:
     CGameEffectAttackNo(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectAwaken : public CGameEffect {
@@ -371,6 +372,8 @@ class CGameEffectBerserk : public CGameEffect {
 public:
     CGameEffectBerserk(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnRemove(CGameSprite* pSprite) override;
 };
 
 class CGameEffectBarbarianRage : public CGameEffect {
@@ -378,6 +381,7 @@ public:
     CGameEffectBarbarianRage(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
     BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnRemove(CGameSprite* pSprite) override;
 };
 
 class CGameEffectCalm : public CGameEffect {
