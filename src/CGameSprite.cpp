@@ -13887,9 +13887,98 @@ void CGameSprite::ClearDialogActions()
 // 0x733340
 CGameObject* CGameSprite::sub_733340()
 {
-    // TODO: Incomplete.
+    CGameObject* pObject = m_curAction.m_acteeID.sub_40CCA0(this, FALSE);
+    if (pObject == NULL) {
+        if (m_targetId == CGameObjectArray::INVALID_INDEX) {
+            return NULL;
+        }
 
-    return NULL;
+        if (m_bSelected && Orderable(FALSE)) {
+            CGameObject* pOldTarget;
+            BYTE rc;
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pOldTarget,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                return NULL;
+            }
+
+            if (pOldTarget->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                static_cast<CGameSprite*>(pOldTarget)->m_marker.SetType(CMarker::ELLIPSE);
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+        return NULL;
+    }
+
+    if (m_curAction.m_acteeID.m_nInstance == -1) {
+        CAIObjectType type;
+        type.Set(m_curAction.m_acteeID);
+        type.m_nInstance = pObject->GetId();
+        m_curAction.m_acteeID.Set(type);
+    }
+
+    if (m_targetId != pObject->GetId()) {
+        if (m_targetId != CGameObjectArray::INVALID_INDEX) {
+            CGameObject* pOldTarget;
+            BYTE rc;
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pOldTarget,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                // NOTE: Returns without updating the target.
+                if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE
+                    && static_cast<CGameSprite*>(pObject)->m_derivedStats.m_cImmunitiesAIType.OnList(m_typeAI)) {
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    return NULL;
+                }
+                return pObject;
+            }
+
+            if (m_bSelected
+                && Orderable(FALSE)
+                && pOldTarget->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                static_cast<CGameSprite*>(pOldTarget)->m_marker.SetType(CMarker::ELLIPSE);
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        if (m_bSelected
+            && Orderable(FALSE)
+            && pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            static_cast<CGameSprite*>(pObject)->m_marker.SetType(CMarker::RECTICLE);
+        }
+
+        m_targetId = pObject->GetId();
+    }
+
+    if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE
+        && static_cast<CGameSprite*>(pObject)->m_derivedStats.m_cImmunitiesAIType.OnList(m_typeAI)) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pObject->GetId(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return NULL;
+    }
+
+    return pObject;
 }
 
 // 0x733660
@@ -15183,6 +15272,14 @@ SHORT CGameSprite::AttackReevaluate()
     return ACTION_ERROR;
 }
 
+// 0x739B60
+SHORT CGameSprite::Swing(CGameSprite* pTarget)
+{
+    // TODO: Incomplete.
+
+    return ACTION_ERROR;
+}
+
 // 0x73B740
 SHORT CGameSprite::GetCriticalHitBonus()
 {
@@ -15528,17 +15625,245 @@ SHORT CGameSprite::sub_73D440(CItem* curWeapon)
 // 0x73EA80
 SHORT CGameSprite::sub_73EA80(CGameSprite* pTarget)
 {
-    // TODO: Incomplete.
+    if (pTarget == NULL) {
+        return ACTION_ERROR;
+    }
 
-    return ACTION_ERROR;
+    if (m_derivedStats.m_nEncumberance == 2) {
+        FeedBack(FEEDBACK_TOOHEAVY_STOPPED, 0, 0, 0, -1, 0, 0);
+        return ACTION_ERROR;
+    }
+
+    CAIGroup* pGroup = g_pBaldurChitin->GetObjectGame()->GetGroup();
+
+    BYTE nFormationPosition = static_cast<BYTE>(m_curAction.m_specificID2);
+    if (nFormationPosition >= (pGroup->GetCount() > 6 ? pGroup->GetCount() : 6)) {
+        nFormationPosition = 0;
+    }
+
+    CPoint* pOffsets = pGroup->GetOffsets(static_cast<BYTE>(m_curAction.m_specificID),
+        static_cast<SHORT>((pTarget->m_nDirection + 8) * 360 / 16 % 360),
+        TRUE);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 11534
+    UTIL_ASSERT(pOffsets != NULL);
+
+    CPoint dest;
+    pTarget->GetNextWaypoint(&dest);
+
+    dest.x = (dest.x / CPathSearch::GRID_SQUARE_SIZEX + pOffsets[nFormationPosition].x / CAIGroup::OFFSET_MULTIPLIER) * CPathSearch::GRID_SQUARE_SIZEX + CPathSearch::GRID_SQUARE_SIZEX / 2;
+    dest.y = (pOffsets[nFormationPosition].y / CAIGroup::OFFSET_MULTIPLIER + dest.y / CPathSearch::GRID_SQUARE_SIZEY) * CPathSearch::GRID_SQUARE_SIZEY + CPathSearch::GRID_SQUARE_SIZEY / 2;
+
+    delete[] pOffsets;
+
+    if (dest.x / CPathSearch::GRID_SQUARE_SIZEX == m_pos.x / CPathSearch::GRID_SQUARE_SIZEX
+        && dest.y / CPathSearch::GRID_SQUARE_SIZEY == m_pos.y / CPathSearch::GRID_SQUARE_SIZEY) {
+        return ACTION_INTERRUPTABLE;
+    }
+
+    if (dest.x / CPathSearch::GRID_SQUARE_SIZEX == m_curDest.x / CPathSearch::GRID_SQUARE_SIZEX
+        && dest.y / CPathSearch::GRID_SQUARE_SIZEY == m_curDest.y / CPathSearch::GRID_SQUARE_SIZEY
+        && field_5618
+        && (m_pPath != NULL || m_currentSearchRequest != NULL)) {
+        return ACTION_INTERRUPTABLE;
+    }
+
+    field_5618 = 0;
+
+    // NOTE: The original reads the interval (8) from a `SHORT` constant at
+    // 0x85BBA4.
+    if (field_5616 % 8 == 0) {
+        m_curDest = dest;
+
+        CSearchRequest* pSearchRequest = new CSearchRequest();
+        if (pSearchRequest == NULL) {
+            return ACTION_ERROR;
+        }
+
+        pSearchRequest->m_searchBitmap = &(m_pArea->m_search);
+        memcpy(pSearchRequest->m_terrainTable, m_terrainTable, sizeof(m_terrainTable));
+        pSearchRequest->m_pathSmooth = m_animation.GetPathSmooth();
+        pSearchRequest->m_sourceId = m_id;
+        pSearchRequest->m_nTargetPoints = 1;
+
+        pSearchRequest->m_targetPoints = new POINT[pSearchRequest->m_nTargetPoints];
+        if (pSearchRequest->m_targetPoints == NULL) {
+            delete pSearchRequest;
+            return ACTION_ERROR;
+        }
+
+        pSearchRequest->m_targetPoints[0] = dest;
+        pSearchRequest->m_sourceSide = m_typeAI.GetEnemyAlly();
+
+        field_5618 = 1;
+
+        SetTarget(pSearchRequest, FALSE, CSearchRequest::LIST_FRONT);
+    }
+
+    field_5616++;
+
+    return ACTION_INTERRUPTABLE;
 }
 
 // 0x73EDD0
 SHORT CGameSprite::MoveToObject(CGameAIBase* pTarget)
 {
-    // TODO: Incomplete.
+    if (m_derivedStats.m_nEncumberance == 2) {
+        FeedBack(FEEDBACK_TOOHEAVY_STOPPED, 0, 0, 0, -1, 0, 0);
+        return ACTION_ERROR;
+    }
 
-    return ACTION_ERROR;
+    if (pTarget == NULL) {
+        return ACTION_ERROR;
+    }
+
+    if (pTarget->GetArea() == NULL) {
+        return ACTION_DONE;
+    }
+
+    if (m_curAction.m_actionID == 263) {
+        const CPoint& ptTarget = pTarget->GetPos();
+        LONG nTargetX = ptTarget.x;
+        LONG nTargetY = ptTarget.y;
+
+        const CPoint& ptSelf = GetPos();
+        LONG nDistance = (ptSelf.x - nTargetX) * (ptSelf.x - nTargetX)
+            + (ptSelf.y - nTargetY) * (ptSelf.y - nTargetY);
+
+        SHORT nRange = GetVisualRange() >> 1;
+
+        BOOL bCanSee;
+        if (nDistance <= nRange * nRange
+            && m_pArea->CheckLOS(pTarget->GetPos(), GetPos(), GetVisibleTerrainTable(), FALSE)) {
+            bCanSee = TRUE;
+        } else {
+            bCanSee = FALSE;
+        }
+
+        if (bCanSee & (pTarget->GetArea() == m_pArea)) {
+            if (!m_lSeen.Equal(pTarget->GetAIType())) {
+                if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pTarget->GetId()) != -1) {
+                    m_canBeSeen = 4 * (CGameObject::VISIBLE_DELAY + 1);
+                }
+
+                // NOTE: Uninline `CAIObjectType::operator=` (0x45B370).
+                m_lSeen.Set(pTarget->GetAIType());
+
+                CMessage* message = new CMessageSetLastObject(pTarget->GetAIType(),
+                    CAITRIGGER_SEE,
+                    m_id,
+                    m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            return ACTION_DONE;
+        }
+    }
+
+    CPoint ptDest;
+    pTarget->GetNextWaypoint(&ptDest);
+
+    if (m_curAction.m_actionID == 105) {
+        SHORT nTableIndex;
+        if (m_pArea->m_search.GetLOSCost(CPoint(ptDest.x / CPathSearch::GRID_SQUARE_SIZEX, ptDest.y / CPathSearch::GRID_SQUARE_SIZEY), m_terrainTable, nTableIndex, FALSE) == CPathSearch::COST_IMPASSABLE) {
+            return ACTION_ERROR;
+        }
+    }
+
+    CPoint ptDestGrid(ptDest.x / CPathSearch::GRID_SQUARE_SIZEX,
+        ptDest.y / CPathSearch::GRID_SQUARE_SIZEY);
+    CPoint ptPosGrid(GetPos().x / CPathSearch::GRID_SQUARE_SIZEX,
+        GetPos().y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    LONG nSquares = CAIUtil::CountSquares(ptPosGrid, ptDestGrid);
+    nSquares *= nSquares;
+
+    BYTE nPersonalSpace = m_animation.GetPersonalSpace();
+    if (pTarget->GetObjectType() == CGameObject::TYPE_SPRITE) {
+        BYTE nTargetPersonalSpace = static_cast<CGameSprite*>(pTarget)->m_animation.GetPersonalSpace();
+        nPersonalSpace = static_cast<BYTE>(((nTargetPersonalSpace - 1) >> 1) + ((nPersonalSpace - 1) >> 1) - 1);
+    }
+
+    SHORT actionID = m_curAction.m_actionID;
+    if (actionID == CAIAction::MOVETOOBJECTFOLLOW
+        && nSquares <= (nPersonalSpace + 4) * (nPersonalSpace + 4)) {
+        if (m_pPath != NULL) {
+            CMessage* message = new CMessageDropPath(m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        if (m_curAction.m_actionID == 208) {
+            return ACTION_NORMAL;
+        }
+
+        return ACTION_INTERRUPTABLE;
+    }
+
+    if (nSquares <= (nPersonalSpace + 1) * (nPersonalSpace + 1)) {
+        if (actionID == CAIAction::MOVETOOBJECTFOLLOW) {
+            return ACTION_INTERRUPTABLE;
+        }
+
+        return ACTION_DONE;
+    }
+
+    m_followRange = 0;
+
+    if (ptDest.x / CPathSearch::GRID_SQUARE_SIZEX == m_curDest.x / CPathSearch::GRID_SQUARE_SIZEX
+        && ptDest.y / CPathSearch::GRID_SQUARE_SIZEY == m_curDest.y / CPathSearch::GRID_SQUARE_SIZEY
+        && field_5618
+        && (m_pPath != NULL || m_currentSearchRequest != NULL)) {
+        if (actionID == 208) {
+            return ACTION_NORMAL;
+        }
+
+        return ACTION_INTERRUPTABLE;
+    }
+
+    field_5618 = 0;
+
+    // NOTE: The original compares the squared grid distance against the
+    // square of a `LONG` constant (16) at 0x85BB7C and then runs two
+    // identical branches. Since the branches don't differ they are merged here.
+
+    // NOTE: The original reads the interval (8) from a `SHORT` constant at
+    // 0x85BBA4.
+    if (field_5616 % 8 == 0) {
+        m_curDest = ptDest;
+
+        CSearchRequest* pSearchRequest = new CSearchRequest();
+        if (pSearchRequest == NULL) {
+            return ACTION_ERROR;
+        }
+
+        pSearchRequest->m_searchBitmap = &(m_pArea->m_search);
+        memcpy(pSearchRequest->m_terrainTable, m_terrainTable, sizeof(m_terrainTable));
+        pSearchRequest->m_pathSmooth = m_animation.GetPathSmooth();
+        pSearchRequest->m_sourceId = m_id;
+        pSearchRequest->m_nTargetIds = 1;
+
+        pSearchRequest->m_targetIds = new LONG[pSearchRequest->m_nTargetIds];
+        if (pSearchRequest->m_targetIds == NULL) {
+            delete pSearchRequest;
+            return ACTION_ERROR;
+        }
+
+        pSearchRequest->m_targetIds[0] = pTarget->GetId();
+        pSearchRequest->m_sourceSide = m_typeAI.GetEnemyAlly();
+
+        field_5618 = 1;
+
+        SetTarget(pSearchRequest, FALSE, CSearchRequest::LIST_FRONT);
+    }
+
+    field_5616++;
+
+    if (m_curAction.m_actionID == 208) {
+        return ACTION_NORMAL;
+    }
+
+    return ACTION_INTERRUPTABLE;
 }
 
 // 0x73F560
@@ -15689,11 +16014,90 @@ SHORT CGameSprite::MoveToPoint()
 }
 
 // 0x73FEC0
-SHORT CGameSprite::sub_73FEC0(const CPoint& dest, BOOL a2)
+SHORT CGameSprite::sub_73FEC0(const CPoint& dest, LONG range)
 {
-    // TODO: Incomplete.
+    if (range == 0) {
+        if (dest.x / CPathSearch::GRID_SQUARE_SIZEX == m_pos.x / CPathSearch::GRID_SQUARE_SIZEX
+            && dest.y / CPathSearch::GRID_SQUARE_SIZEY == m_pos.y / CPathSearch::GRID_SQUARE_SIZEY) {
+            return ACTION_DONE;
+        }
+    } else {
+        LONG dx = dest.x / CPathSearch::GRID_SQUARE_SIZEX - m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
 
-    return ACTION_ERROR;
+        // FIXME: The original uses the result of the comparison, not the
+        // difference.
+        LONG dy = dest.y / CPathSearch::GRID_SQUARE_SIZEY == m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+
+        if (dy * dy + dx * dx <= range * range) {
+            return ACTION_DONE;
+        }
+    }
+
+    if (dest.x < 0
+        || dest.x >= m_pArea->GetInfinity()->nAreaX
+        || dest.y < 0
+        || dest.y >= m_pArea->GetInfinity()->nAreaY) {
+        return ACTION_ERROR;
+    }
+
+    if (m_pPath == NULL
+        && m_currentSearchRequest == NULL
+        && m_moveCount > 0
+        && m_curAction.m_specificID == CAIAction::BACKGROUND) {
+        return ACTION_ERROR;
+    }
+
+    if (dest.x == m_curDest.x && dest.y == m_curDest.y) {
+        return ACTION_INTERRUPTABLE;
+    }
+
+    m_curDest.x = dest.x;
+    m_curDest.y = dest.y;
+
+    CSearchRequest* pSearchRequest = new CSearchRequest();
+    if (pSearchRequest == NULL) {
+        return ACTION_ERROR;
+    }
+
+    pSearchRequest->m_searchBitmap = &(m_pArea->m_search);
+    if (m_animation.GetListType() == LIST_FLIGHT) {
+        memcpy(pSearchRequest->m_terrainTable, m_flightTerrainTable, sizeof(m_flightTerrainTable));
+    } else {
+        memcpy(pSearchRequest->m_terrainTable, m_terrainTable, sizeof(m_terrainTable));
+    }
+
+    pSearchRequest->m_removeSelf = m_animation.GetListType() != LIST_FLIGHT;
+    pSearchRequest->m_pathSmooth = m_animation.GetPathSmooth();
+    pSearchRequest->m_sourceId = m_id;
+    pSearchRequest->m_nTargetPoints = 1;
+    pSearchRequest->m_exclusiveTargetPoints = TRUE;
+
+    pSearchRequest->m_targetPoints = new POINT[pSearchRequest->m_nTargetPoints];
+    if (pSearchRequest->m_targetPoints == NULL) {
+        delete pSearchRequest;
+        return ACTION_ERROR;
+    }
+
+    if (m_pArea->m_pGame->GetGroup()->InList(m_id)) {
+        pSearchRequest->m_nPartyIds = m_pArea->m_pGame->GetGroup()->GetCount();
+        pSearchRequest->m_partyIds = m_pArea->m_pGame->GetGroup()->GetGroupList();
+    }
+
+    pSearchRequest->m_targetPoints[0] = m_curDest;
+    pSearchRequest->m_sourceSide = m_typeAI.GetEnemyAlly();
+
+    if (m_curAction.m_specificID == CAIAction::BACKGROUND) {
+        pSearchRequest->m_frontList = CSearchRequest::LIST_BACK;
+        pSearchRequest->m_minNodesBack = 110;
+        pSearchRequest->m_sourcePt.x = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+        pSearchRequest->m_sourcePt.y = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+        pSearchRequest->m_maxNodesBack = CSearchRequest::MINNODESBACK;
+        SetTarget(pSearchRequest, FALSE, CSearchRequest::LIST_BACK);
+    } else {
+        SetTarget(pSearchRequest, FALSE, CSearchRequest::LIST_FRONT);
+    }
+
+    return ACTION_INTERRUPTABLE;
 }
 
 // 0x740270
@@ -15832,23 +16236,531 @@ SHORT CGameSprite::PlayDead()
 // 0x744C00
 SHORT CGameSprite::RunAwayFrom(CGameSprite* pTarget)
 {
-    // TODO: Incomplete.
+    // NOTE: The original reads 8 (panic distance in grid squares, 0x85BC88),
+    // 120 (number of tries, 0x85BC8A) and 200 (random offset range, 0x85BC8C)
+    // from `SHORT` constants.
+    SHORT returnValue;
+    if (m_curAction.m_actionID == 184) {
+        returnValue = ACTION_NORMAL;
+    } else {
+        returnValue = ACTION_INTERRUPTABLE;
+    }
 
-    return ACTION_ERROR;
+    if (pTarget == NULL || pTarget->m_pArea != m_pArea) {
+        return ACTION_ERROR;
+    }
+
+    if (field_5614++ > m_curAction.m_specificID) {
+        field_5614 = 0;
+
+        if (m_nSequence != SEQ_READY) {
+            CMessage* message = new CMessageDropPath(m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            message = new CMessageSetSequence(static_cast<BYTE>(GetIdleSequence()),
+                m_id,
+                m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        return ACTION_DONE;
+    }
+
+    CPoint ptTarget = pTarget->GetPos();
+
+    LONG dx = ptTarget.x / CPathSearch::GRID_SQUARE_SIZEX - m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+    LONG dy = ptTarget.y / CPathSearch::GRID_SQUARE_SIZEY - m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+    if (dx * dx + dy * dy <= 8 * 8) {
+        if (field_5614 % 15 == 0) {
+            m_curDest.x = 2 * m_pos.x - ptTarget.x;
+            if (m_curDest.x < 0) {
+                m_curDest.x = 0;
+            }
+            if (m_curDest.x >= m_pArea->GetInfinity()->nAreaX) {
+                m_curDest.x = m_pArea->GetInfinity()->nAreaX;
+            }
+
+            m_curDest.y = 2 * m_pos.y - ptTarget.y;
+            if (m_curDest.y < 0) {
+                m_curDest.y = 0;
+            }
+            if (m_curDest.y >= m_pArea->GetInfinity()->nAreaY) {
+                m_curDest.y = m_pArea->GetInfinity()->nAreaY;
+            }
+
+            SetTarget(m_curDest, FALSE);
+        }
+    } else if (m_pPath == NULL && m_currentSearchRequest == NULL) {
+        CPoint ptDest;
+        SHORT nTry;
+
+        for (nTry = 0; nTry < 120; nTry++) {
+            LONG nOffsetX = CPathSearch::GRID_SQUARE_SIZEX + rand() % 200;
+            if (m_pos.x - ptTarget.x < 0) {
+                nOffsetX = -nOffsetX;
+            }
+
+            LONG nOffsetY = CPathSearch::GRID_SQUARE_SIZEY + rand() % 200;
+            if (m_pos.y - ptTarget.y < 0) {
+                nOffsetY = -nOffsetY;
+            }
+
+            ptDest.x = m_pos.x + nOffsetX;
+            ptDest.y = m_pos.y + nOffsetY;
+
+            if (ptDest.x < 0) {
+                ptDest.x = 0;
+            }
+            if (ptDest.x >= m_pArea->GetInfinity()->nAreaX) {
+                ptDest.x = m_pArea->GetInfinity()->nAreaX;
+            }
+            if (ptDest.y < 0) {
+                ptDest.y = 0;
+            }
+            if (ptDest.y >= m_pArea->GetInfinity()->nAreaY) {
+                ptDest.y = m_pArea->GetInfinity()->nAreaY;
+            }
+
+            if (m_pArea->CheckLOS(m_pos, ptDest, m_visibleTerrainTable, FALSE)) {
+                m_curDest = ptDest;
+                if (m_curDest.x != m_pos.x || m_curDest.y != m_pos.y) {
+                    SetTarget(ptDest, FALSE);
+                }
+                return returnValue;
+            }
+        }
+
+        for (nTry = 0; nTry < 120 * 2; nTry++) {
+            LONG nOffsetX = CPathSearch::GRID_SQUARE_SIZEX + rand() % 200;
+            if (m_pos.x - ptTarget.x < 0) {
+                nOffsetX = -nOffsetX;
+            }
+
+            LONG nOffsetY = CPathSearch::GRID_SQUARE_SIZEY + rand() % 200;
+            if (m_pos.y - ptTarget.y < 0) {
+                nOffsetY = -nOffsetY;
+            }
+
+            if (rand() % 2 == 0) {
+                nOffsetX = -nOffsetX;
+            } else {
+                nOffsetY = -nOffsetY;
+            }
+
+            ptDest.x = m_pos.x + nOffsetX;
+            ptDest.y = m_pos.y + nOffsetY;
+
+            if (ptDest.x < 0) {
+                ptDest.x = 0;
+            }
+            if (ptDest.x >= m_pArea->GetInfinity()->nAreaX) {
+                ptDest.x = m_pArea->GetInfinity()->nAreaX;
+            }
+            if (ptDest.y < 0) {
+                ptDest.y = 0;
+            }
+            if (ptDest.y >= m_pArea->GetInfinity()->nAreaY) {
+                ptDest.y = m_pArea->GetInfinity()->nAreaY;
+            }
+
+            if (m_pArea->CheckLOS(m_pos, ptDest, m_visibleTerrainTable, FALSE)) {
+                m_curDest = ptDest;
+                if (m_curDest.x != m_pos.x || m_curDest.y != m_pos.y) {
+                    SetTarget(ptDest, FALSE);
+                }
+                return returnValue;
+            }
+        }
+
+        for (nTry = 0; nTry < 120; nTry++) {
+            LONG nOffsetX = CPathSearch::GRID_SQUARE_SIZEX + rand() % 200;
+            if (m_pos.x - ptTarget.x < 0) {
+                nOffsetX = -nOffsetX;
+            }
+
+            LONG nOffsetY = CPathSearch::GRID_SQUARE_SIZEY + rand() % 200;
+            if (m_pos.y - ptTarget.y < 0) {
+                nOffsetY = -nOffsetY;
+            }
+
+            ptDest.x = m_pos.x - nOffsetX;
+            ptDest.y = m_pos.y - nOffsetY;
+
+            if (ptDest.x < 0) {
+                ptDest.x = 0;
+            }
+            if (ptDest.x >= m_pArea->GetInfinity()->nAreaX) {
+                ptDest.x = m_pArea->GetInfinity()->nAreaX;
+            }
+            if (ptDest.y < 0) {
+                ptDest.y = 0;
+            }
+            if (ptDest.y >= m_pArea->GetInfinity()->nAreaY) {
+                ptDest.y = m_pArea->GetInfinity()->nAreaY;
+            }
+
+            if (m_pArea->CheckLOS(m_pos, ptDest, m_visibleTerrainTable, FALSE)) {
+                m_curDest = ptDest;
+                if (m_curDest.x != m_pos.x || m_curDest.y != m_pos.y) {
+                    SetTarget(ptDest, FALSE);
+                }
+                return returnValue;
+            }
+        }
+    }
+
+    CAIObjectType type = m_typeAI.GetEnemyOf();
+
+    CItem* pItem = m_equipment.m_items[m_equipment.m_selectedWeapon];
+    if (pItem != NULL) {
+        pItem->Demand();
+
+        const ITEM_ABILITY* ability = pItem->GetAbility(m_equipment.m_selectedWeaponAbility);
+        if (ability == NULL
+            || ability->type == 4
+            || (ability->usageFlags == 3
+                && pItem->GetUsageCount(m_equipment.m_selectedWeaponAbility) == 0
+                && ability->maxUsageCount > 0)
+            || ability->type == 2) {
+            pItem->Release();
+        } else {
+            WORD nRange = ability->range + 1;
+            pItem->Release();
+
+            BYTE nPersonalSpace = m_animation.GetPersonalSpace();
+            BYTE nTargetPersonalSpace = pTarget->m_animation.GetPersonalSpace();
+            BYTE nSize = static_cast<BYTE>(((nTargetPersonalSpace - 1) >> 1) + ((nPersonalSpace - 1) >> 1) - 1);
+
+            LONG nNearest = m_pArea->GetNearest(m_id,
+                type,
+                (nSize + nRange) * 16,
+                m_terrainTable,
+                TRUE,
+                GetCanSeeInvisible(),
+                FALSE,
+                FALSE,
+                FALSE);
+            if (nNearest != CGameObjectArray::INVALID_INDEX) {
+                CGameObject* pObject;
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nNearest,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        &pObject,
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    // NOTE: Checks the creature we are running away from, not
+                    // the nearest enemy.
+                    if (pTarget->m_derivedStats.m_spellStates[SPLSTATE_SANCTUARY]) {
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nNearest,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                        return returnValue;
+                    }
+
+                    if (m_attackFrame == -2) {
+                        m_attackFrame = -1;
+                    }
+
+                    Swing(static_cast<CGameSprite*>(pObject));
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nNearest,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                }
+            }
+        }
+    }
+
+    return returnValue;
 }
 
 // 0x745450
 SHORT CGameSprite::Formation(CGameObject* pLeader)
 {
-    // TODO: Incomplete.
+    CPoint ptOffset = m_curAction.m_dest;
 
-    return ACTION_ERROR;
+    if (pLeader == NULL) {
+        return ACTION_ERROR;
+    }
+
+    CGameSprite* pLeaderSprite = static_cast<CGameSprite*>(pLeader);
+
+    CPoint ptLeader = pLeaderSprite->m_curDest;
+    if (ptLeader.x == -1 || ptLeader.y == -1) {
+        ptLeader = pLeader->GetPos();
+    }
+
+    CPoint ptDest(ptLeader.x + CPathSearch::GRID_SQUARE_SIZEX * ptOffset.x,
+        ptLeader.y + CPathSearch::GRID_SQUARE_SIZEY * ptOffset.y);
+
+    if (ptDest.x == m_curDest.x && ptDest.y == m_curDest.y && field_5618) {
+        field_5616 = 0;
+        return ACTION_INTERRUPTABLE;
+    }
+
+    CPoint ptDestGrid(ptDest.x / CPathSearch::GRID_SQUARE_SIZEX,
+        ptDest.y / CPathSearch::GRID_SQUARE_SIZEY);
+    CPoint ptPosGrid(GetPos().x / CPathSearch::GRID_SQUARE_SIZEX,
+        GetPos().y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    LONG nSquares = CAIUtil::CountSquares(ptPosGrid, ptDestGrid);
+    nSquares *= nSquares;
+
+    BYTE nPersonalSpace = m_animation.GetPersonalSpace();
+    BYTE nLeaderPersonalSpace = pLeaderSprite->m_animation.GetPersonalSpace();
+    nPersonalSpace = static_cast<BYTE>(((nLeaderPersonalSpace - 1) >> 1) + ((nPersonalSpace - 1) >> 1) - 1);
+
+    if (nSquares <= (nPersonalSpace + 1) * (nPersonalSpace + 1)) {
+        field_5616 = 0;
+        field_5618 = 0;
+        return ACTION_INTERRUPTABLE;
+    }
+
+    m_curDest = ptDest;
+    field_5618 = 0;
+
+    LONG nPosX = GetPos().x / CPathSearch::GRID_SQUARE_SIZEX;
+    LONG nPosY = GetPos().y / CPathSearch::GRID_SQUARE_SIZEY;
+    LONG dx = pLeader->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX - nPosX;
+    LONG dy = pLeader->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY - nPosY;
+
+    // NOTE: The original compares against the square of a `LONG` constant (16)
+    // at 0x85BB7C and reads the interval (8) from a `SHORT` constant at
+    // 0x85BBA4. The two branches only differ in the order of the last two
+    // statements.
+    if (dy * dy + dx * dx < 16 * 16) {
+        if (field_5616 % 8 == 0) {
+            CSearchRequest* pSearchRequest = new CSearchRequest();
+            if (pSearchRequest == NULL) {
+                return ACTION_ERROR;
+            }
+
+            pSearchRequest->m_searchBitmap = &(m_pArea->m_search);
+            memcpy(pSearchRequest->m_terrainTable, m_terrainTable, sizeof(m_terrainTable));
+            pSearchRequest->m_pathSmooth = m_animation.GetPathSmooth();
+            pSearchRequest->m_sourceId = m_id;
+            pSearchRequest->m_nTargetPoints = 2;
+            pSearchRequest->m_exclusiveTargetPoints = TRUE;
+
+            pSearchRequest->m_targetPoints = new POINT[pSearchRequest->m_nTargetPoints];
+            if (pSearchRequest->m_targetPoints == NULL) {
+                delete pSearchRequest;
+                return ACTION_ERROR;
+            }
+
+            pSearchRequest->m_nPartyIds = m_pArea->m_pGame->GetGroup()->GetCount();
+            pSearchRequest->m_partyIds = m_pArea->m_pGame->GetGroup()->GetGroupList();
+            pSearchRequest->m_targetPoints[0] = m_curDest;
+            pSearchRequest->m_targetPoints[1] = ptLeader;
+            pSearchRequest->m_sourceSide = m_typeAI.GetEnemyAlly();
+
+            SetTarget(pSearchRequest, FALSE, CSearchRequest::LIST_FRONT);
+            field_5618 = 1;
+        }
+    } else {
+        if (field_5616 % 8 == 0) {
+            CSearchRequest* pSearchRequest = new CSearchRequest();
+            if (pSearchRequest == NULL) {
+                return ACTION_ERROR;
+            }
+
+            pSearchRequest->m_searchBitmap = &(m_pArea->m_search);
+            memcpy(pSearchRequest->m_terrainTable, m_terrainTable, sizeof(m_terrainTable));
+            pSearchRequest->m_pathSmooth = m_animation.GetPathSmooth();
+            pSearchRequest->m_sourceId = m_id;
+            pSearchRequest->m_nTargetPoints = 2;
+            pSearchRequest->m_exclusiveTargetPoints = TRUE;
+
+            pSearchRequest->m_targetPoints = new POINT[pSearchRequest->m_nTargetPoints];
+            if (pSearchRequest->m_targetPoints == NULL) {
+                delete pSearchRequest;
+                return ACTION_ERROR;
+            }
+
+            pSearchRequest->m_nPartyIds = m_pArea->m_pGame->GetGroup()->GetCount();
+            pSearchRequest->m_partyIds = m_pArea->m_pGame->GetGroup()->GetGroupList();
+            pSearchRequest->m_targetPoints[0] = m_curDest;
+            pSearchRequest->m_targetPoints[1] = ptLeader;
+            pSearchRequest->m_sourceSide = m_typeAI.GetEnemyAlly();
+
+            field_5618 = 1;
+            SetTarget(pSearchRequest, FALSE, CSearchRequest::LIST_FRONT);
+        }
+    }
+
+    field_5616++;
+
+    return ACTION_INTERRUPTABLE;
 }
 
 // 0x745950
 SHORT CGameSprite::JumpToPoint(CPoint dest, BOOL spriteUpdate)
 {
-    // TODO: Incomplete.
+    CPoint ptOriginal = dest;
+    CPoint ptOriginalGrid(dest.x / CPathSearch::GRID_SQUARE_SIZEX,
+        dest.y / CPathSearch::GRID_SQUARE_SIZEY);
+    BOOL bMoved = FALSE;
+
+    if (m_pArea == NULL) {
+        return ACTION_ERROR;
+    }
+
+    if (dest.x > m_pArea->GetInfinity()->nAreaX) {
+        dest.x = 0;
+    }
+
+    if (dest.y > m_pArea->GetInfinity()->nAreaY) {
+        dest.y = 0;
+    }
+
+    CPoint ptGrid(dest.x / CPathSearch::GRID_SQUARE_SIZEX,
+        dest.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    if (m_pPath != NULL) {
+        CMessage* message = new CMessageDropPath(m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    switch (m_listType) {
+    case CGAMEOBJECT_LIST_FRONT:
+        if (m_active && m_activeAI && m_activeImprisonment) {
+            m_pArea->m_search.RemoveObject(CPoint(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                                               m_pos.y / CPathSearch::GRID_SQUARE_SIZEY),
+                m_typeAI.GetEnemyAlly(),
+                m_animation.GetPersonalSpace(),
+                field_54A8,
+                field_7430);
+        }
+        break;
+    case CGAMEOBJECT_LIST_BACK:
+        if (m_active
+            && m_activeAI
+            && m_activeImprisonment
+            && (m_derivedStats.m_generalState & STATE_SLEEPING) != 0) {
+            m_pArea->m_search.RemoveObject(CPoint(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                                               m_pos.y / CPathSearch::GRID_SQUARE_SIZEY),
+                m_typeAI.GetEnemyAlly(),
+                m_animation.GetPersonalSpace(),
+                field_54A8,
+                field_7430);
+        }
+        break;
+    case CGAMEOBJECT_LIST_FLIGHT:
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+        // __LINE__: 14822
+        UTIL_ASSERT(FALSE);
+    }
+
+    if (!m_derivedStats.m_bDoNotJump) {
+        if ((m_animation.GetAnimationId() & 0xF000) == 0x4000
+            && m_animation.GetAnimationId() >= 0x4400) {
+            ptGrid = m_pArea->m_search.GetNearestOpenSquare(ptGrid,
+                m_visibleTerrainTable,
+                m_animation.GetPersonalSpace(),
+                -1);
+        } else {
+            ptGrid = m_pArea->m_search.GetNearestOpenSquare(ptGrid,
+                m_terrainTable,
+                m_animation.GetPersonalSpace(),
+                -1);
+        }
+    }
+
+    if (ptGrid.x == ptOriginalGrid.x && ptGrid.y == ptOriginalGrid.y) {
+        m_pos.x = ptOriginal.x;
+        m_pos.y = ptOriginal.y;
+    } else {
+        bMoved = TRUE;
+        m_pos.x = ptGrid.x * CPathSearch::GRID_SQUARE_SIZEX;
+        m_pos.y = ptGrid.y * CPathSearch::GRID_SQUARE_SIZEY;
+    }
+
+    m_posExact.x = m_pos.x << EXACT_SCALE;
+    m_posExact.y = ((m_pos.y << EXACT_SCALE) << 2) / 3;
+
+    InitBlur();
+
+    switch (m_listType) {
+    case CGAMEOBJECT_LIST_FRONT:
+        if (m_active && m_activeAI && m_activeImprisonment) {
+            m_pArea->m_search.AddObject(CPoint(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                                            m_pos.y / CPathSearch::GRID_SQUARE_SIZEY),
+                m_typeAI.GetEnemyAlly(),
+                m_animation.GetPersonalSpace(),
+                field_54A8,
+                field_7430);
+        }
+        break;
+    case CGAMEOBJECT_LIST_BACK:
+        if (m_active
+            && m_activeAI
+            && m_activeImprisonment
+            && (m_derivedStats.m_generalState & STATE_SLEEPING) != 0) {
+            m_pArea->m_search.AddObject(CPoint(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                                            m_pos.y / CPathSearch::GRID_SQUARE_SIZEY),
+                m_typeAI.GetEnemyAlly(),
+                m_animation.GetPersonalSpace(),
+                field_54A8,
+                field_7430);
+        }
+        break;
+    case CGAMEOBJECT_LIST_FLIGHT:
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+        // __LINE__: 14869
+        UTIL_ASSERT(FALSE);
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1
+        && (!g_pBaldurChitin->GetObjectGame()->GetGameSave()->field_1AC || InControl())) {
+        m_pArea->m_visibility.UpDate(m_posLastVisMapEntry,
+            m_pos,
+            m_id,
+            m_visibleTerrainTable);
+        m_posLastVisMapEntry = m_pos;
+    }
+
+    if ((m_derivedStats.m_generalState & STATE_SILENCED) == 0
+        && (g_pBaldurChitin->GetObjectGame()->GetOptions()->m_bFootStepsSounds
+            || g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) == -1)
+        && m_nSequence != SEQ_DIE
+        && m_nSequence != SEQ_TWITCH
+        && m_nSequence != SEQ_SLEEP
+        && m_nSequence != SEQ_WALK
+        && m_nSequence != SEQ_AWAKE) {
+        if (!m_sndReady.IsSoundPlaying()) {
+            char* pSndReady = m_animation.GetSndReady();
+            if (*pSndReady != '\0') {
+                // NOTE: Uninline.
+                m_sndReady.SetResRef(CResRef(pSndReady), TRUE, TRUE);
+                delete pSndReady;
+                m_sndReady.SetLoopingFlag(1);
+                m_sndReady.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+            }
+        }
+    } else {
+        m_sndReady.Stop();
+    }
+
+    if (spriteUpdate && InControl()) {
+        CMessage* message = new CMessageSpriteUpdate(this, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    if (g_pChitin->cNetwork.GetSessionOpen() == TRUE
+        && g_pBaldurChitin->GetActiveEngine() == g_pBaldurChitin->m_pEngineMap
+        && g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1
+        && bMoved) {
+        SHORT nPortrait = g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id);
+        CUIControlButtonMapAreaMap* pMap = static_cast<CUIControlButtonMapAreaMap*>(g_pBaldurChitin->m_pEngineMap->GetManager()->GetPanel(2)->GetControl(2));
+        pMap->field_7DA |= 1 << nPortrait;
+    }
 
     return ACTION_DONE;
 }
@@ -17804,9 +18716,236 @@ SHORT CGameSprite::SetAtOffset(DWORD stat, DWORD value, BOOL modify)
 // 0x760C50
 SHORT CGameSprite::RunAwayFromNoLeaveArea(CGameSprite* pTarget)
 {
-    // TODO: Incomplete.
+    // NOTE: The original reads 8 (panic distance in grid squares, 0x85BC88),
+    // 120 (number of tries, 0x85BC8A) and 200 (random offset range, 0x85BC8C)
+    // from `SHORT` constants.
+    SHORT returnValue;
+    if (m_curAction.m_actionID == 184) {
+        returnValue = ACTION_NORMAL;
+    } else {
+        returnValue = ACTION_INTERRUPTABLE;
+    }
 
-    return ACTION_ERROR;
+    if (pTarget == NULL || pTarget->m_pArea != m_pArea) {
+        return ACTION_ERROR;
+    }
+
+    if (field_5614++ > m_curAction.m_specificID) {
+        field_5614 = 0;
+
+        if (m_nSequence != SEQ_READY) {
+            CMessage* message = new CMessageDropPath(m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            message = new CMessageSetSequence(static_cast<BYTE>(GetIdleSequence()),
+                m_id,
+                m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        return ACTION_DONE;
+    }
+
+    CPoint ptTarget = pTarget->GetPos();
+
+    LONG dx = ptTarget.x / CPathSearch::GRID_SQUARE_SIZEX - m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+    LONG dy = ptTarget.y / CPathSearch::GRID_SQUARE_SIZEY - m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+    if (dx * dx + dy * dy <= 8 * 8) {
+        if (field_5614 % 15 == 0) {
+            m_curDest.x = 2 * m_pos.x - ptTarget.x;
+            if (m_curDest.x < 0) {
+                m_curDest.x = 0;
+            }
+            if (m_curDest.x >= m_pArea->GetInfinity()->nAreaX) {
+                m_curDest.x = m_pArea->GetInfinity()->nAreaX;
+            }
+
+            m_curDest.y = 2 * m_pos.y - ptTarget.y;
+            if (m_curDest.y < 0) {
+                m_curDest.y = 0;
+            }
+            if (m_curDest.y >= m_pArea->GetInfinity()->nAreaY) {
+                m_curDest.y = m_pArea->GetInfinity()->nAreaY;
+            }
+
+            SetTarget(m_curDest, FALSE);
+        }
+    } else if (m_pPath == NULL && m_currentSearchRequest == NULL) {
+        CPoint ptDest;
+        SHORT nTry;
+
+        for (nTry = 0; nTry < 120; nTry++) {
+            LONG nOffsetX = CPathSearch::GRID_SQUARE_SIZEX + rand() % 200;
+            if (m_pos.x - ptTarget.x < 0) {
+                nOffsetX = -nOffsetX;
+            }
+
+            LONG nOffsetY = CPathSearch::GRID_SQUARE_SIZEY + rand() % 200;
+            if (m_pos.y - ptTarget.y < 0) {
+                nOffsetY = -nOffsetY;
+            }
+
+            ptDest.x = m_pos.x + nOffsetX;
+            ptDest.y = m_pos.y + nOffsetY;
+
+            if (ptDest.x < 0) {
+                ptDest.x = 0;
+            }
+            if (ptDest.x >= m_pArea->GetInfinity()->nAreaX) {
+                ptDest.x = m_pArea->GetInfinity()->nAreaX;
+            }
+            if (ptDest.y < 0) {
+                ptDest.y = 0;
+            }
+            if (ptDest.y >= m_pArea->GetInfinity()->nAreaY) {
+                ptDest.y = m_pArea->GetInfinity()->nAreaY;
+            }
+
+            if (m_pArea->CheckLOS(m_pos, ptDest, m_visibleTerrainTable, FALSE)) {
+                m_curDest = ptDest;
+                if (m_curDest.x != m_pos.x || m_curDest.y != m_pos.y) {
+                    SetTarget(ptDest, FALSE);
+                }
+                return returnValue;
+            }
+        }
+
+        for (nTry = 0; nTry < 120 * 2; nTry++) {
+            LONG nOffsetX = CPathSearch::GRID_SQUARE_SIZEX + rand() % 200;
+            if (m_pos.x - ptTarget.x < 0) {
+                nOffsetX = -nOffsetX;
+            }
+
+            LONG nOffsetY = CPathSearch::GRID_SQUARE_SIZEY + rand() % 200;
+            if (m_pos.y - ptTarget.y < 0) {
+                nOffsetY = -nOffsetY;
+            }
+
+            if (rand() % 2 == 0) {
+                nOffsetX = -nOffsetX;
+            } else {
+                nOffsetY = -nOffsetY;
+            }
+
+            ptDest.x = m_pos.x + nOffsetX;
+            ptDest.y = m_pos.y + nOffsetY;
+
+            if (ptDest.x < 0) {
+                ptDest.x = 0;
+            }
+            if (ptDest.x >= m_pArea->GetInfinity()->nAreaX) {
+                ptDest.x = m_pArea->GetInfinity()->nAreaX;
+            }
+            if (ptDest.y < 0) {
+                ptDest.y = 0;
+            }
+            if (ptDest.y >= m_pArea->GetInfinity()->nAreaY) {
+                ptDest.y = m_pArea->GetInfinity()->nAreaY;
+            }
+
+            if (m_pArea->CheckLOS(m_pos, ptDest, m_visibleTerrainTable, FALSE)) {
+                m_curDest = ptDest;
+                if (m_curDest.x != m_pos.x || m_curDest.y != m_pos.y) {
+                    SetTarget(ptDest, FALSE);
+                }
+                return returnValue;
+            }
+        }
+
+        for (nTry = 0; nTry < 120; nTry++) {
+            LONG nOffsetX = CPathSearch::GRID_SQUARE_SIZEX + rand() % 200;
+            if (m_pos.x - ptTarget.x < 0) {
+                nOffsetX = -nOffsetX;
+            }
+
+            LONG nOffsetY = CPathSearch::GRID_SQUARE_SIZEY + rand() % 200;
+            if (m_pos.y - ptTarget.y < 0) {
+                nOffsetY = -nOffsetY;
+            }
+
+            ptDest.x = m_pos.x - nOffsetX;
+            ptDest.y = m_pos.y - nOffsetY;
+
+            if (ptDest.x < 0) {
+                ptDest.x = 0;
+            }
+            if (ptDest.x >= m_pArea->GetInfinity()->nAreaX) {
+                ptDest.x = m_pArea->GetInfinity()->nAreaX;
+            }
+            if (ptDest.y < 0) {
+                ptDest.y = 0;
+            }
+            if (ptDest.y >= m_pArea->GetInfinity()->nAreaY) {
+                ptDest.y = m_pArea->GetInfinity()->nAreaY;
+            }
+
+            if (m_pArea->CheckLOS(m_pos, ptDest, m_visibleTerrainTable, FALSE)) {
+                m_curDest = ptDest;
+                if (m_curDest.x != m_pos.x || m_curDest.y != m_pos.y) {
+                    SetTarget(ptDest, FALSE);
+                }
+                return returnValue;
+            }
+        }
+    }
+
+    CAIObjectType type = m_typeAI.GetEnemyOf();
+
+    CItem* pItem = m_equipment.m_items[m_equipment.m_selectedWeapon];
+    if (pItem != NULL) {
+        pItem->Demand();
+
+        const ITEM_ABILITY* ability = pItem->GetAbility(m_equipment.m_selectedWeaponAbility);
+        if (ability == NULL
+            || ability->type == 4
+            || (ability->usageFlags == 3
+                && pItem->GetUsageCount(m_equipment.m_selectedWeaponAbility) == 0
+                && ability->maxUsageCount > 0)
+            || ability->type == 2) {
+            pItem->Release();
+        } else {
+            pItem->Release();
+            WORD nRange = ability->range + 1;
+
+            BYTE nPersonalSpace = m_animation.GetPersonalSpace();
+            BYTE nTargetPersonalSpace = pTarget->m_animation.GetPersonalSpace();
+            BYTE nSize = static_cast<BYTE>(((nTargetPersonalSpace - 1) >> 1) + ((nPersonalSpace - 1) >> 1) - 1);
+
+            LONG nNearest = m_pArea->GetNearest(m_id,
+                type,
+                (nSize + nRange) * 16,
+                m_terrainTable,
+                TRUE,
+                GetCanSeeInvisible(),
+                FALSE,
+                FALSE,
+                FALSE);
+            if (nNearest != CGameObjectArray::INVALID_INDEX) {
+                CGameObject* pObject;
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nNearest,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        &pObject,
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    if (m_attackFrame == -2) {
+                        m_attackFrame = -1;
+                    }
+
+                    Swing(static_cast<CGameSprite*>(pObject));
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nNearest,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                }
+            }
+        }
+    }
+
+    return returnValue;
 }
 
 // 0x761470
