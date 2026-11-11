@@ -232,7 +232,7 @@ static const char* off_8AFD24[FIFTY_THREE] = {
 };
 
 // 0x8B4F84
-static const char* off_8B4F84[] = {
+const char* off_8B4F84[] = {
     "SPPR101",
     "SPPR102",
     "SPPR103",
@@ -6375,6 +6375,67 @@ LONG CInfGame::GetGroundPile(LONG iSprite)
     return iGroundPile;
 }
 
+// 0x5B7730
+BOOL CInfGame::sub_5B7730(LONG nContainerId, SHORT nSlotNum, CGameSprite* pSprite, SHORT nPortraitNum)
+{
+    CItem* pItem;
+    STRREF description;
+    CResRef cResIcon;
+    CResRef cResItem;
+    WORD wCount;
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    CGameContainer* pContainer;
+    if (m_cObjectArray.GetDeny(nContainerId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pContainer),
+            INFINITE)
+        != CGameObjectArray::SUCCESS) {
+        return FALSE;
+    }
+
+    CItem* pGroundItem = pContainer->GetItem(nSlotNum);
+
+    m_cObjectArray.ReleaseDeny(nContainerId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    if (pGroundItem == NULL) {
+        return FALSE;
+    }
+
+    // Gold can always be picked up.
+    if (pGroundItem->GetResRef() == "MISC07") {
+        return TRUE;
+    }
+
+    INT nSlot = 18;
+    do {
+        pGame->InventoryInfoPersonal(nPortraitNum,
+            nSlot,
+            pItem,
+            description,
+            cResIcon,
+            cResItem,
+            wCount,
+            TRUE);
+        if (cResIcon != "") {
+            nSlot++;
+        }
+    } while (cResIcon != "" && nSlot < CScreenInventory::PERSONAL_INVENTORY_SIZE + 18);
+
+    return nSlot < CScreenInventory::PERSONAL_INVENTORY_SIZE + 18;
+}
+
+// 0x5B7850
+BOOL CInfGame::SwapItemGround(LONG nContainerId, SHORT nSlotNum, CItem*& pNewItem, STRREF& errorCode, WORD wCount, BOOLEAN bFromServer)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x5B7FF0
 SHORT CInfGame::GetNumGroundSlots(LONG nContainerId)
 {
@@ -6471,6 +6532,47 @@ void CInfGame::CompressContainer(LONG nContainerId)
             CGameObjectArray::THREAD_ASYNCH,
             INFINITE);
     }
+}
+
+// 0x5B9C60
+BOOL CInfGame::CheckIfPlayerInPortraitSlotCanUseItem(SHORT nPortraitNum, CItem* pItem, STRREF& strError, BOOL a4)
+{
+    LONG nCharacterId = nPortraitNum < m_nCharacters
+        ? m_characterPortraits[nPortraitNum]
+        : CGameObjectArray::INVALID_INDEX;
+
+    BYTE threadNum = a4 ? CGameObjectArray::THREAD_ASYNCH : CGameObjectArray::THREAD_1;
+
+    CGameSprite* pSprite;
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+            threadNum,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        strError = 9373;
+        return FALSE;
+    }
+
+    BOOL bResult = CheckIfSpriteCanUseItem(pSprite, pItem, strError, a4);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+        threadNum,
+        INFINITE);
+
+    return bResult;
+}
+
+// 0x5B9D20
+BOOL CInfGame::CheckIfSpriteCanUseItem(CGameSprite* pSprite, CItem* pItem, STRREF& strError, BOOL a4)
+{
+    // TODO: Incomplete.
+
+    strError = -1;
+    return TRUE;
 }
 
 // 0x5BA080
@@ -8986,6 +9088,67 @@ BOOLEAN CInfGame::GetGameSpyCharacterInformation(INT nCharacterSlot, CString& sN
         INFINITE);
 
     return TRUE;
+}
+
+// 0x5C7440
+void CInfGame::PanicRescueItem(CItem* pItem, LONG nCharacterId)
+{
+    INT nEmptySlot = -1;
+    INT nReplaceableSlot = -1;
+
+    // Only critical items are rescued, everything else is simply destroyed.
+    if ((pItem->GetFlagsFile() & 0x1) == 0) {
+        // NOTE: Uninline.
+        AddDisposableItem(pItem);
+        return;
+    }
+
+    CGameSprite* pSprite;
+    BYTE rc;
+    do {
+        rc = m_cObjectArray.GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    for (INT nSlot = 18; nSlot <= 33; nSlot++) {
+        // NOTE: Always true.
+        if (nSlot != 10) {
+            CItem* pSlotItem = pSprite->m_equipment.m_items[nSlot];
+            if (pSlotItem == NULL) {
+                nEmptySlot = nSlot;
+            } else if ((pSlotItem->GetFlagsFile() & 0x1) == 0) {
+                nReplaceableSlot = nSlot;
+            }
+        }
+    }
+
+    if (nEmptySlot >= 0) {
+        pSprite->m_equipment.m_items[nEmptySlot] = pItem;
+
+        CMessage* pMessage = new CMessageSpriteEquipment(pSprite, nCharacterId, nCharacterId);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+    } else if (nReplaceableSlot >= 0) {
+        // NOTE: Uninline.
+        AddDisposableItem(pSprite->m_equipment.m_items[nReplaceableSlot]);
+
+        pSprite->m_equipment.m_items[nReplaceableSlot] = pItem;
+
+        CMessage* pMessage = new CMessageSpriteEquipment(pSprite, nCharacterId, nCharacterId);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+    } else {
+        // NOTE: Uninline.
+        AddDisposableItem(pItem);
+    }
+
+    m_cObjectArray.ReleaseShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x5C76B0

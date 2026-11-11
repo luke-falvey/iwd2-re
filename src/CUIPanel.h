@@ -32,6 +32,18 @@ public:
     void SetActive(BOOL bActive);
     void SetBackgroundResRef(CResRef cNewResRef, BOOL bDoubleSize);
 
+    // 0x68BF90
+    BOOL GetActive() { return m_bActive; }
+
+    // 0x68BFA0
+    CSize GetSize() { return m_size; }
+
+    // 0x68BFC0
+    void SetActiveFlag(BOOL bActive) { m_bActive = bActive; }
+
+    // 0x68BFD0
+    void OffsetPosFromOriginal(const CPoint& pt) { m_ptOrigin = m_ptBaseOrigin + pt; }
+
     /* 0000 */ CUIManager* m_pManager; // #guess
     /* 0004 */ CTypedPtrList<CPtrList, CUIControlBase*> m_lControls; // #guess
     /* 0020 */ DWORD m_nID;

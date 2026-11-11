@@ -4,6 +4,7 @@
 #include "CVidCell.h"
 
 class CButtonData;
+class CGameSprite;
 
 class CInfButtonSettings {
 public:
@@ -43,6 +44,8 @@ public:
     void UpdateButtons();
     void OnLButtonPressed(int buttonID);
     void OnRButtonPressed(int buttonID);
+    BOOL sub_594170(INT buttonType);
+    void sub_594280(INT buttonType, CGameSprite* pSprite);
 
     INT GetState();
     void SetSelectedButton(INT nSelectedButton);
