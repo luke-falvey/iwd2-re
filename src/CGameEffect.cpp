@@ -11,6 +11,8 @@
 #include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CItem.h"
+#include "CProjectilePart1.h"
+#include "CProjectilePart3.h"
 #include "CResEffect.h"
 #include "CScreenInventory.h"
 #include "CScreenWorld.h"
@@ -11008,6 +11010,170 @@ CGameEffect* CGameEffectVisualSpellHit::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4BBCB0
+BOOL CGameEffectVisualSpellHit::ApplyEffect(CGameSprite* pSprite)
+{
+    CString sVidCell;
+    CString sSound;
+    CString sBitmap;
+
+    // NOTE: The original reuses the stack slot of `pSprite` for the projectile
+    // type, so it is left over from the argument for unhandled values.
+    LONG nProjectileType = reinterpret_cast<LONG>(pSprite);
+
+    if (pSprite->GetArea() == NULL) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    CProjectile* pProjectile;
+
+    switch (m_dwFlags) {
+    case 32:
+    case 33:
+    case 34: {
+        CProjectileBAM84DFA4* pBAM = new CProjectileBAM84DFA4();
+        switch (m_dwFlags) {
+        case 32:
+            pBAM->SetPaletteRange(0, 67);
+            break;
+        case 33:
+            pBAM->SetPaletteRange(0, 65);
+            break;
+        case 34:
+            pBAM->SetPaletteRange(0, 69);
+            break;
+        }
+
+        const CPoint& pos = pSprite->GetPos();
+        pBAM->Virtual88(pSprite->GetArea(), CPoint(pos.x, pos.y - 2));
+
+        m_done = TRUE;
+        return TRUE;
+    }
+    case 35:
+        pProjectile = new CProjectile84E8C0(CString("FlmStrk"),
+            CString(""),
+            0xFF,
+            0,
+            0,
+            CTimerWorld::TIMESCALE_MSEC_PER_SEC * 2);
+        pProjectile->Fire(pSprite->GetArea(),
+            pSprite->GetId(),
+            pSprite->GetId(),
+            pSprite->GetPos(),
+            pProjectile->DetermineHeight(pSprite),
+            0);
+        m_done = TRUE;
+        return TRUE;
+    case 36:
+        pProjectile = new CProjectile84E8C0(CString("HLYMITE"),
+            CString(""),
+            0xFF,
+            1,
+            0,
+            CTimerWorld::TIMESCALE_MSEC_PER_SEC * 2);
+        pProjectile->Fire(pSprite->GetArea(),
+            pSprite->GetId(),
+            pSprite->GetId(),
+            pSprite->GetPos(),
+            pProjectile->DetermineHeight(pSprite),
+            0);
+        m_done = TRUE;
+        return TRUE;
+    case 37:
+        sVidCell = "SHAir";
+        nProjectileType = 147;
+        sBitmap = "SHAir7";
+        sSound = "";
+        break;
+    case 38:
+        pProjectile = new CProjectile84E940(CString("DDoorH"),
+            CString(""),
+            CString(""),
+            0,
+            0);
+        pProjectile->Fire(pSprite->GetArea(),
+            pSprite->GetId(),
+            pSprite->GetId(),
+            pSprite->GetPos(),
+            0,
+            0);
+        m_done = TRUE;
+        return TRUE;
+    case 39:
+        sVidCell = "SPFDEATH";
+        nProjectileType = 207;
+        sBitmap = "";
+        sSound = "";
+        break;
+    default:
+        if (m_dwFlags <= 30 && (m_dwFlags & 3) != 3) {
+            nProjectileType = 118 + (m_dwFlags >> 2) * 3 + (m_dwFlags & 3);
+        }
+
+        switch (m_dwFlags & 3) {
+        case 0:
+            sVidCell = "SHAir";
+            if ((m_dwFlags & ~3) != 0) {
+                sBitmap = "SHAir0";
+                sBitmap.SetAt(sBitmap.GetLength() - 1, '0' + static_cast<char>(m_dwFlags >> 2));
+            } else {
+                sBitmap = "";
+            }
+            sSound = "";
+            break;
+        case 1:
+            sVidCell = "SHEarth";
+            if ((m_dwFlags & ~3) != 0) {
+                sBitmap = "SHEarth0";
+                sBitmap.SetAt(sBitmap.GetLength() - 1, '0' + static_cast<char>(m_dwFlags >> 2));
+            } else {
+                sBitmap = "";
+            }
+            sSound = "";
+            break;
+        case 2:
+            sVidCell = "SHWater";
+            if ((m_dwFlags & ~3) != 0) {
+                sBitmap = "SHWater0";
+                sBitmap.SetAt(sBitmap.GetLength() - 1, '0' + static_cast<char>(m_dwFlags >> 2));
+            } else {
+                sBitmap = "";
+            }
+            sSound = "";
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
+            // __LINE__: 19999
+            UTIL_ASSERT(FALSE);
+        }
+        break;
+    }
+
+    pProjectile = new CProjectile84E9C0(sVidCell, sSound, sBitmap, 8, 0);
+
+    CMessageFireProjectile* pMessage = new CMessageFireProjectile(static_cast<WORD>(nProjectileType),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        pProjectile->DetermineHeight(pSprite),
+        pSprite->GetId(),
+        pSprite->GetId(),
+        0);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pSprite->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        pProjectile->DetermineHeight(pSprite),
+        0);
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
