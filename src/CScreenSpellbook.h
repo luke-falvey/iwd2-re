@@ -47,6 +47,8 @@ public:
 
     void sub_669830(DWORD nPortrait);
     int sub_66A010(DWORD nIndex);
+    int sub_66C4B0();
+    BOOLEAN sub_66C790(CGameSprite* pSprite, DWORD nIndex);
     void SetSpellLevel(INT nLevel);
     void SetClassIndex(DWORD nNewClassIndex);
     void UpdateFlash();
@@ -78,7 +80,7 @@ public:
     /* 0442 */ CUIControlButtonSpellbookSpell* m_pFlashCurrentSpell;
     /* 0446 */ CUIControlButtonSpellbookSpell* m_pFlashMemorizeSourceSpell;
     /* 044A */ CUIControlButtonSpellbookSpell* m_pFlashMemorizeDestSpell;
-    /* 044E */ unsigned char m_nSpellLevel;
+    /* 044E */ DWORD m_nSpellLevel;
     /* 0452 */ BYTE m_nClassIndex;
     /* 0454 */ INT m_nNumKnownSpells;
     /* 0458 */ INT m_nTopKnownSpell;
