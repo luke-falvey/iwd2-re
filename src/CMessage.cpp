@@ -21,6 +21,7 @@
 #include "CProjectile.h"
 #include "CProjectilePart6.h"
 #include "CScreenChapter.h"
+#include "CSearchBitmap.h"
 #include "CScreenConnection.h"
 #include "CScreenCharacter.h"
 #include "CScreenCreateChar.h"
@@ -25122,8 +25123,210 @@ BYTE CMessage51::GetMsgSubType()
 // 0x509100
 void CMessage51::MarshalMessage(BYTE** pData, DWORD* dwSize)
 {
-    // TODO: Incomplete.
-    *dwSize = 0;
+    CResRef cResArea;
+    CString sAreaName;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 20088
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameObject* pObject;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        *dwSize = 0;
+        return;
+    }
+
+    PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+    LONG remoteObjectID = pObject->m_remoteObjectID;
+
+    BYTE bSearchRequest;
+    BYTE nAreaNameLength;
+    DWORD cnt;
+    if (m_pSearchRequest != NULL) {
+        bSearchRequest = TRUE;
+
+        cResArea = pObject->m_pArea->m_resRef;
+        cResArea.CopyToString(sAreaName);
+
+        nAreaNameLength = static_cast<BYTE>(sAreaName.GetLength());
+
+        // NOTE: The fixed part is one byte less than what is written below.
+        cnt = sAreaName.GetLength()
+            + (m_pSearchRequest->m_nTargetPoints
+                  + m_pSearchRequest->m_nTargetIds
+                  + m_pSearchRequest->m_nPartyIds)
+                * 8
+            + 0x54;
+    } else {
+        bSearchRequest = FALSE;
+        cnt = 0x12;
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    *dwSize = cnt;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 20142
+    UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+    *reinterpret_cast<PLAYER_ID*>(*pData) = remotePlayerID;
+    *reinterpret_cast<LONG*>(*pData + 4) = remoteObjectID;
+    *reinterpret_cast<BYTE*>(*pData + 8) = m_frontList;
+    *reinterpret_cast<BYTE*>(*pData + 9) = bSearchRequest;
+
+    if (m_pSearchRequest != NULL) {
+        *reinterpret_cast<BYTE*>(*pData + 0xA) = m_pSearchRequest->m_sourceSide;
+        *reinterpret_cast<BYTE*>(*pData + 0xB) = m_pSearchRequest->m_nPartyIds;
+        *reinterpret_cast<BYTE*>(*pData + 0xC) = m_pSearchRequest->m_nTargetIds;
+        *reinterpret_cast<BYTE*>(*pData + 0xD) = m_pSearchRequest->m_nTargetPoints;
+        *reinterpret_cast<BOOL*>(*pData + 0xE) = m_pSearchRequest->m_removeSelf;
+        *reinterpret_cast<BYTE*>(*pData + 0x12) = m_pSearchRequest->m_frontList;
+        *reinterpret_cast<BYTE*>(*pData + 0x13) = nAreaNameLength;
+
+        INT nLength = sAreaName.GetLength();
+        memcpy(*pData + 0x14, sAreaName.GetBuffer(nLength), nLength);
+
+        cnt = sAreaName.GetLength() + 0x14;
+
+        memcpy(*pData + cnt, m_pSearchRequest->m_terrainTable, sizeof(m_pSearchRequest->m_terrainTable));
+        cnt += sizeof(m_pSearchRequest->m_terrainTable);
+
+        *reinterpret_cast<BOOL*>(*pData + cnt) = m_pSearchRequest->m_pathSmooth;
+        cnt += sizeof(BOOL);
+
+        *reinterpret_cast<BOOL*>(*pData + cnt) = m_pSearchRequest->m_collisionSearch;
+        cnt += sizeof(BOOL);
+
+        *reinterpret_cast<BYTE*>(*pData + cnt) = m_pSearchRequest->m_collisionDelay;
+        cnt += sizeof(BYTE);
+
+        *reinterpret_cast<BOOL*>(*pData + cnt) = m_pSearchRequest->m_exclusiveTargetPoints;
+        cnt += sizeof(BOOL);
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_pSearchRequest->m_sourceId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            remoteObjectID = pObject->m_remoteObjectID;
+            remotePlayerID = pObject->m_remotePlayerID;
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_pSearchRequest->m_sourceId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        } else {
+            remoteObjectID = CGameObjectArray::INVALID_INDEX;
+            remotePlayerID = 0;
+        }
+
+        *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+        cnt += sizeof(PLAYER_ID);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = m_pSearchRequest->m_sourcePt.x;
+        *reinterpret_cast<LONG*>(*pData + cnt + sizeof(LONG)) = m_pSearchRequest->m_sourcePt.y;
+        cnt += sizeof(POINT);
+
+        for (BYTE nPartyId = 0; nPartyId < m_pSearchRequest->m_nPartyIds; nPartyId++) {
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_pSearchRequest->m_partyIds[nPartyId],
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pObject,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                remoteObjectID = pObject->m_remoteObjectID;
+                remotePlayerID = pObject->m_remotePlayerID;
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_pSearchRequest->m_partyIds[nPartyId],
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            } else {
+                remoteObjectID = CGameObjectArray::INVALID_INDEX;
+                remotePlayerID = 0;
+            }
+
+            *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+            cnt += sizeof(PLAYER_ID);
+
+            *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+            cnt += sizeof(LONG);
+        }
+
+        for (BYTE nTargetId = 0; nTargetId < m_pSearchRequest->m_nTargetIds; nTargetId++) {
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_pSearchRequest->m_targetIds[nTargetId],
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pObject,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                remoteObjectID = pObject->m_remoteObjectID;
+                remotePlayerID = pObject->m_remotePlayerID;
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_pSearchRequest->m_targetIds[nTargetId],
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            } else {
+                remoteObjectID = CGameObjectArray::INVALID_INDEX;
+                remotePlayerID = 0;
+            }
+
+            *reinterpret_cast<PLAYER_ID*>(*pData + cnt) = remotePlayerID;
+            cnt += sizeof(PLAYER_ID);
+
+            *reinterpret_cast<LONG*>(*pData + cnt) = remoteObjectID;
+            cnt += sizeof(LONG);
+        }
+
+        for (BYTE nTargetPoint = 0; nTargetPoint < m_pSearchRequest->m_nTargetPoints; nTargetPoint++) {
+            *reinterpret_cast<LONG*>(*pData + cnt) = m_pSearchRequest->m_targetPoints[nTargetPoint].x;
+            *reinterpret_cast<LONG*>(*pData + cnt + sizeof(LONG)) = m_pSearchRequest->m_targetPoints[nTargetPoint].y;
+            cnt += sizeof(POINT);
+        }
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = m_pSearchRequest->m_minNodes;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = m_pSearchRequest->m_maxNodes;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = m_pSearchRequest->m_minNodesBack;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<LONG*>(*pData + cnt) = m_pSearchRequest->m_maxNodesBack;
+        cnt += sizeof(LONG);
+
+        *reinterpret_cast<BOOL*>(*pData + cnt) = m_pSearchRequest->m_bBump;
+        cnt += sizeof(BOOL);
+    } else {
+        *reinterpret_cast<LONG*>(*pData + 0xA) = m_ptTarget.x;
+        *reinterpret_cast<LONG*>(*pData + 0xE) = m_ptTarget.y;
+        cnt = 0x12;
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 20362
+    UTIL_ASSERT(cnt == *dwSize);
 }
 
 // 0x509730
