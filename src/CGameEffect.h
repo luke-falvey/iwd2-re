@@ -327,6 +327,7 @@ public:
     void AdjustINT(CGameSprite* pSprite, INT nValue);
     void AdjustWIS(CGameSprite* pSprite, INT nValue);
     void AdjustCON(CGameSprite* pSprite, INT nValue);
+    void AdjustCHR(CGameSprite* pSprite, INT nValue);
     void Immobilize(CGameSprite* pSprite);
     void AddSlowEffect(CGameSprite* pSprite);
     void AddPanicEffect(CGameSprite* pSprite);
@@ -411,6 +412,7 @@ class CGameEffectCHR : public CGameEffect {
 public:
     CGameEffectCHR(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectColorChange : public CGameEffect {
@@ -523,18 +525,21 @@ class CGameEffectInvisible : public CGameEffect {
 public:
     CGameEffectInvisible(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectLore : public CGameEffect {
 public:
     CGameEffectLore(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectLuck : public CGameEffect {
 public:
     CGameEffectLuck(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectMorale : public CGameEffect {
@@ -556,6 +561,7 @@ class CGameEffectPoison : public CGameEffect {
 public:
     CGameEffectPoison(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
     void OnRemove(CGameSprite* pSprite) override;
 };
 
@@ -800,6 +806,7 @@ class CGameEffectSkillAlchemy : public CGameEffect {
 public:
     CGameEffectSkillAlchemy(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSpellMemoizationCleric : public CGameEffect {
