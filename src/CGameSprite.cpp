@@ -18877,7 +18877,36 @@ SHORT CGameSprite::LeaveParty()
 // 0x74F6D0
 void CGameSprite::MoveGlobal(const CString& sArea, const CPoint& ptStart)
 {
-    // TODO: Incomplete.
+    if (m_bGlobal) {
+        if (m_pArea != NULL) {
+            if (m_pArea->m_resRef == sArea) {
+                JumpToPoint(ptStart, TRUE);
+                return;
+            }
+
+            if (m_bSelected) {
+                Unselect();
+                g_pBaldurChitin->GetObjectGame()->SelectToolbar();
+            }
+
+            RemoveFromArea();
+        }
+
+        CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sArea);
+        if (pArea != NULL) {
+            if ((m_baseStats.m_flags & 0x800) != 0 && m_animation.CanLieDown()) {
+                AddToArea(pArea, ptStart, 0, LIST_BACK);
+                return;
+            }
+
+            AddToArea(pArea, ptStart, 0, LIST_FRONT);
+            return;
+        }
+
+        Icewind586B70::Instance()->sub_5872C0(this);
+        m_currentArea = CResRef(sArea);
+        m_pos = ptStart;
+    }
 }
 
 // 0x74FC50
@@ -22894,15 +22923,84 @@ void CGameSprite::DisplaySkills(CUIControlTextDisplay* pText)
 // 0x766140
 SHORT CGameSprite::JumpToArea(CString areaName, const CPoint& dest, SHORT facingDirection, SHORT delay)
 {
-    // TODO: Incomplete.
+    areaName.MakeUpper();
 
-    return ACTION_ERROR;
+    if (m_bGlobal) {
+        CMessage* message = new CMessageMoveGlobal(areaName, dest, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    if (m_pArea == NULL) {
+        return ACTION_ERROR;
+    }
+
+    if (delay > 0) {
+        CMoveListEntry* pEntry = new CMoveListEntry();
+        pEntry->m_nDelay = delay;
+        pEntry->m_nFacing = static_cast<BYTE>(facingDirection);
+        pEntry->m_nSpriteId = m_id;
+        pEntry->m_ptDestination = dest;
+        pEntry->m_areaResRef = areaName;
+        g_pBaldurChitin->GetObjectGame()->m_cLimboList.AddTail(pEntry);
+    } else {
+        CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(areaName);
+        if (pArea != NULL) {
+            m_clearAIOnRemoveFromArea = FALSE;
+            m_bDeleteOnRemove = FALSE;
+            RemoveFromArea();
+            m_bDeleteOnRemove = TRUE;
+            MoveOntoArea(pArea, dest, facingDirection);
+            return ACTION_DONE;
+        }
+
+        CMoveListEntry* pEntry = new CMoveListEntry();
+        pEntry->m_nFacing = static_cast<BYTE>(facingDirection);
+        pEntry->m_nDelay = 0;
+        pEntry->m_nSpriteId = m_id;
+        pEntry->m_ptDestination = dest;
+        pEntry->m_areaResRef = areaName;
+        g_pBaldurChitin->GetObjectGame()->m_cMoveList.AddTail(pEntry);
+    }
+
+    m_bDeleteOnRemove = FALSE;
+    RemoveFromArea();
+    m_bDeleteOnRemove = TRUE;
+
+    return ACTION_DONE;
 }
 
 // 0x766380
 void CGameSprite::MoveOntoArea(CGameArea* pArea, const CPoint& dest, SHORT facingDirection)
 {
-    // TODO: Incomplete.
+    CPoint ptGrid(dest.x / CPathSearch::GRID_SQUARE_SIZEX,
+        dest.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    BYTE personalSpace = m_animation.GetPersonalSpace();
+
+    CPoint pt = pArea->m_search.GetNearestOpenSquare(ptGrid,
+        GetTerrainTable(),
+        personalSpace,
+        facingDirection);
+
+    CPoint pos(pt.x * CPathSearch::GRID_SQUARE_SIZEX + CPathSearch::GRID_SQUARE_SIZEX / 2,
+        pt.y * CPathSearch::GRID_SQUARE_SIZEY + CPathSearch::GRID_SQUARE_SIZEY / 2);
+    AddToArea(pArea, pos, 0, LIST_FRONT);
+
+    SetFacing(facingDirection);
+
+    if (GetPos() != CPoint(-1, -1) || m_pArea != NULL) {
+        if (InControl()) {
+            CMessage* message = new CMessageSpriteUpdate(this, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    }
+
+    CVariable creatureName;
+    creatureName.SetName(CString(GetScriptName()));
+    creatureName.m_intValue = m_id;
+    pArea->m_namedCreatures.AddKey(creatureName);
+
+    m_posStart = m_pos;
 }
 
 // 0x42FDC0
