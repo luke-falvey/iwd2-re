@@ -7903,6 +7903,14 @@ void CInfGame::SetupCharacters(BOOLEAN bProgressBarInPlace)
     }
 }
 
+// 0x5BDFE0
+LONG CInfGame::sub_5BDFE0(SHORT nType)
+{
+    // TODO: Incomplete.
+
+    return CGameObjectArray::INVALID_INDEX;
+}
+
 // 0x5BFC40
 LONG CInfGame::GetProtagonist()
 {

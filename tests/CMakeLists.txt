@@ -19,6 +19,7 @@ add_executable(iwd2-tests
     "unit/test.h"
     "unit/test_resref.cpp"
     "unit/test_vidpalette.cpp"
+    "unit/test_aiscript.cpp"
     "${LAYOUT_TEST}"
 )
 target_include_directories(iwd2-tests PRIVATE "${PROJECT_SOURCE_DIR}/third_party/doctest" "unit")

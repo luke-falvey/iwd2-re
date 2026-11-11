@@ -175,7 +175,9 @@ public:
     int GetCountInPoly(const CRect& rBounding, const CAIObjectType& type);
     void GetAllInRangeBack(const CPoint& center, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOL lineOfSight, BOOL ignoreDead, BOOL checkForNonSprites);
     void GetAllInPoly(const CRect& rBounding, CPoint* pPoly, SHORT nPoly, const CAIObjectType& type, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOLEAN checkBackList);
+    LONG sub_46BAD0(LONG startObject, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BOOL a7, BYTE nNth, BOOL a9);
     LONG sub_46DAE0(INT x, INT y, const CAIObjectType& type, int range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BOOL farthest, BOOL summonedOnly);
+    LONG sub_46DDC0(INT x, INT y, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BYTE nNth, BOOL a9);
     BOOLEAN CanSaveGame(STRREF& strError);
     void sub_46E130(CGameEffect* pEffect, BOOL a2, BOOL bCheckSpecifics, BYTE nSpecifics, CGameObject* pExclude);
     void AIUpdate();

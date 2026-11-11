@@ -96,9 +96,10 @@ BOOL CAIResponse::InList(SHORT actionID)
 // 0x40E0C0
 BOOL CAIResponse::InListEnd(SHORT actionID)
 {
+    // NOTE: Walks forward from the tail, so only the last action is checked.
     POSITION pos = m_actionList.GetTailPosition();
     while (pos != NULL) {
-        CAIAction* action = m_actionList.GetPrev(pos);
+        CAIAction* action = m_actionList.GetNext(pos);
         if (action->OfType(actionID)) {
             return TRUE;
         }
@@ -115,6 +116,7 @@ void CAIResponse::Read(CString sData)
     CString v2;
 
     v1 = CAIUtil::ReadTo(sData, CString("AC\n"), FALSE);
+    m_weight = static_cast<SHORT>(strtol(v1, NULL, 10));
 
     v2 = CAIUtil::ReadBetween(sData, CString("AC\n"));
     while (v2.GetLength() > 0) {
@@ -132,6 +134,7 @@ void CAIResponse::Read(CString sData)
 // 0x40FA30
 CAIResponseSet::CAIResponseSet()
 {
+    m_weightTotal = 0;
 }
 
 // 0x40E4B0

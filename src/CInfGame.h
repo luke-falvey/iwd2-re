@@ -245,6 +245,7 @@ public:
     void DestroyDisposableItems();
     void AddPartyGold(LONG dwAddPartyGold);
     void SetupCharacters(BOOLEAN bProgressBarInPlace);
+    LONG sub_5BDFE0(SHORT nType);
     LONG GetProtagonist();
     void SetProtagonist(LONG nId);
     BOOLEAN FindAreaID(DWORD nAreaId);
