@@ -1076,15 +1076,75 @@ BOOLEAN CBaldurMessage::ResourceSuggestLoad(const CString& sResName, UINT nType,
 // 0x42ABA0
 BOOLEAN CBaldurMessage::sub_42ABA0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    // NOTE: The following three locals are never used.
+    CString sPlayerName;
+    CAreaFile cAreaFile;
+    CGameFile cGameFile;
 
-    return FALSE;
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return FALSE;
+    }
+
+    INT nType = *reinterpret_cast<INT*>(pMessage + CNetwork::SPEC_MSG_HEADER_LENGTH);
+    DWORD dwFlags = *reinterpret_cast<DWORD*>(pMessage + CNetwork::SPEC_MSG_HEADER_LENGTH + sizeof(INT));
+
+    char szResName[8] = { 0 };
+    DWORD nNameLength = dwSize - (CNetwork::SPEC_MSG_HEADER_LENGTH + sizeof(INT) + sizeof(DWORD));
+    memcpy(szResName, pMessage + CNetwork::SPEC_MSG_HEADER_LENGTH + sizeof(INT) + sizeof(DWORD), nNameLength);
+
+    CString sResName(szResName, nNameLength);
+
+    if (nType == 0x3F2) {
+        BOOLEAN bProgressBarRequired = (dwFlags >> 8) & 1;
+        g_pBaldurChitin->m_pObjectGame->field_4BD4 = TRUE;
+        g_pBaldurChitin->GetObjectGame()->LoadArea(sResName, dwFlags, bProgressBarRequired, FALSE);
+        g_pBaldurChitin->m_pObjectGame->field_4BD4 = FALSE;
+    }
+
+    return TRUE;
 }
 
 // 0x42ADF0
 BOOLEAN CBaldurMessage::sub_42ADF0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    if (g_pChitin->cNetwork.m_bConnectionEstablished
+        && g_pChitin->cNetwork.m_bIsHost) {
+        DWORD nOffset = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+        BYTE nNameLength = pMessage[nOffset];
+
+        char szResName[8] = { 0 };
+        nOffset++;
+        memcpy(szResName, pMessage + nOffset, nNameLength);
+        nOffset += nNameLength;
+
+        CString sResName(szResName, nNameLength);
+
+        INT nType = *reinterpret_cast<INT*>(pMessage + nOffset);
+        DWORD nResSize = *reinterpret_cast<DWORD*>(pMessage + nOffset + sizeof(INT));
+        nOffset += sizeof(INT) + sizeof(DWORD);
+
+        BYTE* pBuffer = CreateBuffer(nResSize);
+        if (pBuffer == NULL) {
+            return FALSE;
+        }
+
+        memcpy(pBuffer, pMessage + nOffset, nResSize);
+
+        if (nType == 0x3F7) {
+            CWorldMapFile cWorldMapFile;
+            cWorldMapFile.SetResRef(CResRef(sResName), TRUE, TRUE);
+            cWorldMapFile.pRes->Write(g_pBaldurChitin->GetObjectGame()->m_sTempDir, pBuffer, nResSize);
+        } else if (nType == 0x3F6) {
+            CStoreFile cStoreFile;
+            cStoreFile.SetResRef(CResRef(sResName), TRUE, TRUE);
+            cStoreFile.pRes->Write(g_pBaldurChitin->GetObjectGame()->m_sTempDir, pBuffer, nResSize);
+        }
+
+        DestroyBuffer(pBuffer);
+
+        return TRUE;
+    }
 
     return FALSE;
 }
