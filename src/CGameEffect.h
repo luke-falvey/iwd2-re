@@ -309,6 +309,7 @@ public:
     BOOL CheckExpiration();
     ITEM_EFFECT* GetItemEffect();
     void DisplayStringRef(CGameSprite* pSprite, STRREF str);
+    void DisplayHitPoints(CGameSprite* pSprite, LONG nAmount);
     void AddColorEffect(CGameSprite* pSprite, BYTE r, BYTE g, BYTE b, BYTE periodLength);
     void AddColorEffect(CGameSprite* pSprite, BYTE r, BYTE g, BYTE b);
     void CopyFromBase(CGameEffectBase* pBase);
@@ -465,6 +466,7 @@ public:
     void sub_4A7750(CGameSprite* pSprite);
     void sub_4A8DF0(DWORD nDamageType, CGameSprite* pSprite);
     void sub_4AB0A0(CGameSprite* pSprite, LONG nDamage);
+    CString sub_4AB370();
 };
 
 class CGameEffectDeath : public CGameEffect {
@@ -506,12 +508,17 @@ public:
     CGameEffectHeal();
     CGameEffectHeal(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    BOOL UsesDice() override;
 };
 
 class CGameEffectHitPoints : public CGameEffect {
 public:
     CGameEffectHitPoints(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnAdd(CGameSprite* pSprite) override;
+    BOOL UsesDice() override;
 };
 
 class CGameEffectINT : public CGameEffect {
