@@ -25,7 +25,14 @@ CProjectile84D8B8::CProjectile84D8B8()
 // 0x529950
 void CProjectile84D8B8::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    m_targetId = target;
+    m_sourceId = source;
+    field_EA = pArea;
+    m_callBackProjectile = CGameObjectArray::INVALID_INDEX;
+
+    OnArrival();
+
+    delete this;
 }
 
 // 0x5348C0
@@ -50,19 +57,233 @@ CProjectile84E8C0::CProjectile84E8C0(const CString& sVidCell, const CString& sSo
 // 0x534C10
 void CProjectile84E8C0::AIUpdate()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (pGame->m_nTimeStop == 0 || pGame->m_nTimeStopCaster == m_id) {
+        field_298--;
+
+        if (field_298 == 0) {
+            // NOTE: Inlined `CProjectile::RemoveSelf`.
+            RemoveFromArea();
+
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+                CGameObjectArray::THREAD_ASYNCH,
+                NULL,
+                INFINITE);
+            if (rc == CGameObjectArray::SUCCESS) {
+                delete this;
+            }
+
+            return;
+        }
+
+        if (field_294 != 0) {
+            BYTE nLength = m_vidCell.GetSequenceLength(0, FALSE);
+            if (nLength != 0) {
+                m_vidCell.FrameSet(rand() % nLength);
+            } else {
+                m_vidCell.FrameSet(0);
+            }
+        } else {
+            if (m_vidCell.IsEndOfSequence(FALSE)) {
+                m_vidCell.FrameSet(0);
+            } else {
+                m_vidCell.FrameAdvance();
+            }
+        }
+
+        if (m_targetId != CGameObjectArray::INVALID_INDEX) {
+            CGameObject* pTarget;
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pTarget,
+                INFINITE);
+            if (rc != CGameObjectArray::SUCCESS) {
+                RemoveSelf();
+                return;
+            }
+
+            if (field_EA != pTarget->m_pArea) {
+                LONG nTargetId = m_targetId;
+
+                RemoveSelf();
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return;
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        m_sound.SetCoordinates(m_pos.x, m_pos.y, m_posZ);
+    }
 }
 
 // 0x534DD0
 void CProjectile84E8C0::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
 {
-    // TODO: Incomplete.
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CProjectile.cpp
+    // __LINE__: 9080
+    UTIL_ASSERT(pVidMode != NULL);
+
+    CInfinity* pInfinity = &field_EA->m_cInfinity;
+
+    CRect rScreen;
+    rScreen.left = pInfinity->nCurrentX;
+    rScreen.top = pInfinity->nCurrentY;
+    rScreen.right = pInfinity->rViewPort.right - pInfinity->rViewPort.left + pInfinity->nCurrentX;
+    rScreen.bottom = pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + pInfinity->nCurrentY;
+
+    DWORD dwFlags = 0;
+
+    CPoint pos;
+    pos.x = m_pos.x;
+    pos.y = field_EA->GetHeightOffset(m_pos, m_listType) + m_pos.y;
+    if (pos.y >= pInfinity->nAreaY) {
+        pos.y = pInfinity->nAreaY - 1;
+    }
+
+    CPoint ptStart(pos.x, pos.y);
+
+    BYTE nSequence = 0;
+
+    // NOTE: Only the low byte of the result is tested.
+    if (static_cast<BYTE>(m_vidCell.GetNumberSequences(FALSE)) > 0) {
+        do {
+            if (pos.y < 0) {
+                return;
+            }
+
+            // NOTE: Inlined `CVisibilityMap::PointToTile`, with a modified
+            // position.
+            if (!field_EA->m_visibility.IsTileVisible(static_cast<SHORT>(static_cast<SHORT>(pos.y / CVisibilityMap::SQUARE_SIZEY) * field_EA->m_visibility.m_nWidth + pos.x / CVisibilityMap::SQUARE_SIZEX))) {
+                return;
+            }
+
+            m_vidCell.SequenceSet(nSequence);
+
+            CPoint ptRef;
+            m_vidCell.GetCurrentCenterPoint(ptRef, FALSE);
+
+            CSize size;
+            m_vidCell.GetCurrentFrameSize(size, FALSE);
+
+            CRect rFx;
+            rFx.SetRect(0, 0, size.cx, size.cy);
+
+            CRect rGCBounds;
+            rGCBounds.left = pos.x - ptRef.x;
+            rGCBounds.top = m_posZ - ptRef.y + pos.y;
+            rGCBounds.right = rFx.right - rFx.left + rGCBounds.left;
+            rGCBounds.bottom = rFx.bottom - rFx.top + rGCBounds.top;
+
+            CRect rIntersect;
+            IntersectRect(&rIntersect, &rGCBounds, &rScreen);
+
+            CRect rClip(rIntersect.left, rIntersect.top, rIntersect.right, rIntersect.bottom);
+            if (IsRectEmpty(&rClip)) {
+                return;
+            }
+
+            if (field_290 != 0) {
+                dwFlags |= CInfinity::FXPREP_COPYFROMBACK | 0x20200;
+            } else {
+                dwFlags |= CInfinity::FXPREP_CLEARFILL | 0x20001;
+            }
+
+            pInfinity->FXPrep(rFx, dwFlags, a3, pos, ptRef);
+
+            if (pInfinity->FXLock(rFx, dwFlags)) {
+                pInfinity->FXRender(&m_vidCell, ptRef.x, ptRef.y, dwFlags, 0);
+
+                CRect rClipPolys(rGCBounds.left,
+                    m_posZ + rGCBounds.top,
+                    rGCBounds.right,
+                    m_posZ + rGCBounds.bottom);
+
+                pInfinity->FXRenderClippingPolys(ptStart.x,
+                    m_posZ + ptStart.y,
+                    -m_posZ,
+                    ptRef,
+                    rClipPolys,
+                    FALSE,
+                    dwFlags);
+
+                pInfinity->FXUnlock(dwFlags, NULL, CPoint(0, 0));
+                pInfinity->FXBltFrom(a3, rFx, pos.x, pos.y, ptRef.x, ptRef.y, dwFlags);
+            }
+
+            pos.y -= ptRef.y;
+            nSequence++;
+        } while (nSequence < static_cast<BYTE>(m_vidCell.GetNumberSequences(FALSE)));
+    }
 }
 
 // 0x535100
 void CProjectile84E8C0::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    CPoint pt;
+    CGameObject* pTarget;
+    BYTE rc;
+
+    m_sourceId = source;
+    m_targetId = target;
+    field_EA = pArea;
+
+    DeliverEffects();
+
+    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Add(&m_id, this, INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        delete this;
+        return;
+    }
+
+    if (m_targetId == CGameObjectArray::INVALID_INDEX) {
+        pt.x = targetPos.x;
+        pt.y = targetPos.y + 13;
+    } else {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pTarget,
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            return;
+        }
+
+        pt.x = pTarget->GetPos().x;
+        pt.y = pTarget->GetPos().y + 13;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    AddToArea(pArea, pt, 0, CGameObject::LIST_FRONT);
+
+    // NOTE: Inlined `CProjectile::PlaySound`.
+    PlaySound(m_fireSoundRef, m_loopFireSound, FALSE);
+
+    if (m_callBackProjectile != CGameObjectArray::INVALID_INDEX) {
+        CProjectile* pProjectile;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_callBackProjectile,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pProjectile),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            pProjectile->CallBack();
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_callBackProjectile,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
 }
 
 // 0x535320
