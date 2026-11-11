@@ -3453,7 +3453,134 @@ void CScreenCharacter::CheckDropEquipment()
 // 0x5E6A30
 void CScreenCharacter::CheckDropSlot(INT nSlot)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 9499
+    UTIL_ASSERT(pGame != NULL);
+
+    STRREF strError = -1;
+    CResRef cResIcon("");
+    CResRef cResItem("");
+    WORD wCount = 0;
+    CItem* pItem;
+
+    pGame->InventoryInfoPersonal(static_cast<WORD>(m_nSelectedCharacter),
+        nSlot,
+        pItem,
+        strError,
+        cResIcon,
+        cResItem,
+        wCount,
+        TRUE);
+
+    if (pItem == NULL) {
+        return;
+    }
+
+    if (!(nSlot >= 0x2B
+            && nSlot <= 0x32
+            && nSlot - 0x2B >= pGame->GetNumQuickWeaponSlots(static_cast<WORD>(m_nSelectedCharacter)))) {
+        if (pGame->CheckIfPlayerInPortraitSlotCanUseItem(static_cast<WORD>(m_nSelectedCharacter),
+                pItem,
+                strError,
+                TRUE)) {
+            return;
+        }
+    }
+
+    LONG iSprite = pGame->GetCharacterId(m_nSelectedCharacter);
+
+    CButtonData buttonData;
+
+    CGameSprite* pSprite;
+    BYTE rc;
+
+    if (nSlot >= 0x2B && nSlot <= 0x32) {
+        do {
+            rc = pGame->GetObjectArray()->GetDeny(iSprite,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            BYTE nButtonNum = static_cast<BYTE>(nSlot - CGameSpriteEquipment::SLOT_WEAPON);
+            pSprite->SetQuickWeapon(nButtonNum, buttonData);
+
+            nButtonNum = static_cast<BYTE>(nSlot - CGameSpriteEquipment::SLOT_WEAPON);
+            pSprite->SetQuickWeapon(nButtonNum, 0);
+
+            pGame->GetObjectArray()->ReleaseDeny(iSprite,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    if (nSlot >= 0xB && nSlot <= 0xD) {
+        do {
+            rc = pGame->GetObjectArray()->GetDeny(iSprite,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            SHORT nLauncherSlot = pSprite->GetLauncherSlot(nSlot, 0);
+            if (nLauncherSlot != -1) {
+                BYTE nButtonNum = static_cast<BYTE>(nLauncherSlot - CGameSpriteEquipment::SLOT_WEAPON);
+                pSprite->SetQuickWeapon(nButtonNum, buttonData);
+
+                nButtonNum = static_cast<BYTE>(nLauncherSlot - CGameSpriteEquipment::SLOT_WEAPON);
+                pSprite->SetQuickWeapon(nButtonNum, 0);
+            }
+
+            pGame->GetObjectArray()->ReleaseDeny(iSprite,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    pItem = NULL;
+    if (!pGame->SwapItemPersonal(static_cast<WORD>(m_nSelectedCharacter),
+            nSlot,
+            pItem,
+            strError,
+            0xFFFF,
+            FALSE)) {
+        return;
+    }
+
+    if (pItem == NULL) {
+        return;
+    }
+
+    if (pGame->SwapItemPersonalInventory(static_cast<WORD>(m_nSelectedCharacter),
+            pItem,
+            0x7FFF,
+            strError,
+            0xFFFF,
+            FALSE,
+            TRUE)) {
+        return;
+    }
+
+    LONG nGroundPile = pGame->GetGroundPile(iSprite);
+    pGame->SwapItemGround(nGroundPile,
+        0x7FFF,
+        pItem,
+        strError,
+        0xFFFF,
+        FALSE);
+
+    // NOTE: The item argument is a default-constructed temporary.
+    CMessageContainerAddItem* pMessage = new CMessageContainerAddItem(CItem(),
+        0x7FFF,
+        TRUE,
+        nGroundPile,
+        nGroundPile);
+
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
 }
 
 // 0x5E7020
