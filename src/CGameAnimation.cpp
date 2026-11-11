@@ -249,6 +249,16 @@ BOOL CGameAnimation::IsFalseColor()
 }
 
 // NOTE: Inlined.
+BOOL CGameAnimation::IsInvulnerable()
+{
+    // __FILE__: .\Include\ObjAnimation.h
+    // __LINE__: 2100
+    UTIL_ASSERT(m_animation != NULL);
+
+    return m_animation->IsInvulnerable();
+}
+
+// NOTE: Inlined.
 BOOL CGameAnimation::IsBeginningOfSequence()
 {
     // __FILE__: .\Include\ObjAnimation.h

@@ -1017,3 +1017,41 @@ void IcewindMisc::sub_5860F0(CGameSprite* pSprite, CGameEffect* pEffect)
         }
     }
 }
+
+// 0x586220
+std::list<CGameEffect*> IcewindMisc::GetSpellEffects(CGameAIBase* pCaster, const char* szResRef, BYTE nCasterLevel)
+{
+    CResRef cResRef((CString(szResRef)));
+    CSpell cSpell(cResRef);
+    cSpell.Demand();
+
+    // Pick the last ability whose minimum caster level is met.
+    SHORT nAbility = 0;
+    while (nAbility < cSpell.GetAbilityCount()) {
+        if (nCasterLevel < cSpell.GetAbility(nAbility)->minCasterLevel) {
+            break;
+        }
+
+        // NOTE: The original fetches the ability once more here.
+        cSpell.GetAbility(nAbility);
+        nAbility++;
+    }
+
+    nAbility--;
+
+    SPELL_ABILITY* pAbility = cSpell.GetAbility(nAbility);
+
+    std::list<CGameEffect*> effects;
+    if (pAbility != NULL) {
+        for (INT nEffect = 0; nEffect < pAbility->effectCount; nEffect++) {
+            CGameEffect* pEffect = cSpell.DecodeEffect(nAbility, nEffect, pCaster, 0, 0, 0);
+            pEffect->m_source = pCaster->GetPos();
+            pEffect->m_sourceID = pCaster->GetId();
+            effects.push_back(pEffect);
+        }
+    }
+
+    cSpell.Release();
+
+    return effects;
+}

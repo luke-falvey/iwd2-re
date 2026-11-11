@@ -443,8 +443,16 @@ public:
     CGameEffectDamage();
     CGameEffectDamage(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnAdd(CGameSprite* pSprite) override;
+    BOOL CheckSave(CGameSprite* pSprite, BYTE& roll1, BYTE& roll2, BYTE& roll3, BYTE& roll4) override;
+    BOOL UsesDice() override;
+    void DisplayString(CGameSprite* pSprite) override;
+    /* 0028 */ virtual void sub_4AA6D0(CGameSprite* pSprite, LONG nResisted);
 
     void sub_4A7750(CGameSprite* pSprite);
+    void sub_4A8DF0(DWORD nDamageType, CGameSprite* pSprite);
+    void sub_4AB0A0(CGameSprite* pSprite, LONG nDamage);
 };
 
 class CGameEffectDeath : public CGameEffect {

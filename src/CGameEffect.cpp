@@ -3,9 +3,11 @@
 #include "CAIScript.h"
 #include "CBaldurChitin.h"
 #include "CBaldurProjector.h"
+#include "CBlood.h"
 #include "CGameAnimationType.h"
 #include "CGameArea.h"
 #include "CGameSprite.h"
+#include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CScreenWorld.h"
 #include "CSpell.h"
@@ -2270,6 +2272,710 @@ void CGameEffectDamage::sub_4A7750(CGameSprite* pSprite)
             }
         }
     }
+}
+
+// 0x49FC40
+BOOL CGameEffectDamage::UsesDice()
+{
+    return TRUE;
+}
+
+// 0x4A51D0
+void CGameEffectDamage::DisplayString(CGameSprite* pSprite)
+{
+}
+
+// 0x4A7900
+BOOL CGameEffectDamage::ApplyEffect(CGameSprite* pSprite)
+{
+    CGameObject* pSource;
+    BYTE rc;
+
+    pSprite->m_hasColorEffects = TRUE;
+
+    DWORD nDamageMode = m_dwFlags & 0xFFFF;
+    DWORD nDamageType = (m_dwFlags >> 16) << 16;
+
+    // Druids of level 9 and higher are immune to poison.
+    if (nDamageType == 0x200000
+        && pSprite->GetDerivedStats()->GetClassLevel(CAIOBJECTTYPE_C_DRUID) >= 9) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    LONG nOldHitPoints = pSprite->GetBaseStats()->m_hitPoints;
+
+    // NOTE: Uninline.
+    if (pSprite->GetAnimation()->IsInvulnerable()) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->m_gameSave.m_cutScene == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    SHORT nDirection;
+    if (m_sourceID == CGameObjectArray::INVALID_INDEX) {
+        nDirection = pSprite->GetDirection(m_source);
+    } else {
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pSource,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            nDirection = pSprite->GetDirection(pSource->GetPos());
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        } else {
+            nDirection = 0;
+        }
+    }
+
+    if ((pSprite->GetBaseStats()->m_generalState & STATE_STONE_DEATH) != 0) {
+        CGameEffectDeath* pDeath = new CGameEffectDeath();
+        // NOTE: The inlined constructor here stores 0 (the default
+        // constructor stores 1).
+        pDeath->field_18C = 0;
+        pDeath->m_source = m_source;
+        pDeath->m_sourceID = m_sourceID;
+        pDeath->m_dwFlags = 0x40;
+        pDeath->m_casterLevel = m_casterLevel;
+        pSprite->AddEffect(pDeath, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if ((pSprite->GetBaseStats()->m_generalState & STATE_FROZEN_DEATH) != 0) {
+        CGameEffectDeath* pDeath = new CGameEffectDeath();
+        // NOTE: The inlined constructor here stores 0 (the default
+        // constructor stores 1).
+        pDeath->field_18C = 0;
+        pDeath->m_source = m_source;
+        pDeath->m_sourceID = m_sourceID;
+        pDeath->m_dwFlags = 0x80;
+        pDeath->m_casterLevel = m_casterLevel;
+        pSprite->AddEffect(pDeath, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if (pSprite->GetBaseStats()->m_hitPoints <= -10
+        || (pSprite->GetBaseStats()->m_generalState & STATE_DEAD) != 0) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    LONG nRoll = 0;
+    for (BYTE nDie = 0; nDie < m_numDice; nDie++) {
+        nRoll += CUtil::UtilRandInt(m_diceSize, -pSprite->m_tempStats.m_nLuck) + 1;
+    }
+
+    m_effectAmount += nRoll;
+    if (m_effectAmount <= 0) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    SHORT nSequence = pSprite->m_nSequence;
+
+    if (nDamageMode == 3) {
+        m_effectAmount /= 2;
+        if (m_effectAmount < 1) {
+            m_effectAmount = 1;
+        }
+    }
+
+    LONG nResisted = 0;
+
+    if (nDamageMode == 0 || nDamageMode == 3) {
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+            BOOLEAN bApplyDifficulty = TRUE;
+
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pSource,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                if (pSource->GetObjectType() == CGameObject::TYPE_SPRITE
+                    && IcewindMisc::sub_585310(pSprite) == TRUE
+                    && IcewindMisc::sub_585310(static_cast<CGameSprite*>(pSource)) == TRUE) {
+                    bApplyDifficulty = FALSE;
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+
+            CGameOptions* pOptions = g_pBaldurChitin->GetObjectGame()->GetOptions();
+
+            LONG nDifficultyMultiplier;
+            if (g_pChitin->cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL) {
+                nDifficultyMultiplier = pOptions->m_nDifficultyMultiplier;
+            } else {
+                nDifficultyMultiplier = pOptions->m_nMPDifficultyMultiplier;
+            }
+
+            if (pOptions->m_bSuppressExtraDifficultyDamage == TRUE) {
+                bApplyDifficulty = FALSE;
+            }
+
+            if (nDifficultyMultiplier <= 0 || bApplyDifficulty) {
+                m_effectAmount += m_effectAmount * nDifficultyMultiplier / 100;
+            }
+        }
+
+        LONG nUnresistedAmount = m_effectAmount;
+
+        if (pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_TORTOISE_SHELL]) {
+            pSprite->GetDerivedStats()->field_124 -= nUnresistedAmount;
+
+            LONG nShell = pSprite->GetDerivedStats()->field_124;
+            POSITION pos = pSprite->GetTimedEffectList()->GetHeadPosition();
+            while (pos != NULL) {
+                CGameEffect* pEffect = pSprite->GetTimedEffectList()->GetNext(pos);
+                if (pEffect->m_effectID == ICEWIND_CGAMEEFFECT_TORTOISESHELL) {
+                    pEffect->m_effectAmount = nShell;
+                }
+            }
+
+            nShell = pSprite->GetDerivedStats()->field_124;
+            pos = pSprite->GetEquipedEffectList()->GetHeadPosition();
+            while (pos != NULL) {
+                CGameEffect* pEffect = pSprite->GetEquipedEffectList()->GetNext(pos);
+                if (pEffect->m_effectID == ICEWIND_CGAMEEFFECT_TORTOISESHELL) {
+                    pEffect->m_effectAmount = nShell;
+                }
+            }
+
+            sub_4AB0A0(pSprite, m_effectAmount);
+
+            if (pSprite->GetDerivedStats()->field_124 <= 0) {
+                pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+                    ICEWIND_CGAMEEFFECT_TORTOISESHELL,
+                    pSprite->GetTimedEffectList()->GetPosCurrent(),
+                    -1);
+                pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+                    ICEWIND_CGAMEEFFECT_TORTOISESHELL,
+                    pSprite->GetEquipedEffectList()->GetPosCurrent(),
+                    -1);
+
+                // NOTE: Uninline.
+                DisplayStringRef(pSprite, 17096);
+            }
+
+            sub_4A7750(pSprite);
+
+            m_done = TRUE;
+            return TRUE;
+        }
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pSource,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        switch (nDamageType) {
+        case 0x0:
+            m_effectAmount -= pSprite->m_tempStats.m_nResistCrushing;
+            break;
+        case 0x10000:
+            if (rc == CGameObjectArray::SUCCESS
+                && pSource->GetObjectType() == CGameObject::TYPE_SPRITE
+                && static_cast<CGameSprite*>(pSource)->sub_763150(CGAMESPRITE_FEAT_AQUA_MORTIS) == TRUE) {
+                m_effectAmount = static_cast<LONG>(static_cast<float>(m_effectAmount) * 1.2);
+            }
+
+            m_effectAmount -= pSprite->m_tempStats.m_nResistAcid;
+
+            if (pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_IRON_BODY]) {
+                m_effectAmount /= 2;
+            }
+            break;
+        case 0x20000:
+            if (rc == CGameObjectArray::SUCCESS
+                && pSource->GetObjectType() == CGameObject::TYPE_SPRITE
+                && static_cast<CGameSprite*>(pSource)->sub_763150(CGAMESPRITE_FEAT_AEGIS_OF_RIME) == TRUE) {
+                m_effectAmount = static_cast<LONG>(static_cast<float>(m_effectAmount) * 1.2);
+            }
+
+            m_effectAmount -= pSprite->m_tempStats.m_nResistCold;
+
+            if (pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_RED_FIRESHIELD]) {
+                m_effectAmount /= 2;
+            }
+            break;
+        case 0x40000:
+            if (rc == CGameObjectArray::SUCCESS
+                && pSource->GetObjectType() == CGameObject::TYPE_SPRITE
+                && static_cast<CGameSprite*>(pSource)->sub_763150(CGAMESPRITE_FEAT_SCION_OF_STORMS) == TRUE) {
+                m_effectAmount = static_cast<LONG>(static_cast<float>(m_effectAmount) * 1.2);
+            }
+
+            m_effectAmount -= pSprite->m_tempStats.m_nResistElectricity;
+
+            if (pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_IRON_BODY]) {
+                m_effectAmount = 0;
+            }
+            break;
+        case 0x80000:
+            if (rc == CGameObjectArray::SUCCESS
+                && pSource->GetObjectType() == CGameObject::TYPE_SPRITE
+                && static_cast<CGameSprite*>(pSource)->sub_763150(CGAMESPRITE_FEAT_SPIRIT_OF_FLAME) == TRUE) {
+                m_effectAmount = static_cast<LONG>(static_cast<float>(m_effectAmount) * 1.2);
+            }
+
+            m_effectAmount -= pSprite->m_tempStats.m_nResistFire;
+
+            if (pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_BLUE_FIRESHIELD]) {
+                m_effectAmount /= 2;
+            }
+
+            if (pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_IRON_BODY]) {
+                m_effectAmount /= 2;
+            }
+            break;
+        case 0x100000:
+            m_effectAmount -= pSprite->m_tempStats.m_nResistPiercing;
+            break;
+        case 0x200000:
+            m_effectAmount -= pSprite->m_tempStats.m_nResistPoison;
+            break;
+        case 0x400000:
+            m_effectAmount -= pSprite->m_tempStats.m_nMagicDamageResistance;
+            break;
+        case 0x1000000:
+            m_effectAmount -= pSprite->m_tempStats.m_nResistSlashing;
+            break;
+        case 0x2000000:
+            m_effectAmount -= pSprite->m_tempStats.m_nResistMissile;
+            m_effectAmount -= pSprite->m_tempStats.m_nResistPiercing;
+            break;
+        case 0x4000000:
+            m_effectAmount -= pSprite->m_tempStats.m_nResistMissile;
+            m_effectAmount -= pSprite->m_tempStats.m_nResistCrushing;
+            break;
+        }
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        if (m_effectAmount < 0) {
+            m_effectAmount = 0;
+        }
+
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+            SHORT nMaxHitPoints = pSprite->m_tempStats.m_nMaxHitPoints;
+            if (m_effectAmount > nMaxHitPoints && nMaxHitPoints < 14) {
+                m_effectAmount = nMaxHitPoints - 1;
+            }
+        }
+
+        if (m_special != -1) {
+            // TODO: Incomplete. The original passes the damage through the
+            // damage reduction list at `m_derivedStats + 0x49C` here
+            // (0x448250, `amount = list.sub_448250(amount, m_special,
+            // nDamageType)`), which is not translated yet.
+        }
+
+        if (m_effectAmount < 0) {
+            m_effectAmount = 0;
+        }
+
+        nResisted = nUnresistedAmount - m_effectAmount;
+    }
+
+    if (m_effectAmount > 0) {
+        pSprite->field_5582 = m_effectAmount;
+    }
+
+    // NOTE: `6` is the sound constant at `0x85BB69` (damage).
+    if (nDamageType == 0x200000) {
+        if (pSprite->field_72A0 <= 0) {
+            pSprite->field_72A0 = 100;
+
+            CMessage* message = new CMessagePlaySound(6,
+                TRUE,
+                TRUE,
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    } else {
+        CMessage* message = new CMessagePlaySound(6,
+            TRUE,
+            TRUE,
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    SHORT nHitPoints;
+    switch (nDamageMode) {
+    case 0:
+    case 3:
+        sub_4AA6D0(pSprite, nResisted);
+        pSprite->GetBaseStats()->m_hitPoints -= static_cast<SHORT>(m_effectAmount);
+        break;
+    case 1:
+        nHitPoints = pSprite->GetBaseStats()->m_hitPoints;
+        pSprite->GetBaseStats()->m_hitPoints = static_cast<SHORT>(min(m_effectAmount, static_cast<LONG>(pSprite->m_tempStats.m_nMaxHitPoints)));
+        m_effectAmount = nHitPoints - m_effectAmount;
+        sub_4AA6D0(pSprite, nResisted);
+        break;
+    case 2:
+        pSprite->GetBaseStats()->m_hitPoints = static_cast<SHORT>(pSprite->GetBaseStats()->m_hitPoints * m_effectAmount / 100);
+        break;
+    }
+
+    pSprite->m_bBloodFlashOn = TRUE;
+    pSprite->m_nBloodFlashAmount = 128;
+    pSprite->m_nDamageLocatorTime = 128;
+
+    sub_4A8DF0(nDamageType, pSprite);
+
+    // NOTE: Sprite effects `1`..`4` and intensity `0` are BYTE constants at
+    // `0x85BB4A`..`0x85BB4E`.
+    BYTE nEffectDuration = static_cast<BYTE>(3 * nOldHitPoints - 3 * pSprite->GetBaseStats()->m_hitPoints);
+    switch (nDamageType) {
+    case 0x0:
+    case 0x100000:
+    case 0x1000000:
+    case 0x2000000:
+    case 0x4000000:
+        pSprite->AddBlood(0,
+            nDirection,
+            nOldHitPoints - pSprite->GetBaseStats()->m_hitPoints < 6 ? CBlood::GUSH_LOW : CBlood::GUSH_MEDIUM);
+        break;
+    case 0x10000:
+        PlaySound(CResRef("EFF_M47"), pSprite);
+        pSprite->StartSpriteEffect(4, 0, nEffectDuration, TRUE);
+        break;
+    case 0x20000:
+        PlaySound(CResRef("EFF_M46"), pSprite);
+        pSprite->StartSpriteEffect(3, 0, nEffectDuration, TRUE);
+        break;
+    case 0x40000:
+        PlaySound(CResRef("MISC_02C"), pSprite);
+        pSprite->StartSpriteEffect(2, 0, nEffectDuration, TRUE);
+        break;
+    case 0x80000:
+        PlaySound(CResRef("MISC_01C"), pSprite);
+        pSprite->StartSpriteEffect(1, 0, nEffectDuration, TRUE);
+        break;
+    case 0x400000:
+        PlaySound(CResRef("HIT_07"), pSprite);
+        break;
+    }
+
+    if (nSequence != CGameSprite::SEQ_DAMAGE
+        && nSequence != CGameSprite::SEQ_DIE
+        && nSequence != CGameSprite::SEQ_SLEEP
+        && nSequence != CGameSprite::SEQ_TWITCH) {
+        pSprite->SetSequence(CGameSprite::SEQ_DAMAGE);
+    }
+
+    if (pSprite->GetDerivedStats()->m_nMinHitPoints > 0
+        && pSprite->GetBaseStats()->m_hitPoints <= 0) {
+        pSprite->GetBaseStats()->m_hitPoints = static_cast<SHORT>(pSprite->GetDerivedStats()->m_nMinHitPoints);
+    }
+
+    BOOL bWakeUp = TRUE;
+    if (pSprite->GetBaseStats()->m_hitPoints > 0) {
+        if (pSprite->sub_763150(CGAMESPRITE_FEAT_HEROIC_INSPIRATION) == TRUE
+            && pSprite->GetBaseStats()->m_hitPoints <= pSprite->GetBaseStats()->m_maxHitPointsBase / 2) {
+            BOOL bFound = FALSE;
+            POSITION pos = pSprite->GetTimedEffectList()->GetHeadPosition();
+            while (pos != NULL) {
+                CGameEffect* pEffect = pSprite->GetTimedEffectList()->GetNext(pos);
+                if (pEffect->m_effectID == ICEWIND_CGAMEEFFECT_HEROICINSPIRATION) {
+                    bFound = TRUE;
+                    break;
+                }
+            }
+
+            if (!bFound) {
+                ITEM_EFFECT effect;
+                CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_HEROICINSPIRATION);
+                effect.durationType = 1;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    pSprite->GetPos(),
+                    pSprite->GetId(),
+                    CPoint(-1, -1));
+                pEffect->m_flags &= ~0x1;
+
+                CMessage* message = new CMessageAddEffect(pEffect,
+                    pSprite->GetId(),
+                    pSprite->GetId());
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            pSprite->FeedBack(CGameSprite::FEEDBACK_HEROICINSPIRATION, 0, 0, 0, -1, 0, 0);
+        }
+    } else {
+        bWakeUp = FALSE;
+
+        CGameEffectDeath* pDeath = new CGameEffectDeath();
+        // NOTE: The inlined constructor here stores 0 (the default
+        // constructor stores 1).
+        pDeath->field_18C = 0;
+        pDeath->m_source = m_source;
+        pDeath->m_sourceID = m_sourceID;
+
+        CGameEffect* pEffect = pDeath;
+
+        BOOL bPhysical = FALSE;
+        BOOL bSubdual = FALSE;
+
+        switch (nDamageType) {
+        case 0x8000000:
+            if (IcewindMisc::IsUndead(pSprite) == TRUE) {
+                nDamageType = 0;
+                bPhysical = TRUE;
+            } else {
+                bSubdual = TRUE;
+            }
+            break;
+        case 0x0:
+        case 0x100000:
+        case 0x1000000:
+            bPhysical = TRUE;
+            break;
+        case 0x10000:
+            pDeath->m_dwFlags = pSprite->GetBaseStats()->m_hitPoints < -5 ? 0x0 : 0x4;
+            break;
+        case 0x20000:
+            pDeath->m_dwFlags = pSprite->GetBaseStats()->m_hitPoints < -5 ? 0x20 : 0x4;
+            break;
+        case 0x40000:
+            pDeath->m_dwFlags = pSprite->GetBaseStats()->m_hitPoints < -5 ? 0x100 : 0x4;
+            break;
+        case 0x80000:
+            pDeath->m_dwFlags = pSprite->GetBaseStats()->m_hitPoints < -5 ? 0x1 : 0x4;
+            break;
+        case 0x200000:
+        case 0x400000:
+        case 0x2000000:
+        case 0x4000000:
+        case 0x20000000:
+        case 0x40000000:
+            pDeath->m_dwFlags = 0x4;
+            break;
+        case 0x10000000:
+            pDeath->m_dwFlags = 0x8;
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
+            // __LINE__: 5402
+            UTIL_ASSERT_MSG(FALSE, "WIERD damage");
+        }
+
+        if (bPhysical) {
+            if (pSprite->GetAIType().m_nEnemyAlly == CAIObjectType::EA_PC
+                && pSprite->GetBaseStats()->m_hitPoints < -30) {
+                pDeath->m_dwFlags = 0x8;
+            } else if (pSprite->GetAIType().m_nEnemyAlly == CAIObjectType::EA_PC) {
+                pDeath->m_dwFlags = 0x4;
+            } else if (pSprite->GetBaseStats()->m_hitPoints < -10) {
+                pDeath->m_dwFlags = 0x8;
+            } else {
+                pDeath->m_dwFlags = 0x4;
+            }
+        }
+
+        if (bSubdual) {
+            // Not undead: unless immune to sleep, the creature is knocked
+            // unconscious instead of killed.
+            if (pSprite->GetDerivedStats()->m_naturalImmunities.find(CGAMEEFFECT_SLEEP) == pSprite->GetDerivedStats()->m_naturalImmunities.end()) {
+                if (pDeath != NULL) {
+                    delete pDeath;
+                }
+
+                ITEM_EFFECT* effect = new ITEM_EFFECT;
+                CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_SLEEP);
+                effect->duration = 15 - 15 * pSprite->GetBaseStats()->m_hitPoints;
+
+                pEffect = CGameEffect::DecodeEffect(effect,
+                    CPoint(-1, -1),
+                    -1,
+                    CPoint(-1, -1));
+                pSprite->GetBaseStats()->m_hitPoints = 1;
+                delete effect;
+            }
+        }
+
+        CPoint pos = pSprite->GetPos();
+        pEffect->m_casterLevel = m_casterLevel;
+        pSprite->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+
+        if (nDamageType == 0x10000000) {
+            // NOTE: No retry loop here, and the share is released even when
+            // it was not obtained.
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pSource,
+                INFINITE);
+            if (rc == CGameObjectArray::SUCCESS) {
+                std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pSource),
+                    "EffSE",
+                    static_cast<BYTE>(m_casterLevel));
+                for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+                    (*it)->m_sourceRes = m_sourceRes;
+                    (*it)->m_target = pos;
+                    (*it)->m_casterLevel = m_casterLevel;
+                    static_cast<CGameAIBase*>(pSource)->AddEffect(*it,
+                        CGameAIBase::EFFECT_LIST_TIMED,
+                        TRUE,
+                        TRUE);
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    CInfCursor* pCursor = g_pBaldurChitin->GetObjectCursor();
+    if (pCursor->m_nCurrentCursor == 101
+        && pSprite->GetArea()->m_iPicked == pSprite->GetId()) {
+        pSprite->SetCharacterToolTip(pCursor->field_A02);
+    }
+
+    // NOTE: `30` is a WORD constant at `0x85BCA4`, `8` is the sound constant
+    // at `0x85BB6B` (hurt).
+    LONG nMaxHitPoints = pSprite->m_tempStats.m_nMaxHitPoints;
+    if (nOldHitPoints * 100 / nMaxHitPoints > 30
+        && pSprite->GetBaseStats()->m_hitPoints * 100 / nMaxHitPoints < 30
+        && pSprite->GetBaseStats()->m_hitPoints * 100 / nMaxHitPoints > 0) {
+        CMessage* message = new CMessagePlaySound(8,
+            TRUE,
+            FALSE,
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        pSprite->AutoPause(8);
+    } else if (pSprite->GetBaseStats()->m_hitPoints * 100 / nMaxHitPoints < 30
+        && pSprite->GetBaseStats()->m_hitPoints * 100 / nMaxHitPoints > 0
+        && rand() % 10 == 0) {
+        CMessage* message = new CMessagePlaySound(8,
+            TRUE,
+            FALSE,
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        pSprite->AutoPause(8);
+    }
+
+    if (bWakeUp == TRUE) {
+        sub_4A7750(pSprite);
+    }
+
+    m_done = TRUE;
+    return TRUE;
+}
+
+// 0x4A8DF0
+void CGameEffectDamage::sub_4A8DF0(DWORD nDamageType, CGameSprite* pSprite)
+{
+    // TODO: Incomplete.
+}
+
+// 0x4A9B50
+void CGameEffectDamage::OnAdd(CGameSprite* pSprite)
+{
+    // TODO: Incomplete.
+}
+
+// 0x4A9E30
+BOOL CGameEffectDamage::CheckSave(CGameSprite* pSprite, BYTE& roll1, BYTE& roll2, BYTE& roll3, BYTE& roll4)
+{
+    // TODO: Incomplete.
+
+    return CGameEffect::CheckSave(pSprite, roll1, roll2, roll3, roll4);
+}
+
+// 0x4AA6D0
+void CGameEffectDamage::sub_4AA6D0(CGameSprite* pSprite, LONG nResisted)
+{
+    // TODO: Incomplete.
+}
+
+// 0x4AB0A0
+void CGameEffectDamage::sub_4AB0A0(CGameSprite* pSprite, LONG nDamage)
+{
+    CString sName = pSprite->GetName();
+
+    if ((g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nEffectTextLevel & 0x2) == 0) {
+        return;
+    }
+
+    BOOLEAN bDamager = FALSE;
+    STRREF strRef;
+
+    if (m_sourceID != CGameObjectArray::INVALID_INDEX && m_sourceID != pSprite->GetId()) {
+        CGameObject* pSource;
+
+        // NOTE: No retry loop here.
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pSource,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pSource->GetObjectType() == CGameObject::TYPE_SPRITE
+                && strcmp(static_cast<CGameSprite*>(pSource)->GetName(), "") != 0) {
+                bDamager = TRUE;
+                g_pBaldurChitin->GetTlkTable().SetToken(CString("DAMAGER"),
+                    static_cast<CGameSprite*>(pSource)->GetName());
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            strRef = bDamager == TRUE ? 17067 : 17075;
+        } else {
+            strRef = 17075;
+        }
+    } else {
+        strRef = 17075;
+    }
+
+    CString sText;
+    sText.Format("%d", nDamage);
+    g_pBaldurChitin->GetTlkTable().SetToken(CString("AMOUNT"), sText);
+
+    STR_RES strRes;
+    g_pBaldurChitin->GetTlkTable().Fetch(strRef, strRes);
+    sText = strRes.szText;
+
+    g_pBaldurChitin->GetBaldurMessage()->DisplayText(sName,
+        sText,
+        CVidPalette::RANGE_COLORS[pSprite->GetBaseStats()->m_colors[2]],
+        RGB(0xD7, 0xD7, 0xBE),
+        -1,
+        pSprite->GetId(),
+        pSprite->GetId());
 }
 
 // -----------------------------------------------------------------------------
