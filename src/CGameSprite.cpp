@@ -6993,7 +6993,228 @@ void CGameSprite::RenderDamageArrow(CGameArea* pArea, CVidMode* pVidMode, INT nS
 // 0x7093E0
 void CGameSprite::RenderSpriteEffect(CVidMode* pVidMode, INT nSurface)
 {
-    // TODO: Incomplete.
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+    // __LINE__: 10675
+    UTIL_ASSERT(pVidMode != NULL);
+
+    DWORD dwFlags = (m_animation.IsMirroring() ? CInfinity::MIRROR_FX : 0) | m_spriteEffectFlags;
+
+    if (m_spriteEffectDuration == 0) {
+        return;
+    }
+
+    BOOLEAN bDithered;
+    if (m_id == m_pArea->m_iPicked
+        || g_pBaldurChitin->GetObjectGame()->GetOptions()->m_bAlwaysDither
+        || g_pBaldurChitin->GetObjectGame()->m_bForceDither) {
+        bDithered = TRUE;
+    } else {
+        bDithered = FALSE;
+    }
+
+    CRect rFX;
+    CPoint ptCenter;
+    CSize frameSize;
+
+    if (!m_spriteSplashVidCell.IsEndOfSequence(FALSE)) {
+        m_spriteSplashVidCell.GetCurrentCenterPoint(ptCenter, FALSE);
+        m_spriteSplashVidCell.GetCurrentFrameSize(frameSize, FALSE);
+        rFX.SetRect(0, 0, frameSize.cx, frameSize.cy);
+
+        LONG x = m_pos.x;
+        LONG y = m_pArea->GetHeightOffset(m_pos, m_listType) + m_pos.y;
+
+        CRect rGCBounds;
+        rGCBounds.left = x - ptCenter.x;
+        rGCBounds.right = rFX.right - rFX.left + rGCBounds.left;
+        rGCBounds.top = m_posZ - ptCenter.y + y;
+        rGCBounds.bottom = rFX.bottom - rFX.top + rGCBounds.top;
+
+        dwFlags |= CInfinity::FXPREP_COPYFROMBACK;
+
+        CPoint ptPos;
+        ptPos.x = x;
+        ptPos.y = m_posZ - m_ptSpriteEffectReference.y / 2 + y;
+
+        m_pArea->m_cInfinity.FXPrep(rFX, dwFlags, nSurface, ptPos, ptCenter);
+
+        if (!m_pArea->m_cInfinity.FXLock(rFX, dwFlags)) {
+            return;
+        }
+
+        m_pArea->m_cInfinity.FXRender(&m_spriteSplashVidCell, ptCenter.x, ptCenter.y, dwFlags, 0);
+
+        CRect rClip;
+        rClip.left = rGCBounds.left;
+        rClip.top = rGCBounds.top - m_ptSpriteEffectReference.y / 2 - m_posZ;
+        rClip.right = rGCBounds.right;
+        rClip.bottom = rGCBounds.bottom - m_ptSpriteEffectReference.y / 2 - m_posZ;
+
+        CPoint ptRef;
+        ptRef.x = ptCenter.x;
+        ptRef.y = m_posZ - m_ptSpriteEffectReference.y / 2 + ptCenter.y;
+
+        m_pArea->m_cInfinity.FXRenderClippingPolys(x,
+            y - m_ptSpriteEffectReference.y / 2 - m_posZ,
+            m_posZ,
+            ptRef,
+            rClip,
+            bDithered,
+            dwFlags);
+
+        m_pArea->m_cInfinity.FXUnlock(dwFlags, NULL, CPoint(0, 0));
+
+        m_pArea->m_cInfinity.FXBltFrom(nSurface,
+            rFX,
+            x,
+            m_posZ - m_ptSpriteEffectReference.y / 2 + y,
+            ptCenter.x,
+            ptCenter.y,
+            dwFlags);
+        return;
+    }
+
+    if (m_pSpriteEffectArray == NULL) {
+        return;
+    }
+
+    BOOL bRendered = FALSE;
+
+    CSize fxSize;
+    pVidMode->GetFXSize(fxSize);
+
+    CPoint ptOffset;
+
+    switch (m_effectExtendDirection) {
+    case 0:
+        ptOffset.x = 0;
+        ptOffset.y = 0;
+        rFX.SetRect(0, 0, m_rSpriteEffectFX.right, m_rSpriteEffectFX.bottom);
+        if (rFX.right > fxSize.cx) {
+            rFX.right = fxSize.cx;
+        }
+        if (rFX.bottom > fxSize.cy) {
+            rFX.bottom = fxSize.cy;
+        }
+        break;
+    case 1:
+        ptOffset.x = 0;
+        ptOffset.y = m_rSpriteEffectFX.bottom - fxSize.cy + 1;
+        rFX.SetRect(0, 0, m_rSpriteEffectFX.right, fxSize.cy - 1);
+        if (rFX.right > fxSize.cx) {
+            rFX.right = fxSize.cx;
+        }
+        if (rFX.bottom > fxSize.cy) {
+            rFX.bottom = fxSize.cy;
+        }
+        break;
+    case 2:
+        ptOffset.x = 0;
+        ptOffset.y = 0;
+        rFX.SetRect(0, 0, m_rSpriteEffectFX.right, fxSize.cy - 1);
+        if (rFX.right > fxSize.cx) {
+            rFX.right = fxSize.cx;
+        }
+        if (rFX.bottom > fxSize.cy) {
+            rFX.bottom = fxSize.cy;
+        }
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+        // __LINE__: 10799
+        UTIL_ASSERT(FALSE);
+    }
+
+    LONG nHeightOffset = m_pArea->GetHeightOffset(m_pos, m_listType);
+
+    CRect rGCBounds;
+    rGCBounds.left = m_pos.x - m_ptSpriteEffectReference.x + ptOffset.x;
+    rGCBounds.top = m_posZ - m_ptSpriteEffectReference.y + m_pos.y + nHeightOffset + ptOffset.y;
+    rGCBounds.right = rFX.right - rFX.left + rGCBounds.left;
+    rGCBounds.bottom = rFX.bottom - rFX.top + rGCBounds.top;
+
+    if ((m_spriteEffectFlags & 0x208) != 0) {
+        dwFlags |= CInfinity::FXPREP_COPYFROMBACK;
+    } else {
+        dwFlags |= CInfinity::FXPREP_CLEARFILL | 0x1;
+    }
+
+    CPoint ptPos;
+    ptPos.x = m_pos.x + ptOffset.x;
+    ptPos.y = m_posZ + m_pos.y + nHeightOffset + ptOffset.y;
+
+    m_pArea->m_cInfinity.FXPrep(rFX, dwFlags, nSurface, ptPos, m_ptSpriteEffectReference);
+
+    if (!m_pArea->m_cInfinity.FXLock(rFX, dwFlags)) {
+        return;
+    }
+
+    for (BYTE nSequence = 0; nSequence < m_spriteEffectSequenceLength; nSequence++) {
+        for (BYTE nParticle = 0; nParticle < static_cast<char>(m_spriteEffectBaseIntensity) - 1 + m_spriteEffectRandomIntensity; nParticle++) {
+            SHORT nArrayIndex = static_cast<SHORT>((static_cast<char>(m_spriteEffectBaseIntensity) + m_spriteEffectRandomIntensity - 1) * nSequence + nParticle);
+            if (m_pSpriteEffectArray[nArrayIndex] == 0xFFFF) {
+                break;
+            }
+
+            m_spriteEffectVidCell.SequenceSet(m_pSpriteEffectArray[nArrayIndex] >> 8);
+            m_spriteEffectVidCell.FrameSet(m_pSpriteEffectArray[nArrayIndex] & 0xFF);
+            m_spriteEffectVidCell.GetCurrentCenterPoint(ptCenter, FALSE);
+            m_spriteEffectVidCell.GetCurrentFrameSize(frameSize, FALSE);
+
+            INT x;
+            if ((dwFlags & CInfinity::MIRROR_FX) != 0) {
+                x = rFX.right - m_pSpriteEffectArrayPosition[nArrayIndex].x - m_ptSpriteEffectReference.x + ptOffset.x + ptCenter.x;
+            } else {
+                x = m_pSpriteEffectArrayPosition[nArrayIndex].x - ptOffset.x - ptCenter.x + m_ptSpriteEffectReference.x;
+            }
+
+            INT y = m_pSpriteEffectArrayPosition[nArrayIndex].y - ptOffset.y - ptCenter.y + m_ptSpriteEffectReference.y;
+
+            if (x >= frameSize.cx >> 2
+                && x <= rFX.right - (frameSize.cx >> 2)
+                && y >= frameSize.cy >> 2
+                && y <= rFX.bottom - (frameSize.cy >> 2)
+                && x - ptCenter.x >= 0
+                && x - ptCenter.x + frameSize.cx < rFX.right - rFX.left
+                && y - ptCenter.y >= 0
+                && y - ptCenter.y + frameSize.cy < rFX.bottom - rFX.top) {
+                m_pArea->m_cInfinity.FXRender(&m_spriteEffectVidCell, x, y, dwFlags, 0);
+                bRendered = TRUE;
+            }
+        }
+    }
+
+    // NOTE: The original only checks this when the sequence is not empty
+    // (`bRendered` is FALSE otherwise).
+    if (bRendered) {
+        CRect rClip;
+        rClip.left = rGCBounds.left;
+        rClip.top = rGCBounds.top;
+        rClip.right = rGCBounds.right;
+        rClip.bottom = rGCBounds.bottom - m_posZ;
+
+        m_pArea->m_cInfinity.FXRenderClippingPolys(m_pos.x,
+            m_pos.y,
+            0,
+            m_ptSpriteEffectReference,
+            rClip,
+            bDithered,
+            dwFlags);
+    }
+
+    m_pArea->m_cInfinity.FXUnlock(dwFlags, NULL, CPoint(0, 0));
+
+    if (!bRendered) {
+        return;
+    }
+
+    m_pArea->m_cInfinity.FXBltFrom(nSurface,
+        rFX,
+        m_pos.x + ptOffset.x,
+        m_posZ + m_pos.y + nHeightOffset + ptOffset.y,
+        m_ptSpriteEffectReference.x,
+        m_ptSpriteEffectReference.y,
+        dwFlags);
 }
 
 // 0x709B60
