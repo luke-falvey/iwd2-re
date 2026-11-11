@@ -11,6 +11,7 @@
 #include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CItem.h"
+#include "CPathSearch.h"
 #include "CProjectilePart1.h"
 #include "CProjectilePart3.h"
 #include "CResEffect.h"
@@ -10878,6 +10879,174 @@ CGameEffect* CGameEffectPolymorph::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4BB110
+BOOL CGameEffectPolymorph::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_res == "") {
+        pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+            CGAMEEFFECT_POLYMORPH,
+            pSprite->GetTimedEffectList()->GetPosCurrent(),
+            -1);
+        pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+            CGAMEEFFECT_POLYMORPH,
+            pSprite->GetEquipedEffectList()->GetPosCurrent(),
+            -1);
+        sub_4B8730(pSprite, 42);
+        m_forceRepass = TRUE;
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    pSprite->SetIdleSequence();
+
+    if (pSprite->m_pPath != NULL) {
+        CMessageDropPath* pMessage = new CMessageDropPath(pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+    }
+
+    CCreatureFile creatureData;
+
+    // NOTE: Uninline.
+    creatureData.SetResRef(m_res, TRUE, TRUE);
+
+    BOOL bResult = TRUE;
+
+    CGameSprite* pNewSprite = new CGameSprite(creatureData.GetData(),
+        creatureData.GetDataSize(),
+        0,
+        0,
+        -1,
+        0,
+        0,
+        0x7FFFFFFF,
+        CPoint(-1, -1),
+        0);
+
+    // NOTE: The original `SetResRef` (0x42FDC0) takes a `CString` by value,
+    // here it's converted through `CResRef`.
+    pNewSprite->SetResRef(CResRef(creatureData.GetResRef().GetResRefStr()));
+    creatureData.ReleaseData();
+
+    if (pNewSprite == NULL) {
+        return bResult;
+    }
+
+    LONG nNewSpriteId = pNewSprite->GetId();
+
+    CDerivedStats* pStats = pSprite->GetDerivedStats();
+    pStats->m_disabledSpellTypes[0] = bResult;
+    pStats->m_disabledSpellTypes[1] = bResult;
+    pStats->m_disabledButtons[2] = bResult;
+    pStats->m_disabledButtons[3] = bResult;
+    pStats->m_disabledButtons[4] = bResult;
+    pStats->m_disabledButtons[5] = bResult;
+    pStats->m_disabledButtons[6] = bResult;
+    pStats->m_disabledButtons[7] = bResult;
+    pStats->m_disabledButtons[8] = bResult;
+    pStats->m_disabledButtons[9] = bResult;
+    pStats->m_disabledButtons[10] = bResult;
+    pStats->m_disabledButtons[11] = bResult;
+
+    CString sResRef;
+    m_res.CopyToString(sResRef);
+    pNewSprite->SetResRef(CResRef(sResRef));
+
+    CGameObjectArray* pObjectArray = g_pBaldurChitin->GetObjectGame()->GetObjectArray();
+    if (pObjectArray->GetDeny(nNewSpriteId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pNewSprite),
+            INFINITE)
+        != CGameObjectArray::SUCCESS) {
+        return bResult;
+    }
+
+    if (pSprite->GetArea() != NULL
+        && pSprite->m_animation.GetListType() != CGameObject::LIST_FLIGHT) {
+        pSprite->GetArea()->m_search.RemoveObject(CPoint(pSprite->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX,
+                                                      pSprite->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY),
+            pSprite->GetAIType().m_nEnemyAlly,
+            pSprite->m_animation.GetPersonalSpace(),
+            pSprite->field_54A8,
+            pSprite->field_7430);
+        bResult = TRUE;
+    }
+
+    WORD nDirection = pSprite->m_nDirection;
+    pSprite->m_animation.SetAnimationType(pNewSprite->m_animation.GetAnimationId(),
+        pNewSprite->GetBaseStats()->m_colors,
+        nDirection);
+    pSprite->m_animation.m_animation->SetSequence(6);
+
+    if (pSprite->GetArea() != NULL
+        && pSprite->m_animation.GetListType() != CGameObject::LIST_FLIGHT) {
+        pSprite->GetArea()->m_search.AddObject(CPoint(pSprite->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX,
+                                                   pSprite->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY),
+            pSprite->GetAIType().m_nEnemyAlly,
+            pSprite->m_animation.GetPersonalSpace(),
+            pSprite->field_54A8,
+            pSprite->field_7430);
+        bResult = TRUE;
+    }
+
+    CMessageAnimationChange* pAnimationChange = new CMessageAnimationChange(pNewSprite->m_animation.GetAnimationId(),
+        pSprite->GetId(),
+        pSprite->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pAnimationChange, FALSE);
+    bResult = TRUE;
+
+    CDerivedStats* pNewStats = pNewSprite->GetDerivedStats();
+    pStats->m_bPolymorphed = bResult;
+    pStats->field_6 = pNewStats->field_6;
+    pStats->field_8 = pNewStats->field_8;
+    pStats->field_A = pNewStats->field_A;
+    pStats->field_C = pNewStats->field_C;
+    pStats->m_nACCrushingMod = pNewStats->m_nACCrushingMod;
+    pStats->m_nACMissileMod = pNewStats->m_nACMissileMod;
+    pStats->m_nACPiercingMod = pNewStats->m_nACPiercingMod;
+    pStats->m_nACSlashingMod = pNewStats->m_nACSlashingMod;
+    pStats->m_nCON = pNewStats->m_nCON;
+    pStats->m_nDEX = pNewStats->m_nDEX;
+    pStats->m_nSTR = pNewStats->m_nSTR;
+    pStats->m_nNumberOfAttacks = pNewStats->m_nNumberOfAttacks;
+    pStats->m_nResistFire = pNewStats->m_nResistFire;
+    pStats->m_nResistCold = pNewStats->m_nResistCold;
+    pStats->m_nResistElectricity = pNewStats->m_nResistElectricity;
+    pStats->m_nResistAcid = pNewStats->m_nResistAcid;
+    pStats->m_nResistMagic = pNewStats->m_nResistMagic;
+    pStats->m_nResistMagicFire = pNewStats->m_nResistMagicFire;
+    pStats->m_nResistMagicCold = pNewStats->m_nResistMagicCold;
+    pStats->m_nResistSlashing = pNewStats->m_nResistSlashing;
+    pStats->m_nResistCrushing = pNewStats->m_nResistCrushing;
+    pStats->m_nResistPiercing = pNewStats->m_nResistPiercing;
+    pStats->m_nResistMissile = pNewStats->m_nResistMissile;
+    pStats->m_nMagicDamageResistance = pNewStats->m_nMagicDamageResistance;
+    pStats->m_nResistPoison = pNewStats->m_nResistPoison;
+
+    if (m_secondaryType) {
+        g_pBaldurChitin->GetObjectGame()->m_cButtonArray.ResetState();
+    }
+
+    pObjectArray = g_pBaldurChitin->GetObjectGame()->GetObjectArray();
+    pObjectArray->ReleaseDeny(nNewSpriteId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(nNewSpriteId,
+            CGameObjectArray::THREAD_ASYNCH,
+            NULL,
+            INFINITE)
+            == CGameObjectArray::SUCCESS
+        && pNewSprite != NULL) {
+        delete pNewSprite;
+    }
+
+    pSprite->JumpToPoint(pSprite->GetPos(), bResult);
+    pSprite->SetIdleSequence();
+
+    return bResult;
 }
 
 // -----------------------------------------------------------------------------

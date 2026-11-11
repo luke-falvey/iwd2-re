@@ -1309,6 +1309,7 @@ class CGameEffectPolymorph : public CGameEffect {
 public:
     CGameEffectPolymorph(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectForceVisible : public CGameEffect {
