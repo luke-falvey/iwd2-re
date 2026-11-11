@@ -555,6 +555,8 @@ void CUIControlTextDisplay::RemoveString(POSITION posBoss)
             m_posTopString = pos;
         }
 
+        m_plstStrings->RemoveAt(currentPos);
+
         if (pDisplayString != NULL) {
             delete pDisplayString;
         }
@@ -730,6 +732,8 @@ BOOL CUIControlTextDisplay::Render(BOOL bForce)
         m_nRenderCount--;
         lock.Unlock();
     }
+
+    renderLock.Lock(INFINITE);
 
     m_textFont.pRes->Demand();
     m_labelFont.pRes->Demand();
