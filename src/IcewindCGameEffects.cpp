@@ -9,11 +9,13 @@
 #include "CPathSearch.h"
 #include "CProjectile.h"
 #include "CProjectileArea.h"
+#include "CProjectilePart3.h"
 #include "CProjectilePart5.h"
 #include "CProjectilePart6.h"
 #include "CScreenWorld.h"
 #include "CUtil.h"
 #include "Icewind586B70.h"
+#include "IcewindCVisualEffect.h"
 #include "IcewindMisc.h"
 
 // NOTE: I'm not sure where these constants belong.
@@ -80,6 +82,80 @@ CGameEffect* IcewindCGameEffectCastingGlow::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x55E130
+BOOL IcewindCGameEffectCastingGlow::ApplyEffect(CGameSprite* pSprite)
+{
+    BYTE nDuration = static_cast<BYTE>(m_duration) - static_cast<BYTE>(g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime);
+
+    IcewindCVisualEffect vfx;
+    vfx.sub_586A90(TRUE);
+
+    WORD nProjectileType;
+    CProjectile* pProjectile;
+
+    switch (m_dwFlags) {
+    case 1:
+        nProjectileType = 113;
+        pProjectile = new CProjectile850F9C(CString("AbjurCG"), CString(""), nDuration, 0, vfx);
+        break;
+    case 2:
+        nProjectileType = 115;
+        pProjectile = new CProjectile850F9C(CString("ConjuCG"), CString(""), nDuration, 0, vfx);
+        break;
+    case 3:
+        nProjectileType = 117;
+        pProjectile = new CProjectile850F9C(CString("DivinCG"), CString(""), nDuration, 0, vfx);
+        break;
+    case 4:
+        nProjectileType = 112;
+        pProjectile = new CProjectile850F9C(CString("EnchaCG"), CString(""), nDuration, 0, vfx);
+        break;
+    case 5:
+        nProjectileType = 114;
+        pProjectile = new CProjectile850F9C(CString("IllusCG"), CString(""), nDuration, 0, vfx);
+        break;
+    case 6:
+        nProjectileType = 116;
+        pProjectile = new CProjectile850F9C(CString("InvocCG"), CString(""), nDuration, 0, vfx);
+        break;
+    case 7:
+        nProjectileType = 110;
+        pProjectile = new CProjectile850F9C(CString("NecroCG"), CString(""), nDuration, 0, vfx);
+        break;
+    case 8:
+        nProjectileType = 111;
+        pProjectile = new CProjectile850F9C(CString("AlterCG"), CString(""), nDuration, 0, vfx);
+        break;
+    default:
+        // FIXME: The original leaves both uninitialized here (the projectile
+        // register holds `pSprite`, the type slot holds `nDuration`) and
+        // carries on.
+        nProjectileType = nDuration;
+        pProjectile = NULL;
+        break;
+    }
+
+    CMessage* message = new CMessageFireProjectile(nProjectileType,
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        pProjectile->DetermineHeight(pSprite),
+        pSprite->GetId(),
+        pSprite->GetId(),
+        nDuration);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pSprite->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        pProjectile->DetermineHeight(pSprite),
+        0);
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
