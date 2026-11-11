@@ -79,7 +79,7 @@ public:
     void DismissPopup();
     void ResetHistoryPanel(CUIPanel* pPanel);
     void ResetAbilitiesPanel(CUIPanel* pPanel);
-    void SelectItemAbility();
+    void SelectItemAbility(CGameSprite* pSprite);
     void OnDoneButtonClick();
     void OnCancelButtonClick();
     void ResetErrorPanel(CUIPanel* pPanel);

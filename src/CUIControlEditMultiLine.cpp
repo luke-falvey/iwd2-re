@@ -90,9 +90,119 @@ void CUIControlEditMultiLine::Remove()
 }
 
 // 0x4D9830
-void CUIControlEditMultiLine::ReConstitute()
+int CUIControlEditMultiLine::ReConstitute()
 {
-    // TODO: Incomplete.
+    CString sLine;
+    int nLines = 0;
+
+    if (field_877) {
+        m_cVidFont.Load(FALSE);
+        SHORT nFontHeight = m_cVidFont.GetFontHeight(FALSE);
+        field_877 = 0;
+        field_878 = static_cast<SHORT>((m_size.cy - m_ptText.y) / nFontHeight);
+    }
+
+    m_cVidFont.pRes->Demand();
+
+    int nWidth = m_size.cx - 10;
+
+    int nPos = CUtil::Find(m_sText, '\r', 0);
+    while (nPos != -1) {
+        m_sText = m_sText.Left(nPos) + m_sText.Mid(nPos + 1);
+
+        if (nPos < field_86A) {
+            field_86A--;
+        }
+
+        nPos = CUtil::Find(m_sText, '\r', 0);
+    }
+
+    int nStart = 0;
+    sLine.Empty();
+
+    while (nStart < m_sText.GetLength()) {
+        int nEnd = CUtil::Find(m_sText.Mid(nStart), '\n', 0);
+        if (nEnd == -1) {
+            nEnd = m_sText.GetLength();
+        }
+
+        sLine = m_sText.Mid(nStart, nEnd);
+
+        if (m_cVidFont.GetStringLength(sLine, TRUE) < nWidth) {
+            nStart = nStart + nEnd + 1;
+            if (nStart >= m_sText.GetLength()) {
+                nStart = m_sText.GetLength();
+            }
+            nLines++;
+        } else {
+            int nLength = sLine.GetLength();
+            while (m_cVidFont.GetStringLength(sLine.Left(nLength), TRUE) >= nWidth) {
+                CString sTemp = sLine.Left(nLength);
+
+                BOOL bFound = FALSE;
+                int nSpace = CUtil::Find(sTemp, ' ', 0);
+                if (nSpace >= 0) {
+                    int nLastSpace;
+                    do {
+                        nLastSpace = nSpace;
+                        nSpace = CUtil::Find(sTemp, ' ', nLastSpace + 1);
+                    } while (nSpace >= 0);
+
+                    if (nLastSpace > 0) {
+                        nLength = nLastSpace;
+                        bFound = TRUE;
+                    }
+                }
+
+                if (!bFound) {
+                    if (g_pChitin->field_1A0) {
+                        int nPrev = nLength - 1;
+                        if (CUtil::IsDBCSTrailByte(sLine, nPrev)) {
+                            nLength = nPrev;
+                        }
+                    }
+
+                    nLength--;
+                }
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\ChUIControls.cpp
+                // __LINE__: 2660
+                UTIL_ASSERT(nLength > 0);
+            }
+
+            nPos = nLength + nStart + 1;
+
+            m_sText = m_sText.Left(nPos) + '\r' + m_sText.Right(m_sText.GetLength() - nLength - nStart - 1);
+
+            if (nPos < field_86A) {
+                field_86A++;
+            }
+
+            if (nPos >= m_sText.GetLength()) {
+                nPos = m_sText.GetLength();
+            }
+
+            nStart = nPos;
+            nLines++;
+        }
+    }
+
+    BOOL bExtraLine = m_sText.Right(1) == "\n"
+        && (!g_pChitin->field_1A0 || !CUtil::IsDBCSTrailByte(m_sText, m_sText.GetLength() - 1));
+
+    if (bExtraLine) {
+        nLines++;
+    }
+
+    field_87A = static_cast<short>(nLines);
+
+    AdjustVisibleIndex();
+
+    field_86A = min(field_86A, m_sText.GetLength());
+
+    m_cVidFont.pRes->Release();
+
+    return nLines;
 }
 
 // 0x4D9D00
@@ -156,9 +266,105 @@ void CUIControlEditMultiLine::SetFocus()
 // 0x4DABD0
 BOOL CUIControlEditMultiLine::OnLButtonDown(CPoint pt)
 {
-    // TODO: Incomplete.
+    if (!m_bActive) {
+        return FALSE;
+    }
 
-    return FALSE;
+    int x = pt.x - (m_ptText.x + m_ptOrigin.x);
+    int y = pt.y - (m_ptText.y + m_ptOrigin.y);
+
+    if (x >= 0 && x < m_size.cx && y >= 0 && y < m_size.cy) {
+        m_pPanel->m_pManager->SetCapture(this, CUIManager::MOUSELBUTTON);
+
+        m_cVidFont.pRes->Demand();
+
+        int nColumn = 0;
+
+        // NOTE: `min` evaluates its arguments twice.
+        int nTargetLine = min(field_86E + min(y / m_cVidFont.GetFontHeight(FALSE), static_cast<INT>(field_878)),
+            static_cast<INT>(field_87A));
+
+        int nIndex = 0;
+        if (nTargetLine > 0) {
+            for (int nLine = 0; nLine < nTargetLine && nIndex < m_sText.GetLength(); nLine++) {
+                nIndex += CUtil::FindOneOf(m_sText.Mid(nIndex), CString("\n\r"), 0);
+                BOOL bNotFound = nIndex == -1;
+                if (bNotFound) {
+                    nIndex = m_sText.GetLength();
+                } else {
+                    nIndex++;
+                }
+            }
+        }
+
+        if (nIndex == m_sText.GetLength()) {
+            field_86A = m_sText.GetLength();
+            m_cVidFont.pRes->Release();
+            field_88E = field_86A;
+
+            if (!m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                field_88A = field_88E;
+            }
+
+            field_888 = 1;
+        } else {
+            int nLineEnd = CUtil::FindOneOf(m_sText.Mid(nIndex), CString("\n\r"), 0);
+            BOOL bNotFound = nLineEnd == -1;
+            if (bNotFound) {
+                nLineEnd = m_sText.GetLength();
+            }
+
+            if (x > m_cVidFont.GetStringLength(m_sText.Mid(nIndex, nLineEnd), FALSE)) {
+                nColumn = nLineEnd + 1;
+            } else if (x > m_cVidFont.GetStringLength(m_sText.Mid(nIndex, 0), FALSE)) {
+                do {
+                    if (g_pChitin->field_1A0) {
+                        if (IsDBCSLeadByte(m_sText[nIndex + nColumn - 1])) {
+                            nColumn++;
+                        }
+                    }
+
+                    nColumn++;
+
+                    if (nColumn == m_sText.GetLength()) {
+                        break;
+                    }
+                } while (x > m_cVidFont.GetStringLength(m_sText.Mid(nIndex, nColumn), FALSE));
+            }
+
+            m_cVidFont.pRes->Release();
+
+            if (g_pChitin->field_1A0) {
+                if (CUtil::IsDBCSTrailByte(m_sText, nIndex + nColumn - 1)) {
+                    nColumn--;
+                }
+            }
+
+            field_86A = min(nIndex + nColumn - 1, m_sText.GetLength());
+            field_88E = field_86A;
+
+            if (!m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                field_88A = field_88E;
+            }
+
+            field_888 = 1;
+
+            InvalidateRect();
+        }
+    } else if (m_bFocused == TRUE) {
+        if (field_872 != 0) {
+            m_sText = field_866;
+            ReConstitute();
+        }
+
+        // NOTE: Uninline.
+        m_pPanel->m_pManager->KillCapture();
+
+        field_88A = -1;
+        field_88E = -1;
+    }
+
+    return TRUE;
 }
 
 // 0x4DB070
@@ -210,7 +416,100 @@ void CUIControlEditMultiLine::OnKeyDown(SHORT nKey)
 // 0x4E05B0
 void CUIControlEditMultiLine::OnMouseMove(CPoint pt)
 {
-    // TODO: Incomplete.
+    if (!m_bActive || !field_888) {
+        return;
+    }
+
+    int x = pt.x - (m_ptText.x + m_ptOrigin.x);
+    int y = pt.y - (m_ptText.y + m_ptOrigin.y);
+
+    if (min(m_size.cx, x) < 1) {
+        x = 1;
+    } else if (m_size.cx < x) {
+        x = m_size.cx;
+    }
+
+    if (y < 0) {
+        if (field_86E > 0) {
+            field_86E--;
+            AdjustVisibleIndex();
+        }
+
+        y = 0;
+    }
+
+    if (y > m_size.cy) {
+        if (field_878 + field_86E < field_87A) {
+            field_86E++;
+            AdjustVisibleIndex();
+        }
+
+        y = m_size.cy - 1;
+    }
+
+    m_cVidFont.pRes->Demand();
+
+    int nColumn = 0;
+
+    // NOTE: `min` evaluates its arguments twice.
+    int nTargetLine = min(field_86E + min(y / m_cVidFont.GetFontHeight(FALSE), static_cast<INT>(field_878)),
+        static_cast<INT>(field_87A));
+
+    int nIndex = 0;
+    if (nTargetLine > 0) {
+        for (int nLine = 0; nLine < nTargetLine && nIndex < m_sText.GetLength(); nLine++) {
+            nIndex += CUtil::FindOneOf(m_sText.Mid(nIndex), CString("\n\r"), 0);
+            BOOL bNotFound = nIndex == -1;
+            if (bNotFound) {
+                nIndex = m_sText.GetLength();
+            } else {
+                nIndex++;
+            }
+        }
+    }
+
+    if (nIndex == m_sText.GetLength()) {
+        field_88E = m_sText.GetLength();
+        field_86A = m_sText.GetLength();
+        m_cVidFont.pRes->Release();
+    } else {
+        int nLineEnd = CUtil::FindOneOf(m_sText.Mid(nIndex), CString("\n\r"), 0);
+        BOOL bNotFound = nLineEnd == -1;
+        if (bNotFound) {
+            nLineEnd = m_sText.GetLength();
+        }
+
+        if (x > m_cVidFont.GetStringLength(m_sText.Mid(nIndex, nLineEnd), FALSE)) {
+            nColumn = nLineEnd + 1;
+        } else if (x > m_cVidFont.GetStringLength(m_sText.Mid(nIndex, 0), FALSE)) {
+            do {
+                if (g_pChitin->field_1A0) {
+                    if (IsDBCSLeadByte(m_sText[nIndex + nColumn - 1])) {
+                        nColumn++;
+                    }
+                }
+
+                nColumn++;
+
+                if (nColumn == m_sText.GetLength()) {
+                    break;
+                }
+            } while (x > m_cVidFont.GetStringLength(m_sText.Mid(nIndex, nColumn), FALSE));
+        }
+
+        m_cVidFont.pRes->Release();
+
+        if (g_pChitin->field_1A0) {
+            if (CUtil::IsDBCSTrailByte(m_sText, nIndex + nColumn - 1)) {
+                nColumn--;
+            }
+        }
+
+        field_86A = min(nIndex + nColumn - 1, m_sText.GetLength());
+        field_88E = field_86A;
+
+        InvalidateRect();
+    }
 }
 
 // 0x4E09F0
@@ -222,9 +521,238 @@ BOOL CUIControlEditMultiLine::NeedRender()
 // 0x4E0A20
 BOOL CUIControlEditMultiLine::Render(BOOL bForce)
 {
-    // TODO: Incomplete.
+    // NOTE: The original function is split in two at 0x4E0A4C.
 
-    return FALSE;
+    // NOTE: Uninline.
+    CVidInf* pVidInf = static_cast<CVidInf*>(g_pBaldurChitin->GetCurrentVideoMode());
+
+    INT nIndex = 0;
+    INT nLine = 0;
+    CString sText;
+    CString sLine;
+
+    if ((!m_bActive && !m_bInactiveRender) || (m_nRenderCount == 0 && !bForce)) {
+        return FALSE;
+    }
+
+    if (field_877) {
+        m_cVidFont.Load(FALSE);
+        SHORT nFontHeight = m_cVidFont.GetFontHeight(FALSE);
+        field_877 = 0;
+        field_878 = static_cast<SHORT>((m_size.cy - m_ptText.y) / nFontHeight);
+    }
+
+    if (m_nRenderCount != 0) {
+        CSingleLock lock(&(m_pPanel->m_pManager->field_56), FALSE);
+        lock.Lock(INFINITE);
+        m_nRenderCount--;
+        lock.Unlock();
+    }
+
+    INT nTextX = m_ptText.x + (m_ptOrigin.x + m_pPanel->m_ptOrigin.x);
+    INT nTextY = m_ptText.y + (m_pPanel->m_ptOrigin.y + m_ptOrigin.y);
+
+    m_cVidFont.pRes->Demand();
+
+    SHORT nBaseLine = m_cVidFont.GetBaseLineHeight(TRUE);
+
+    nTextX++;
+    nTextY++;
+
+    CRect rText(nTextX, nTextY, m_size.cx + nTextX, m_size.cy + nTextY);
+
+    CRect rIntersect;
+    rIntersect.IntersectRect(rText, m_rDirty);
+
+    CRect rClip(rIntersect);
+
+    if (!pVidInf->BKLock(rClip)) {
+        m_cVidFont.pRes->Release();
+        return TRUE;
+    }
+
+    nTextY -= rClip.top;
+    nTextX -= rClip.left;
+    rClip.OffsetRect(-rClip.left, -rClip.top);
+
+    if (m_sText.Right(1) == "\n"
+        && (!g_pChitin->field_1A0 || !CUtil::IsDBCSTrailByte(m_sText, m_sText.GetLength() - 1))) {
+        sText = m_sText.Left(m_sText.GetLength() - 1);
+    } else {
+        sText = m_sText;
+    }
+
+    sLine.Empty();
+
+    INT nCursorX = -1;
+    INT nCursorY = -1;
+
+    INT nSelStart;
+    INT nSelEnd;
+    if (field_88A < field_88E) {
+        nSelStart = field_88A;
+        nSelEnd = field_88E;
+    } else {
+        nSelStart = field_88E;
+        nSelEnd = field_88A;
+    }
+
+    if (sText.GetLength() > 0) {
+        INT nEnd;
+        do {
+            if (static_cast<WORD>(nLine) >= field_878 + field_86E) {
+                break;
+            }
+
+            nEnd = CUtil::FindOneOf(sText.Mid(nIndex), CString("\n\r"), 0);
+            if (nEnd == -1) {
+                nEnd = sText.GetLength();
+            }
+
+            sLine += sText.Mid(nIndex, nEnd);
+
+            if (nIndex <= field_86A && field_86A <= nEnd + nIndex) {
+                nCursorY = m_cVidFont.GetFontHeight(TRUE) * (nLine - field_86E);
+                nCursorX = m_cVidFont.GetStringLength(m_sText.Mid(nIndex, field_86A - nIndex), TRUE);
+            }
+
+            if (nLine >= field_86E) {
+                INT nLineEnd = nEnd + nIndex;
+
+                if (nSelEnd == -1 || nSelStart == -1) {
+                    m_cVidFont.SetColor(m_rgbForegroundColor, m_rgbBackgroundColor, FALSE);
+
+                    pVidInf->BKTextOut(&m_cVidFont,
+                        sLine,
+                        nTextX,
+                        nTextY + nBaseLine + m_cVidFont.GetFontHeight(TRUE) * (nLine - field_86E),
+                        rClip,
+                        0,
+                        TRUE);
+                } else if (nIndex <= nSelStart && nSelStart <= nLineEnd) {
+                    m_cVidFont.SetColor(m_rgbForegroundColor, m_rgbBackgroundColor, FALSE);
+
+                    INT nPreLen = nSelStart - nIndex;
+
+                    pVidInf->BKTextOut(&m_cVidFont,
+                        sLine.Left(nPreLen),
+                        nTextX,
+                        m_cVidFont.GetFontHeight(TRUE) * (nLine - field_86E) + nBaseLine + nTextY,
+                        rClip,
+                        0,
+                        TRUE);
+
+                    m_cVidFont.SetColor(0x3C3CC8, m_rgbBackgroundColor, FALSE);
+
+                    INT nPreWidth = m_cVidFont.GetStringLength(sLine.Left(nPreLen), TRUE);
+
+                    if (nSelEnd <= nLineEnd) {
+                        INT nSelLen = nSelEnd - nSelStart;
+
+                        pVidInf->BKTextOut(&m_cVidFont,
+                            sLine.Mid(nPreLen, nSelLen),
+                            nPreWidth + nTextX,
+                            m_cVidFont.GetFontHeight(TRUE) * (nLine - field_86E) + nBaseLine + nTextY,
+                            rClip,
+                            0,
+                            TRUE);
+
+                        nPreWidth += m_cVidFont.GetStringLength(sLine.Mid(nPreLen, nSelLen), TRUE);
+
+                        m_cVidFont.SetColor(m_rgbForegroundColor, m_rgbBackgroundColor, FALSE);
+
+                        pVidInf->BKTextOut(&m_cVidFont,
+                            sLine.Right(sLine.GetLength() - nSelEnd + nIndex),
+                            nPreWidth + nTextX,
+                            m_cVidFont.GetFontHeight(TRUE) * (nLine - field_86E) + nBaseLine + nTextY,
+                            rClip,
+                            0,
+                            TRUE);
+                    } else {
+                        pVidInf->BKTextOut(&m_cVidFont,
+                            sLine.Right(sLine.GetLength() - nSelStart + nIndex),
+                            nPreWidth + nTextX,
+                            m_cVidFont.GetFontHeight(TRUE) * (nLine - field_86E) + nBaseLine + nTextY,
+                            rClip,
+                            0,
+                            TRUE);
+                    }
+                } else if (nIndex <= nSelEnd && nSelEnd <= nLineEnd) {
+                    m_cVidFont.SetColor(0x3C3CC8, m_rgbBackgroundColor, FALSE);
+
+                    INT nSelLen = nSelEnd - nIndex;
+
+                    pVidInf->BKTextOut(&m_cVidFont,
+                        sLine.Left(nSelLen),
+                        nTextX,
+                        m_cVidFont.GetFontHeight(TRUE) * (nLine - field_86E) + nBaseLine + nTextY,
+                        rClip,
+                        0,
+                        TRUE);
+
+                    INT nSelWidth = m_cVidFont.GetStringLength(sLine.Left(nSelLen), TRUE);
+
+                    m_cVidFont.SetColor(m_rgbForegroundColor, m_rgbBackgroundColor, FALSE);
+
+                    pVidInf->BKTextOut(&m_cVidFont,
+                        sLine.Right(sLine.GetLength() - nSelEnd + nIndex),
+                        nSelWidth + nTextX,
+                        m_cVidFont.GetFontHeight(TRUE) * (nLine - field_86E) + nBaseLine + nTextY,
+                        rClip,
+                        0,
+                        TRUE);
+                } else {
+                    if (nIndex <= nSelStart || nIndex > nSelEnd) {
+                        m_cVidFont.SetColor(m_rgbForegroundColor, m_rgbBackgroundColor, FALSE);
+                    } else {
+                        m_cVidFont.SetColor(0x3C3CC8, m_rgbBackgroundColor, FALSE);
+                    }
+
+                    pVidInf->BKTextOut(&m_cVidFont,
+                        sLine,
+                        nTextX,
+                        nBaseLine + (nTextY + m_cVidFont.GetFontHeight(TRUE) * (nLine - field_86E)),
+                        rClip,
+                        0,
+                        TRUE);
+                }
+            }
+
+            nIndex = min(nIndex + nEnd + 1, sText.GetLength());
+            nLine++;
+            sLine.Empty();
+        } while (nEnd < sText.GetLength());
+    }
+
+    m_vcCursor.pRes->Demand();
+
+    CPoint ptCursor;
+    m_vcCursor.GetCurrentCenterPoint(ptCursor, TRUE);
+
+    if (m_bFocused) {
+        if (nCursorX == -1 || nCursorY == -1) {
+            if (field_86A == 0 && field_86E == 0) {
+                nCursorX = 0;
+                nCursorY = 0;
+            }
+        }
+
+        m_vcCursor.RealizePalette(1);
+
+        pVidInf->BKRender(&m_vcCursor,
+            nCursorX + ptCursor.x + nTextX,
+            ptCursor.y + nCursorY + nTextY,
+            rClip,
+            TRUE,
+            0);
+    }
+
+    m_vcCursor.pRes->Release();
+    m_cVidFont.pRes->Release();
+
+    pVidInf->BKUnlock();
+
+    return TRUE;
 }
 
 // 0x4E1580
