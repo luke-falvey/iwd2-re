@@ -10078,7 +10078,148 @@ void CGameSprite::GetNumInventoryPersonalSlots(INT& nUsedSlots, INT& nTotalSlots
 // 0x71FC00
 void CGameSprite::SetModalState(BYTE modalState, BOOL bUpdateToolbar)
 {
-    // TODO: Incomplete.
+    if (modalState == m_nModalState) {
+        return;
+    }
+
+    switch (m_nModalState) {
+    case 1:
+        if (sub_763150(CGAMESPRITE_FEAT_LINGERING_SONG) == TRUE) {
+            if ((m_derivedStats.m_generalState & STATE_SILENCED) == 0
+                && (m_baseStats.m_generalState & STATE_SILENCED) == 0
+                && g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_cutScene != TRUE) {
+                UINT nSongIndex = m_nLastSong;
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+                // __LINE__: 22207
+                UTIL_ASSERT_MSG(nSongIndex < g_pBaldurChitin->GetObjectGame()->GetMasterSongLookup().m_nCount, "Invalid Song Index.");
+
+                CResRef songResRef = g_pBaldurChitin->GetObjectGame()->GetMasterSongLookup().Get(nSongIndex);
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+                // __LINE__: 22209
+                UTIL_ASSERT(songResRef != "");
+
+                // NOTE: Uninline.
+                CSpell cSpell;
+                cSpell.SetResRef(songResRef, TRUE, TRUE);
+
+                cSpell.Demand();
+
+                if (cSpell.GetCasterType() != 5) {
+                    cSpell.Release();
+                } else {
+                    FeedBack(FEEDBACK_LINGERINGSONG,
+                        0,
+                        0,
+                        0,
+                        cSpell.GetGenericName(),
+                        0,
+                        0);
+
+                    SPELL_ABILITY* pAbility = cSpell.GetAbility(0);
+
+                    CTypedPtrList<CPtrList, LONG*> targets;
+
+                    m_pArea->GetAllInRange(GetVertListPos(),
+                        GetPos(),
+                        CAIObjectType::ANYONE,
+                        400,
+                        GetTerrainTable(),
+                        targets,
+                        TRUE,
+                        FALSE);
+
+                    m_pArea->GetAllInRangeBack(GetPos(),
+                        CAIObjectType::ANYONE,
+                        400,
+                        GetTerrainTable(),
+                        targets,
+                        TRUE,
+                        FALSE,
+                        FALSE);
+
+                    targets.AddTail(reinterpret_cast<LONG*>(m_id));
+
+                    POSITION pos = targets.GetHeadPosition();
+                    while (pos != NULL) {
+                        LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+                        CGameSprite* pSprite;
+                        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            reinterpret_cast<CGameObject**>(&pSprite),
+                            INFINITE);
+                        if (rc != CGameObjectArray::SUCCESS) {
+                            continue;
+                        }
+
+                        if (pSprite->GetObjectType() != CGameObject::TYPE_SPRITE
+                            || (cSpell.cResRef == "SPIN147"
+                                && (IcewindMisc::sub_585230(this, pSprite) == 1
+                                    || IcewindMisc::sud_585070(pSprite) == 1
+                                    || pSprite->m_derivedStats.m_spellStates[SPLSTATE_DEAFENED]))
+                            || !IcewindMisc::sub_585230(this, pSprite)) {
+                            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                                CGameObjectArray::THREAD_ASYNCH,
+                                INFINITE);
+                            continue;
+                        }
+
+                        std::list<CMessageAddEffect*> effects;
+
+                        for (INT nEffect = 0; nEffect < pAbility->effectCount; nEffect++) {
+                            CGameEffect* pEffect = cSpell.DecodeEffect(0, nEffect, this, 0, 0, 0);
+                            pEffect->m_source = m_pos;
+                            pEffect->m_sourceID = m_id;
+
+                            IcewindMisc::sub_5860F0(this, pEffect);
+
+                            if (pEffect->m_durationType == 0 && pEffect->m_duration == 7) {
+                                pEffect->m_durationType = 0x1000;
+                                pEffect->m_duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + 200;
+                            }
+
+                            CMessageAddEffect* pAddEffect = new CMessageAddEffect(pEffect, m_id, pSprite->m_id);
+                            effects.push_back(pAddEffect);
+                        }
+
+                        CMessage105* pMessage = new CMessage105(effects, m_id, pSprite->m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                    }
+
+                    cSpell.Release();
+                }
+            }
+        } else {
+            FeedBack(FEEDBACK_BATTLESONGEND, 0, 0, 0, -1, 0, 0);
+        }
+        break;
+    case 2:
+        FeedBack(FEEDBACK_SEARCHEND, 0, 0, 0, -1, 0, 0);
+        break;
+    case 3:
+        if (m_bHiding) {
+            FeedBack(FEEDBACK_LEAVING_SHADOWS, 0, 0, 0, -1, 0, 0);
+            m_bHiding = FALSE;
+        }
+        break;
+    case 4:
+        FeedBack(FEEDBACK_TURNUNDEADEND, 0, 0, 0, -1, 0, 0);
+        break;
+    }
+
+    m_nModalState = modalState;
+
+    if (bUpdateToolbar) {
+        if (g_pBaldurChitin->GetObjectGame()->GetGroup()->GetGroupLeader() == m_id) {
+            g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateButtons();
+        }
+    }
 }
 
 // 0x7202E0
