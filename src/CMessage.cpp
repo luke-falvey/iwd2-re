@@ -9854,8 +9854,10 @@ void CMessageClearTriggers::Run()
 CMessageColorChange::CMessageColorChange(BYTE* colors, LONG caller, LONG target)
     : CMessage(caller, target)
 {
-    for (int index = 0; index < 7; index++) {
-        m_colors[index] = colors[index];
+    if (colors != NULL) {
+        for (int index = 0; index < 7; index++) {
+            m_colors[index] = colors[index];
+        }
     }
 }
 
