@@ -5546,9 +5546,57 @@ SHORT CGameAIBase::MoveViewObject(CGameObject* target)
 // 0x45F6D0
 SHORT CGameAIBase::MoveCursor(CPoint dest, SHORT speed)
 {
-    // TODO: Incomplete.
+    INT viewX;
+    INT viewY;
+    GetArea()->GetInfinity()->GetViewPosition(viewX, viewY);
 
-    return ACTION_DONE;
+    POINT ptCursor;
+    GetCursorPos(&ptCursor);
+
+    INT dy = dest.y - ptCursor.y;
+    INT dx = dest.x - ptCursor.x;
+
+    // NOTE: Read from an unnamed WORD constant at 0x851882.
+    SHORT nStep = 4;
+    SHORT nThreeQuarters = 3 * nStep / 4;
+    SHORT nHalf = nStep / 2;
+    SHORT nMaxX = static_cast<SHORT>(nStep * speed);
+    SHORT nMaxY = static_cast<SHORT>(nThreeQuarters * speed);
+
+    if (m_curAction.m_specificID == 0) {
+        GetArea()->GetInfinity()->SetViewPosition(dest.x, dest.y, TRUE);
+        return ACTION_DONE;
+    }
+
+    if (dx <= nMaxX && dx >= -nMaxX && dy <= nMaxY && dy >= -nMaxY) {
+        return ACTION_DONE;
+    }
+
+    if (dx <= nMaxX && dx >= -nMaxX && dy > 0) {
+        ptCursor.y += nThreeQuarters * speed;
+    } else if (dx <= nMaxX && dx >= -nMaxX && dy < 0) {
+        ptCursor.y -= nThreeQuarters * speed;
+    } else if (dx > 0 && dy <= 6 && dy >= -nMaxY) {
+        ptCursor.x += speed * nStep;
+    } else if (dx < 0 && dy <= 6 && dy >= -nMaxY) {
+        ptCursor.x -= speed * nStep;
+    } else if (dx > 0 && dy > 0) {
+        ptCursor.x += nThreeQuarters * speed;
+        ptCursor.y += nHalf * speed;
+    } else if (dx < 0 && dy > 0) {
+        ptCursor.x -= nThreeQuarters * speed;
+        ptCursor.y += nHalf * speed;
+    } else if (dx > 0 && dy < 0) {
+        ptCursor.x += nThreeQuarters * speed;
+        ptCursor.y -= nHalf * speed;
+    } else if (dx < 0 && dy < 0) {
+        ptCursor.x -= nThreeQuarters * speed;
+        ptCursor.y -= nHalf * speed;
+    }
+
+    GetArea()->GetInfinity()->SetViewPosition(ptCursor.x, ptCursor.y, TRUE);
+
+    return ACTION_INTERRUPTABLE;
 }
 
 // 0x45F900
@@ -6574,7 +6622,41 @@ CAIAction& CGameAIBase::GetNextAction(CAIAction& action)
 // 0x481890
 void CGameAIBase::sub_481890(CRect* r, CArray<CRect*>& ary)
 {
-    // TODO: Incomplete.
+    INT nTilesX = 1;
+    INT nTilesY = 1;
+    BOOL bSplit = FALSE;
+
+    INT nWidth = r->right - r->left;
+    if (nWidth > 512) {
+        nTilesX = nWidth / 512 + 1;
+        bSplit = TRUE;
+    }
+
+    INT nHeight = r->bottom - r->top;
+    if (nHeight > 512 || bSplit) {
+        if (nHeight > 512) {
+            nTilesY = nHeight / 512 + 1;
+        }
+
+        ary.SetSize(0, 4);
+
+        INT y = 0;
+        for (INT j = 0; j < nTilesY && y <= r->bottom; j++, y += 512) {
+            INT x = 0;
+            // NOTE: The original compares the offsets with the absolute edges.
+            for (INT i = 0; i < nTilesX && x <= r->right; i++, x += 512) {
+                CRect* pRect = new CRect(r->left + x, r->top + y, 0x7FFFFFFF, 0x7FFFFFFF);
+
+                pRect->right = pRect->left + min(r->right - pRect->left, 512);
+                pRect->bottom = pRect->top + min(r->bottom - pRect->top, 512);
+
+                ary.Add(pRect);
+            }
+        }
+    } else {
+        ary.SetSize(0, -1);
+        ary.Add(r);
+    }
 }
 
 // 0x467C50
@@ -6592,9 +6674,41 @@ void CGameAIBase::FireSpellPoint(const CResRef& resRef, const CPoint& ptTarget)
 // 0x4686C0
 CVariable* CGameAIBase::GetGlobalVariable(const CString& sScope, const CString& sName, int a3)
 {
-    // TODO: Incomplete.
+    // NOTE: `a3` is never read.
+    CString sScopeUpper(sScope);
+    CString sNameUpper(sName);
+    sScopeUpper.MakeUpper();
+    sNameUpper.MakeUpper();
 
-    return NULL;
+    CVariable var;
+    CVariable* pVariable;
+
+    if (strcmp(sScopeUpper, "GLOBAL") == 0) {
+        pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sNameUpper);
+        if (pVariable == NULL) {
+            var.SetName(sNameUpper);
+            var.m_intValue = 0;
+            g_pBaldurChitin->GetObjectGame()->m_variables.AddKey(var);
+            pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sNameUpper);
+        }
+    } else {
+        CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sScopeUpper);
+        if (pArea != NULL) {
+            pVariable = pArea->GetVariables()->FindKey(sNameUpper);
+            if (pVariable != NULL) {
+                return pVariable;
+            }
+        }
+
+        // NOTE: The variable is added to the global variables even though
+        // the scope is not "GLOBAL".
+        var.SetName(sNameUpper);
+        var.m_intValue = 0;
+        g_pBaldurChitin->GetObjectGame()->m_variables.AddKey(var);
+        pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sNameUpper);
+    }
+
+    return pVariable;
 }
 
 // 0x4530F0
