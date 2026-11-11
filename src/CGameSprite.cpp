@@ -23176,7 +23176,34 @@ BOOL CGameSprite::sub_763200(UINT nFeatNumber, INT a2)
                 && m_baseStats.m_skills[CGAMESPRITE_SKILL_CONCENTRATION] >= 4;
         }
     case CGAMESPRITE_FEAT_MERCANTILE_BACKGROUND:
-        // TODO: Incomplete.
+        return m_typeAI.m_nRace == CAIOBJECTTYPE_R_HUMAN
+            || (m_typeAI.m_nRace == CAIOBJECTTYPE_R_DWARF
+                && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_DWARF_GRAY)
+            || (m_typeAI.m_nRace == CAIOBJECTTYPE_R_GNOME
+                && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_GNOME_DEEP);
+    case CGAMESPRITE_FEAT_POWER_ATTACK:
+        return nSTR >= 13;
+    case CGAMESPRITE_FEAT_RESIST_POISON:
+        if ((m_typeAI.m_nRace == CAIOBJECTTYPE_R_DWARF
+                && m_typeAI.m_nSubRace == CAIOBJECTTYPE_SUBRACE_DWARF_GRAY)
+            || m_typeAI.m_nRace == CAIOBJECTTYPE_R_HALF_ORC) {
+            // NOTE: Probably inlined "get character level" helper.
+            INT nLevel = 0;
+            DWORD nClassMask = GetAIType().m_nClassMask & 0xFFF;
+            if (nClassMask != 0) {
+                DWORD nMask = 1;
+                for (INT nClass = 0; nClass < 11 && nMask <= 0xFFF; nClass++) {
+                    if ((nMask & nClassMask) != 0) {
+                        nLevel += m_baseStats.m_classLevels[nClass];
+                    }
+                    nMask <<= 1;
+                }
+
+                if (nLevel == 1) {
+                    return TRUE;
+                }
+            }
+        }
         return FALSE;
     case CGAMESPRITE_FEAT_SIMPLE_CROSSBOW:
     case CGAMESPRITE_FEAT_SIMPLE_MACE:
@@ -23184,8 +23211,27 @@ BOOL CGameSprite::sub_763200(UINT nFeatNumber, INT a2)
     case CGAMESPRITE_FEAT_SIMPLE_QUARTERSTAFF:
     case CGAMESPRITE_FEAT_SIMPLE_SMALLBLADE:
         return GetFeatValue(nFeatNumber) != 3 || m_baseStats.m_fighterLevel >= 4;
+    case CGAMESPRITE_FEAT_SLIPPERY_MIND:
+        return m_baseStats.m_rogueLevel >= 10;
     case CGAMESPRITE_FEAT_SNAKE_BLOOD:
-        // TODO: Incomplete.
+        if (m_typeAI.m_nRace == CAIOBJECTTYPE_R_HUMAN) {
+            // NOTE: Probably inlined "get character level" helper.
+            INT nLevel = 0;
+            DWORD nClassMask = GetAIType().m_nClassMask & 0xFFF;
+            if (nClassMask != 0) {
+                DWORD nMask = 1;
+                for (INT nClass = 0; nClass < 11 && nMask <= 0xFFF; nClass++) {
+                    if ((nMask & nClassMask) != 0) {
+                        nLevel += m_baseStats.m_classLevels[nClass];
+                    }
+                    nMask <<= 1;
+                }
+
+                if (nLevel == 1) {
+                    return TRUE;
+                }
+            }
+        }
         return FALSE;
     case CGAMESPRITE_FEAT_STUNNING_FIST:
         return (nDEX >= 13 && nWIS >= 13 && m_baseStats.m_attackBase >= 8)
