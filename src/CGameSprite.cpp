@@ -20873,9 +20873,137 @@ SHORT CGameSprite::Berserk()
 // 0x75ACB0
 SHORT CGameSprite::UseDoor()
 {
-    // TODO: Incomplete.
+    CGameDoor* pDoor;
+    BYTE rc;
 
-    return ACTION_ERROR;
+    if (m_actionCount > 0) {
+        return ACTION_INTERRUPTABLE;
+    }
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    LONG nDoorId = m_curAction.m_specificID;
+
+    if (pGame->GetCharacterPortraitNum(m_id) == -1
+        && pGame->m_familiars.Find(reinterpret_cast<int*>(m_id)) == NULL) {
+        return ACTION_DONE;
+    }
+
+    if (!Orderable(FALSE) || !m_bSelected) {
+        return ACTION_DONE;
+    }
+
+    rc = pGame->GetObjectArray()->GetShare(nDoorId,
+        CGameObjectArray::THREAD_ASYNCH,
+        reinterpret_cast<CGameObject**>(&pDoor),
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+        // __LINE__: 24158
+        UTIL_ASSERT(FALSE);
+
+        return ACTION_ERROR;
+    }
+
+    CMessageSetForceActionPick* pForceActionPick = new CMessageSetForceActionPick(TRUE, m_id, pDoor->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pForceActionPick, FALSE);
+
+    // NOTE: The original reads CAITrigger::CLICKED (0x847E78).
+    CAITrigger trigger(CAITRIGGER_CLICKED, m_typeAI, 0);
+    CMessageSetTrigger* pSetTrigger = new CMessageSetTrigger(trigger, m_id, pDoor->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pSetTrigger, FALSE);
+
+    CPoint ptDest = pDoor->GetClosestDest(m_pos);
+
+    LONG nRange = CGameDoor::RANGE_DOOR;
+    if (_strnicmp(reinterpret_cast<char*>(m_pArea->m_header.m_areaName), "ar5004", 7) == 0) {
+        nRange = CGameDoor::RANGE_DOOR / 10;
+    } else if (_strnicmp(reinterpret_cast<char*>(m_pArea->m_header.m_areaName), "ar5202", 7) == 0) {
+        nRange = CGameDoor::RANGE_DOOR / 5;
+    }
+
+    if ((ptDest.y - m_pos.y) * (ptDest.y - m_pos.y) * 16 / 9 + (ptDest.x - m_pos.x) * (ptDest.x - m_pos.x) > nRange) {
+        pGame->GetObjectArray()->ReleaseShare(nDoorId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return ACTION_DONE;
+    }
+
+    do {
+        rc = pGame->GetObjectArray()->GetDeny(nDoorId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pDoor),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+        // __LINE__: 24206
+        UTIL_ASSERT(FALSE);
+
+        pGame->GetObjectArray()->ReleaseShare(nDoorId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return ACTION_ERROR;
+    }
+
+    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL
+        && g_pChitin->cNetwork.m_idLocalPlayer != pDoor->m_remotePlayerID) {
+        CMessageDoorOpen* pDoorOpen = new CMessageDoorOpen((pDoor->m_dwFlags & 0x1) != 1, m_id, pDoor->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(pDoorOpen, FALSE);
+    } else {
+        pDoor->ToggleDoor(m_typeAI, FALSE);
+    }
+
+    pGame->GetObjectArray()->ReleaseDeny(nDoorId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+    pGame->GetObjectArray()->ReleaseShare(nDoorId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    CAIGroup* pGroup = &(pGame->m_group);
+    LONG* pGroupList = pGroup->GetGroupList();
+    if (pGroupList == NULL) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+        // __LINE__: 24216
+        UTIL_ASSERT(FALSE);
+
+        return ACTION_ERROR;
+    }
+
+    for (SHORT nIndex = 0; nIndex < pGroup->GetCount(); nIndex++) {
+        if (pGroupList[nIndex] != m_id) {
+            CGameSprite* pSprite;
+            do {
+                rc = pGame->GetObjectArray()->GetDeny(pGroupList[nIndex],
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                pSprite->ClearActions(FALSE);
+
+                if (pSprite->m_curAction.m_actionID == CAIAction::MOVETOPOINT) {
+                    // NOTE: One more than the `SHORT` constant (4) at 0x85BBA6
+                    // `MoveToPoint` compares this counter against.
+                    pSprite->m_curAction.m_specificID2 = 4 + 1;
+                }
+
+                pGame->GetObjectArray()->ReleaseDeny(pGroupList[nIndex],
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            } else {
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+                // __LINE__: 24228
+                UTIL_ASSERT(FALSE);
+            }
+        }
+    }
+
+    delete pGroupList;
+
+    return ACTION_DONE;
 }
 
 // 0x75B280
