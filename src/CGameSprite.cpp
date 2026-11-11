@@ -21294,9 +21294,158 @@ SHORT CGameSprite::EscapeArea()
 // 0x75BC70
 SHORT CGameSprite::PickLock(CGameAIBase* pTarget)
 {
-    // TODO: Incomplete.
+    CMessage* message;
 
-    return ACTION_ERROR;
+    if (pTarget == NULL) {
+        return ACTION_ERROR;
+    }
+
+    SHORT actionReturn = ACTION_DONE;
+
+    if (pTarget->GetObjectType() != TYPE_DOOR
+        && pTarget->GetObjectType() != TYPE_CONTAINER) {
+        return ACTION_ERROR;
+    }
+
+    message = new CMessageSetForceActionPick(TRUE, m_id, pTarget->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    LONG nMyX = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+    LONG nMyY = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+    const CPoint& ptTarget = pTarget->GetPos();
+    LONG nTargetX = ptTarget.x / CPathSearch::GRID_SQUARE_SIZEX;
+    LONG nTargetY = ptTarget.y / CPathSearch::GRID_SQUARE_SIZEY;
+
+    if ((nTargetX - nMyX) * (nTargetX - nMyX) + (nTargetY - nMyY) * (nTargetY - nMyY) > 16) {
+        m_curAction.m_dest = pTarget->GetPos();
+        actionReturn = sub_73FEC0(pTarget->GetPos(), 0);
+    }
+
+    if (actionReturn != ACTION_DONE) {
+        return actionReturn;
+    }
+
+    nMyX = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+    nMyY = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+    const CPoint& ptTarget2 = pTarget->GetPos();
+    nTargetX = ptTarget2.x / CPathSearch::GRID_SQUARE_SIZEX;
+    nTargetY = ptTarget2.y / CPathSearch::GRID_SQUARE_SIZEY;
+
+    if ((nTargetX - nMyX) * (nTargetX - nMyX) + (nTargetY - nMyY) * (nTargetY - nMyY) > 16) {
+        return ACTION_ERROR;
+    }
+
+    if (!IsVisibleToCaller(FALSE)) {
+        ITEM_EFFECT effect;
+        CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+        // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+        effect.durationType = 1;
+
+        CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+            m_pos,
+            m_id,
+            CPoint(-1, -1));
+
+        message = new CMessageAddEffect(pEffect, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    // NOTE: The skill is read as a signed byte (`MOVSX`). There is no die
+    // roll, the check is deterministic.
+    INT nSkill = static_cast<signed char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_OPEN_LOCK]) * 7;
+
+    CAITrigger trigger(CAITrigger::NO_TRIGGER, 0);
+
+    if (pTarget->GetObjectType() == TYPE_DOOR
+        && (static_cast<CGameDoor*>(pTarget)->m_dwFlags & 0x2) != 0) {
+        CGameDoor* pDoor = static_cast<CGameDoor*>(pTarget);
+
+        FeedBack(83,
+            nSkill,
+            pDoor->m_lockDifficulty,
+            GetSkillBonus(CGAMESPRITE_SKILL_OPEN_LOCK),
+            39301,
+            0,
+            0);
+
+        if (static_cast<DWORD>(nSkill) >= pDoor->m_lockDifficulty
+            && pDoor->m_lockDifficulty != 100) {
+            trigger = CAITrigger(CAITrigger::UNLOCKED, m_typeAI, 0);
+
+            message = new CMessageSetTrigger(trigger, m_id, pTarget->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            pDoor->m_dwFlags &= ~0x2;
+
+            FeedBack(8, 0, 0, 0, -1, 0, 0);
+            PlaySound(CResRef("AMB_D21D"));
+
+            message = new CMessageUnlock(pDoor->m_dwFlags, m_id, pTarget->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        } else if (pDoor->m_lockDifficulty == 100) {
+            // NOTE: The original reads `CAITrigger::PICKLOCKFAILED` (0x847E58).
+            trigger = CAITrigger(CAITRIGGER_PICKLOCKFAILED, m_typeAI, 0);
+
+            message = new CMessageSetTrigger(trigger, m_id, pTarget->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            FeedBack(49, 0, 0, 0, -1, 0, 0);
+            PlaySound(CResRef("AMB_D21"));
+        } else {
+            trigger = CAITrigger(CAITRIGGER_PICKLOCKFAILED, m_typeAI, 0);
+
+            message = new CMessageSetTrigger(trigger, m_id, pTarget->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            FeedBack(9, 0, 0, 0, -1, 0, 0);
+            PlaySound(CResRef("AMB_D21"));
+        }
+    }
+
+    if (pTarget->GetObjectType() == TYPE_CONTAINER
+        && (static_cast<CGameContainer*>(pTarget)->m_dwFlags & 0x1) != 0) {
+        CGameContainer* pContainer = static_cast<CGameContainer*>(pTarget);
+
+        FeedBack(83,
+            nSkill,
+            pContainer->m_lockDifficulty,
+            GetSkillBonus(CGAMESPRITE_SKILL_OPEN_LOCK),
+            39301,
+            0,
+            0);
+
+        if (static_cast<DWORD>(nSkill) >= pContainer->m_lockDifficulty
+            && pContainer->m_lockDifficulty != 100) {
+            trigger = CAITrigger(CAITrigger::UNLOCKED, m_typeAI, 0);
+
+            message = new CMessageSetTrigger(trigger, m_id, pTarget->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            message = new CMessageUnlock(pContainer->m_dwFlags & ~0x1, m_id, pTarget->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            FeedBack(8, 0, 0, 0, -1, 0, 0);
+            PlaySound(CResRef("AMB_D21D"));
+        } else if (pContainer->m_lockDifficulty == 100) {
+            trigger = CAITrigger(CAITRIGGER_PICKLOCKFAILED, m_typeAI, 0);
+
+            message = new CMessageSetTrigger(trigger, m_id, pTarget->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            FeedBack(49, 0, 0, 0, -1, 0, 0);
+            PlaySound(CResRef("AMB_D21"));
+        } else {
+            trigger = CAITrigger(CAITRIGGER_PICKLOCKFAILED, m_typeAI, 0);
+
+            message = new CMessageSetTrigger(trigger, m_id, pTarget->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            FeedBack(9, 0, 0, 0, -1, 0, 0);
+            PlaySound(CResRef("AMB_D21"));
+        }
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x75C980
