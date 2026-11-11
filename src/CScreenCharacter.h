@@ -163,12 +163,14 @@ public:
     /* 01BA */ CGameSpriteGroupedSpellList m_spells;
     /* 02B6 */ int field_2B6;
     /* 02BA */ SHORT m_nTopSkill;
+    /* 02BC */ INT field_2BC;
     /* 02C0 */ INT m_storedSkills[16];
     /* 0300 */ CKeyInfo m_pVirtualKeys[CSCREENCHARACTER_VIRTUAL_KEYS];
     /* 05D0 */ BYTE m_pVirtualKeysFlags[CSCREENCHARACTER_VIRTUAL_KEYS];
     /* 062A */ CTypedPtrList<CPtrList, CUIPanel*> m_lPopupStack;
     /* 0646 */ INT m_nExtraFeats;
     /* 064A */ SHORT m_nTopFeat;
+    /* 064C */ INT field_64C;
     /* 0650 */ INT m_storedFeats[75];
     /* 077C */ WORD field_77C;
     /* 0780 */ int field_780;

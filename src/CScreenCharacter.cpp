@@ -4,6 +4,7 @@
 #include "CAIScript.h"
 #include "CBaldurChitin.h"
 #include "CGameSprite.h"
+#include "CIcon.h"
 #include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CItem.h"
@@ -1242,7 +1243,73 @@ void CScreenCharacter::ResetClassSelectionPanel(CUIPanel* pPanel, CGameSprite* p
 // 0x5DA200
 void CScreenCharacter::ResetFeatsPanel(CUIPanel* pPanel, CGameSprite* pSprite, int a3)
 {
-    // TODO: Incomplete.
+    const CRuleTables& ruleTables = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
+
+    CString sNumber;
+
+    if (a3 != 0) {
+        LONG nHPCONBonusTotalOld = pSprite->m_nHPCONBonusTotalOld;
+        WORD nMaxHitPointsBase = pSprite->m_baseStats.m_maxHitPointsBase;
+        SHORT nHitPoints = pSprite->m_baseStats.m_hitPoints;
+        SHORT nMaxHitPoints = pSprite->m_derivedStats.m_nMaxHitPoints;
+
+        pSprite->field_562C = 1;
+        pSprite->ProcessEffectList();
+
+        pSprite->m_baseStats.m_hitPoints = nHitPoints;
+        pSprite->m_derivedStats.m_nMaxHitPoints = nMaxHitPoints;
+        pSprite->m_baseStats.m_maxHitPointsBase = nMaxHitPointsBase;
+        pSprite->m_nHPCONBonusTotalOld = nHPCONBonusTotalOld;
+
+        m_nExtraFeats = field_64C;
+
+        for (m_nTopFeat = 0; m_nTopFeat < CGAMESPRITE_FEAT_NUMFEATS; m_nTopFeat++) {
+            m_storedFeats[m_nTopFeat] = pSprite->GetFeatValue(m_nTopFeat);
+        }
+
+        for (m_nTopFeat = 0; m_nTopFeat < CGAMESPRITE_FEAT_NUMFEATS; m_nTopFeat++) {
+            // NOTE: Result unused.
+            ruleTables.GetFeatId(m_nTopFeat);
+
+            if (pSprite->sub_763A40(m_nTopFeat, 1)) {
+                break;
+            }
+        }
+    } else {
+        m_nTopFeat = 0;
+    }
+
+    sNumber.Format("%d", m_nExtraFeats);
+
+    g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_NUMBER, sNumber);
+    UpdateHelp(pPanel->m_nID, 92, 36476);
+
+    INT nSlot = 0;
+    for (INT nButtonId = 15; nButtonId < 33; nButtonId += 2) {
+        CUIControlButton* pButton;
+
+        BOOL bEnabled = pSprite->sub_763A40(ruleTables.GetFeatId(nSlot), 1) != FALSE;
+
+        pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButtonId - 1));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 3330
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetEnabled(bEnabled);
+        pButton->SetActive(bEnabled);
+
+        pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButtonId));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 3337
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetEnabled(bEnabled);
+        pButton->SetActive(bEnabled);
+
+        nSlot++;
+    }
 }
 
 // 0x5DA490
@@ -2968,9 +3035,80 @@ void CScreenCharacter::DismissPopup(CGameSprite* pSprite)
 // 0x5E1F50
 BOOL CScreenCharacter::IsDoneButtonClickable(CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
+    CUIPanel* pPanel = GetTopPopup();
 
-    return FALSE;
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 7305
+    UTIL_ASSERT(pPanel != NULL);
+
+    CString sValue;
+
+    switch (pPanel->m_nID) {
+    case 4:
+    case 12:
+    case 17:
+    case 18:
+    case 51:
+    case 52:
+    case 53:
+    case 57:
+        return TRUE;
+    case 6: {
+        DWORD nMask = 0;
+        if (m_nClass == 11) {
+            nMask = m_nSpecialization & 0x7FC0;
+        }
+        if (m_nClass == 7) {
+            nMask = m_nSpecialization & 0x7;
+        }
+        if (m_nClass == 6) {
+            nMask = m_nSpecialization & 0x38;
+        }
+        if (m_nClass == 3) {
+            nMask = m_nSpecialization & 0xFF8000;
+        }
+        return nMask != 0;
+    }
+    case 7:
+        return m_nExtraAbilityPoints == 0;
+    case 8:
+        return m_nExtraMageSpells == 0;
+    case 11:
+        return m_nScriptIndex >= 0;
+    case 13: {
+        CUIControlEdit* pEdit = static_cast<CUIControlEdit*>(pPanel->GetControl(6));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 7346
+        UTIL_ASSERT(pEdit != NULL);
+
+        sValue = pEdit->GetText();
+        sValue.TrimLeft();
+        sValue.TrimRight();
+
+        return strcmp(sValue, "") != 0;
+    }
+    case 16:
+        return pSprite->m_baseStats.m_favoredEnemies[m_nHatedRaceIndex] != CAIObjectType::R_NO_RACE;
+    case 19:
+        if (m_nPortraitSmallIndex >= 0 && m_nPortraitLargeIndex >= 0) {
+            return TRUE;
+        }
+        return FALSE;
+    case 20:
+        return m_nCustomSoundSetIndex >= 0;
+    case 54:
+        return m_nClass != 0;
+    case 55:
+        return m_nExtraSkillPoints <= 1;
+    case 56:
+        return m_nExtraFeats == 0;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 7399
+        UTIL_ASSERT(FALSE);
+        return FALSE;
+    }
 }
 
 // 0x5E2210
@@ -4707,7 +4845,77 @@ void CScreenCharacter::ResetCustomizeBiographyPanel(CUIPanel* pPanel, CGameSprit
 // 0x5F7850
 void CScreenCharacter::ResetSkillsPanel(CUIPanel* pPanel, CGameSprite* pSprite, int a3)
 {
-    // TODO: Incomplete.
+    const CRuleTables& ruleTables = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
+
+    CString sNumber;
+
+    if (a3 != 0) {
+        LONG nHPCONBonusTotalOld = pSprite->m_nHPCONBonusTotalOld;
+        WORD nMaxHitPointsBase = pSprite->m_baseStats.m_maxHitPointsBase;
+        SHORT nHitPoints = pSprite->m_baseStats.m_hitPoints;
+        SHORT nMaxHitPoints = pSprite->m_derivedStats.m_nMaxHitPoints;
+
+        pSprite->field_562C = 1;
+        pSprite->ProcessEffectList();
+
+        pSprite->m_baseStats.m_hitPoints = nHitPoints;
+        pSprite->m_derivedStats.m_nMaxHitPoints = nMaxHitPoints;
+        pSprite->m_baseStats.m_maxHitPointsBase = nMaxHitPointsBase;
+        pSprite->m_nHPCONBonusTotalOld = nHPCONBonusTotalOld;
+
+        m_nExtraSkillPoints = field_2BC;
+
+        for (m_nTopSkill = 0; m_nTopSkill < SKILL_COUNT; m_nTopSkill++) {
+            m_storedSkills[m_nTopSkill] = pSprite->GetSkillValue(m_nTopSkill);
+        }
+
+        for (m_nTopSkill = 0; m_nTopSkill < SKILL_COUNT; m_nTopSkill++) {
+            if (pSprite->GetSkillCost(ruleTables.GetSkillId(m_nTopSkill), m_nClass) != 0) {
+                break;
+            }
+        }
+    } else {
+        m_nTopSkill = 0;
+    }
+
+    sNumber.Format("%d", m_nExtraSkillPoints);
+
+    g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_NUMBER, sNumber);
+    UpdateHelp(pPanel->m_nID, 92, 17248);
+
+    INT nSlot = 0;
+    for (INT nButtonId = 15; nButtonId < 33; nButtonId += 2) {
+        CUIControlButton* pButton;
+
+        INT nCost = pSprite->GetSkillCost(ruleTables.GetSkillId(nSlot), m_nClass);
+
+        BOOL bEnabled;
+        if (nCost != 0 && m_nExtraSkillPoints >= nCost) {
+            bEnabled = TRUE;
+        } else {
+            bEnabled = FALSE;
+        }
+
+        pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButtonId - 1));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 17847
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetEnabled(bEnabled);
+        pButton->SetActive(bEnabled);
+
+        pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButtonId));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 17854
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetEnabled(bEnabled);
+        pButton->SetActive(bEnabled);
+
+        nSlot++;
+    }
 }
 
 // 0x5F89B0
@@ -4738,7 +4946,50 @@ void CScreenCharacter::sub_5F8C90(int a1)
 // 0x5F91F0
 void CScreenCharacter::sub_5F91F0(int a1)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    const CRuleTables& ruleTables = pGame->GetRuleTables();
+
+    CUIPanel* pPanel = m_cUIManager.GetPanel(57);
+
+    DWORD nStrId = -1;
+
+    switch (field_1846) {
+    case 0:
+        nStrId = atol(ruleTables.m_tHelp01.GetAt(CPoint(1, a1)));
+        break;
+    case 1:
+        nStrId = atol(ruleTables.m_tHelp02.GetAt(CPoint(1, a1)));
+        break;
+    case 2:
+        nStrId = ruleTables.GetFeatDescription(a1);
+        break;
+    case 3:
+        nStrId = atol(ruleTables.m_tHelp03.GetAt(CPoint(1, a1)));
+        break;
+    case 4:
+        nStrId = atol(ruleTables.m_tHelp04.GetAt(CPoint(1, a1)));
+        break;
+    case 5:
+        nStrId = ruleTables.GetSkillDescription(a1);
+        break;
+    }
+
+    field_184A = a1;
+
+    for (INT nIndex = 0; nIndex < 11; nIndex++) {
+        if (field_184A - field_1852 == nIndex) {
+            HighlightLabel(pPanel, 0x10000030 + nIndex, TRUE, COLOR_LABEL_HIGHLIGHT_BONUS);
+        } else {
+            HighlightLabel(pPanel, 0x10000030 + nIndex, FALSE, COLOR_LABEL_HIGHLIGHT_BONUS);
+        }
+
+        CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(71 + nIndex));
+        if (pButton != NULL) {
+            pButton->SetEnabled(nIndex < field_184E);
+        }
+    }
+
+    UpdateHelp(57, 2, nStrId);
 }
 
 // -----------------------------------------------------------------------------
@@ -5917,9 +6168,53 @@ void CUIControlButtonCharacter5EBC60::OnLButtonClick(CPoint pt)
 // 0x5EC420
 BOOL CUIControlButtonCharacter5EBC60::Render(BOOL bForce)
 {
-    // TODO: Incomplete.
+    DWORD dwFlags = 0;
 
-    return FALSE;
+    if (!m_bActive && !m_bInactiveRender) {
+        return FALSE;
+    }
+
+    if (m_nRenderCount == 0 && !bForce) {
+        return FALSE;
+    }
+
+    if (!CUIControlButton3State::Render(bForce)) {
+        return FALSE;
+    }
+
+    if (field_676 != "" && field_66E != "") {
+        CRect rFrame(m_pPanel->m_ptOrigin + m_ptOrigin, m_size);
+
+        if (m_bPressed) {
+            rFrame.OffsetRect(field_63E, field_642);
+        }
+
+        CPoint pt(rFrame.left, rFrame.top);
+
+        CRect rClip;
+        rClip.IntersectRect(rFrame, m_rDirty);
+        rFrame = rClip;
+
+        if (!m_bEnabled) {
+            // 0x84CEB8
+            dwFlags = 0x2;
+        }
+
+        CIcon::RenderIcon(0,
+            pt,
+            m_size,
+            rFrame,
+            field_66E,
+            m_pPanel->m_pManager->m_bDoubleSize,
+            dwFlags,
+            0,
+            FALSE,
+            0,
+            FALSE,
+            0);
+    }
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------

@@ -47,6 +47,7 @@ public:
 
     void sub_669830(DWORD nPortrait);
     int sub_66A010(DWORD nIndex);
+    int sub_66A8C0(CGameSprite* pSprite);
     int sub_66C4B0();
     BOOLEAN sub_66C790(CGameSprite* pSprite, DWORD nIndex);
     void SetSpellLevel(INT nLevel);
