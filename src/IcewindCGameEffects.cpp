@@ -4009,8 +4009,7 @@ BOOL IcewindCGameEffectAreaOfEffect::ApplyEffect(CGameSprite* pSprite)
         strcpy(reinterpret_cast<char*>(pEffect->field_29), m_sourceRes.GetResRefStr());
 
         if (m_dwFlags == 3) {
-            // NOTE: The original set holds signed object ids.
-            pEffect->field_58.insert(reinterpret_cast<void*>(pSprite->GetId()));
+            pEffect->field_58.insert(pSprite->GetId());
         }
 
         pSprite->GetDerivedStats()->m_cRegeneratedPersistantEffectList.AddTail(pEffect);
