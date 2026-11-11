@@ -7032,7 +7032,8 @@ BOOL CInfGame::sub_5BA2E0(CGameSprite* pSprite, SHORT nSlot, CItem*& pItem, STRR
     STRREF strEffectError;
     BOOL bQuickItem = FALSE;
 
-    // NOTE: Uninitialized in the original when `pItem` is NULL.
+    // NOTE: The original keeps `nSlot` in this register when `pItem` is NULL. It is
+    // only compared with item types that no slot number equals.
     WORD nItemType = 0;
     if (pItem != NULL) {
         nItemType = pItem->GetItemType();
