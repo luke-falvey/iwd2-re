@@ -19893,7 +19893,7 @@ void CGameSprite::MoveGlobal(const CString& sArea, const CPoint& ptStart)
 
         CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sArea);
         if (pArea != NULL) {
-            if ((m_baseStats.m_flags & 0x800) != 0 && m_animation.CanLieDown()) {
+            if ((m_baseStats.m_generalState & STATE_DEAD) != 0 && m_animation.CanLieDown()) {
                 AddToArea(pArea, ptStart, 0, LIST_BACK);
                 return;
             }
