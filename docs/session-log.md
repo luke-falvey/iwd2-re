@@ -2,6 +2,32 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-11 (night): batches 3–4, spells merge, S1–S4 green
+
+Branch `phase-a/stubs-and-layout` (local only). 7,304 of 9,831 functions without a TODO (74.3%).
+
+**Done**
+- Merged the old `wip/spells` work (22 functions) and two Sonnet batches: seven `CScreenStore` functions (one partial), six `CScreenInventory` and four `CUIControlEditMultiLine` functions. About 32–34k tokens per function to translate, 11–19k to verify.
+- Bugs found by running the game:
+  - `CGameObjectArray::Delete` never marked the slot deleted, so removed objects were still handed out (crash once floating text worked).
+  - `CGameText` freed its `CString` array with scalar `delete`.
+  - The `CGameSprite` constructor set `m_active` from the hour's parity instead of the time-of-day mask. Sprites started inactive on even hours and their scripts didn't run. This was the "hard pause not lifted" flake in S3/S4.
+- Bugs found by the verifier, then by scanning the repo for the same pattern: six `GetShare`/`GetDeny` retry loops that tested the wrong results or shouldn't loop.
+- S1 failed at night because the main menu scene follows the system clock. Checkpoints now accept golden variants (`name.altN.png`).
+- S1–S4 pass on the rebuild.
+
+**Next**
+1. `CStore::sub_54CFE0` (0x54CFE0), needed by `CScreenStore::UpdateStoreItems`; `CScreenInventory::SwapWithSlot` (0x62F360), needed by `CancelEngine`.
+2. More batches from `tools/worklist.py`. The worktrees `iwd2-re-wt/batch3` and `batch4` are already built; reset them to the work branch and reuse them.
+3. Remaining gates (vtable comparison, pitfall scan) and skills (switch chunks, class scaffolding).
+4. Scenario S5 and later: walk, fight, save and load.
+
+**Notes**
+- Check a verifier's "DIFFERS" against the listing before applying it. So far 7 of 8 were right; the wrong one quoted an instruction that wasn't there.
+- A verifier finding is often a pattern. Scan the repo for it (the retry-loop scan found six more).
+- `packet.py` can't normalise stack slots for about 8% of functions (28% of those over 2 KB). It says so and prints raw asm.
+- Unverified: 0x84CEB4 is read as a global holding 1 in several `Render` functions; the C++ uses a literal.
+
 ## 2026-11-11 (evening): cheaper translation pipeline
 
 Branch `phase-a/stubs-and-layout` (local only).
