@@ -3,9 +3,12 @@
 
 #include "mfc.h"
 
+#include <list>
+
 #include "BalDataTypes.h"
 
 class CButtonData;
+class CGameAIBase;
 class CGameEffect;
 class CGameObject;
 class CGameSprite;
@@ -78,6 +81,7 @@ public:
     static BOOLEAN sub_585DA0(CGameSprite* pSprite);
     static CButtonData* CreateButtonData(BYTE* resRef);
     static void sub_5860F0(CGameSprite* pSprite, CGameEffect* pEffect);
+    static std::list<CGameEffect*> GetSpellEffects(CGameAIBase* pCaster, const char* szResRef, BYTE nCasterLevel);
 };
 
 #endif /* ICEWINDMISC_H_ */

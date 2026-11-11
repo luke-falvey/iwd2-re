@@ -795,6 +795,7 @@ public:
     INT GetNextHatedRacesSlot();
     void ResetQuickSlots();
     BOOL sub_724690(SHORT a1);
+    void sub_6F50A0();
 
     // NOTE: See `CGameSpriteSpells` for explanation of the overall ugliness of
     // the following functions.
@@ -1054,6 +1055,7 @@ public:
     /* 70FF */ BOOLEAN field_70FF;
     /* 7100 */ BOOLEAN field_7100;
     /* 7101 */ BOOLEAN field_7101;
+    /* 7102 */ CString m_sLastHitSound;
     /* 7106 */ int field_7106;
     /* 710A */ SHORT field_710A;
     /* 710C */ SHORT field_710C;
