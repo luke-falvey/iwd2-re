@@ -1,15 +1,19 @@
 #include "IcewindCGameEffects.h"
 
 #include "CBaldurChitin.h"
+#include "CCreatureFile.h"
 #include "CGameArea.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CMessage.h"
+#include "CPathSearch.h"
+#include "CProjectile.h"
 #include "CProjectileArea.h"
 #include "CProjectilePart5.h"
 #include "CProjectilePart6.h"
 #include "CScreenWorld.h"
 #include "CUtil.h"
+#include "Icewind586B70.h"
 #include "IcewindMisc.h"
 
 // NOTE: I'm not sure where these constants belong.
@@ -683,6 +687,313 @@ CGameEffect* IcewindCGameEffectSummon::Copy()
 void IcewindCGameEffectSummon::sub_49DB60(int a1)
 {
     field_190 = a1;
+}
+
+// 0x55F6F0
+IcewindCGameEffectSummon::~IcewindCGameEffectSummon()
+{
+}
+
+// 0x55F710
+BOOL IcewindCGameEffectSummon::ApplyEffect(CGameSprite* pSprite)
+{
+    sub_560140();
+
+    if (field_18C == NULL) {
+        field_18C = pSprite;
+    }
+
+    LONG nCount = m_effectAmount;
+    for (DWORD nDie = 0; nDie < m_numDice; nDie++) {
+        nCount += (m_diceSize != 0 ? rand() % static_cast<INT>(m_diceSize) : 0) + 1;
+    }
+
+    for (LONG nIndex = 0; nIndex < nCount; nIndex++) {
+        if (!Icewind586B70::Instance()->sub_586CA0(field_18C)) {
+            field_18C->FeedBack(CGameSprite::FEEDBACK_TOOMANYSUMMONED, 0, 0, 0, -1, 0, 0);
+            break;
+        }
+
+        CGameSprite* pSummoned = SummonCreature(m_res.GetResRefStr(), m_target);
+
+        // NOTE: Original reads these from constants at 0x8491A8, 0x8491BC,
+        // 0x8491AE and 0x8491AA. The last check is always true.
+        if ((m_durationType == 0 || m_durationType == 0x1000 || m_durationType == 3)
+            && pSummoned != NULL
+            && m_durationType != 1) {
+            CGameEffect* pUnsummon = IcewindMisc::CreateEffectSkillUnsummon(pSummoned,
+                (m_duration - g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime) / 15,
+                0);
+            pUnsummon->m_casterLevel = m_casterLevel;
+            pSummoned->AddEffect(pUnsummon, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+        }
+
+        sub_55FA10(pSummoned, m_dwFlags != 0 ? 21 : 0);
+    }
+
+    INT nProjectile = 0;
+    switch (m_dwFlags) {
+    case 0:
+    case 7:
+        nProjectile = 0;
+        break;
+    case 1:
+        nProjectile = 288;
+        break;
+    case 2:
+        nProjectile = 289;
+        break;
+    case 3:
+        nProjectile = 290;
+        break;
+    case 4:
+        nProjectile = 291;
+        break;
+    case 5:
+        nProjectile = 292;
+        break;
+    case 6:
+        nProjectile = 360;
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+        // __LINE__: 1811
+        UTIL_ASSERT(FALSE);
+    }
+
+    sub_55F930(nProjectile);
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
+// 0x55F930
+void IcewindCGameEffectSummon::sub_55F930(INT nProjectile)
+{
+    if (nProjectile == 0) {
+        return;
+    }
+
+    CProjectile* pProjectile = CProjectile::DecodeProjectile(static_cast<WORD>(nProjectile + 1), NULL, FALSE);
+
+    CMessage* message = new CMessageFireProjectile(pProjectile->m_projectileType,
+        CGameObjectArray::INVALID_INDEX,
+        m_target,
+        0,
+        field_18C->GetId(),
+        field_18C->GetId(),
+        0);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    pProjectile->Fire(field_18C->GetArea(),
+        field_18C->GetId(),
+        field_18C->GetId(),
+        m_target,
+        0,
+        0);
+}
+
+// 0x55FA10
+void IcewindCGameEffectSummon::sub_55FA10(CGameSprite* pSummoned, DWORD nVisual)
+{
+    if (nVisual == 0 || pSummoned == NULL) {
+        return;
+    }
+
+    CGameObject* pSource;
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pSource,
+            INFINITE)
+        == CGameObjectArray::SUCCESS) {
+        CGameEffect* pEffect = IcewindMisc::CreateEffectVisualSpellHit(pSource, nVisual, 0, 0);
+        pEffect->m_casterLevel = m_casterLevel;
+        pSummoned->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// 0x55FAD0
+CGameSprite* IcewindCGameEffectSummon::SummonCreature(const CString& sResRef, const CPoint& ptTarget)
+{
+    if (sResRef.GetLength() == 0) {
+        return NULL;
+    }
+
+    LONG y = ptTarget.y / CPathSearch::GRID_SQUARE_SIZEY;
+    LONG x = ptTarget.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+    CGameSprite* pCaster = field_18C;
+    if (pCaster->GetArea() == NULL) {
+        return NULL;
+    }
+
+    BYTE personalSpace = pCaster->m_animation.GetPersonalSpace();
+    CPoint pt = pCaster->GetArea()->m_search.GetNearestOpenSquare(CPoint(x, y),
+        pCaster->GetTerrainTable(),
+        personalSpace,
+        -1);
+
+    CCreatureFile creatureData;
+
+    // NOTE: Uninline.
+    creatureData.SetResRef(CResRef(sResRef), TRUE, TRUE);
+
+    CGameSprite* pSummoned;
+    if (IcewindMisc::sub_585310(pCaster) == TRUE) {
+        pSummoned = new CGameSprite(creatureData.GetData(),
+            creatureData.GetDataSize(),
+            0,
+            2,
+            -1,
+            0,
+            0,
+            0x7FFFFFFF,
+            CPoint(-1, -1),
+            0);
+    } else {
+        pSummoned = new CGameSprite(creatureData.GetData(),
+            creatureData.GetDataSize(),
+            0,
+            0,
+            -1,
+            0,
+            0,
+            0x7FFFFFFF,
+            CPoint(-1, -1),
+            0);
+    }
+
+    // NOTE: Called before the `NULL` check. The original `SetResRef`
+    // (0x42FDC0) takes a `CString` by value.
+    pSummoned->SetResRef(CResRef(creatureData.GetResRef().GetResRefStr()));
+    creatureData.ReleaseData();
+
+    if (pSummoned == NULL) {
+        return NULL;
+    }
+
+    pSummoned->SetResRef(CResRef(sResRef));
+    pSummoned->GetBaseStats()->m_generalState |= STATE_SUMMONED_CREATURE;
+
+    LONG nSummonedId = pSummoned->GetId();
+
+    if (field_190 != 0) {
+        sub_55FF40(pSummoned);
+    }
+
+    // NOTE: The result is ignored.
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nSummonedId,
+        CGameObjectArray::THREAD_ASYNCH,
+        reinterpret_cast<CGameObject**>(&pSummoned),
+        INFINITE);
+
+    BYTE listType = pSummoned->m_animation.GetListType();
+    pSummoned->AddToArea(pCaster->GetArea(),
+        CPoint(pt.x * CPathSearch::GRID_SQUARE_SIZEX, pt.y * CPathSearch::GRID_SQUARE_SIZEY),
+        0,
+        listType);
+
+    // NOTE: The direction is computed from the caster's own position.
+    pSummoned->SetFacing(pCaster->GetDirection(pCaster->GetPos()));
+    pSummoned->m_posStart = pSummoned->GetPos();
+
+    Icewind586B70::Instance()->sub_586D60(pCaster, pSummoned);
+
+    CMessage* message = new CMessage88(nSummonedId,
+        pCaster->GetId(),
+        nSummonedId,
+        nSummonedId);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nSummonedId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return pSummoned;
+}
+
+// 0x55FF40
+void IcewindCGameEffectSummon::sub_55FF40(CGameSprite* pSprite)
+{
+    if (pSprite == NULL) {
+        return;
+    }
+
+    BOOLEAN bAlly = FALSE;
+    switch (field_190) {
+    case 0:
+        return;
+    case 1:
+        bAlly = IcewindMisc::sub_585310(field_18C) == TRUE;
+        break;
+    case 2:
+        bAlly = IcewindMisc::sub_585310(field_18C) != TRUE;
+        break;
+    }
+
+    CAIObjectType typeAI;
+    typeAI.Set(pSprite->GetAIType());
+
+    CAIObjectType liveTypeAI;
+    liveTypeAI.Set(pSprite->m_liveTypeAI);
+
+    CAIObjectType startTypeAI;
+    startTypeAI.Set(pSprite->m_liveTypeAI);
+
+    BYTE nEnemyAlly;
+    if (bAlly == TRUE) {
+        g_pBaldurChitin->GetObjectGame()->AddCharacterToAllies(pSprite->GetId());
+
+        startTypeAI.m_nEnemyAlly = CAIObjectType::EA_ALLY;
+        pSprite->m_startTypeAI.Set(startTypeAI);
+
+        typeAI.m_nEnemyAlly = CAIObjectType::EA_ALLY;
+        pSprite->SetAIType(typeAI, FALSE, FALSE);
+
+        nEnemyAlly = CAIObjectType::EA_ALLY;
+    } else {
+        startTypeAI.m_nEnemyAlly = CAIObjectType::EA_ENEMY;
+        pSprite->m_startTypeAI.Set(startTypeAI);
+
+        typeAI.m_nEnemyAlly = CAIObjectType::EA_ENEMY;
+        pSprite->SetAIType(typeAI, FALSE, FALSE);
+
+        nEnemyAlly = CAIObjectType::EA_ENEMY;
+    }
+
+    liveTypeAI.m_nEnemyAlly = nEnemyAlly;
+    pSprite->m_liveTypeAI.Set(liveTypeAI);
+}
+
+// 0x560140
+void IcewindCGameEffectSummon::sub_560140()
+{
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&field_18C),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::BAD_INDEX) {
+        return;
+    }
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+        // __LINE__: 2076
+        UTIL_ASSERT(FALSE);
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // -----------------------------------------------------------------------------

@@ -208,11 +208,18 @@ public:
 class IcewindCGameEffectSummon : public CGameEffect {
 public:
     IcewindCGameEffectSummon(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
+    /* 0000 */ ~IcewindCGameEffectSummon() override;
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    /* 0028 */ virtual void sub_560140();
+    /* 002C */ virtual CGameSprite* SummonCreature(const CString& sResRef, const CPoint& ptTarget);
 
     void sub_49DB60(int a1);
+    void sub_55F930(INT nProjectile);
+    void sub_55FA10(CGameSprite* pSummoned, DWORD nVisual);
+    void sub_55FF40(CGameSprite* pSprite);
 
-    /* 018C */ int field_18C;
+    /* 018C */ CGameSprite* field_18C;
     /* 0190 */ int field_190;
 };
 
