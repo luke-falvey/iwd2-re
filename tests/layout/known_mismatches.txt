@@ -1335,14 +1335,6 @@ CInfinity::m_nMessageEndTime
 CInfinity::m_screenShakeDecrease
 CInfinity::m_screenShakeDelta
 CInfinity::m_strMessageText
-CItem::m_flags
-CItem::m_nAbilities
-CItem::m_numSounds
-CItem::m_useCount1
-CItem::m_useCount2
-CItem::m_useCount3
-CItem::m_useSound
-CItem::m_wear
 CMessageContainerAddItem::m_bCompressContainer
 CMessageContainerAddItem::m_slotNum
 CMessageSpriteUpdate::field_106

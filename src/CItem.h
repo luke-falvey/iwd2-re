@@ -19,7 +19,7 @@ public:
     CItem(const CItem& item);
     CItem(const CCreatureFileItem& item);
     CItem(CResRef id, WORD useCount1, WORD useCount2, WORD useCount3, int wear, DWORD flags);
-    ~CItem();
+    /* 0000 */ virtual ~CItem();
 
     CCreatureFileItem GetItemFile();
     BOOL Demand();
@@ -33,9 +33,11 @@ public:
     void Equip(CGameSprite* pSprite, LONG slotNum, BOOL animationOnly);
     void Unequip(CGameSprite* pSprite, LONG slotNum, BOOL recalculateEffects, BOOL animationOnly);
     WORD GetAnimationType();
+    BYTE sub_4E9250(CString& sAnimation, CGameSprite* pSprite);
     ITEM_ABILITY* GetAbility(INT nAbility);
     CGameEffect* GetAbilityEffect(LONG abilityNum, LONG effectNum, CGameObject* pObject);
     WORD GetItemType();
+    WORD sub_4E9840(const ITEM_ABILITY* pAbility);
     DWORD GetCriticalHitMultiplier();
     DWORD GetWeight();
     CResRef GetUsedUpItemId();
@@ -60,10 +62,16 @@ public:
     BYTE GetMinWISRequired();
     BYTE GetMinCONRequired();
     BYTE GetMinCHRRequired();
+    DWORD sub_4EA3F0();
+    void sub_4EA4A0(CString& sResRef);
     void sub_4EA580(CUIControlTextDisplay* pText, COLORREF rgbColor);
+    void sub_4EA750(CUIControlTextDisplay* pText, COLORREF rgbColor);
 
     CItem& operator=(const CItem& other);
     bool operator==(const CItem& other);
+
+    // NOTE: The virtual destructor puts the vtable at offset 0, `CResHelper`
+    // follows at offset 4.
 
     /* 0014 */ INT m_nAbilities;
     /* 0018 */ WORD m_useCount1;
@@ -74,5 +82,11 @@ public:
     /* 0024 */ CSound m_useSound[2];
     /* 00EC */ SHORT m_numSounds;
 };
+
+// Color ranges passed to the animation when an item is unequipped. Never
+// written, so always zero.
+//
+// #guess: size
+extern BYTE byte_8D86B0[7];
 
 #endif /* CITEM_H_ */

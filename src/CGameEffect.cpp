@@ -1309,6 +1309,56 @@ void CGameEffect::AddColorEffect(CGameSprite* pSprite, BYTE r, BYTE g, BYTE b)
     AddColorEffect(pSprite, r, g, b, 1);
 }
 
+// 0x4A4FC0
+BOOL CGameEffect::sub_4A4FC0(CGameEffect* pEffect, BOOL bCompareSource)
+{
+    if (m_sourceRes.GetResRefStr() != pEffect->m_sourceRes.GetResRefStr()) {
+        return FALSE;
+    }
+
+    if (m_effectID != pEffect->m_effectID) {
+        return FALSE;
+    }
+
+    if (m_effectAmount != pEffect->m_effectAmount) {
+        return FALSE;
+    }
+
+    if (m_dwFlags != pEffect->m_dwFlags) {
+        return FALSE;
+    }
+
+    if (m_durationType != pEffect->m_durationType) {
+        return FALSE;
+    }
+
+    if (m_duration != pEffect->m_duration) {
+        return FALSE;
+    }
+
+    if (m_source != pEffect->m_source && bCompareSource) {
+        return FALSE;
+    }
+
+    if (m_sourceID != pEffect->m_sourceID && bCompareSource) {
+        return FALSE;
+    }
+
+    if (m_targetType != pEffect->m_targetType) {
+        return FALSE;
+    }
+
+    if (m_probabilityUpper != pEffect->m_probabilityUpper) {
+        return FALSE;
+    }
+
+    if (m_probabilityLower != pEffect->m_probabilityLower) {
+        return FALSE;
+    }
+
+    return m_spellLevel == pEffect->m_spellLevel;
+}
+
 // 0x48C5B0
 BOOL CGameEffect::Compare(const CGameEffect& other)
 {

@@ -300,6 +300,7 @@ public:
     /* 0024 */ virtual void OnRemove(CGameSprite* pSprite);
 
     BOOL Compare(const CGameEffect& other);
+    BOOL sub_4A4FC0(CGameEffect* pEffect, BOOL bCompareSource);
     void PlaySound(const CResRef& soundResRef, CGameSprite* pSprite);
     BOOL CheckExpiration();
     ITEM_EFFECT* GetItemEffect();

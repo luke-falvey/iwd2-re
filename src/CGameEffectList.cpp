@@ -306,6 +306,26 @@ BOOL CGameEffectList::IsTypeOnList(WORD effectID)
     return FALSE;
 }
 
+// NOTE: Unlike `RemoveAllOfType` this does not call `OnRemove`.
+//
+// 0x4C0830
+BOOL CGameEffectList::sub_4C0830(CGameEffect* pEffect)
+{
+    POSITION pos = GetHeadPosition();
+    while (pos != NULL) {
+        POSITION posOld = pos;
+        CGameEffect* pCurEffect = GetNext(pos);
+        if (pEffect->sub_4A4FC0(pCurEffect, FALSE)) {
+            RemoveAt(posOld);
+            if (pCurEffect != NULL) {
+                delete pCurEffect;
+            }
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 // 0x4C0890
 BOOL CGameEffectList::ModifyAllOfType(WORD effectID, LONG newEffectAmount, BOOL increment)
 {
