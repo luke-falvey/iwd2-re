@@ -10,6 +10,7 @@
 #include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CItem.h"
+#include "CProjectileArea.h"
 #include "CScreenWorld.h"
 #include "CSevenEyes.h"
 #include "CSpell.h"
@@ -14232,7 +14233,54 @@ CPersistantEffect84C4B4::~CPersistantEffect84C4B4()
 // 0x4C1C00
 void CPersistantEffect84C4B4::ApplyEffect(CGameSprite* pSprite, int index)
 {
-    // TODO: Incomplete.
+    CGameObject* pCaster;
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pCaster,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    CProjectileArea* pProjectile = new CProjectileArea(static_cast<SHORT>(field_54));
+
+    for (std::set<LONG>::iterator it = field_58.begin(); it != field_58.end(); ++it) {
+        pProjectile->field_64E.insert(*it);
+    }
+
+    if (index < 100) {
+        for (int n = index; n > 0; n--) {
+            std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pCaster),
+                field_34.c_str(),
+                1);
+            for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+                (*it)->m_sourceRes = CResRef(field_29);
+                (*it)->m_target = pSprite->GetPos();
+                pProjectile->AddEffect(*it);
+            }
+        }
+    } else if (field_44.length() != 0) {
+        std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pCaster),
+            field_44.c_str(),
+            1);
+        for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+            (*it)->m_sourceRes = CResRef(field_29);
+            (*it)->m_target = pSprite->GetPos();
+            pProjectile->AddEffect(*it);
+        }
+    }
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pCaster->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        0,
+        0);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x4C1F10
@@ -14266,7 +14314,49 @@ CPersistantEffect84C4C4::~CPersistantEffect84C4C4()
 // 0x4C21E0
 void CPersistantEffect84C4C4::ApplyEffect(CGameSprite* pSprite, int index)
 {
-    // TODO: Incomplete.
+    CGameObject* pCaster;
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pCaster,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    if (index >= 100) {
+        if (field_44.length() != 0) {
+            std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pCaster),
+                field_44.c_str(),
+                1);
+            for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+                (*it)->m_sourceRes = CResRef(field_29);
+                (*it)->m_target = pSprite->GetPos();
+                pSprite->AddEffect(*it,
+                    CGameAIBase::EFFECT_LIST_TIMED,
+                    FALSE,
+                    TRUE);
+            }
+        }
+    } else {
+        for (int n = index; n > 0; n--) {
+            std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pCaster),
+                field_34.c_str(),
+                1);
+            for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+                (*it)->m_sourceRes = CResRef(field_29);
+                (*it)->m_target = pSprite->GetPos();
+                pSprite->AddEffect(*it,
+                    CGameAIBase::EFFECT_LIST_TIMED,
+                    FALSE,
+                    TRUE);
+            }
+        }
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x4C2440
@@ -14350,6 +14440,93 @@ CPersistantEffect* CPersistantEffect84C494::Copy()
 
 // -----------------------------------------------------------------------------
 
+// NOTE: The two projectiles below are only created by the shroud of flame and
+// mold touch persistent effects.
+//
+// TODO: Move to CProjectilePart5.cpp.
+
+class CProjectileArea850690 : public CProjectileArea {
+public:
+    CProjectileArea850690(SHORT a1);
+    /* 0094 */ void Virtual94(std::list<LONG>& targets) override;
+};
+
+class CProjectileArea8505F4 : public CProjectileArea {
+public:
+    CProjectileArea8505F4(SHORT a1);
+    /* 0094 */ void Virtual94(std::list<LONG>& targets) override;
+};
+
+// 0x575DD0
+CProjectileArea850690::CProjectileArea850690(SHORT a1)
+    : CProjectileArea(a1)
+{
+}
+
+// 0x575DF0
+void CProjectileArea850690::Virtual94(std::list<LONG>& targets)
+{
+    for (std::list<LONG>::iterator it = targets.begin(); it != targets.end(); ++it) {
+        CGameObject* pObject;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE
+                && !static_cast<CGameSprite*>(pObject)->GetDerivedStats()->m_spellStates.test(SPLSTATE_SHROUD_OF_FLAME)) {
+                Virtual98(*it);
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+}
+
+// 0x575CD0
+CProjectileArea8505F4::CProjectileArea8505F4(SHORT a1)
+    : CProjectileArea(a1)
+{
+}
+
+// 0x575CF0
+void CProjectileArea8505F4::Virtual94(std::list<LONG>& targets)
+{
+    for (std::list<LONG>::iterator it = targets.begin(); it != targets.end(); ++it) {
+        CGameObject* pObject;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            // NOTE: Stops at the first target it cannot obtain.
+            return;
+        }
+
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE
+            && !static_cast<CGameSprite*>(pObject)->GetDerivedStats()->m_spellStates.test(SPLSTATE_MOLD_TOUCH)) {
+            Virtual98(*it);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            // NOTE: Only the first eligible target is affected.
+            return;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
 // 0x4C2A20
 CPersistantEffect84C4D4::CPersistantEffect84C4D4(int a1, int a2, int a3, int a4)
     : CPersistantEffect84C4A4(a2, a3, a4)
@@ -14376,7 +14553,63 @@ CPersistantEffect84C4D4::~CPersistantEffect84C4D4()
 // 0x4C2CB0
 void CPersistantEffect84C4D4::ApplyEffect(CGameSprite* pSprite, int index)
 {
-    // TODO: Incomplete.
+    ULONG delta = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime - field_18;
+    if (delta == 0 || delta == 1) {
+        return;
+    }
+
+    CGameObject* pCaster;
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pCaster,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    for (int n = index; n > 0; n--) {
+        std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pCaster),
+            "EffSoF1",
+            1);
+        for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+            (*it)->m_sourceRes = CResRef(field_29);
+            pSprite->AddEffect(*it,
+                CGameAIBase::EFFECT_LIST_TIMED,
+                FALSE,
+                TRUE);
+        }
+    }
+
+    CProjectileArea* pProjectile = new CProjectileArea850690(static_cast<SHORT>(field_54));
+
+    pProjectile->field_64E.insert(pSprite->GetId());
+
+    for (std::set<LONG>::iterator it = field_58.begin(); it != field_58.end(); ++it) {
+        pProjectile->field_64E.insert(*it);
+    }
+
+    for (int n = index; n > 0; n--) {
+        std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pCaster),
+            "EffSoF2",
+            1);
+        for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+            (*it)->m_sourceRes = CResRef(field_29);
+            (*it)->m_duration = (field_1C - g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime) / 15;
+            pProjectile->AddEffect(*it);
+        }
+    }
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pCaster->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        0,
+        0);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x4C3000
@@ -14409,7 +14642,63 @@ CPersistantEffect84C484::~CPersistantEffect84C484()
 // 0x4C3280
 void CPersistantEffect84C484::ApplyEffect(CGameSprite* pSprite, int index)
 {
-    // TODO: Incomplete.
+    CGameObject* pCaster;
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pCaster,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    int delta = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime - field_18;
+    int numDice = field_68 - delta / field_24;
+    if (numDice > 0) {
+        CGameEffect* pDamage = IcewindMisc::CreateEffectDamage(pCaster,
+            0x40000000,
+            numDice,
+            6,
+            0,
+            3,
+            0);
+        pDamage->m_sourceRes = CResRef(field_29);
+        pSprite->AddEffect(pDamage,
+            CGameAIBase::EFFECT_LIST_TIMED,
+            TRUE,
+            TRUE);
+    }
+
+    if (delta != 0 && delta != 1) {
+        CProjectileArea* pProjectile = new CProjectileArea8505F4(static_cast<SHORT>(field_54));
+
+        pProjectile->field_64E.insert(pSprite->GetId());
+
+        for (std::set<LONG>::iterator it = field_58.begin(); it != field_58.end(); ++it) {
+            pProjectile->field_64E.insert(*it);
+        }
+
+        for (int n = index; n > 0; n--) {
+            std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pCaster),
+                "EffMT1",
+                1);
+            for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+                (*it)->m_sourceRes = CResRef(field_29);
+                pProjectile->AddEffect(*it);
+            }
+        }
+
+        pProjectile->Fire(pSprite->GetArea(),
+            pCaster->GetId(),
+            pSprite->GetId(),
+            pSprite->GetPos(),
+            0,
+            0);
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x4C3570

@@ -2029,7 +2029,7 @@ public:
     /* 0034 */ std::string field_34;
     /* 0044 */ std::string field_44;
     /* 0054 */ int field_54;
-    /* 0058 */ std::set<void*> field_58;
+    /* 0058 */ std::set<LONG> field_58;
 };
 
 class CPersistantEffect84C4C4 : public CPersistantEffect84C4A4 {
@@ -2076,7 +2076,7 @@ public:
     /* 0034 */ std::string field_34;
     /* 0044 */ std::string field_44;
     /* 0054 */ int field_54;
-    /* 0058 */ std::set<void*> field_58;
+    /* 0058 */ std::set<LONG> field_58;
 };
 
 class CPersistantEffect84C484 : public CPersistantEffect84C4B4 {
