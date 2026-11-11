@@ -290,11 +290,13 @@ public:
 
     CGameEffect();
     CGameEffect(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target, BOOL usesDice);
-    /* 0000 */ ~CGameEffect();
+    /* 0000 */ virtual ~CGameEffect();
     /* 0004 */ virtual CGameEffect* Copy();
     /* 0008 */ virtual BOOL ApplyEffect(CGameSprite* pSprite);
     /* 000C */ virtual BOOL ResolveEffect(CGameSprite* pSprite);
+    /* 0010 */ virtual void OnAdd(CGameSprite* pSprite);
     /* 0014 */ virtual void OnLoad(CGameSprite* pSprite);
+    /* 0018 */ virtual BOOL CheckSave(CGameSprite* pSprite, BYTE& roll1, BYTE& roll2, BYTE& roll3, BYTE& roll4);
     /* 001C */ virtual BOOL UsesDice();
     /* 0020 */ virtual void DisplayString(CGameSprite* pSprite);
     /* 0024 */ virtual void OnRemove(CGameSprite* pSprite);

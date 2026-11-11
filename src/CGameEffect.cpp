@@ -1154,8 +1154,21 @@ BOOL CGameEffect::ResolveEffect(CGameSprite* pSprite)
 }
 
 // 0x799E60
+void CGameEffect::OnAdd(CGameSprite* pSprite)
+{
+}
+
+// 0x799E60
 void CGameEffect::OnLoad(CGameSprite* pSprite)
 {
+}
+
+// 0x4A42F0
+BOOL CGameEffect::CheckSave(CGameSprite* pSprite, BYTE& roll1, BYTE& roll2, BYTE& roll3, BYTE& roll4)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
 }
 
 // 0x78E6E0
