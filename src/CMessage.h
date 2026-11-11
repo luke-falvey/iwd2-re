@@ -235,6 +235,8 @@ public:
 
     static const BYTE MSG_TYPE_RESOURCE;
     static const BYTE MSG_SUBTYPE_RESOURCE_DEMAND;
+    static const BYTE MSG_SUBTYPE_RESOURCE_REPLY;
+    static const BYTE MSG_SUBTYPE_RESOURCE_SUGGEST;
 
     static const BYTE MSG_TYPE_SIGNAL;
     static const BYTE MSG_SUBTYPE_SIGNAL;
