@@ -1215,7 +1215,7 @@ void CScreenWorld::OnKeyDown(SHORT nKeysFlags)
                     pGame->m_cButtonArray.m_nSelectedButton = 100;
                     pGame->m_cButtonArray.UpdateState();
                     pGame->m_tempCursor = 4;
-                } else if (pGame->m_cButtonArray.field_19B2) {
+                } else if (pGame->m_cButtonArray.m_stateStack.size() != 0) {
                     pGame->m_cButtonArray.m_nSelectedButton = 100;
                     pGame->m_cButtonArray.ResetState();
                 } else {

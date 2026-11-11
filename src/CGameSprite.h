@@ -544,7 +544,15 @@ public:
     void InitQuickItemData(SHORT itemNum, SHORT abilityNum, int a3, CButtonData& cButtonData);
     CGameButtonList* GetSongsButtonList();
     BOOLEAN CanCast(BYTE nClass, DWORD nSpecialization, CSpell* pSpell);
+    CGameButtonList* sub_714F70(const BYTE& nClass);
+    CGameButtonList* sub_7155C0(const BYTE& nClass, DWORD a2);
+    CGameButtonList* sub_715BD0();
+    void sub_716770(CButtonData& cButtonData);
+    CGameButtonList* sub_716E80(INT a1);
+    CGameButtonList* sub_717250(INT a1);
     CGameButtonList* GetInternalButtonList();
+    CGameButtonList* sub_717FC0(const CResRef& cResRef, INT nCount);
+    void sub_718390(const CResRef& cResRef, int a2, int a3, CButtonData& cButtonData);
     CGameButtonList* GetItemUsages(SHORT slotNum, WORD buttonType, SHORT abilityNum);
     CItem* GetLauncher(const ITEM_ABILITY* ability, SHORT& launcherSlot);
     SHORT GetLauncherSlot(SHORT slotNum, SHORT abilityNum);

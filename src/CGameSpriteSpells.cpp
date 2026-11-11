@@ -268,6 +268,12 @@ CGameSpriteGroupedSpellList::~CGameSpriteGroupedSpellList()
 {
 }
 
+// 0x58FE70
+unsigned int CGameSpriteSpellList::sub_58FE70()
+{
+    return field_18;
+}
+
 // 0x58FE80
 CGameSpriteSpellList* CGameSpriteGroupedSpellList::GetSpellsAtLevel(const UINT& nLevel)
 {
