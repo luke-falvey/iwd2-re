@@ -9606,7 +9606,7 @@ LONG CInfGame::sub_5BDFE0(SHORT nType)
 
             if (rc == CGameObjectArray::SUCCESS) {
                 if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
-                    SHORT nDamage = pSprite->m_derivedStats.m_nMaxHitPoints - pSprite->m_baseStats.m_hitPoints;
+                    INT nDamage = pSprite->m_derivedStats.m_nMaxHitPoints - pSprite->m_baseStats.m_hitPoints;
                     if (nDamage > nBest) {
                         nResult = nCharacterId;
                         nBest = nDamage;
@@ -9634,7 +9634,7 @@ LONG CInfGame::sub_5BDFE0(SHORT nType)
 
             if (rc == CGameObjectArray::SUCCESS) {
                 if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
-                    SHORT nDamage = pSprite->m_derivedStats.m_nMaxHitPoints - pSprite->m_baseStats.m_hitPoints;
+                    INT nDamage = pSprite->m_derivedStats.m_nMaxHitPoints - pSprite->m_baseStats.m_hitPoints;
                     if (nDamage < nBest) {
                         nResult = nCharacterId;
                         nBest = nDamage;
@@ -10801,7 +10801,7 @@ void CInfGame::ChangeBiography(BYTE nFixedPartyId, CString szBiography)
     LONG nCharacterId = GetFixedOrderCharacterId(nFixedPartyId);
 
     if (nCharacterId == -1) {
-        if (g_pChitin->pActiveEngine != g_pBaldurChitin->m_pEngineCreateChar) {
+        if (g_pBaldurChitin->pActiveEngine != g_pBaldurChitin->m_pEngineCreateChar) {
             return;
         }
 
@@ -10830,7 +10830,7 @@ void CInfGame::ChangeBiography(BYTE nFixedPartyId, CString szBiography)
     }
 
     if (g_pChitin->cNetwork.GetSessionOpen() == TRUE
-        && g_pChitin->pActiveEngine == pEngineCharacter
+        && g_pBaldurChitin->pActiveEngine == pEngineCharacter
         && pEngineCharacter->GetTopPopup() != NULL
         && pEngineCharacter->GetTopPopup()->m_nID == 12) {
         pEngineCharacter->GetManager()->GetPanel(12)->GetControl(0);
