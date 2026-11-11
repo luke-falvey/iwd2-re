@@ -1740,6 +1740,7 @@ public:
     CGameEffectFamiliarBlock(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
     BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnLoad(CGameSprite* pSprite) override;
 };
 
 class CGameEffectBounceProjectile : public CGameEffect {
@@ -1803,6 +1804,7 @@ class CGameEffectImmunitySpell : public CGameEffect {
 public:
     CGameEffectImmunitySpell(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 
     BOOL Evaluate(CGameSprite* pSprite);
 };
@@ -1884,6 +1886,8 @@ class CGameEffectStoneSkins : public CGameEffect {
 public:
     CGameEffectStoneSkins(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    BOOL UsesDice() override;
 };
 
 class CGameEffectProtectionCircle : public CGameEffect {
@@ -1976,7 +1980,9 @@ public:
 class CGameEffectDisguise : public CGameEffect {
 public:
     CGameEffectDisguise(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
+    /* 0000 */ ~CGameEffectDisguise() override;
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 
     /* 018C */ int field_18C;
 };
@@ -2081,7 +2087,7 @@ public:
     /* 0034 */ std::string field_34;
     /* 0044 */ std::string field_44;
     /* 0054 */ int field_54;
-    /* 0058 */ std::set<void*> field_58;
+    /* 0058 */ std::set<LONG> field_58;
 };
 
 class CPersistantEffect84C4C4 : public CPersistantEffect84C4A4 {
@@ -2128,7 +2134,7 @@ public:
     /* 0034 */ std::string field_34;
     /* 0044 */ std::string field_44;
     /* 0054 */ int field_54;
-    /* 0058 */ std::set<void*> field_58;
+    /* 0058 */ std::set<LONG> field_58;
 };
 
 class CPersistantEffect84C484 : public CPersistantEffect84C4B4 {
