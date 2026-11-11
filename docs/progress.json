@@ -6,12 +6,12 @@
   ],
   "functions_total": 9831,
   "functions_done": 7714,
-  "functions_complete": 7355,
-  "incomplete_markers": 388,
+  "functions_complete": 7369,
+  "incomplete_markers": 374,
   "incomplete_by_file": {
     "src/CMessage.cpp": 85,
-    "src/CGameSprite.cpp": 35,
     "src/CProjectilePart6.cpp": 35,
+    "src/CGameSprite.cpp": 21,
     "src/CProjectilePart3.cpp": 20,
     "src/CProjectilePart5.cpp": 19,
     "src/CProjectilePart1.cpp": 16,
@@ -3790,7 +3790,7 @@
   ],
   "bytes_total": 3846937,
   "bytes_done": 3421875,
-  "bytes_complete": 3003971,
+  "bytes_complete": 3015774,
   "largest_stubs": [
     {
       "addr": "0x4DB160",
