@@ -26959,9 +26959,101 @@ SHORT CGameSprite::DropInventory(BOOLEAN a1, CString a2)
 // 0x7555F0
 SHORT CGameSprite::UseContainer()
 {
-    // TODO: Incomplete.
+    if (m_actionCount > 0) {
+        return ACTION_INTERRUPTABLE;
+    }
 
-    return ACTION_ERROR;
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    LONG iContainer = m_curAction.m_specificID;
+
+    if (pGame->GetCharacterPortraitNum(m_id) == -1) {
+        if (pGame->m_familiars.Find(reinterpret_cast<int*>(m_id), NULL) == NULL) {
+            return ACTION_DONE;
+        }
+    }
+
+    if (!Orderable(FALSE)) {
+        return ACTION_DONE;
+    }
+
+    if (!m_bSelected) {
+        return ACTION_DONE;
+    }
+
+    CGameContainer* pContainer;
+
+    BYTE rc = pGame->GetObjectArray()->GetShare(iContainer,
+        CGameObjectArray::THREAD_ASYNCH,
+        reinterpret_cast<CGameObject**>(&pContainer),
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return ACTION_ERROR;
+    }
+
+    // NOTE: Read from an unnamed `const SHORT` at 0x847E78.
+    CAITrigger cTrigger(CAITRIGGER_CLICKED, m_typeAI, 0);
+
+    CMessage* message = new CMessageSetTrigger(cTrigger, m_id, pContainer->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    CPoint ptContainer = pContainer->GetPos();
+
+    message = new CMessageSetForceActionPick(TRUE, m_id, pContainer->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    if ((ptContainer.y - m_pos.y) * (ptContainer.y - m_pos.y) * 16 / 9 + (ptContainer.x - m_pos.x) * (ptContainer.x - m_pos.x) > CGameTrigger::RANGE_TRIGGER) {
+        pGame->GetObjectArray()->ReleaseShare(iContainer,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return ACTION_DONE;
+    }
+
+    if (!IsVisibleToCaller(FALSE)) {
+        ITEM_EFFECT effect;
+        CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+        // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+        effect.durationType = 1;
+
+        CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+            m_pos,
+            m_id,
+            CPoint(-1, -1));
+
+        message = new CMessageAddEffect(pEffect, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    if (pContainer->GetObjectType() == CGameObject::TYPE_CONTAINER) {
+        if ((pContainer->m_dwFlags & 0x1) != 0) {
+            if (pContainer->m_keyType == ""
+                || !PartyHasItem(pContainer->m_keyType)) {
+                DisplayTextRef(-1, 19862, 0, RGB(215, 215, 190));
+
+                pGame->GetObjectArray()->ReleaseShare(iContainer,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return ACTION_DONE;
+            }
+        }
+
+        pContainer->OpenContainer(m_typeAI);
+    }
+
+    pGame->GetObjectArray()->ReleaseShare(iContainer,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    if (pGame->GetCharacterPortraitNum(m_id) != -1) {
+        pGame->m_iContainer = iContainer;
+        pGame->m_iContainerSprite = m_id;
+        g_pBaldurChitin->m_pEngineWorld->StartContainer();
+    } else {
+        DisplayTextRef(-1, 7546, RGB(255, 0, 0), RGB(255, 0, 0));
+    }
+
+    ClearActions(FALSE);
+
+    return ACTION_INTERRUPTABLE;
 }
 
 // 0x755A70
