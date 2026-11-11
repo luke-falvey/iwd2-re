@@ -5623,6 +5623,16 @@ BOOL CInfButtonArray::sub_595D60(const BYTE& nClass)
     return bResult;
 }
 
+// 0x595E70
+void CInfButtonArray::UpdateCustomizableButtonTypes(INT* pButtonList)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfButtonArray.cpp
+    // __LINE__: 7128
+    UTIL_ASSERT(pButtonList != NULL);
+
+    memcpy(m_customizableButtonTypes, pButtonList, sizeof(m_customizableButtonTypes));
+}
+
 // 0x595EB0
 BOOLEAN CInfButtonArray::sub_595EB0(CGameSprite* pSprite)
 {
@@ -5656,6 +5666,16 @@ BOOLEAN CInfButtonArray::sub_595EB0(CGameSprite* pSprite)
     }
 
     return FALSE;
+}
+
+// 0x595F70
+void CInfButtonArray::UpdateSelectedWeaponSet(BYTE nIndex)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfButtonArray.cpp
+    // __LINE__: 7154
+    UTIL_ASSERT(nIndex < CCREATUREFILEEQUIPMENT21_WEAPON_NUM_SETS);
+
+    m_nSelectedWeaponSet = nIndex;
 }
 
 // 0x595FB0
@@ -5716,16 +5736,6 @@ INT CInfButtonArray::ScrollLeft(CGameButtonList* pButtonList)
     return 0;
 }
 
-// 0x595E70
-void CInfButtonArray::UpdateCustomizableButtonTypes(INT* pButtonList)
-{
-    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfButtonArray.cpp
-    // __LINE__: 7128
-    UTIL_ASSERT(pButtonList != NULL);
-
-    memcpy(m_customizableButtonTypes, pButtonList, sizeof(m_customizableButtonTypes));
-}
-
 // 0x5960E0
 void CInfButtonArray::UpdateTempSelectedWeaponSet()
 {
@@ -5752,14 +5762,4 @@ void CInfButtonArray::UpdateTempSelectedWeaponSet()
                 INFINITE);
         }
     }
-}
-
-// 0x595F70
-void CInfButtonArray::UpdateSelectedWeaponSet(BYTE nIndex)
-{
-    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfButtonArray.cpp
-    // __LINE__: 7154
-    UTIL_ASSERT(nIndex < CCREATUREFILEEQUIPMENT21_WEAPON_NUM_SETS);
-
-    m_nSelectedWeaponSet = nIndex;
 }
