@@ -22546,12 +22546,6 @@ SHORT CGameSprite::SpellHitEffect(CGameAIBase* pSource, const CPoint& ptTarget, 
         pProjectile = CProjectile::DecodeProjectile(211, pSource, FALSE);
     }
 
-    if (pProjectile == NULL) {
-        // TODO: Not in the original; remove once 0x51EAF0 and 0x560310 are
-        // translated.
-        return ACTION_ERROR;
-    }
-
     CMessage115* pMessage = new CMessage115(static_cast<WORD>(nMessageType),
         targetId,
         ptTarget,
