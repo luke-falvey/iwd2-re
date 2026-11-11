@@ -682,6 +682,7 @@ public:
     CPoint sub_734720(LONG** ppPath, LONG* pnPath, SHORT range, BOOLEAN* pbExtended);
     void FeedBack(WORD nFeedBackId, LONG a2, LONG a3, LONG a4, LONG a5, LONG a6, LONG a7);
     BOOLEAN sub_737910(BOOL a1);
+    void CheckReputation();
     SHORT GetCriticalHitBonus();
     SHORT sub_73C6A0(CGameSprite* target, CItem* curWeapon, const ITEM_ABILITY* curAttack);
     SHORT sub_73C7E0();
@@ -813,7 +814,7 @@ public:
     BOOLEAN sub_724C40(const unsigned int& a1);
     BOOLEAN RemoveKnownSpell(const BYTE& nClass, const UINT& nSpellLevel, const CResRef& resRef, const unsigned int& a4, const unsigned int& a5, const unsigned int& a6);
     BOOLEAN RemoveDomainSpell(const UINT& nSpellLevel, const CResRef& resRef, const unsigned int& a3, const unsigned int& a4, const unsigned int& a5);
-    BOOLEAN RemoveInnateSpell(const CResRef& resRef, const unsigned int& a2, const unsigned int& a3, const unsigned int& a4);
+    BOOLEAN RemoveInnateSpell(const CResRef& resRef, const BOOLEAN& a2, const unsigned int& a3, const unsigned int& a4);
     BOOLEAN RemoveSong(const CResRef& resRef, const unsigned int& a2, const unsigned int& a3, const unsigned int& a4);
     BOOLEAN RemoveShapeshift(const CResRef& resRef);
     BOOLEAN sub_724FD0(const BYTE& nClass, const UINT& nSpellLevel, const CResRef& resRef, const unsigned int& a4, const unsigned int& a5);

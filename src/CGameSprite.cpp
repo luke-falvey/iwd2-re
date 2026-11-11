@@ -15772,6 +15772,152 @@ BOOLEAN CGameSprite::sub_737910(BOOL a1)
     return TRUE;
 }
 
+// 0x737990
+void CGameSprite::CheckReputation()
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 7570
+    UTIL_ASSERT(pGame != NULL);
+
+    BOOL bFallen = FALSE;
+
+    if ((m_baseStats.m_flags & 0x800) == 0) {
+        return;
+    }
+
+    CInfGame* pObjectGame = g_pBaldurChitin->GetObjectGame();
+
+    // NOTE: The original passes WIS, INT and CON (in this order).
+    INT nOldFortitude = pObjectGame->GetRuleTables().GetSavingThrow(m_startTypeAI,
+        m_derivedStats,
+        m_baseStats.m_WISBase,
+        CRuleTables::FORTITUDE);
+    INT nOldReflex = pObjectGame->GetRuleTables().GetSavingThrow(m_startTypeAI,
+        m_derivedStats,
+        m_baseStats.m_INTBase,
+        CRuleTables::REFLEX);
+    INT nOldWill = pObjectGame->GetRuleTables().GetSavingThrow(m_startTypeAI,
+        m_derivedStats,
+        m_baseStats.m_CONBase,
+        CRuleTables::WILL);
+
+    // NOTE: `70` is `0x85BCAE`.
+    if ((m_typeAI.m_nClassMask & 0x40) != 0
+        && m_derivedStats.m_nReputation < 70) {
+        DWORD nXP = pObjectGame->GetRuleTables().GetNextLevelXP(static_cast<BYTE>(GetEffectiveCharacterLevel()));
+        m_baseStats.m_xp = nXP;
+        m_derivedStats.m_nXP = nXP;
+
+        CResRef resRef;
+
+        resRef = "SPIN109";
+        RemoveInnateSpell(resRef, TRUE, 0, 0);
+
+        resRef = "SPIN120";
+        RemoveInnateSpell(resRef, TRUE, 0, 0);
+
+        resRef = "SPIN121";
+        RemoveInnateSpell(resRef, TRUE, 0, 0);
+
+        resRef = "SPIN125";
+        RemoveInnateSpell(resRef, TRUE, 0, 0);
+
+        resRef = "SPIN152";
+        RemoveInnateSpell(resRef, TRUE, 0, 0);
+
+        INT nPaladinLevel = m_derivedStats.GetClassLevel(CAIOBJECTTYPE_C_PALADIN);
+        m_derivedStats.SetClassLevel(CAIOBJECTTYPE_C_PALADIN, 0);
+        m_derivedStats.SetClassLevel(CAIOBJECTTYPE_C_FIGHTER, nPaladinLevel + m_derivedStats.GetClassLevel(CAIOBJECTTYPE_C_FIGHTER));
+
+        m_typeAI.m_nClass = CAIOBJECTTYPE_C_FIGHTER;
+        m_liveTypeAI.m_nClass = CAIOBJECTTYPE_C_FIGHTER;
+        m_startTypeAI.m_nClass = CAIOBJECTTYPE_C_FIGHTER;
+        m_typeAI.m_nClassMask = m_derivedStats.m_classMask;
+        m_liveTypeAI.m_nClassMask = m_derivedStats.m_classMask;
+        m_startTypeAI.m_nClassMask = m_derivedStats.m_classMask;
+
+        FeedBack(16, 0, 0, 0, 19620, 0, 0);
+
+        m_baseStats.m_flags |= 0x200;
+        bFallen = TRUE;
+    }
+
+    // NOTE: `70` is `0x85BCB0`.
+    if (m_derivedStats.HasClassMask(0x80)
+        && m_derivedStats.m_nReputation < 70) {
+        DWORD nXP = pObjectGame->GetRuleTables().GetNextLevelXP(static_cast<BYTE>(GetEffectiveCharacterLevel()));
+        m_baseStats.m_xp = nXP;
+        m_derivedStats.m_nXP = nXP;
+
+        CResRef resRef;
+
+        resRef = "SPIN108";
+        RemoveInnateSpell(resRef, TRUE, 0, 0);
+
+        resRef = "SPIN139";
+        RemoveInnateSpell(resRef, TRUE, 0, 0);
+
+        BYTE nRangerLevel = m_baseStats.m_rangerLevel;
+        m_baseStats.m_characterLevel -= nRangerLevel;
+        m_baseStats.m_rangerLevel = 0;
+
+        BYTE nFighterLevel = nRangerLevel + m_baseStats.m_fighterLevel;
+        m_baseStats.m_characterLevel += nFighterLevel - m_baseStats.m_fighterLevel;
+        m_baseStats.m_fighterLevel = nFighterLevel;
+
+        m_typeAI.m_nClass = CAIOBJECTTYPE_C_FIGHTER;
+        m_liveTypeAI.m_nClass = CAIOBJECTTYPE_C_FIGHTER;
+        m_startTypeAI.m_nClass = CAIOBJECTTYPE_C_FIGHTER;
+        m_typeAI.m_nClassMask = m_derivedStats.m_classMask;
+        m_liveTypeAI.m_nClassMask = m_derivedStats.m_classMask;
+        m_startTypeAI.m_nClassMask = m_derivedStats.m_classMask;
+
+        FeedBack(16, 0, 0, 0, 19621, 0, 0);
+
+        m_baseStats.m_flags |= 0x400;
+    } else if (!bFallen) {
+        return;
+    }
+
+    INT nNewFortitude = pObjectGame->GetRuleTables().GetSavingThrow(m_startTypeAI,
+        m_derivedStats,
+        m_baseStats.m_WISBase,
+        CRuleTables::FORTITUDE);
+    INT nNewReflex = pObjectGame->GetRuleTables().GetSavingThrow(m_startTypeAI,
+        m_derivedStats,
+        m_baseStats.m_INTBase,
+        CRuleTables::REFLEX);
+    INT nNewWill = pObjectGame->GetRuleTables().GetSavingThrow(m_startTypeAI,
+        m_derivedStats,
+        m_baseStats.m_CONBase,
+        CRuleTables::WILL);
+
+    m_baseStats.m_saveVSFortitudeBase += static_cast<signed char>(max(nNewFortitude - nOldFortitude, 0));
+    m_baseStats.m_saveVSReflexBase += static_cast<signed char>(max(nNewReflex - nOldReflex, 0));
+    m_baseStats.m_saveVSWillBase += static_cast<signed char>(max(nNewWill - nOldWill, 0));
+
+    field_562C = 1;
+    ProcessEffectList();
+
+    if (pGame->GetCharacterPortraitNum(m_id) != -1) {
+        g_pBaldurChitin->GetActiveEngine()->UpdateCharacterStatus(m_id);
+
+        if (g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
+            for (SHORT nIndex = 0; nIndex < 6; nIndex++) {
+                // NOTE: Inlined bounds check (always within bounds).
+                LONG nCharacterId = nIndex < 6
+                    ? g_pBaldurChitin->GetObjectGame()->m_characters[nIndex]
+                    : CGameObjectArray::INVALID_INDEX;
+                if (nCharacterId == m_id) {
+                    g_pBaldurChitin->GetBaldurMessage()->BroadcastUpdateCharacterSlot(FALSE, nIndex, FALSE);
+                }
+            }
+        }
+    }
+}
+
 // 0x737EF0
 SHORT CGameSprite::Attack(CGameSprite* pTarget)
 {
@@ -22587,7 +22733,60 @@ SHORT CGameSprite::sub_7615F0(int a1)
 // 0x761650
 void CGameSprite::sub_761650()
 {
-    // TODO: Incomplete.
+    // NOTE: Unequips the items with hardcoded minimum hit points.
+    SHORT slot;
+
+    CString sOldString1 = m_curAction.GetString1();
+    m_curAction.m_specificID = 0;
+
+    // NOTE: The next four blocks are inlined `EquipItem`.
+    m_curAction.SetString1(CString("00CIMHP1"));
+    slot = FindItemPersonal(m_curAction.GetString1(), 0, FALSE);
+    if (slot != -1) {
+        if (m_curAction.m_specificID != 0) {
+            m_equipment.m_items[slot]->Equip(this, slot, FALSE);
+        } else {
+            m_equipment.m_items[slot]->Unequip(this, slot, TRUE, FALSE);
+        }
+    }
+
+    m_curAction.SetString1(CString("00Troll1"));
+    slot = FindItemPersonal(m_curAction.GetString1(), 0, FALSE);
+    if (slot != -1) {
+        if (m_curAction.m_specificID != 0) {
+            m_equipment.m_items[slot]->Equip(this, slot, FALSE);
+        } else {
+            m_equipment.m_items[slot]->Unequip(this, slot, TRUE, FALSE);
+        }
+    }
+
+    m_curAction.SetString1(CString("11Veira3"));
+    slot = FindItemPersonal(m_curAction.GetString1(), 0, FALSE);
+    if (slot != -1) {
+        if (m_curAction.m_specificID != 0) {
+            m_equipment.m_items[slot]->Equip(this, slot, FALSE);
+        } else {
+            m_equipment.m_items[slot]->Unequip(this, slot, TRUE, FALSE);
+        }
+    }
+
+    m_curAction.SetString1(CString("40lycant"));
+    slot = FindItemPersonal(m_curAction.GetString1(), 0, FALSE);
+    if (slot != -1) {
+        if (m_curAction.m_specificID != 0) {
+            m_equipment.m_items[slot]->Equip(this, slot, FALSE);
+        } else {
+            m_equipment.m_items[slot]->Unequip(this, slot, TRUE, FALSE);
+        }
+    }
+
+    m_curAction.SetString1(CString("41CIMIRR"));
+    EquipItem();
+
+    m_curAction.SetString1(CString("41Oria"));
+    EquipItem();
+
+    m_curAction.SetString1(sOldString1);
 }
 
 // 0x7618E0
@@ -25013,7 +25212,7 @@ BOOLEAN CGameSprite::RemoveDomainSpell(const UINT& nSpellLevel, const CResRef& r
 }
 
 // 0x724EA0
-BOOLEAN CGameSprite::RemoveInnateSpell(const CResRef& resRef, const unsigned int& a2, const unsigned int& a3, const unsigned int& a4)
+BOOLEAN CGameSprite::RemoveInnateSpell(const CResRef& resRef, const BOOLEAN& a2, const unsigned int& a3, const unsigned int& a4)
 {
     UINT nID = 0;
     if (g_pBaldurChitin->GetObjectGame()->GetInnateSpells()->Find(resRef, nID) != TRUE) {
