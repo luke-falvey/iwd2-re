@@ -604,6 +604,8 @@ public:
     void sub_71E760(CDerivedStats& DStats, int a2);
     void sub_722D50(BYTE nClass, SHORT nLevels, int a3);
     void CheckStatsChange();
+    void sub_71CC90();
+    void sub_71CEA0(CItem* pItem, BOOL bLeft);
     int sub_71F6E0();
     const CString& GetName();
     STRREF GetNameRef();
@@ -668,6 +670,7 @@ public:
     SHORT BashDoor(CGameAIBase* pTarget);
     SHORT EquipRanged();
     SHORT StartStore(CGameSprite* pTarget);
+    INT sub_75E930(INT a1);
     SHORT ChangeAnimation();
     SHORT ReturnToSavedLocation();
     SHORT RunAwayFromNoLeaveArea(CGameSprite* pTarget);

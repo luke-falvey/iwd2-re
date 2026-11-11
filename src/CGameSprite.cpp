@@ -9539,6 +9539,138 @@ void CGameSprite::CheckStatsChange()
     // TODO: Incomplete.
 }
 
+// 0x71CC90
+void CGameSprite::sub_71CC90()
+{
+    CItem* pWeapon = m_equipment.m_items[m_equipment.m_selectedWeapon];
+    CItem* pOffhand = m_equipment.m_items[static_cast<BYTE>((m_nWeaponSet + 22) * 2)];
+    BOOL bFist = FALSE;
+
+    if (m_equipment.m_selectedWeapon == 42
+        || (pOffhand != NULL
+            && (pOffhand->GetItemType() == 47
+                || pOffhand->GetItemType() == 53
+                || pOffhand->GetItemType() == 49
+                || pOffhand->GetItemType() == 41))) {
+        pOffhand = NULL;
+    }
+
+    if (pWeapon == NULL) {
+        SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 0, 1);
+        pWeapon = m_equipment.m_items[m_equipment.m_selectedWeapon];
+    }
+
+    sub_71CEA0(pWeapon, FALSE);
+    sub_71CEA0(pOffhand, TRUE);
+
+    if (pWeapon == m_equipment.m_items[CGameSpriteEquipment::SLOT_FIST]) {
+        bFist = TRUE;
+    }
+
+    // NOTE: Unused.
+    CString sUnused;
+
+    pWeapon->Demand();
+
+    ITEM_ABILITY* pAbility = pWeapon->GetAbility(m_equipment.m_selectedWeaponAbility);
+
+    // NOTE: The original compares the low byte of `type` only.
+    if (pAbility != NULL && static_cast<BYTE>(pAbility->type) != 2) {
+        if ((pWeapon->GetFlagsFile() & 0x2) != 0) {
+            if (!bFist) {
+                switch (sub_75E930(14)) {
+                case 1:
+                    m_derivedStats.m_nPhysicalSpeed += 2;
+                    m_derivedStats.m_nCriticalHitBonus++;
+                    m_derivedStats.m_DamageBonusRight++;
+                    break;
+                case 2:
+                    m_derivedStats.m_nPhysicalSpeed += 4;
+                    m_derivedStats.m_nCriticalHitBonus++;
+                    m_derivedStats.m_DamageBonusRight++;
+                    break;
+                }
+            }
+        } else if (pOffhand == NULL) {
+            if (m_equipment.m_items[static_cast<BYTE>((m_nWeaponSet + 22) * 2)] == NULL) {
+                if (!bFist) {
+                    switch (sub_75E930(16)) {
+                    case 1:
+                        m_derivedStats.field_6++;
+                        m_derivedStats.m_nCriticalHitBonus++;
+                        break;
+                    case 2:
+                        m_derivedStats.field_6 += 2;
+                        m_derivedStats.m_nCriticalHitBonus++;
+                        break;
+                    }
+                }
+            } else {
+                if (!bFist) {
+                    switch (sub_75E930(15)) {
+                    case 1:
+                        m_derivedStats.m_nACMissileMod -= 2;
+                        break;
+                    case 2:
+                        m_derivedStats.m_nACMissileMod -= 4;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    pWeapon->Release();
+}
+
+// 0x71CEA0
+void CGameSprite::sub_71CEA0(CItem* pItem, BOOL bLeft)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    LONG nBonus = 0;
+
+    if (pItem == NULL) {
+        return;
+    }
+
+    pItem->Demand();
+
+    ITEM_ABILITY* pAbility = pItem->GetAbility(m_equipment.m_selectedWeaponAbility);
+    if (pAbility != NULL) {
+        SHORT launcherSlot;
+        CItem* pLauncher = GetLauncher(pAbility, launcherSlot);
+        if (pLauncher != NULL) {
+            pLauncher->Demand();
+            pLauncher->GetAbility(0);
+        }
+
+        SHORT nLevel = sub_73D440(pItem);
+        if (pLauncher != NULL) {
+            if (sub_73D440(pLauncher) > nLevel) {
+                nLevel = sub_73D440(pLauncher);
+            }
+            pLauncher->Release();
+        }
+
+        if (pItem->GetItemType() == 28 && nLevel <= 1) {
+            nLevel = 1;
+        }
+
+        if (nLevel > 0) {
+            // NOTE: The column is a constant WORD at 0x84EBB8 (1).
+            nBonus = atol(pGame->GetRuleTables().m_tWeaponSpecialization.GetAt(CPoint(1, nLevel)));
+        }
+    }
+
+    pItem->Release();
+
+    if (!bLeft) {
+        m_derivedStats.m_DamageBonusRight += static_cast<SHORT>(nBonus);
+    } else {
+        m_derivedStats.m_DamageBonusLeft += static_cast<SHORT>(nBonus);
+    }
+}
+
 // 0x71CFF0
 BOOL CGameSprite::sub_71CFF0()
 {
@@ -21317,6 +21449,12 @@ SHORT CGameSprite::GetCasterLevel(CSpell* pSpell, BYTE nClass, DWORD nSpecializa
         nBestCasterLevel = 1;
     }
     return static_cast<SHORT>(nBestCasterLevel);
+}
+
+// 0x75E930
+INT CGameSprite::sub_75E930(INT a1)
+{
+    return 0;
 }
 
 // 0x75EC50
