@@ -23382,9 +23382,336 @@ SHORT CGameSprite::UseItem(CGameAIBase* pTarget)
 // 0x7473E0
 SHORT CGameSprite::UseItemPoint()
 {
-    // TODO: Incomplete.
+    field_55A0 = 0;
 
-    return ACTION_ERROR;
+    CPoint ptDest = m_curAction.m_dest;
+    ITEM_ABILITY* pAbility = NULL;
+
+    if (m_actionCount == 0) {
+        m_curItem = NULL;
+    }
+
+    if (m_curItem == NULL) {
+        if (m_curAction.GetString1() == "") {
+            if (m_curAction.m_specificID == -1) {
+                return ACTION_ERROR;
+            }
+
+            m_curItem = m_equipment.m_items[m_curAction.m_specificID];
+            if (m_curItem == NULL) {
+                return ACTION_ERROR;
+            }
+
+            field_559E = static_cast<short>(m_curAction.m_specificID);
+            m_curItem->Demand();
+
+            pAbility = m_curItem->GetAbility(m_curAction.m_specificID2);
+            field_55A0 = static_cast<short>(m_curAction.m_specificID2);
+            if (pAbility == NULL) {
+                m_curItem->Release();
+                return ACTION_ERROR;
+            }
+        } else {
+            for (INT nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+                if (m_equipment.m_items[nSlot] != NULL
+                    && m_equipment.m_items[nSlot]->GetResRef() == m_curAction.GetString1()) {
+                    m_curItem = m_equipment.m_items[nSlot];
+                    field_559E = static_cast<short>(nSlot);
+                    if (m_curItem == NULL) {
+                        return ACTION_ERROR;
+                    }
+
+                    m_curItem->Demand();
+
+                    pAbility = m_curItem->GetAbility(m_curAction.m_specificID2);
+                    field_55A0 = static_cast<short>(m_curAction.m_specificID2);
+                    if (pAbility == NULL) {
+                        m_curItem->Release();
+                        return ACTION_ERROR;
+                    }
+
+                    break;
+                }
+            }
+        }
+    } else {
+        m_curItem->Demand();
+    }
+
+    if (m_curItem == NULL) {
+        return ACTION_ERROR;
+    }
+
+    if (pAbility == NULL) {
+        pAbility = m_curItem->GetAbility(m_curAction.m_specificID2);
+        field_55A0 = static_cast<short>(m_curAction.m_specificID2);
+        if (pAbility == NULL) {
+            m_curItem->Release();
+            return ACTION_ERROR;
+        }
+    }
+
+    if (pAbility->usageFlags == 3
+        && m_curItem->GetUsageCount(field_55A0) == 0
+        && pAbility->maxUsageCount > 0) {
+        CString sResRef;
+        m_curItem->GetResRef().CopyToString(sResRef);
+
+        CAITrigger trigger(CAITRIGGER_UNUSABLE, 0);
+        trigger.m_string1 = sResRef;
+
+        CMessage* message = new CMessageSetTrigger(trigger, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        m_curItem->Release();
+        return ACTION_ERROR;
+    }
+
+    LONG nDestY = ptDest.y / CPathSearch::GRID_SQUARE_SIZEY;
+    LONG nDestX = ptDest.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+    CPoint& myPos = GetPos();
+    LONG dy = myPos.y / CPathSearch::GRID_SQUARE_SIZEY - nDestY;
+    LONG dx = myPos.x / CPathSearch::GRID_SQUARE_SIZEX - nDestX;
+    LONG nDistanceSq = dx * dx + dy * dy;
+
+    LONG nRange = pAbility->range + 1;
+
+    // NOTE: Inlined `CGameAnimation::GetPersonalSpace`.
+    BYTE nPersonalSpace = (m_animation.GetPersonalSpace() - 1) >> 1;
+    LONG nReach = nPersonalSpace + nRange;
+
+    // NOTE: The original reads the extra reach (1) from a `SHORT`
+    // constant at 0x85BC86.
+    if ((nDistanceSq <= nReach * nReach || field_7118 != 0)
+        && nDistanceSq <= (nReach + 1) * (nReach + 1)
+        && m_pArea->CheckLOS(ptDest,
+            GetPos(),
+            m_visibleTerrainTable,
+            FALSE)) {
+        if (m_pPath != NULL) {
+            CMessage* message = new CMessageDropPath(m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        SHORT nDirection = m_nDirection;
+        field_7118 = 1;
+
+        if (nDirection != GetDirection(ptDest)) {
+            CMessage* message = new CMessageSetDirection(ptDest, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            m_curItem->Release();
+            return ACTION_NORMAL;
+        }
+
+        if (m_pPath != NULL) {
+            CMessage* message = new CMessageDropPath(m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        if (m_actionCount == 0) {
+            if (m_castCounter != -1) {
+                m_bStartedCasting = FALSE;
+            }
+        }
+
+        if (m_castCounter == -1) {
+            m_castCounter = 0;
+            m_bStartedCasting = TRUE;
+        }
+
+        if (m_actionCount < 20 || !m_bStartedCasting) {
+            m_curItem->Release();
+            return ACTION_INTERRUPTABLE;
+        }
+
+        BOOL bBlocked = FALSE;
+        if (g_pBaldurChitin->GetObjectGame()->CheckItemUsable(this, m_curItem) == 2) {
+            if (g_pBaldurChitin->GetObjectGame()->GetRuleTables().sub_5468B0(this, m_curItem) != 1) {
+                bBlocked = TRUE;
+            } else {
+                FeedBack(0x42, 0, 0, 0, -1, 0, 0);
+            }
+        }
+
+        if (!bBlocked) {
+            if (!IsVisibleToCaller(FALSE)) {
+                ITEM_EFFECT effect;
+                CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+                // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+                effect.durationType = 1;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    m_pos,
+                    m_id,
+                    CPoint(-1, -1));
+
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            if (m_derivedStats.m_spellStates[SPLSTATE_SANCTUARY]) {
+                ITEM_EFFECT effect;
+                CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_DISPELSANCTUARY);
+                // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+                effect.durationType = 1;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    m_pos,
+                    m_id,
+                    CPoint(-1, -1));
+
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            m_curProjectile = CProjectile::DecodeProjectile(pAbility->missileType, this, FALSE);
+            m_curProjectile->field_18A = m_curItem->GetResRef();
+            m_curProjectile->field_186 = 0;
+
+            if (pAbility->effectCount > 0) {
+                INT nEffect = 0;
+                do {
+                    CGameEffect* pEffect = m_curItem->GetAbilityEffect(field_55A0, nEffect, this);
+                    pEffect->m_source = m_pos;
+                    pEffect->m_sourceID = m_id;
+                    pEffect->m_target = ptDest;
+                    IcewindMisc::sub_5860F0(this, pEffect);
+
+                    switch (pEffect->m_targetType) {
+                    case 1:
+                        {
+                            pEffect->m_flags |= 0x2;
+                            CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                        }
+                        break;
+                    case 2:
+                        m_curProjectile->AddEffect(pEffect);
+                        break;
+                    case 3:
+                        ApplyEffectToParty(pEffect);
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    case 4:
+                        m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, NULL);
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    case 5:
+                        m_pArea->sub_46E130(pEffect, TRUE, FALSE, 0, NULL);
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    case 6:
+                        m_pArea->sub_46E130(pEffect, FALSE, TRUE, m_typeAI.m_nSpecific, NULL);
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    case 7:
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    case 8:
+                        m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, this);
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    default:
+                        if (pEffect != NULL) {
+                            delete pEffect;
+                        }
+                        break;
+                    }
+
+                    nEffect++;
+                } while (nEffect < pAbility->effectCount);
+            }
+
+            CMessageFireProjectile* pMessage = new CMessageFireProjectile(m_curProjectile->m_projectileType,
+                CGameObjectArray::INVALID_INDEX,
+                ptDest,
+                m_curProjectile->DetermineHeight(this),
+                m_id,
+                m_id,
+                0);
+
+            if (m_curProjectile->m_projectileType == 304) {
+                int nRandom = rand() % 1000000;
+                static_cast<CProjectileSingleTarget851444*>(m_curProjectile)->field_356 = nRandom;
+                // NOTE: No NULL check on `pMessage`.
+                pMessage->field_20 = nRandom;
+            }
+
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+            m_curProjectile->Fire(m_pArea,
+                m_id,
+                CGameObjectArray::INVALID_INDEX,
+                ptDest,
+                m_curProjectile->DetermineHeight(this),
+                0);
+
+            m_curProjectile = NULL;
+        } else {
+            FeedBack(0x41, 0, 0, 0, -1, 0, 0);
+
+            DWORD nValue = m_curItem->sub_4EA3F0();
+            CGameEffect* pEffect = IcewindMisc::sub_585380(this,
+                2 * (nValue < 1 ? 1 : nValue),
+                6,
+                0,
+                static_cast<BYTE>(nValue),
+                0);
+            pEffect->m_flags |= 0x2;
+
+            CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        WORD nUsageCount = m_curItem->GetUsageCount(field_55A0);
+        m_curItem->SetUsageCount(field_55A0, nUsageCount - 1);
+        m_curItem->Release();
+
+        BOOL bRemove = FALSE;
+        if (pAbility->usageFlags == 1) {
+            bRemove = TRUE;
+        }
+
+        bRemove &= sub_75D450(static_cast<WORD>(field_559E), static_cast<WORD>(field_55A0));
+
+        if (pAbility->maxUsageCount > 0) {
+            CAbilityId ab;
+            ab.m_itemType = 2;
+            ab.m_itemNum = field_559E;
+            ab.m_abilityNum = field_55A0;
+            CheckQuickLists(&ab, -1, bRemove, FALSE);
+
+            SHORT nPortrait = g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id);
+            if (nPortrait == g_pBaldurChitin->m_pEngineWorld->GetSelectedCharacter()) {
+                g_pBaldurChitin->GetObjectGame()->GetButtonArray()->UpdateButtons();
+            }
+        }
+
+        AutoPause(0x40);
+        return ACTION_DONE;
+    }
+
+    SHORT rc = sub_73FEC0(ptDest, 0);
+    if (rc == ACTION_DONE) {
+        rc = ACTION_INTERRUPTABLE;
+    }
+
+    m_curItem->Release();
+    return rc;
 }
 
 // 0x747F80
@@ -27438,7 +27765,356 @@ SHORT CGameSprite::UseContainer()
 // 0x755A70
 void CGameSprite::sub_755A70(CSpell* pSpell, SPELL_ABILITY* pAbility, const CPoint& ptTarget)
 {
-    // TODO: Incomplete.
+    // NOTE: Result is not used.
+    pSpell->GetCasterType();
+
+    if (pSpell == NULL || pAbility == NULL) {
+        return;
+    }
+
+    CString sSound;
+
+    INT nDiff = pAbility->speedFactor - m_derivedStats.m_nMentalSpeed;
+
+    BYTE cGender;
+    if (nDiff < 0 || nDiff < 3) {
+        cGender = 'N';
+    } else {
+        cGender = m_typeAI.m_nGender == 2 ? 'F' : 'M';
+    }
+
+    BYTE cCasterType;
+    if (pSpell->GetCasterType() == 2) {
+        cCasterType = 'P';
+    } else {
+        // NOTE: Result is not used.
+        pSpell->GetCasterType();
+        cCasterType = 'M';
+    }
+
+    if (cGender != 'N') {
+        CString sTemp;
+        sTemp = "CHA_";
+        sTemp += static_cast<char>(cGender);
+        sTemp += static_cast<char>(cCasterType);
+
+        // NOTE: Every `rand()` result below is discarded.
+        switch (pSpell->GetAnimationType()) {
+        case 9:
+            rand();
+            sSound.Format("%s1%c", (LPCSTR)sTemp, '3');
+            break;
+        case 10:
+            rand();
+            sSound.Format("%s1%c", (LPCSTR)sTemp, '5');
+            break;
+        case 11:
+            rand();
+            sSound += "09";
+            break;
+        case 12:
+            rand();
+            sSound.Format("%s0%c", (LPCSTR)sTemp, '3');
+            break;
+        case 13:
+            rand();
+            sSound.Format("%s0%c", (LPCSTR)sTemp, '1');
+            break;
+        case 14:
+            rand();
+            sSound.Format("%s0%c", (LPCSTR)sTemp, '5');
+            break;
+        case 15:
+            rand();
+            sSound.Format("%s1%c", (LPCSTR)sTemp, '1');
+            break;
+        case 16:
+            rand();
+            sSound.Format("%s0%c", (LPCSTR)sTemp, '7');
+            break;
+        }
+    }
+
+    BOOLEAN bHarpy = FALSE;
+
+    // NOTE: Compares the object type with the harpy race id.
+    if (GetObjectType() == CAIObjectType::R_HARPY) {
+        sSound = "HARPY06";
+        bHarpy = TRUE;
+    }
+
+    if ((cGender != 'N' && IcewindMisc::sub_585210(this) == TRUE)
+        || bHarpy == TRUE) {
+        m_sndCastingChant.SetChannel(2, reinterpret_cast<DWORD>(m_pArea));
+        // NOTE: Uninline.
+        m_sndCastingChant.SetResRef(CResRef(sSound), TRUE, TRUE);
+        m_sndCastingChant.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+
+        CMessagePlaySoundRef* message = new CMessagePlaySoundRef(CResRef(sSound), m_id, m_id);
+        // NOTE: No NULL check.
+        message->m_nChannel = 2;
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    sSound = "PRE_";
+    sSound += static_cast<char>(cCasterType);
+
+    switch (pSpell->GetAnimationType()) {
+    case 9:
+        sSound += "07";
+        break;
+    case 10:
+        sSound += "08";
+        break;
+    case 11:
+        sSound += "05";
+        break;
+    case 12:
+        sSound += "02";
+        break;
+    case 14:
+        sSound += "03";
+        break;
+    case 15:
+        sSound += "06";
+        break;
+    case 16:
+        sSound += "04";
+        break;
+    default:
+        sSound += "01";
+        break;
+    }
+
+    m_sndCasting.SetChannel(4, reinterpret_cast<DWORD>(m_pArea));
+    // NOTE: Uninline.
+    m_sndCasting.SetResRef(CResRef(sSound), TRUE, TRUE);
+    m_sndCasting.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+
+    CMessagePlaySoundRef* message = new CMessagePlaySoundRef(CResRef(sSound), m_id, m_id);
+    // NOTE: No NULL check.
+    message->m_nChannel = 4;
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    INT nLevel = pAbility->speedFactor;
+    if (sub_763150(0x20) == 1) {
+        nLevel--;
+        if (nLevel < 0) {
+            nLevel = 0;
+        }
+    }
+
+    nLevel -= m_derivedStats.m_nMentalSpeed;
+    if (nLevel < 0) {
+        nLevel = 0;
+    }
+
+    SHORT nDuration = nLevel * 100 / 10;
+
+    ITEM_EFFECT effect;
+    CGameEffect::ClearItemEffect(&effect, 0);
+
+    // NOTE: The duration type is read from an unnamed `const WORD` at
+    // 0x8491BC.
+    switch (pSpell->GetAnimationType()) {
+    case 9:
+        effect.dwFlags = 7;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 10:
+        effect.dwFlags = 8;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 11:
+        effect.dwFlags = 4;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 12:
+        effect.dwFlags = 1;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 13:
+        effect.dwFlags = 5;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 14:
+        effect.dwFlags = 2;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 15:
+        effect.dwFlags = 6;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 16:
+        effect.dwFlags = 3;
+        effect.effectID = ICEWIND_CGAMEEFFECT_CASTINGGLOW;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 17:
+    case 26:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 2;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 18:
+    case 27:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 1;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 19:
+    case 28:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 2;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 20:
+    case 29:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 4;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 21:
+    case 30:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 5;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 22:
+    case 31:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 11;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 23:
+    case 32:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 6;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 24:
+    case 33:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 7;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    case 25:
+    case 34:
+        effect.effectID = CGAMEEFFECT_SPARKLE;
+        effect.dwFlags = 3;
+        effect.effectAmount = 8;
+        effect.durationType = 0x1000;
+        effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDuration;
+        break;
+    }
+
+    effect.duration += 4;
+
+    CGameEffect* pCastingEffect = CGameEffect::DecodeEffect(&effect,
+        ptTarget,
+        m_id,
+        CPoint(-1, -1));
+
+    CMessage* pMessage = new CMessageAddEffect(pCastingEffect, m_id, m_id);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+    INT nEffect = 0;
+    if (pSpell->GetCastingEffectNo() > 0) {
+        do {
+            CGameEffect* pEffect = pSpell->GetCastingEffect(nEffect);
+            pEffect->m_source = m_pos;
+            pEffect->m_sourceID = m_id;
+            pEffect->m_target = m_pos;
+
+            switch (pEffect->m_targetType) {
+            case 1:
+                {
+                    CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                }
+                break;
+            case 2:
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+                // __LINE__: 21479
+                UTIL_ASSERT(FALSE);
+                break;
+            case 3:
+                ApplyEffectToParty(pEffect);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 4:
+                m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 5:
+                m_pArea->sub_46E130(pEffect, TRUE, FALSE, 0, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 6:
+                m_pArea->sub_46E130(pEffect, FALSE, TRUE, m_typeAI.m_nSpecific, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 7:
+                m_pArea->sub_46E130(pEffect, FALSE, TRUE, GetAIType().m_nSpecific, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 8:
+                m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, this);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            default:
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            }
+
+            nEffect++;
+        } while (nEffect < pSpell->GetCastingEffectNo());
+    }
 }
 
 // 0x7564E0
