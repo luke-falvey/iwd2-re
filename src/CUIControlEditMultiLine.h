@@ -27,7 +27,7 @@ public:
     /* 0078 */ virtual void AdjustVisibleIndex();
 
     void Remove();
-    void ReConstitute();
+    int ReConstitute();
     void CalculateNewLines(BYTE a1);
 
     /* 0052 */ CVidMosaic m_mosBackground;
