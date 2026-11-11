@@ -20,17 +20,31 @@ def checkpoint(game, golden_dir: Path, name: str, max_diff: float = 0.02, mask=N
     game.shots += 1
     img.save(game.out_dir / f"{game.shots:03d}-{name}.png")
     golden = golden_dir / f"{name}.png"
+    # Some screens legitimately vary (the main menu is a day or night scene
+    # depending on the system clock), so a checkpoint may have variants:
+    # name.png, name.alt1.png, ...
+    variants = ([golden] if golden.exists() else []) + sorted(golden_dir.glob(f"{name}.alt*.png"))
+
+    def matches(path: Path) -> tuple[bool, float]:
+        ref = Image.open(path)
+        d = diff_ratio(ref, img, region=region)
+        if mask:
+            from harness.screen import similar
+            return similar(ref, img, max_diff=max_diff, mask=mask, region=region), d
+        return d <= max_diff, d
+
+    results = [matches(p) for p in variants]
     if game.target == "original":
-        img.save(golden)
+        # Record the first image, and any later one that matches no variant.
+        if not variants:
+            img.save(golden)
+        elif not any(ok for ok, _ in results):
+            img.save(golden_dir / f"{name}.alt{len(variants)}.png")
         return img
-    if not golden.exists():
+    if not variants:
         raise AssertionError(f"no golden image {golden}; run with --target original first")
-    ref = Image.open(golden)
-    d = diff_ratio(ref, img, region=region)
-    if mask:
-        from harness.screen import similar
-        ok = similar(ref, img, max_diff=max_diff, mask=mask, region=region)
-    else:
-        ok = d <= max_diff
-    assert ok, f"checkpoint {name}: {d:.1%} of pixels differ from the original (limit {max_diff:.1%})"
+    best = min(d for _, d in results)
+    assert any(ok for ok, _ in results), (
+        f"checkpoint {name}: {best:.1%} of pixels differ from the original (limit {max_diff:.1%}, "
+        f"{len(variants)} golden variant(s))")
     return img
