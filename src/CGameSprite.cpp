@@ -28651,9 +28651,65 @@ SHORT CGameSprite::PickLock(CGameAIBase* pTarget)
 // 0x75C980
 SHORT CGameSprite::RemoveSpell()
 {
-    // TODO: Incomplete.
+    CString sSpell("");
 
-    return ACTION_ERROR;
+    if (m_curAction.GetString1() == "") {
+        DecodeSpell(m_curAction.m_specificID, sSpell);
+
+        if (sSpell == "") {
+            return ACTION_ERROR;
+        }
+    } else {
+        sSpell = m_curAction.GetString1();
+    }
+
+    CResRef cResSpell(sSpell);
+
+    BYTE nClass = 0;
+    INT a3 = 0;
+    BYTE nLevel = 0;
+    sub_727720(cResSpell, nClass, a3, nLevel);
+
+    switch (g_pBaldurChitin->GetObjectGame()->GetSpellType(cResSpell)) {
+    case 1:
+        {
+            UINT nSpellLevel = nLevel - 1;
+            UINT nZero1 = 0;
+            UINT nZero2 = 0;
+            BOOLEAN bRemove = TRUE;
+            RemoveKnownSpell(nClass, nSpellLevel, cResSpell, bRemove, nZero1, nZero2);
+
+            if (a3 != 0) {
+                UINT nDomainSpellLevel = nLevel - 1;
+                UINT nZero3 = 0;
+                UINT nZero4 = 0;
+                BOOLEAN bRemoveDomain = TRUE;
+                RemoveDomainSpell(nDomainSpellLevel, cResSpell, bRemoveDomain, nZero3, nZero4);
+            }
+        }
+        break;
+    case 2:
+        {
+            UINT nZero1 = 0;
+            UINT nZero2 = 0;
+            BOOLEAN bRemove = TRUE;
+            RemoveInnateSpell(cResSpell, bRemove, nZero1, nZero2);
+        }
+        break;
+    case 3:
+        {
+            UINT nZero1 = 0;
+            UINT nZero2 = 0;
+            BOOLEAN bRemove = TRUE;
+            RemoveSong(cResSpell, bRemove, nZero1, nZero2);
+        }
+        break;
+    case 4:
+        RemoveShapeshift(cResSpell);
+        break;
+    }
+
+    return ACTION_DONE;
 }
 
 // 0x75CBD0
@@ -29026,9 +29082,67 @@ SHORT CGameSprite::EquipMostDamagingMelee()
 // 0x75E150
 SHORT CGameSprite::EquipRanged()
 {
-    // TODO: Incomplete.
+    if (m_equipment.m_items[42] != NULL) {
+        return ACTION_ERROR;
+    }
 
-    return ACTION_ERROR;
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
+        m_equipment.m_items[m_equipment.m_selectedWeapon]->Demand();
+
+        // NOTE: The original compares the low byte of `type` only.
+        if (m_equipment.m_items[m_equipment.m_selectedWeapon] != NULL
+            && m_equipment.m_items[m_equipment.m_selectedWeapon]->GetAbility(m_equipment.m_selectedWeaponAbility) != NULL
+            && static_cast<BYTE>(m_equipment.m_items[m_equipment.m_selectedWeapon]->GetAbility(m_equipment.m_selectedWeaponAbility)->type) == 2) {
+            m_equipment.m_items[m_equipment.m_selectedWeapon]->Release();
+            return ACTION_DONE;
+        }
+
+        m_equipment.m_items[m_equipment.m_selectedWeapon]->Release();
+    }
+
+    for (INT nAmmo = 0; nAmmo < 4; nAmmo++) {
+        CItem* pItem = m_equipment.m_items[CGameSpriteEquipment::SLOT_AMMO + nAmmo];
+        if (pItem != NULL) {
+            pItem->Demand();
+
+            ITEM_ABILITY* pAbility = pItem->GetAbility(0);
+            if (pAbility != NULL
+                && static_cast<BYTE>(pAbility->type) == 2
+                && CheckLauncherType(pAbility, NULL)) {
+                SHORT launcherSlot;
+                if (GetLauncher(pAbility, launcherSlot) != NULL) {
+                    sub_726810((launcherSlot - CGameSpriteEquipment::SLOT_WEAPON) / 2);
+                }
+
+                pItem->Release();
+                return ACTION_DONE;
+            }
+
+            pItem->Release();
+        }
+    }
+
+    for (INT nWeapon = 0; nWeapon < 8; nWeapon++) {
+        CItem* pItem = m_equipment.m_items[CGameSpriteEquipment::SLOT_WEAPON + nWeapon];
+        if (pItem != NULL) {
+            pItem->Demand();
+
+            ITEM_ABILITY* pAbility = pItem->GetAbility(0);
+            if (pAbility != NULL
+                && static_cast<BYTE>(pAbility->type) == 2
+                && CheckLauncherType(pAbility, NULL)) {
+                sub_726810((CGameSpriteEquipment::SLOT_WEAPON + nWeapon - CGameSpriteEquipment::SLOT_WEAPON) / 2);
+                pItem->Release();
+                return ACTION_DONE;
+            }
+
+            pItem->Release();
+        }
+    }
+
+    EquipMostDamagingMelee();
+
+    return ACTION_DONE;
 }
 
 // 0x75E330
