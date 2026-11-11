@@ -27516,7 +27516,536 @@ void CGameSprite::sub_756770(CPoint& ptDelta, const CPoint& ptTarget)
 // 0x756930
 void CGameSprite::sub_756930(CItem* pItem, CItem* pLauncher)
 {
-    // TODO: Incomplete.
+    if ((m_derivedStats.m_generalState & STATE_SILENCED) == 0) {
+        CString sFileName("");
+        CString sSound;
+        CString sBuf;
+        sSound = "";
+        char szNum[3] = {0, 0, 0};
+        INT nField = 0;
+        INT nCount;
+        INT nIndex;
+        INT nRand;
+
+        if (field_70FB) {
+            // __FILE__: .\Include\ObjAnimation.h
+            // __LINE__: 2118
+            UTIL_ASSERT(m_animation.m_animation != NULL);
+
+            switch (m_animation.m_nSequence) {
+                case CGAMESPRITE_SEQ_ATTACK_SLASH:
+                    nCount = field_72F0.GetCount();
+                    if (nCount == 0) {
+                        goto noList;
+                    }
+
+                    nIndex = nCount != 0 ? rand() % nCount : 0;
+                    {
+                        CGameSpriteSoundEntry& entry = field_72F0.GetAt(field_72F0.FindIndex(nIndex));
+                        sSound = entry.field_0;
+                        nField = entry.field_4;
+                    }
+
+                    if (strcmp(sSound, field_7408) == 0) {
+                        if (nIndex == field_72F0.GetCount() - 1) {
+                            CGameSpriteSoundEntry& entry = field_72F0.GetAt(field_72F0.FindIndex(0));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        } else {
+                            CGameSpriteSoundEntry& entry = field_72F0.GetAt(field_72F0.FindIndex(nIndex + 1));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        }
+                    } else {
+                        field_7408 = sSound;
+                        field_740C = nField;
+                    }
+                    goto done;
+                case CGAMESPRITE_SEQ_ATTACK_BACKSLASH:
+                    nCount = field_730C.GetCount();
+                    if (nCount == 0) {
+                        goto noList;
+                    }
+
+                    nIndex = nCount != 0 ? rand() % nCount : 0;
+                    {
+                        CGameSpriteSoundEntry& entry = field_730C.GetAt(field_730C.FindIndex(nIndex));
+                        sSound = entry.field_0;
+                        nField = entry.field_4;
+                    }
+
+                    if (strcmp(sSound, field_7408) == 0) {
+                        if (nIndex == field_730C.GetCount() - 1) {
+                            CGameSpriteSoundEntry& entry = field_730C.GetAt(field_730C.FindIndex(0));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        } else {
+                            CGameSpriteSoundEntry& entry = field_730C.GetAt(field_730C.FindIndex(nIndex + 1));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        }
+                    } else {
+                        field_7408 = sSound;
+                        field_740C = nField;
+                    }
+                    goto done;
+                case CGAMESPRITE_SEQ_ATTACK_JAB:
+                    nCount = field_7328.GetCount();
+                    if (nCount == 0) {
+                        goto noList;
+                    }
+
+                    nIndex = nCount != 0 ? rand() % nCount : 0;
+                    {
+                        CGameSpriteSoundEntry& entry = field_7328.GetAt(field_7328.FindIndex(nIndex));
+                        sSound = entry.field_0;
+                        nField = entry.field_4;
+                    }
+
+                    if (strcmp(sSound, field_7408) == 0) {
+                        if (nIndex == field_7328.GetCount() - 1) {
+                            CGameSpriteSoundEntry& entry = field_7328.GetAt(field_7328.FindIndex(0));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        } else {
+                            CGameSpriteSoundEntry& entry = field_7328.GetAt(field_7328.FindIndex(nIndex + 1));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        }
+                    } else {
+                        field_7408 = sSound;
+                        field_740C = nField;
+                    }
+                    goto done;
+                default:
+                    nCount = field_7344.GetCount();
+                    if (nCount == 0) {
+                        goto noList;
+                    }
+
+                    nIndex = nCount != 0 ? rand() % nCount : 0;
+                    {
+                        CGameSpriteSoundEntry& entry = field_7344.GetAt(field_7344.FindIndex(nIndex));
+                        sSound = entry.field_0;
+                        nField = entry.field_4;
+                    }
+
+                    if (strcmp(sSound, field_7408) == 0) {
+                        if (nIndex == field_7344.GetCount() - 1) {
+                            CGameSpriteSoundEntry& entry = field_7344.GetAt(field_7344.FindIndex(0));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        } else {
+                            CGameSpriteSoundEntry& entry = field_7344.GetAt(field_7344.FindIndex(nIndex + 1));
+                            field_7408 = entry.field_0;
+                            field_740C = entry.field_4;
+                        }
+                    } else {
+                        field_7408 = sSound;
+                        field_740C = nField;
+                    }
+                    goto done;
+            }
+        }
+
+    noList:
+        {
+            CResRef cResRef = pItem->cResRef;
+            BOOL bDefault = FALSE;
+
+            if (cResRef == "WYVERN1") {
+                sFileName = "WYVER05";
+            } else if (cResRef == "WYVERN2") {
+                sFileName = "WYVER06";
+            } else if (cResRef == "WOLFWI1") {
+                sFileName = "WWOLF07";
+            } else if (cResRef == "WOLFWI2") {
+                sFileName = "WWOLF06";
+            } else {
+                WORD nType = pItem->GetItemType();
+                if (pLauncher != NULL) {
+                    nType = pLauncher->GetItemType();
+                }
+
+                if (nType == 0) {
+                    nType = 20;
+                }
+
+                sFileName = "Sw_";
+
+                switch (nType) {
+                    case 15:
+                        sFileName += "Ms";
+                        nRand = rand() % 5;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 4) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 16:
+                    case 17:
+                    case 22:
+                    case 29:
+                        sFileName += "Sm";
+                        nRand = rand() % 7;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 6) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 18:
+                        sFileName += "Slg";
+                        nRand = rand() % 5;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 4) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 19:
+                    case 20:
+                    case 69:
+                        sFileName += "Swd";
+                        nRand = rand() % 5;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 4) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 21:
+                    case 25:
+                    case 26:
+                    case 30:
+                        sFileName += "Lg";
+                        nRand = rand() % 6;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 5) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 23:
+                        sFileName += "Flal";
+                        nRand = rand() % 5;
+                        if (nRand < 10) {
+                            szNum[0] = static_cast<char>(nRand + '0');
+                            szNum[1] = '\0';
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 4) {
+                                szNum[0] = '0';
+                                szNum[1] = '\0';
+                            } else {
+                                nRand++;
+                                _itoa(nRand, szNum, 10);
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 24:
+                        sFileName += "Fist";
+                        nRand = rand() % 3;
+                        if (nRand < 10) {
+                            szNum[0] = static_cast<char>(nRand + '0');
+                            szNum[1] = '\0';
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 2) {
+                                szNum[0] = '0';
+                                szNum[1] = '\0';
+                            } else {
+                                nRand++;
+                                _itoa(nRand, szNum, 10);
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 27:
+                        sFileName += "Xbow";
+                        nRand = rand() % 5;
+                        if (nRand < 10) {
+                            szNum[0] = static_cast<char>(nRand + '0');
+                            szNum[1] = '\0';
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 4) {
+                                szNum[0] = '0';
+                                szNum[1] = '\0';
+                            } else {
+                                nRand++;
+                                _itoa(nRand, szNum, 10);
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 28:
+                        sFileName += "Fist";
+                        nRand = rand() % 3;
+                        if (nRand < 10) {
+                            szNum[0] = static_cast<char>(nRand + '0');
+                            szNum[1] = '\0';
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 2) {
+                                szNum[0] = '0';
+                                szNum[1] = '\0';
+                            } else {
+                                nRand++;
+                                _itoa(nRand, szNum, 10);
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 44:
+                        sFileName += "Lg";
+                        nRand = rand() % 6;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 5) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    case 57:
+                        sFileName += "Swd";
+                        nRand = rand() % 5;
+                        if (nRand < 10) {
+                            szNum[0] = '0';
+                            szNum[1] = static_cast<char>(nRand + '1');
+                            szNum[2] = '\0';
+                        } else {
+                            _itoa(nRand, szNum, 10);
+                        }
+                        sBuf = sFileName;
+                        sBuf += szNum;
+                        if (strcmp(sBuf, field_7408) == 0) {
+                            if (nRand == 4) {
+                                szNum[0] = '0';
+                                szNum[1] = '1';
+                                szNum[2] = '\0';
+                            } else {
+                                nRand++;
+                                if (nRand < 10) {
+                                    szNum[0] = '0';
+                                    szNum[1] = static_cast<char>(nRand + '1');
+                                    szNum[2] = '\0';
+                                } else {
+                                    _itoa(nRand, szNum, 10);
+                                }
+                            }
+                            sFileName += szNum;
+                        } else {
+                            sFileName = sBuf;
+                        }
+                        break;
+                    default:
+                        bDefault = TRUE;
+                        break;
+                }
+            }
+
+            CString sLeft = sFileName.Left(7);
+            if (bDefault || strcmp(sLeft, "Sw_Fist") == 0) {
+                // __FILE__: .\Include\ObjAnimation.h
+                // __LINE__: 2118
+                UTIL_ASSERT(m_animation.m_animation != NULL);
+
+                BYTE nSpeech;
+                switch (m_animation.m_nSequence) {
+                    case CGAMESPRITE_SEQ_ATTACK_SLASH:
+                        nSpeech = 40;
+                        if (m_baseStats.m_speech[40] == -1) {
+                            goto skipSound;
+                        }
+                        break;
+                    case CGAMESPRITE_SEQ_ATTACK_BACKSLASH:
+                        nSpeech = 41;
+                        if (m_baseStats.m_speech[41] == -1) {
+                            goto skipSound;
+                        }
+                        break;
+                    case CGAMESPRITE_SEQ_ATTACK_JAB:
+                        nSpeech = 42;
+                        if (m_baseStats.m_speech[42] == -1) {
+                            goto skipSound;
+                        }
+                        break;
+                    default:
+                        goto skipSound;
+                }
+
+                {
+                    STR_RES strRes;
+                    g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[nSpeech], strRes);
+                    strRes.cSound.cResRef.CopyToString(sFileName);
+                }
+            }
+
+        skipSound:
+            if (strcmp(sFileName, "") != 0) {
+                field_7408 = sFileName;
+                field_740C = 0;
+            }
+        }
+
+    done:;
+    }
 }
 
 // 0x757540
@@ -31164,7 +31693,185 @@ void CGameSprite::sub_761AB0(CGameSprite* pTarget)
 // 0x761C50
 SHORT CGameSprite::SpellCastEffect(const CString& sString1, const CString& sString2, LONG nSpecific1, LONG nSpecific2, LONG nSpecific3)
 {
-    // TODO: Incomplete.
+    INT nPos = sString2.FindOneOf(":");
+
+    if (!field_753A) {
+        CString sLeft = sString2.Left(nPos);
+
+        m_sndCastingChant.SetChannel(2, reinterpret_cast<DWORD>(m_pArea));
+        m_sndCastingChant.SetResRef(CResRef(sString1), TRUE, TRUE);
+        m_sndCastingChant.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+
+        CMessagePlaySoundRef* pChantMessage = new CMessagePlaySoundRef(CResRef(sString1), m_id, m_id);
+        pChantMessage->m_nChannel = 2;
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(pChantMessage, FALSE);
+
+        m_sndCasting.SetChannel(4, reinterpret_cast<DWORD>(m_pArea));
+        m_sndCasting.SetResRef(CResRef(sLeft), TRUE, TRUE);
+        m_sndCasting.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+
+        CMessagePlaySoundRef* pCastingMessage = new CMessagePlaySoundRef(CResRef(sLeft), m_id, m_id);
+        pCastingMessage->m_nChannel = 4;
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(pCastingMessage, FALSE);
+
+        LONG nDiff = nSpecific2 - m_derivedStats.m_nMentalSpeed;
+        SHORT nDelay = static_cast<SHORT>((nDiff < 0 ? 0 : nDiff) * 100 / 10);
+
+        ITEM_EFFECT effect;
+        CGameEffect::ClearItemEffect(&effect, 0);
+
+        switch (nSpecific1) {
+            case 9:
+                effect.dwFlags = 7;
+                effect.effectID = 235;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 10:
+                effect.dwFlags = 8;
+                effect.effectID = 235;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 11:
+                effect.dwFlags = 4;
+                effect.effectID = 235;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 12:
+                effect.dwFlags = 1;
+                effect.effectID = 235;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 13:
+                effect.dwFlags = 5;
+                effect.effectID = 235;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 14:
+                effect.dwFlags = 2;
+                effect.effectID = 235;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 15:
+                effect.dwFlags = 6;
+                effect.effectID = 235;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 16:
+                effect.dwFlags = 3;
+                effect.effectID = 235;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 17:
+            case 26:
+                effect.effectID = 41;
+                effect.dwFlags = 3;
+                effect.effectAmount = 2;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 18:
+            case 27:
+                effect.effectID = 41;
+                effect.dwFlags = 3;
+                effect.effectAmount = 1;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 19:
+            case 28:
+                effect.effectID = 41;
+                effect.dwFlags = 3;
+                effect.effectAmount = 2;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 20:
+            case 29:
+                effect.effectID = 41;
+                effect.dwFlags = 3;
+                effect.effectAmount = 4;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 21:
+            case 30:
+                effect.effectID = 41;
+                effect.dwFlags = 3;
+                effect.effectAmount = 5;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 22:
+            case 31:
+                effect.effectID = 41;
+                effect.dwFlags = 3;
+                effect.effectAmount = 11;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 23:
+            case 32:
+                effect.effectID = 41;
+                effect.dwFlags = 3;
+                effect.effectAmount = 6;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 24:
+            case 33:
+                effect.effectID = 41;
+                effect.dwFlags = 3;
+                effect.effectAmount = 7;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+            case 25:
+            case 34:
+                effect.effectID = 41;
+                effect.dwFlags = 3;
+                effect.effectAmount = 8;
+                effect.durationType = 0x1000;
+                effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + nDelay;
+                break;
+        }
+
+        effect.duration += 4;
+
+        CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect, m_pos, m_id, CPoint(-1, -1));
+        CMessageAddEffect* pEffectMessage = new CMessageAddEffect(pEffect, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(pEffectMessage, FALSE);
+
+        field_753A = TRUE;
+        field_753C = effect.duration;
+    }
+
+    if (field_753A == 1 && g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime < field_753C) {
+        return ACTION_NORMAL;
+    }
+
+    if (field_753A == 1) {
+        CString sRight = sString2.Right(sString2.GetLength() - nPos - 1);
+
+        m_sndCasting.Stop();
+        m_sndCasting.SetChannel(4, reinterpret_cast<DWORD>(m_pArea));
+        m_sndCasting.SetResRef(CResRef(sRight), TRUE, TRUE);
+        m_sndCasting.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+
+        CMessagePlaySoundRef* pMessage = new CMessagePlaySoundRef(CResRef(sRight), m_id, m_id);
+        pMessage->m_nChannel = 4;
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+        field_753A = FALSE;
+        return ACTION_DONE;
+    }
 
     return ACTION_ERROR;
 }
