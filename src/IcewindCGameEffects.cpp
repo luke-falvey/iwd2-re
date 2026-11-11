@@ -1228,6 +1228,48 @@ CGameEffect* IcewindCGameEffectVitriolicSphere::Copy()
     return copy;
 }
 
+// 0x5663F0
+BOOL IcewindCGameEffectVitriolicSphere::ApplyEffect(CGameSprite* pSprite)
+{
+    CGameObject* pObject;
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pObject,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if (m_numDice > 1) {
+        CGameEffect* pCopy = Copy();
+        pCopy->m_duration = 7;
+        // NOTE: Original reads it from a constant at 0x8491B0.
+        pCopy->m_durationType = 4;
+        pCopy->m_numDice = m_numDice - 2;
+        pCopy->m_savingThrow = 8;
+        pSprite->AddEffect(pCopy, CGameAIBase::EFFECT_LIST_TIMED, FALSE, FALSE);
+    }
+
+    CGameEffect* pDamage = IcewindMisc::CreateEffectDamage(pObject,
+        0x10003,
+        m_numDice,
+        m_diceSize,
+        0,
+        static_cast<BYTE>(m_spellLevel),
+        8);
+    pSprite->AddEffect(pDamage, CGameAIBase::EFFECT_LIST_TIMED, FALSE, TRUE);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49FC50
@@ -1504,6 +1546,46 @@ CGameEffect* IcewindCGameEffectSetGlobal::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x567230
+BOOL IcewindCGameEffectSetGlobal::ApplyEffect(CGameSprite* pSprite)
+{
+    CString sName;
+
+    switch (m_dwFlags) {
+    case 0:
+        sName = "RETURN_TO_LONELYWOOD";
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+        // __LINE__: 5535
+        UTIL_ASSERT(FALSE);
+    }
+
+    CVariable var;
+
+    CVariable* pVar = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sName);
+    if (pVar != NULL) {
+        pVar->m_intValue = m_effectAmount;
+    } else {
+        var.SetName(sName);
+        var.m_intValue = m_effectAmount;
+        g_pBaldurChitin->GetObjectGame()->m_variables.AddKey(var);
+    }
+
+    CMessage* message = new CMessageSetVariable(sName,
+        CString("GLOBAL"),
+        m_effectAmount,
+        0,
+        pSprite->GetId(),
+        pSprite->GetId(),
+        0);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
