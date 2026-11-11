@@ -12,7 +12,9 @@ public:
     ITEM_ABILITY* GetAbility(int nAbility);
     ITEM_EFFECT* GetAbilityEffect(int nAbility, int nEffect);
     int GetAbilityEffectNo(int nAbility);
-    int GetAbilityNo();
+    int GetEquipedEffectNo();
+    ITEM_EFFECT* GetEquipedEffect(int nEffect);
+    int Release();
     BOOL Parse(void* pData);
 
     /* 0050 */ ITEM_ABILITY* m_pAbilities;

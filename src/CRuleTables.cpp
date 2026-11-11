@@ -1188,6 +1188,13 @@ const CString CRuleTables::DLGINST("DLGINST");
 // 0x8DEF5C
 const CString CRuleTables::SCRINST("SCRINST");
 
+// Treasure tiers used by the "up" entries of the random treasure tables: the
+// last character of a table name ("..._L", "..._M", "..._R", "..._V") is
+// replaced with the character a few positions further.
+//
+// 0x8DE8C8
+static const CString RANDOM_TREASURE_TIERS("lmrvvvvv");
+
 // NOTE: This function is somewhat strange. It's first half uses inlined
 // `C2DArray` constructor, while the second half calls `0x5402E0` to initialize
 // tables. The same goes for destructor below (destructor at `0x426500` is
@@ -3312,6 +3319,118 @@ const C2DArray* CRuleTables::GetClassAbilityTable(BYTE nClass, DWORD nSpecialist
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CRuleTables.cpp
     // __LINE__: 6354
     UTIL_ASSERT_MSG(FALSE, "GetClassAbilityTable Being  called incorrectly");
+}
+
+// Returns the name of the random treasure table `sName` moved up by the number
+// of tiers requested by the rolled entry `sRolled` ("up", "up1", "up2" or
+// "up3"). Returns `sName` unchanged when there is nothing to upgrade.
+//
+// 0x5461E0
+CString CRuleTables::sub_5461E0(const CString& sName, const CString& sRolled) const
+{
+    CString sResult(sName);
+
+    if (sName.GetLength() > 2
+        && sName[sName.GetLength() - 2] == '_'
+        && sRolled.GetLength() > 1
+        && tolower(sRolled[0]) == 'u'
+        && tolower(sRolled[1]) == 'p') {
+        int nIndex = RANDOM_TREASURE_TIERS.Find(static_cast<char>(tolower(sName[sName.GetLength() - 1])));
+        if (nIndex >= 0) {
+            int nStep;
+            switch (tolower(sRolled[sRolled.GetLength() - 1])) {
+            case '1':
+                nStep = 1;
+                break;
+            case '2':
+                nStep = 2;
+                break;
+            case '3':
+                nStep = 3;
+                break;
+            case 'p':
+                if (sRolled.GetLength() > 2) {
+                    return sResult;
+                }
+                nStep = 1;
+                break;
+            default:
+                return sResult;
+            }
+
+            if (sName[sName.GetLength() - 1] != RANDOM_TREASURE_TIERS[nIndex + nStep]) {
+                sResult = sName.Left(sName.GetLength() - 1);
+                sResult += RANDOM_TREASURE_TIERS[nIndex + nStep];
+            }
+        }
+    }
+
+    return sResult;
+}
+
+// Resolves random treasure: when `sResRef` names a row of RT_NORM.2DA (or
+// RT_FURY.2DA in Heart of Fury mode) it is replaced with a randomly picked
+// entry of that row, recursively. Returns `FALSE` when `sResRef` is not a
+// random treasure table (it is left unchanged then) or an empty entry was
+// rolled.
+//
+// 0x5463E0
+BOOL CRuleTables::sub_5463E0(CString& sResRef) const
+{
+    CString sName(sResRef);
+
+    const C2DArray* pTable = &m_tRtNorm;
+    if (g_pBaldurChitin->GetObjectGame()->m_cOptions.m_nNightmareMode == 1) {
+        pTable = &m_tRtFury;
+    }
+
+    CPoint ptLocation;
+    if (pTable->Find(sName, ptLocation) != TRUE || ptLocation.x != -1) {
+        return FALSE;
+    }
+
+    // NOTE: `nCount` ends up being the index of the last used column, not the
+    // number of used columns, so the last entry of a row is never rolled.
+    INT nCount = 0;
+    for (INT x = 0; x < pTable->GetWidth(); x++) {
+        // NOTE: Uninline.
+        CString sEntry(pTable->GetAt(CPoint(x, ptLocation.y)));
+        if (sEntry.GetLength() == 0 || strcmp(sEntry, "*") == 0) {
+            break;
+        }
+
+        nCount = x;
+    }
+
+    if (nCount != 0) {
+        ptLocation.x = rand() % nCount;
+    } else {
+        ptLocation.x = 0;
+    }
+
+    // NOTE: Uninline.
+    CString sRolled(pTable->GetAt(ptLocation));
+
+    if (sRolled.GetLength() > 1
+        && tolower(sRolled[0]) == 'u'
+        && tolower(sRolled[1]) == 'p') {
+        CString sUpgraded = sub_5461E0(sName, sRolled);
+        if (sUpgraded.CompareNoCase(sResRef) != 0) {
+            sub_5463E0(sUpgraded);
+            sResRef = sUpgraded;
+        } else {
+            sResRef = "no_drop";
+        }
+    } else {
+        sResRef = sRolled;
+        if (strcmp(sResRef, "") == 0) {
+            return FALSE;
+        }
+
+        sub_5463E0(sResRef);
+    }
+
+    return TRUE;
 }
 
 // 0x546680

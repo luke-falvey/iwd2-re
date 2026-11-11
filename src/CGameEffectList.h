@@ -19,6 +19,7 @@ public:
     BOOL HandleList(CGameSprite* pSprite);
     BOOL CheckEffects();
     BOOL IsTypeOnList(WORD effectID);
+    BOOL sub_4C0830(CGameEffect* pEffect);
     BOOL ModifyAllOfType(WORD effectID, LONG newEffectAmount, BOOL increment);
 
     /* 001C */ POSITION m_posNext;

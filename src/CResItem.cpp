@@ -48,7 +48,7 @@ ITEM_EFFECT* CResItem::GetAbilityEffect(int nAbility, int nEffect)
 {
     if (m_bParsed) {
         if (nAbility >= 0 && nAbility < m_pHeader->abilityCount) {
-            if (nEffect >= 0 && nEffect <= m_pAbilities[nAbility].effectCount) {
+            if (nEffect >= 0 && nEffect < m_pAbilities[nAbility].effectCount) {
                 return &(m_pEffects[m_pAbilities[nAbility].startingEffect + nEffect]);
             }
         }
@@ -70,13 +70,40 @@ int CResItem::GetAbilityEffectNo(int nAbility)
 }
 
 // 0x4016D0
-int CResItem::GetAbilityNo()
+int CResItem::GetEquipedEffectNo()
 {
     if (m_bParsed) {
-        return m_pHeader->abilityCount;
+        return m_pHeader->equipedEffectCount;
     }
 
     return -1;
+}
+
+// NOTE: Does not add `equipedStartingEffect`.
+//
+// 0x401B60
+ITEM_EFFECT* CResItem::GetEquipedEffect(int nEffect)
+{
+    if (m_bParsed) {
+        if (nEffect >= 0 && nEffect < m_pHeader->equipedEffectCount) {
+            return &(m_pEffects[nEffect]);
+        }
+    }
+
+    return NULL;
+}
+
+// 0x401BA0
+int CResItem::Release()
+{
+    int rc = CRes::Release();
+    if (GetDemands() <= 0) {
+        m_bParsed = FALSE;
+        m_pAbilities = NULL;
+        m_pEffects = NULL;
+        m_pHeader = NULL;
+    }
+    return rc;
 }
 
 // 0x4016F0
