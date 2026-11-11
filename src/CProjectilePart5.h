@@ -30,6 +30,12 @@ public:
     /* 0094 */ void Virtual94(std::list<LONG>& targets) override;
 };
 
+class CProjectileArea850114 : public CProjectileArea {
+public:
+    CProjectileArea850114();
+    /* 0094 */ void Virtual94(std::list<LONG>& targets) override;
+};
+
 class CProjectileArea8501B0 : public CProjectileArea {
 public:
     CProjectileArea8501B0();
@@ -71,6 +77,20 @@ class CProjectileArea850558 : public CProjectileArea {
 public:
     CProjectileArea850558();
     /* 006C */ void Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType) override;
+};
+
+// NOTE: Only created by the mold touch persistent effect.
+class CProjectileArea8505F4 : public CProjectileArea {
+public:
+    CProjectileArea8505F4(SHORT a1);
+    /* 0094 */ void Virtual94(std::list<LONG>& targets) override;
+};
+
+// NOTE: Only created by the shroud of flame persistent effect.
+class CProjectileArea850690 : public CProjectileArea {
+public:
+    CProjectileArea850690(SHORT a1);
+    /* 0094 */ void Virtual94(std::list<LONG>& targets) override;
 };
 
 class CProjectileArea85072C : public CProjectileArea {

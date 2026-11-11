@@ -3588,6 +3588,22 @@ INT CRuleTables::sub_547040(CGameSprite* pSprite, const CResRef& resRef, INT a3,
     return nMod;
 }
 
+// 0x547620
+INT CRuleTables::sub_547620(INT a1, CGameSprite* pSprite, INT a3, INT a4) const
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CRuleTables.cpp
+    // __LINE__: 7295
+    UTIL_ASSERT_MSG(pSprite != NULL, "Invalid Sprite.");
+
+    INT nResult = 0;
+
+    if (a1 == 1) {
+        nResult = static_cast<signed char>(pSprite->GetDerivedStats()->m_nSkills[1]) - a3 - a4 - 5;
+    }
+
+    return nResult;
+}
+
 // FIXME: For unknown reason `nClass` and `nLevel` params are passed as
 // pointers.
 //

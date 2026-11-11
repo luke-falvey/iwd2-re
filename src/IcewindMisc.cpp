@@ -7,6 +7,7 @@
 #include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
+#include "CItem.h"
 #include "CSpell.h"
 #include "CUtil.h"
 #include "IcewindCGameEffects.h"
@@ -1019,9 +1020,68 @@ void IcewindMisc::sub_5860F0(CGameSprite* pSprite, CGameEffect* pEffect)
 }
 
 // 0x586220
-std::list<CGameEffect*> IcewindMisc::sub_586220(CGameSprite* pSprite, const BYTE* resRef, INT nLevel)
+std::list<CGameEffect*> IcewindMisc::GetSpellEffects(CGameAIBase* pCaster, const char* szResRef, BYTE nCasterLevel)
 {
-    // TODO: Incomplete.
+    CResRef cResRef((CString(szResRef)));
+    CSpell cSpell(cResRef);
+    cSpell.Demand();
 
-    return std::list<CGameEffect*>();
+    // Pick the last ability whose minimum caster level is met.
+    SHORT nAbility = 0;
+    while (nAbility < cSpell.GetAbilityCount()) {
+        if (nCasterLevel < cSpell.GetAbility(nAbility)->minCasterLevel) {
+            break;
+        }
+
+        // NOTE: The original fetches the ability once more here.
+        cSpell.GetAbility(nAbility);
+        nAbility++;
+    }
+
+    nAbility--;
+
+    SPELL_ABILITY* pAbility = cSpell.GetAbility(nAbility);
+
+    std::list<CGameEffect*> effects;
+    if (pAbility != NULL) {
+        for (INT nEffect = 0; nEffect < pAbility->effectCount; nEffect++) {
+            CGameEffect* pEffect = cSpell.DecodeEffect(nAbility, nEffect, pCaster, 0, 0, 0);
+            pEffect->m_source = pCaster->GetPos();
+            pEffect->m_sourceID = pCaster->GetId();
+            effects.push_back(pEffect);
+        }
+    }
+
+    cSpell.Release();
+
+    return effects;
+}
+
+// Returns the name of the item or spell `resRef`.
+//
+// 0x5864F0
+CString IcewindMisc::sub_5864F0(const CResRef& resRef)
+{
+    if (resRef.GetResRefStr().IsEmpty()) {
+        return CString();
+    }
+
+    STR_RES strRes;
+    CString sName;
+
+    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(resRef, 1005, FALSE)) {
+        CItem item(resRef, 1, 0, 0, 0, 0);
+        g_pBaldurChitin->m_cTlkTable.Fetch(item.GetIdentifiedName(), strRes);
+        sName = strRes.szText;
+        return sName;
+    }
+
+    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(resRef, 1006, FALSE)) {
+        CSpell spell(resRef);
+        g_pBaldurChitin->m_cTlkTable.Fetch(spell.GetGenericName(), strRes);
+        sName = strRes.szText;
+        return sName;
+    }
+
+    return CString();
 }

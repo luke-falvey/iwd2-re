@@ -290,21 +290,26 @@ public:
 
     CGameEffect();
     CGameEffect(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target, BOOL usesDice);
-    /* 0000 */ ~CGameEffect();
+    /* 0000 */ virtual ~CGameEffect();
     /* 0004 */ virtual CGameEffect* Copy();
     /* 0008 */ virtual BOOL ApplyEffect(CGameSprite* pSprite);
     /* 000C */ virtual BOOL ResolveEffect(CGameSprite* pSprite);
+    /* 0010 */ virtual void OnAdd(CGameSprite* pSprite);
     /* 0014 */ virtual void OnLoad(CGameSprite* pSprite);
+    /* 0018 */ virtual BOOL CheckSave(CGameSprite* pSprite, BYTE& fortitudeRoll, BYTE& reflexRoll, BYTE& willRoll, BYTE& resistMagicRoll);
     /* 001C */ virtual BOOL UsesDice();
     /* 0020 */ virtual void DisplayString(CGameSprite* pSprite);
     /* 0024 */ virtual void OnRemove(CGameSprite* pSprite);
 
     BOOL Compare(const CGameEffect& other);
-    BOOL sub_4A4FC0(CGameEffect* pEffect, BOOL bCompareSource);
+    BOOL CompareTo(const CGameEffect& other, BOOL bCheckSource);
+    BOOL CheckAdd(CGameSprite* pSprite, BYTE& fortitudeRoll, BYTE& reflexRoll, BYTE& willRoll, BYTE& resistMagicRoll, BYTE& probabilityRoll);
+    void sub_4A3FF0(CGameSprite* pSprite);
     void PlaySound(const CResRef& soundResRef, CGameSprite* pSprite);
     BOOL CheckExpiration();
     ITEM_EFFECT* GetItemEffect();
     void DisplayStringRef(CGameSprite* pSprite, STRREF str);
+    void DisplayHitPoints(CGameSprite* pSprite, LONG nAmount);
     void AddColorEffect(CGameSprite* pSprite, BYTE r, BYTE g, BYTE b, BYTE periodLength);
     void AddColorEffect(CGameSprite* pSprite, BYTE r, BYTE g, BYTE b);
     void CopyFromBase(CGameEffectBase* pBase);
@@ -323,6 +328,7 @@ public:
     void AdjustINT(CGameSprite* pSprite, INT nValue);
     void AdjustWIS(CGameSprite* pSprite, INT nValue);
     void AdjustCON(CGameSprite* pSprite, INT nValue);
+    void AdjustCHR(CGameSprite* pSprite, INT nValue);
     void Immobilize(CGameSprite* pSprite);
     void AddSlowEffect(CGameSprite* pSprite);
     void AddPanicEffect(CGameSprite* pSprite);
@@ -354,6 +360,7 @@ class CGameEffectAttackNo : public CGameEffect {
 public:
     CGameEffectAttackNo(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectAwaken : public CGameEffect {
@@ -367,6 +374,8 @@ class CGameEffectBerserk : public CGameEffect {
 public:
     CGameEffectBerserk(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnRemove(CGameSprite* pSprite) override;
 };
 
 class CGameEffectBarbarianRage : public CGameEffect {
@@ -374,6 +383,7 @@ public:
     CGameEffectBarbarianRage(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
     BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnRemove(CGameSprite* pSprite) override;
 };
 
 class CGameEffectCalm : public CGameEffect {
@@ -387,6 +397,8 @@ class CGameEffectCharm : public CGameEffect {
 public:
     CGameEffectCharm(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnAdd(CGameSprite* pSprite) override;
     void OnRemove(CGameSprite* pSprite) override;
 };
 
@@ -394,12 +406,15 @@ class CGameEffectSlipperyMind : public CGameEffect {
 public:
     CGameEffectSlipperyMind(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnRemove(CGameSprite* pSprite) override;
 };
 
 class CGameEffectCHR : public CGameEffect {
 public:
     CGameEffectCHR(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectColorChange : public CGameEffect {
@@ -442,8 +457,17 @@ public:
     CGameEffectDamage();
     CGameEffectDamage(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnAdd(CGameSprite* pSprite) override;
+    BOOL CheckSave(CGameSprite* pSprite, BYTE& roll1, BYTE& roll2, BYTE& roll3, BYTE& roll4) override;
+    BOOL UsesDice() override;
+    void DisplayString(CGameSprite* pSprite) override;
+    /* 0028 */ virtual void sub_4AA6D0(CGameSprite* pSprite, LONG nResisted);
 
     void sub_4A7750(CGameSprite* pSprite);
+    void sub_4A8DF0(DWORD nDamageType, CGameSprite* pSprite);
+    void sub_4AB0A0(CGameSprite* pSprite, LONG nDamage);
+    CString sub_4AB370();
 };
 
 class CGameEffectDeath : public CGameEffect {
@@ -452,6 +476,8 @@ public:
     CGameEffectDeath(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffectDeath(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target, int a5);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnAdd(CGameSprite* pSprite) override;
     void DisplayString(CGameSprite* pSprite) override;
 
     /* 018C */ int field_18C;
@@ -483,12 +509,17 @@ public:
     CGameEffectHeal();
     CGameEffectHeal(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    BOOL UsesDice() override;
 };
 
 class CGameEffectHitPoints : public CGameEffect {
 public:
     CGameEffectHitPoints(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnAdd(CGameSprite* pSprite) override;
+    BOOL UsesDice() override;
 };
 
 class CGameEffectINT : public CGameEffect {
@@ -502,18 +533,22 @@ class CGameEffectInvisible : public CGameEffect {
 public:
     CGameEffectInvisible(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    void OnAdd(CGameSprite* pSprite) override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectLore : public CGameEffect {
 public:
     CGameEffectLore(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectLuck : public CGameEffect {
 public:
     CGameEffectLuck(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectMorale : public CGameEffect {
@@ -535,6 +570,7 @@ class CGameEffectPoison : public CGameEffect {
 public:
     CGameEffectPoison(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
     void OnRemove(CGameSprite* pSprite) override;
 };
 
@@ -542,6 +578,7 @@ class CGameEffectRemoveCurse : public CGameEffect {
 public:
     CGameEffectRemoveCurse(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectResistAcid : public CGameEffect {
@@ -583,6 +620,7 @@ class CGameEffectResurrect : public CGameEffect {
 public:
     CGameEffectResurrect(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSaveVsFortitude : public CGameEffect {
@@ -632,12 +670,14 @@ class CGameEffectSparkle : public CGameEffect {
 public:
     CGameEffectSparkle(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSpellMemorizationMage : public CGameEffect {
 public:
     CGameEffectSpellMemorizationMage(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectStoneToFlesh : public CGameEffect {
@@ -645,6 +685,7 @@ public:
     CGameEffectStoneToFlesh();
     CGameEffectStoneToFlesh(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSTR : public CGameEffect {
@@ -715,6 +756,8 @@ class CGameEffectAnimationChange : public CGameEffect {
 public:
     CGameEffectAnimationChange(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    ~CGameEffectAnimationChange() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 
     /* 018C */ int field_18C;
 };
@@ -723,12 +766,14 @@ class CGameEffectBaseAttackBonus : public CGameEffect {
 public:
     CGameEffectBaseAttackBonus(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSlay : public CGameEffect {
 public:
     CGameEffectSlay(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectAlignmentReversal : public CGameEffect {
@@ -779,12 +824,14 @@ class CGameEffectSkillAlchemy : public CGameEffect {
 public:
     CGameEffectSkillAlchemy(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSpellMemoizationCleric : public CGameEffect {
 public:
     CGameEffectSpellMemoizationCleric(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectInfravision : public CGameEffect {
@@ -828,6 +875,7 @@ class CGameEffectSkillUnsummon : public CGameEffect {
 public:
     CGameEffectSkillUnsummon(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
     void DisplayString(CGameSprite* pSprite) override;
 };
 
@@ -849,6 +897,7 @@ class CGameEffectSexChange : public CGameEffect {
 public:
     CGameEffectSexChange(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectAIChange : public CGameEffect {
@@ -1032,6 +1081,7 @@ class CGameEffectLevel : public CGameEffect {
 public:
     CGameEffectLevel(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSTRExtra : public CGameEffect {
@@ -1045,6 +1095,8 @@ class CGameEffectRegeneration : public CGameEffect {
 public:
     CGameEffectRegeneration(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnAdd(CGameSprite* pSprite) override;
 };
 
 class CGameEffectDurationCasting : public CGameEffect {
@@ -1136,24 +1188,28 @@ class CGameEffectCreateWeapon : public CGameEffect {
 public:
     CGameEffectCreateWeapon(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectDestroyWeapon : public CGameEffect {
 public:
     CGameEffectDestroyWeapon(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectEquipWeapon : public CGameEffect {
 public:
     CGameEffectEquipWeapon(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectDither : public CGameEffect {
 public:
     CGameEffectDither(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectDispelInvisible : public CGameEffect {
@@ -1174,6 +1230,7 @@ class CGameEffectShowCreatures : public CGameEffect {
 public:
     CGameEffectShowCreatures(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectMirrorImage : public CGameEffect {
@@ -1194,24 +1251,28 @@ class CGameEffectVisualAnimationEffect : public CGameEffect {
 public:
     CGameEffectVisualAnimationEffect(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectCreateItem : public CGameEffect {
 public:
     CGameEffectCreateItem(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectDestroyItem : public CGameEffect {
 public:
     CGameEffectDestroyItem(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectTeleport : public CGameEffect {
 public:
     CGameEffectTeleport(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectKnock : public CGameEffect {
@@ -1294,6 +1355,7 @@ class CGameEffectPolymorph : public CGameEffect {
 public:
     CGameEffectPolymorph(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectForceVisible : public CGameEffect {
@@ -1321,6 +1383,7 @@ class CGameEffectVisualSpellHit : public CGameEffect {
 public:
     CGameEffectVisualSpellHit(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectPortraitIcon : public CGameEffect {
@@ -1334,6 +1397,7 @@ class CGameEffectReplaceItem : public CGameEffect {
 public:
     CGameEffectReplaceItem(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectDisableButton : public CGameEffect {
@@ -1361,6 +1425,7 @@ class CGameEffectLearnSpell : public CGameEffect {
 public:
     CGameEffectLearnSpell(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectCastSpellPoint : public CGameEffect {
@@ -1386,6 +1451,7 @@ class CGameEffectReplaceSelf : public CGameEffect {
 public:
     CGameEffectReplaceSelf(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectPlayMovie : public CGameEffect {
@@ -1511,6 +1577,7 @@ class CGameEffectAddInnateAbility : public CGameEffect {
 public:
     CGameEffectAddInnateAbility(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectRemoveInnateAbility : public CGameEffect {
@@ -1545,6 +1612,7 @@ class CGameEffectApplyEffect : public CGameEffect {
 public:
     CGameEffectApplyEffect(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSelectiveToHitBonus : public CGameEffect {
@@ -1579,12 +1647,14 @@ class CGameEffectApplyEffectEquipItem : public CGameEffect {
 public:
     CGameEffectApplyEffectEquipItem(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectApplyEffectEquipItemType : public CGameEffect {
 public:
     CGameEffectApplyEffectEquipItemType(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSetDoNoJump : public CGameEffect {
@@ -1640,12 +1710,14 @@ class CGameEffectFeatCleave : public CGameEffect {
 public:
     CGameEffectFeatCleave(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectFindFamiliar : public CGameEffect {
 public:
     CGameEffectFindFamiliar(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSeeInvisible : public CGameEffect {
@@ -1674,30 +1746,35 @@ public:
     CGameEffectFamiliarBlock(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
     BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnLoad(CGameSprite* pSprite) override;
 };
 
 class CGameEffectBounceProjectile : public CGameEffect {
 public:
     CGameEffectBounceProjectile(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectBounceEffect : public CGameEffect {
 public:
     CGameEffectBounceEffect(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectBounceLevel : public CGameEffect {
 public:
     CGameEffectBounceLevel(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectBounceLevelDecrement : public CGameEffect {
 public:
     CGameEffectBounceLevelDecrement(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectImmunityLevelDecrement : public CGameEffect {
@@ -1711,12 +1788,14 @@ class CGameEffectBounceSchool : public CGameEffect {
 public:
     CGameEffectBounceSchool(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectBounceSecondaryType : public CGameEffect {
 public:
     CGameEffectBounceSecondaryType(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectImmunitySchool : public CGameEffect {
@@ -1737,6 +1816,7 @@ class CGameEffectImmunitySpell : public CGameEffect {
 public:
     CGameEffectImmunitySpell(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 
     BOOL Evaluate(CGameSprite* pSprite);
 };
@@ -1745,6 +1825,7 @@ class CGameEffectBounceSpell : public CGameEffect {
 public:
     CGameEffectBounceSpell(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectMinHitPoints : public CGameEffect {
@@ -1786,6 +1867,7 @@ class CGameEffectMaze : public CGameEffect {
 public:
     CGameEffectMaze(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    void OnAdd(CGameSprite* pSprite) override;
     BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
@@ -1793,18 +1875,22 @@ class CGameEffectSecondaryCastList : public CGameEffect {
 public:
     CGameEffectSecondaryCastList(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectVisualEffect : public CGameEffect {
 public:
     CGameEffectVisualEffect(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectLevelDrain : public CGameEffect {
 public:
     CGameEffectLevelDrain(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    void OnAdd(CGameSprite* pSprite) override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectPowerWordSleep : public CGameEffect {
@@ -1818,6 +1904,8 @@ class CGameEffectStoneSkins : public CGameEffect {
 public:
     CGameEffectStoneSkins(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    BOOL UsesDice() override;
 };
 
 class CGameEffectProtectionCircle : public CGameEffect {
@@ -1831,18 +1919,21 @@ class CGameEffectDispelSchool : public CGameEffect {
 public:
     CGameEffectDispelSchool(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectDispelSecondaryType : public CGameEffect {
 public:
     CGameEffectDispelSecondaryType(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectRandomTeleport : public CGameEffect {
 public:
     CGameEffectRandomTeleport(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectImmunitySchoolDecrement : public CGameEffect {
@@ -1856,6 +1947,7 @@ class CGameEffectLevelRestoration : public CGameEffect {
 public:
     CGameEffectLevelRestoration(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectRevealMagic : public CGameEffect {
@@ -1910,7 +2002,9 @@ public:
 class CGameEffectDisguise : public CGameEffect {
 public:
     CGameEffectDisguise(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
+    /* 0000 */ ~CGameEffectDisguise() override;
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 
     /* 018C */ int field_18C;
 };
@@ -2015,7 +2109,7 @@ public:
     /* 0034 */ std::string field_34;
     /* 0044 */ std::string field_44;
     /* 0054 */ int field_54;
-    /* 0058 */ std::set<void*> field_58;
+    /* 0058 */ std::set<LONG> field_58;
 };
 
 class CPersistantEffect84C4C4 : public CPersistantEffect84C4A4 {
@@ -2062,7 +2156,7 @@ public:
     /* 0034 */ std::string field_34;
     /* 0044 */ std::string field_44;
     /* 0054 */ int field_54;
-    /* 0058 */ std::set<void*> field_58;
+    /* 0058 */ std::set<LONG> field_58;
 };
 
 class CPersistantEffect84C484 : public CPersistantEffect84C4B4 {

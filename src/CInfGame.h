@@ -198,6 +198,7 @@ public:
     void sub_5AF420(SHORT nPortrait, DWORD dwPanelId);
     SHORT GetCharacterPortraitNum(LONG nCharacterId);
     SHORT GetFixedOrderCharacterPortraitNum(LONG nCharacterId);
+    void GetFamiliarResRef(BYTE nLevel, BYTE nAlignment, CString& sResRef);
     void RemoveFamiliarResRef(const CResRef& resRef, BYTE nAlignment, BYTE nLevel);
     void RenderPortrait(DWORD portraitId, const CPoint& cpRenderPosition, const CSize& szControl, BOOL bPressed, BOOL reorderHighlight, BOOL selectFromMarker, const CRect& rClip, BOOL bDoubleSize);
     void WorldEngineActivated(CVidMode* pVidMode);
@@ -347,6 +348,7 @@ public:
     void SetFormation(SHORT formation);
     BOOL IsFamiliar(LONG id);
     BOOL IsAlly(LONG id);
+    STRREF GetTrackingText(CGameSprite* pSprite, CString& sAreaName);
 
     static const CString FOGOWAR_RESREF;
     static const CString SAVE_OBJECT_LIST_NAME;

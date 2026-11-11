@@ -3,14 +3,16 @@
 
 #include "mfc.h"
 
-#include "BalDataTypes.h"
-
 #include <list>
 
+#include "BalDataTypes.h"
+
 class CButtonData;
+class CGameAIBase;
 class CGameEffect;
 class CGameObject;
 class CGameSprite;
+class CResRef;
 
 // NOTE: The name is obviously wrong and misleading, but at least it matches
 // file name (which is seen via assertions).
@@ -66,6 +68,7 @@ public:
     static CGameEffect* CreateEffectDisplayString(CGameObject* pObject, int effectAmount, BYTE spellLevel, DWORD savingThrow);
     static CGameEffect* CreateEffectVisualSpellHit(CGameObject* pObject, DWORD dwFlags, BYTE spellLevel, DWORD savingThrow);
     static CGameEffect* CreateEffectHitPoints(CGameObject* pObject, int effectAmount, DWORD duration, BYTE spellLevel, BYTE targetType);
+    static CString sub_5864F0(const CResRef& resRef);
     static CGameEffect* CreateEffectImmunitySpell(CGameObject* pObject, const BYTE* res, DWORD dwFlags, DWORD duration, BYTE spellLevel, BYTE targetType);
     static CGameEffect* CreateEffectRemoveAllOfType(CGameObject* pObject, DWORD dwFlags, BYTE spellLevel);
     static CGameEffect* CreateEffectConfusion(CGameObject* pObject, DWORD duration, BYTE spellLevel, DWORD savingThrow);
@@ -79,7 +82,7 @@ public:
     static BOOLEAN sub_585DA0(CGameSprite* pSprite);
     static CButtonData* CreateButtonData(BYTE* resRef);
     static void sub_5860F0(CGameSprite* pSprite, CGameEffect* pEffect);
-    static std::list<CGameEffect*> sub_586220(CGameSprite* pSprite, const BYTE* resRef, INT nLevel);
+    static std::list<CGameEffect*> GetSpellEffects(CGameAIBase* pCaster, const char* szResRef, BYTE nCasterLevel);
 };
 
 #endif /* ICEWINDMISC_H_ */

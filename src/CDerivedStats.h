@@ -10,6 +10,8 @@
 #include <bitset>
 #include <list>
 #include <set>
+#include <string>
+#include <vector>
 
 // STATE.IDS
 
@@ -384,6 +386,7 @@
 #define IWD_VFX_DEATH_ARMOR 31
 
 class CCreatureFileHeader;
+class CGameEffect;
 class CGameSprite;
 class CGameSpriteGroupedSpellList;
 class CGameSpriteSpells;
@@ -517,6 +520,36 @@ public:
 
 #pragma pack(pop)
 
+// NOTE: Element of the damage reduction list (0x24 bytes in the original,
+// constructed by 0x447B60). Not annotated because the STL layout differs.
+class CDamageReduction {
+public:
+    // 0x447B60
+    CDamageReduction(LONG nAmount, DWORD nEnchantment)
+        : m_nAmount(nAmount)
+        , m_nEnchantment(nEnchantment)
+        , m_pAmountLeft(NULL)
+        , m_sourceCreaturePtr(NULL)
+        , m_sourceEffectPtr(NULL)
+    {
+    }
+
+    void SetSource(LONG* pAmountLeft, CGameSprite* pSourceCreature, CGameEffect* pSourceEffect);
+    LONG Absorb(LONG nDamage);
+
+    LONG m_nAmount;
+    DWORD m_nEnchantment;
+    std::set<int> m_damageTypes;
+    LONG* m_pAmountLeft;
+    CGameSprite* m_sourceCreaturePtr;
+    CGameEffect* m_sourceEffectPtr;
+};
+
+class CDamageReductionList : public std::vector<CDamageReduction> {
+public:
+    LONG Apply(LONG nDamage, LONG nEnchantment, DWORD nDamageType);
+};
+
 class CPersistantEffectListRegenerated : public CTypedPtrList<CPtrList, CPersistantEffect*> {
 public:
     CPersistantEffectListRegenerated();
@@ -583,9 +616,14 @@ public:
     /* 041C */ CImmunitiesProjectile field_41C;
     /* 0438 */ CImmunitiesItemEquipList m_cImmunitiesItemUse;
     /* 0454 */ CImmunitiesItemTypeEquipList m_cImmunitiesItemTypeUse;
-    /* 0490 */ std::list<CDerivedStatsWhenStruck> m_lWhenStruck;
+    // NOTE: At 0x0470 in the original (not annotated because the STL
+    // container layout differs, see known layout mismatches around it).
+    std::set<std::string> m_spellImmunities;
     /* 04AC */ CPtrList field_4AC;
     /* 0480 */ std::set<int> m_naturalImmunities;
+    /* 0490 */ std::list<CDerivedStatsWhenStruck> m_lWhenStruck;
+    // NOTE: At 0x049C in the original (STL layout differs).
+    CDamageReductionList m_damageReduction;
     /* 04C8 */ CPtrList field_4C8;
     /* 04E4 */ CPtrList field_4E4;
     /* 0500 */ CPtrList field_500;

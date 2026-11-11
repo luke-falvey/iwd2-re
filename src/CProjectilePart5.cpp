@@ -110,6 +110,50 @@ void CProjectileArea850078::Virtual94(std::list<LONG>& targets)
     // TODO: Incomplete.
 }
 
+// 0x574A70
+CProjectileArea850114::CProjectileArea850114()
+    : CProjectileArea(256)
+{
+    // NOTE: The original reads the constructor argument from a global at
+    // 0x84F1BC and this value from a constant at 0x84F084.
+    field_2AE = 275;
+}
+
+// 0x574AA0
+void CProjectileArea850114::Virtual94(std::list<LONG>& targets)
+{
+    CGameObject* pObject;
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE)
+        == CGameObjectArray::SUCCESS) {
+        CGameSprite* pSprite = NULL;
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            pSprite = static_cast<CGameSprite*>(pObject);
+        }
+
+        // Lightning can only be called outdoors.
+        if ((pObject->GetArea()->GetHeader()->m_areaType & 0x1) != 0) {
+            if (targets.begin() != targets.end()) {
+                Virtual98(*targets.begin());
+            } else if (pSprite != NULL) {
+                // NOTE: Sprite effect `2` and intensity `0` are BYTE
+                // constants at `0x85BB4B` and `0x85BB4E`.
+                pSprite->StartSpriteEffect(2, 0, 30, FALSE);
+                pSprite->FeedBack(CGameSprite::FEEDBACK_CALLLIGHTNINGEND, 0, 0, 0, -1, 0, 0);
+            }
+        } else {
+            // NOTE: The original does not check `pSprite` for `NULL` here.
+            pSprite->FeedBack(CGameSprite::FEEDBACK_CALLLIGHTNINGEND, 0, 0, 0, -1, 0, 0);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
 // 0x574B80
 CProjectileArea8501B0::CProjectileArea8501B0()
     : CProjectileArea(256)
@@ -223,6 +267,74 @@ CProjectileArea850558::CProjectileArea850558()
 void CProjectileArea850558::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
     // TODO: Incomplete.
+}
+
+// 0x575CD0
+CProjectileArea8505F4::CProjectileArea8505F4(SHORT a1)
+    : CProjectileArea(a1)
+{
+}
+
+// 0x575CF0
+void CProjectileArea8505F4::Virtual94(std::list<LONG>& targets)
+{
+    for (std::list<LONG>::iterator it = targets.begin(); it != targets.end(); ++it) {
+        CGameObject* pObject;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            // NOTE: Stops at the first target it cannot obtain.
+            return;
+        }
+
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE
+            && !static_cast<CGameSprite*>(pObject)->GetDerivedStats()->m_spellStates.test(SPLSTATE_MOLD_TOUCH)) {
+            Virtual98(*it);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            // NOTE: Only the first eligible target is affected.
+            return;
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// 0x575DD0
+CProjectileArea850690::CProjectileArea850690(SHORT a1)
+    : CProjectileArea(a1)
+{
+}
+
+// 0x575DF0
+void CProjectileArea850690::Virtual94(std::list<LONG>& targets)
+{
+    for (std::list<LONG>::iterator it = targets.begin(); it != targets.end(); ++it) {
+        CGameObject* pObject;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE
+                && !static_cast<CGameSprite*>(pObject)->GetDerivedStats()->m_spellStates.test(SPLSTATE_SHROUD_OF_FLAME)) {
+                Virtual98(*it);
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
 }
 
 // 0x575EA0

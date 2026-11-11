@@ -485,6 +485,8 @@ public:
     /* 00C8 */ virtual void ProcessPendingTriggers();
 
     void AddBlood(SHORT nHeight, SHORT nDirection, SHORT nType);
+    void sub_6F5330();
+    void Shatter(BYTE nType);
     void RemoveReplacementFromArea();
     void sub_6F50A0();
     void AIUpdateWalk();
@@ -768,6 +770,8 @@ public:
     INT GetRacialFavoredClass(DWORD& nSpecialization);
     INT GetMulticlassingPenalty();
     void SetColorRange(BYTE rangeValue);
+    void sub_756770(CPoint& ptDelta, const CPoint& ptTarget);
+    void DisplaySaveString(DWORD dwSaveType, BYTE bSaved, INT nRoll, INT nBonus, const CString& sSpellName);
     void DisplayFeats(CUIControlTextDisplay* pText);
     void DisplaySkills(CUIControlTextDisplay* pText);
     SHORT JumpToArea(CString areaName, const CPoint& dest, SHORT facingDirection, SHORT delay);
@@ -1077,6 +1081,7 @@ public:
     /* 70FF */ BOOLEAN field_70FF;
     /* 7100 */ BOOLEAN field_7100;
     /* 7101 */ BOOLEAN field_7101;
+    /* 7102 */ CString m_sLastHitSound;
     /* 7106 */ int field_7106;
     /* 710A */ SHORT field_710A;
     /* 710C */ SHORT field_710C;

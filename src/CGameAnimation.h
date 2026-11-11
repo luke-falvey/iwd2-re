@@ -25,6 +25,7 @@ public:
     BOOLEAN CanLieDown();
     BOOLEAN DetectedByInfravision();
     BYTE GetColorBlood();
+    BYTE GetColorChunks();
     BYTE GetListType();
     BYTE GetMoveScale();
     BYTE GetMoveScaleDefault();
@@ -39,6 +40,7 @@ public:
     DWORD GetSndWalkFreq();
     BOOL IsFalseColor();
     BOOL IsMirroring();
+    BOOL IsInvulnerable();
     void SetAnimationType(USHORT animationID, BYTE* colorRangeValues, WORD facing);
     void ClearColorEffectsAll();
     void SetColorEffect(BYTE effectType, BYTE colorRange, COLORREF tintColor, BYTE periodLength);

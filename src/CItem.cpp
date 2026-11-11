@@ -539,7 +539,7 @@ void CItem::Unequip(CGameSprite* pSprite, LONG slotNum, BOOL recalculateEffects,
 
             // NOTE: 2 is the "while equipped" duration type (0x8491AC).
             if (pEffect->m_durationType == 2) {
-                pSprite->m_equipedEffectList.sub_4C0830(pEffect);
+                pSprite->m_equipedEffectList.RemoveMatchingEffect(pEffect);
             }
 
             if (pEffect != NULL) {
