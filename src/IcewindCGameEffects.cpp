@@ -2805,6 +2805,555 @@ CGameEffect* IcewindCGameEffectApplyEffectsList::Copy()
     return copy;
 }
 
+// 0x5675E0
+BOOL IcewindCGameEffectApplyEffectsList::ApplyEffect(CGameSprite* pSprite)
+{
+    CGameObject* pSource;
+    BYTE rc;
+
+    m_done = TRUE;
+
+    switch (m_dwFlags) {
+    case 0:
+        break;
+    case 1:
+        if (!IcewindMisc::IsUndead(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 2:
+        if (IcewindMisc::IsUndead(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 3:
+        if (!IcewindMisc::IsImmuneToFire(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 4:
+        if (IcewindMisc::IsImmuneToFire(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 5:
+        if (!IcewindMisc::IsHumanoid(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 6:
+        if (IcewindMisc::IsHumanoid(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 7:
+        if (!IcewindMisc::IsAnimal(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 8:
+        if (IcewindMisc::IsAnimal(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 9:
+        if (!IcewindMisc::IsElemental(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 10:
+        if (IcewindMisc::IsElemental(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 11:
+        if (!IcewindMisc::IsFungus(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 12:
+        if (IcewindMisc::IsFungus(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 13:
+        if (!IcewindMisc::IsLarge(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 14:
+        if (IcewindMisc::IsLarge(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 15:
+        if (!IcewindMisc::IsElf(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 16:
+        if (IcewindMisc::IsElf(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 17:
+        if (!IcewindMisc::IsUmberhulk(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 18:
+        if (IcewindMisc::IsUmberhulk(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 19:
+        if (!IcewindMisc::IsHalfElf(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 20:
+        if (IcewindMisc::IsHalfElf(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 21:
+        if (!IcewindMisc::IsHumanoid(pSprite) && !IcewindMisc::IsAnimal(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 22:
+        if (IcewindMisc::IsHumanoid(pSprite) == TRUE || IcewindMisc::IsAnimal(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 23:
+        if (!IcewindMisc::IsBlind(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 24:
+        if (IcewindMisc::IsBlind(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 25:
+        if (!IcewindMisc::IsImmuneToCold(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 26:
+        if (IcewindMisc::IsImmuneToCold(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 27:
+        if (!IcewindMisc::IsGolem(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 28:
+        if (IcewindMisc::IsGolem(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 29:
+        if (!IcewindMisc::IsMinotaur(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 30:
+        if (IcewindMisc::IsMinotaur(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 31:
+        if (!IcewindMisc::IsUndead(pSprite) && !IcewindMisc::IsFungus(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 32:
+        if (IcewindMisc::IsUndead(pSprite) == TRUE || IcewindMisc::IsFungus(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 33:
+        if (!IcewindMisc::IsGood(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 34:
+        if (IcewindMisc::IsGood(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 35:
+        if (!IcewindMisc::IsNeutral(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 36:
+        if (IcewindMisc::IsNeutral(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 37:
+        if (!IcewindMisc::IsEvil(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 38:
+        if (IcewindMisc::IsEvil(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 39:
+        if (!IcewindMisc::IsPaladin(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 40:
+        if (IcewindMisc::IsPaladin(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 43:
+        if (pSprite->GetId() != m_sourceID) {
+            return TRUE;
+        }
+        break;
+    case 44:
+        if (pSprite->GetId() == m_sourceID) {
+            return TRUE;
+        }
+        break;
+    case 45:
+        if (!IcewindMisc::IsAcquatic(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 46:
+        if (IcewindMisc::IsAcquatic(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 47:
+        if (!IcewindMisc::IsLiving(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 48:
+        if (IcewindMisc::IsLiving(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 53:
+        if (!IcewindMisc::IsImmuneToFire(pSprite) && !IcewindMisc::IsImmuneToCold(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 54:
+        if (IcewindMisc::IsImmuneToFire(pSprite) == TRUE || IcewindMisc::IsImmuneToCold(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 55:
+        if (!IcewindMisc::sud_585070(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 56:
+        if (IcewindMisc::sud_585070(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 57:
+        if (!IcewindMisc::IsMale(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 58:
+        if (IcewindMisc::IsMale(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 59:
+        if (!IcewindMisc::IsLawful(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 60:
+        if (IcewindMisc::IsLawful(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 61:
+        if (!IcewindMisc::IsChaotic(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 62:
+        if (IcewindMisc::IsChaotic(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    case 63:
+        if (pSprite->GetAIType().m_nRace != CAIOBJECTTYPE_R_ORC) {
+            return TRUE;
+        }
+        break;
+    case 64:
+        if (pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_ORC) {
+            return TRUE;
+        }
+        break;
+    case 65:
+        if (!pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_DEAFENED]) {
+            return TRUE;
+        }
+        break;
+    case 66:
+        if (pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_DEAFENED]) {
+            return TRUE;
+        }
+        break;
+    case 71:
+        if (pSprite->GetBaseStats()->m_hitPoints <= m_effectAmount) {
+            return TRUE;
+        }
+        break;
+    case 72:
+        if (pSprite->GetBaseStats()->m_hitPoints >= m_effectAmount) {
+            return TRUE;
+        }
+        break;
+    case 73:
+        if (pSprite->GetAIType().m_nRace != CAIOBJECTTYPE_R_ELF
+            || pSprite->GetAIType().m_nSubRace != CAIOBJECTTYPE_SUBRACE_ELF_DROW) {
+            return TRUE;
+        }
+        break;
+    case 74:
+        if (pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_ELF
+            && pSprite->GetAIType().m_nSubRace == CAIOBJECTTYPE_SUBRACE_ELF_DROW) {
+            return TRUE;
+        }
+        break;
+    case 75:
+        if (pSprite->GetAIType().m_nRace != CAIOBJECTTYPE_R_DWARF
+            || pSprite->GetAIType().m_nSubRace != CAIOBJECTTYPE_SUBRACE_DWARF_GRAY) {
+            return TRUE;
+        }
+        break;
+    case 76:
+        if (pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_DWARF
+            && pSprite->GetAIType().m_nSubRace == CAIOBJECTTYPE_SUBRACE_DWARF_GRAY) {
+            return TRUE;
+        }
+        break;
+    case 77:
+        if ((pSprite->GetBaseStats()->m_generalState & STATE_SUMMONED_CREATURE) == 0) {
+            return TRUE;
+        }
+        break;
+    case 78:
+        if ((pSprite->GetBaseStats()->m_generalState & STATE_SUMMONED_CREATURE) != 0) {
+            return TRUE;
+        }
+        break;
+    case 79:
+        if (pSprite->GetAIType().m_nRace != CAIOBJECTTYPE_R_GOBLIN) {
+            return TRUE;
+        }
+        break;
+    case 80:
+        if (pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_GOBLIN) {
+            return TRUE;
+        }
+        break;
+    case 81:
+        if (pSprite->GetAIType().m_nRace != CAIOBJECTTYPE_R_GIANT) {
+            return TRUE;
+        }
+        break;
+    case 82:
+        if (pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_GIANT) {
+            return TRUE;
+        }
+        break;
+    case 83:
+        if (pSprite->GetAIType().m_nRace != CAIOBJECTTYPE_R_TROLL) {
+            return TRUE;
+        }
+        break;
+    case 84:
+        if (pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_TROLL) {
+            return TRUE;
+        }
+        break;
+    case 85:
+        if (pSprite->GetAIType().m_nRace != CAIOBJECTTYPE_R_190) {
+            return TRUE;
+        }
+        break;
+    case 86:
+        if (pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_190) {
+            return TRUE;
+        }
+        break;
+    case 87:
+        if (pSprite->GetAIType().m_nRace != CAIOBJECTTYPE_R_HUMAN) {
+            return TRUE;
+        }
+        break;
+    case 88:
+        if (pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_HUMAN) {
+            return TRUE;
+        }
+        break;
+    case 89:
+        if (pSprite->GetAIType().m_nRace != CAIOBJECTTYPE_R_YUANTI) {
+            return TRUE;
+        }
+        break;
+    case 90:
+        if (pSprite->GetAIType().m_nRace == CAIOBJECTTYPE_R_YUANTI) {
+            return TRUE;
+        }
+        break;
+    case 91:
+        if (!IcewindMisc::IsOutsider(pSprite)) {
+            return TRUE;
+        }
+        break;
+    case 92:
+        if (IcewindMisc::IsOutsider(pSprite) == TRUE) {
+            return TRUE;
+        }
+        break;
+    default: {
+        // NOTE: The original stores `pSource` in the stack slot of
+        // `pSprite`, which is kept in a register.
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pSource,
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            return FALSE;
+        }
+
+        BOOL bApply = TRUE;
+        switch (m_dwFlags) {
+        case 41:
+            if (!IcewindMisc::IsGoodEvilSame(pSprite, static_cast<CGameSprite*>(pSource))) {
+                bApply = FALSE;
+            }
+            break;
+        case 42:
+            if (IcewindMisc::IsGoodEvilSame(pSprite, static_cast<CGameSprite*>(pSource)) == TRUE) {
+                bApply = FALSE;
+            }
+            break;
+        case 49:
+            if (!IcewindMisc::sub_585230(pSprite, static_cast<CGameSprite*>(pSource))) {
+                bApply = FALSE;
+            }
+            break;
+        case 50:
+            if (IcewindMisc::sub_585230(pSprite, static_cast<CGameSprite*>(pSource)) == TRUE) {
+                bApply = FALSE;
+            }
+            break;
+        case 51:
+            if (!IcewindMisc::sub_5852A0(pSprite, static_cast<CGameSprite*>(pSource))) {
+                bApply = FALSE;
+            }
+            break;
+        case 52:
+            if (IcewindMisc::sub_5852A0(pSprite, static_cast<CGameSprite*>(pSource)) == TRUE) {
+                bApply = FALSE;
+            }
+            break;
+        case 67:
+            if (!IcewindMisc::IsAlignmentSame(pSprite, static_cast<CGameSprite*>(pSource))) {
+                bApply = FALSE;
+            }
+            break;
+        case 68:
+            if (IcewindMisc::IsAlignmentSame(pSprite, static_cast<CGameSprite*>(pSource)) == TRUE) {
+                bApply = FALSE;
+            }
+            break;
+        case 69:
+            if (IcewindMisc::IsAlignmentSame(pSprite, static_cast<CGameSprite*>(pSource)) != TRUE
+                || IcewindMisc::sub_585230(pSprite, static_cast<CGameSprite*>(pSource)) != TRUE) {
+                bApply = FALSE;
+            }
+            break;
+        case 70:
+            if (IcewindMisc::IsAlignmentSame(pSprite, static_cast<CGameSprite*>(pSource)) == TRUE
+                && IcewindMisc::sub_585230(pSprite, static_cast<CGameSprite*>(pSource)) == TRUE) {
+                bApply = FALSE;
+            }
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+            // __LINE__: 5802
+            UTIL_ASSERT_MSG(FALSE, "Out-of-range value detected in IcewindCGameEffectApplyEffectsList (-rjf)");
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        if (!bApply) {
+            return TRUE;
+        }
+        break;
+    }
+    }
+
+    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pSource,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pSource),
+        reinterpret_cast<const char*>(m_res.GetResRef()),
+        static_cast<BYTE>(m_casterLevel));
+    for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+        CGameEffect* pEffect = *it;
+        pEffect->m_sourceRes = m_sourceRes;
+        pEffect->m_target = m_target;
+        pEffect->m_casterLevel = m_casterLevel;
+
+        if (pEffect->m_targetType == 1) {
+            if (pSource->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                static_cast<CGameAIBase*>(pSource)->AddEffect(pEffect,
+                    CGameAIBase::EFFECT_LIST_TIMED,
+                    FALSE,
+                    TRUE);
+            }
+        } else {
+            pSprite->AddEffect(pEffect,
+                CGameAIBase::EFFECT_LIST_TIMED,
+                FALSE,
+                TRUE);
+        }
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4A0A60
@@ -3002,6 +3551,75 @@ CGameEffect* IcewindCGameEffectFireshield::Copy()
     return copy;
 }
 
+// 0x568D00
+BOOL IcewindCGameEffectFireshield::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_secondaryType) {
+        DisplayStringRef(pSprite, 736); // "Fireshield"
+    }
+
+    switch (m_dwFlags) {
+    case 0:
+        if (pSprite->GetDerivedStats()->m_spellStates.test(SPLSTATE_RED_FIRESHIELD) == true) {
+            return TRUE;
+        }
+
+        // NOTE: Uninline.
+        AddPortraitIcon(pSprite, 121);
+
+        pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_RED_FIRESHIELD, true);
+
+        // NOTE: Using `set` (with bounds check).
+        pSprite->GetDerivedStats()->m_visualEffects.set(IWD_VFX_FIRE_SHIELD_RED, true);
+        pSprite->GetDerivedStats()->m_visualEffects.set(IWD_VFX_28, true);
+
+        AddWhenStruck(pSprite);
+        break;
+    case 1:
+        if (pSprite->GetDerivedStats()->m_spellStates.test(SPLSTATE_BLUE_FIRESHIELD) == true) {
+            return TRUE;
+        }
+
+        // NOTE: Uninline.
+        AddPortraitIcon(pSprite, 122);
+
+        pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_BLUE_FIRESHIELD, true);
+
+        // NOTE: Using `set` (with bounds check).
+        pSprite->GetDerivedStats()->m_visualEffects.set(IWD_VFX_FIRE_SHIELD_BLUE, true);
+        pSprite->GetDerivedStats()->m_visualEffects.set(IWD_VFX_29, true);
+
+        AddWhenStruck(pSprite);
+        break;
+    }
+
+    m_done = FALSE;
+
+    return TRUE;
+}
+
+// NOTE: Inlined in both cases of `ApplyEffect`, identical to
+// `IcewindCGameEffectWhenStruck::ApplyEffect`.
+void IcewindCGameEffectFireshield::AddWhenStruck(CGameSprite* pSprite)
+{
+    CWhenStruck whenStruck;
+    whenStruck.m_sourceRes = m_sourceRes;
+    whenStruck.m_res = m_res;
+    whenStruck.m_casterLevel = static_cast<BYTE>(m_casterLevel);
+    whenStruck.m_target = m_target;
+    pSprite->GetDerivedStats()->m_whenStruckList.push_back(whenStruck);
+
+    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+        CMessage* message = new CMessage117(m_sourceRes,
+            m_res,
+            static_cast<BYTE>(m_casterLevel),
+            m_target,
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4A0E20
@@ -3018,6 +3636,29 @@ CGameEffect* IcewindCGameEffectDeathWard::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x569090
+BOOL IcewindCGameEffectDeathWard::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_secondaryType) {
+        DisplayStringRef(pSprite, 1309); // "Death Ward"
+    }
+
+    if (pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_DEATH_WARD]) {
+        return TRUE;
+    }
+
+    pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_DEATH_WARD] = true;
+
+    // NOTE: Uninline.
+    AddPortraitIcon(pSprite, 87);
+
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(ICEWIND_CGAMEEFFECT_MAGIC_DEATH);
+
+    m_done = FALSE;
+
+    return TRUE;
 }
 
 // 0x4BAF90
@@ -3089,7 +3730,7 @@ CGameEffect* IcewindCGameEffectVisualEffect::Copy()
     return copy;
 }
 
-// 0x569320
+// 0x5692D0
 BOOL IcewindCGameEffectVisualEffect::ApplyEffect(CGameSprite* pSprite)
 {
     // NOTE: Using `set` (with bounds check).
@@ -3222,6 +3863,57 @@ CGameEffect* IcewindCGameEffectBleedingWounds::Copy()
     return copy;
 }
 
+// 0x569A30
+BOOL IcewindCGameEffectBleedingWounds::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_secondaryType) {
+        DisplayStringRef(pSprite, 26877); // "Bleeding Wound"
+    }
+
+    // NOTE: Uninline.
+    AddPortraitIcon(pSprite, 85);
+
+    if (m_secondaryType != 0) {
+        m_special = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+    }
+
+    // NOTE: Original reads it from a constant at 0x8491AA.
+    DWORD duration = m_durationType != 1 ? m_duration : 0;
+
+    CPersistantEffect84C420* pEffect;
+    switch (m_dwFlags) {
+    case 0:
+        pEffect = new CPersistantEffect84C420(0x20000000,
+            m_effectAmount,
+            105,
+            m_special,
+            duration);
+        break;
+    case 1:
+        pEffect = new CPersistantEffect84C420(0x20000000,
+            m_effectAmount,
+            15,
+            m_special,
+            duration);
+        break;
+    case 2:
+        pEffect = new CPersistantEffect84C420(0x20000000,
+            1,
+            15 * m_effectAmount,
+            m_special,
+            duration);
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+        // __LINE__: 6408
+        UTIL_ASSERT(FALSE);
+    }
+
+    pSprite->GetDerivedStats()->m_cRegeneratedPersistantEffectList.AddTail(pEffect);
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4A13C0
@@ -3238,6 +3930,95 @@ CGameEffect* IcewindCGameEffectAreaOfEffect::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x569470
+BOOL IcewindCGameEffectAreaOfEffect::ApplyEffect(CGameSprite* pSprite)
+{
+    if (IcewindMisc::IsDead(pSprite) == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    switch (m_dwFlags) {
+    case 0:
+    case 2: {
+        CGameObject* pSource;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pSource,
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            m_done = TRUE;
+            return TRUE;
+        }
+
+        CProjectileArea* pProjectile = new CProjectileArea(static_cast<SHORT>(m_effectAmount));
+
+        if (m_dwFlags == 2) {
+            pProjectile->field_64E.insert(pSprite->GetId());
+        }
+
+        std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pSource),
+            reinterpret_cast<const char*>(m_res.GetResRef()),
+            1);
+        for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+            (*it)->m_sourceRes = m_res;
+            pProjectile->AddEffect(*it);
+        }
+
+        pProjectile->Fire(pSprite->GetArea(),
+            pSource->GetId(),
+            pSprite->GetId(),
+            pSprite->GetPos(),
+            0,
+            0);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        m_done = TRUE;
+        break;
+    }
+    case 1:
+    case 3: {
+        if (m_secondaryType != 0) {
+            m_special = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+        }
+
+        CPersistantEffect84C4B4* pEffect;
+
+        // NOTE: Original reads it from a constant at 0x8491AA.
+        if (m_durationType == 1) {
+            pEffect = new CPersistantEffect84C4B4(m_res.GetResRefStr(),
+                m_effectAmount,
+                105,
+                m_special,
+                0);
+        } else {
+            pEffect = new CPersistantEffect84C4B4(m_res.GetResRefStr(),
+                m_effectAmount,
+                105,
+                m_special,
+                m_duration);
+        }
+
+        pEffect->m_sourceID = m_sourceID;
+        strcpy(reinterpret_cast<char*>(pEffect->field_29), m_sourceRes.GetResRefStr());
+
+        if (m_dwFlags == 3) {
+            // NOTE: The original set holds signed object ids.
+            pEffect->field_58.insert(reinterpret_cast<void*>(pSprite->GetId()));
+        }
+
+        pSprite->GetDerivedStats()->m_cRegeneratedPersistantEffectList.AddTail(pEffect);
+        break;
+    }
+    }
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -3558,6 +4339,64 @@ CGameEffect* IcewindCGameEffectAegis::Copy()
     return copy;
 }
 
+// 0x56A230
+BOOL IcewindCGameEffectAegis::ApplyEffect(CGameSprite* pSprite)
+{
+    if (pSprite->GetDerivedStats()->m_spellStates.test(SPLSTATE_AEGIS) == true) {
+        return TRUE;
+    }
+
+    pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_AEGIS, true);
+
+    // NOTE: Uninline.
+    AddPortraitIcon(pSprite, 119);
+
+    pSprite->GetDerivedStats()->m_nResistFire += 15;
+    pSprite->GetDerivedStats()->m_nResistCold += 15;
+    pSprite->GetDerivedStats()->m_nResistElectricity += 15;
+    pSprite->GetDerivedStats()->m_nResistAcid += 15;
+
+    sub_4C3F30(pSprite, 5);
+
+    pSprite->GetDerivedStats()->m_nResistMagic += 3;
+    pSprite->GetDerivedStats()->m_nSaveVSFortitude += 2;
+    pSprite->GetDerivedStats()->m_nSaveVSReflex += 2;
+    pSprite->GetDerivedStats()->m_nSaveVSWill += 2;
+
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_STONESKINS);
+
+    if (m_secondaryType) {
+        m_effectAmount = 8;
+    }
+
+    pSprite->GetDerivedStats()->m_nStoneSkins = max(pSprite->GetDerivedStats()->m_nStoneSkins, m_effectAmount);
+    if (pSprite->GetDerivedStats()->m_nStoneSkins > 0) {
+        pSprite->SetColorRange(14);
+    }
+
+    pSprite->GetDerivedStats()->m_nResistCrushing += 10;
+    pSprite->GetDerivedStats()->m_nResistPiercing += 10;
+    pSprite->GetDerivedStats()->m_nResistSlashing += 10;
+
+    // NOTE: Using `set` (with bounds check).
+    pSprite->GetDerivedStats()->m_visualEffects.set(IWD_VFX_MINOR_GLOBE_OF_INVULNERABILITY, true);
+
+    pSprite->GetDerivedStats()->field_1E0 = 1;
+    pSprite->GetDerivedStats()->field_1E4 = 1;
+    pSprite->GetDerivedStats()->field_1E8 = 1;
+
+    AddColorEffect(pSprite, 128, 96, 96, 30);
+
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_ENTANGLE);
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_GREASEPOOL);
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_WEBHOLD);
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_HOLDCREATURE);
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_SLOW);
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(CGAMEEFFECT_MOVEMENTRATE_176);
+
+    return TRUE;
+}
+
 // 0x56B6E0
 void IcewindCGameEffectAegis::OnRemove(CGameSprite* pSprite)
 {
@@ -3622,6 +4461,29 @@ CGameEffect* IcewindCGameEffectWhenStruck::Copy()
     return copy;
 }
 
+// 0x56A5A0
+BOOL IcewindCGameEffectWhenStruck::ApplyEffect(CGameSprite* pSprite)
+{
+    CWhenStruck whenStruck;
+    whenStruck.m_sourceRes = m_sourceRes;
+    whenStruck.m_res = m_res;
+    whenStruck.m_casterLevel = static_cast<BYTE>(m_casterLevel);
+    whenStruck.m_target = m_target;
+    pSprite->GetDerivedStats()->m_whenStruckList.push_back(whenStruck);
+
+    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+        CMessage* message = new CMessage117(m_sourceRes,
+            m_res,
+            static_cast<BYTE>(m_casterLevel),
+            m_target,
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4A1C30
@@ -3638,6 +4500,48 @@ CGameEffect* IcewindCGameEffectProjectile::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x56A730
+BOOL IcewindCGameEffectProjectile::ApplyEffect(CGameSprite* pSprite)
+{
+    CGameObject* pSource;
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pSource,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    CProjectile* pProjectile = CProjectile::DecodeProjectile(static_cast<WORD>(m_dwFlags + 1), pSprite, FALSE);
+
+    std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pSource),
+        reinterpret_cast<const char*>(m_res.GetResRef()),
+        1);
+    for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+        (*it)->m_sourceRes = m_res;
+        (*it)->m_target = m_target;
+        (*it)->m_casterLevel = m_casterLevel;
+        pProjectile->AddEffect(*it);
+    }
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pSource->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        0,
+        0);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceID,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -3801,6 +4705,35 @@ CGameEffect* IcewindCGameEffectPersistantEffect::Copy()
     return copy;
 }
 
+// 0x56AC20
+BOOL IcewindCGameEffectPersistantEffect::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_secondaryType != 0) {
+        m_special = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+    }
+
+    CPersistantEffect84C4C4* pEffect;
+
+    // NOTE: Original reads it from a constant at 0x8491AA.
+    if (m_durationType == 1) {
+        pEffect = new CPersistantEffect84C4C4(m_res.GetResRefStr(),
+            15 * m_effectAmount,
+            m_special,
+            0);
+    } else {
+        pEffect = new CPersistantEffect84C4C4(m_res.GetResRefStr(),
+            15 * m_effectAmount,
+            m_special,
+            m_duration);
+    }
+
+    pEffect->m_sourceID = m_sourceID;
+    strcpy(reinterpret_cast<char*>(pEffect->field_29), m_sourceRes.GetResRefStr());
+    pSprite->GetDerivedStats()->m_cRegeneratedPersistantEffectList.AddTail(pEffect);
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4A20E0
@@ -3819,6 +4752,34 @@ CGameEffect* IcewindCGameEffectDamageReduction::Copy()
     return copy;
 }
 
+// 0x56ADC0
+BOOL IcewindCGameEffectDamageReduction::ApplyEffect(CGameSprite* pSprite)
+{
+    LONG nAmount;
+    if (m_effectAmount == 0) {
+        if (m_dwFlags == 6) {
+            m_dwFlags = 3;
+        }
+        nAmount = m_dwFlags * 5;
+    } else {
+        // FIXME: The original leaves the amount uninitialized here (the
+        // compiler reuses the stack slot of `pSprite`), so `m_effectAmount`
+        // is never used.
+        nAmount = reinterpret_cast<LONG>(pSprite);
+    }
+
+    CDamageReduction damageReduction(nAmount, m_dwFlags);
+    damageReduction.m_damageTypes.insert(0);
+    damageReduction.m_damageTypes.insert(0x100000);
+    damageReduction.m_damageTypes.insert(0x1000000);
+    damageReduction.m_damageTypes.insert(0x2000000);
+    damageReduction.m_damageTypes.insert(0x4000000);
+    damageReduction.m_damageTypes.insert(0x8000000);
+    pSprite->GetDerivedStats()->m_damageReduction.push_back(damageReduction);
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x4A21D0
@@ -3835,6 +4796,17 @@ CGameEffect* IcewindCGameEffectProtectionFromArrows::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x56AF80
+BOOL IcewindCGameEffectProtectionFromArrows::ApplyEffect(CGameSprite* pSprite)
+{
+    CDamageReduction damageReduction(10, m_dwFlags);
+    damageReduction.m_damageTypes.insert(0x4000000);
+    damageReduction.m_damageTypes.insert(0x2000000);
+    pSprite->GetDerivedStats()->m_damageReduction.push_back(damageReduction);
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -3934,6 +4906,114 @@ CGameEffect* IcewindCGameEffectRestoration::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x56B240
+BOOL IcewindCGameEffectRestoration::ApplyEffect(CGameSprite* pSprite)
+{
+    if ((pSprite->GetDerivedStats()->m_generalState & STATE_DISEASED) != 0) {
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 13);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 14);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 15);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 4);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 5);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 6);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 7);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 8);
+        RemoveAllOfType(pSprite, CGAMEEFFECT_DISEASE, 9);
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+    // __LINE__: 7075
+    UTIL_ASSERT(pSprite != NULL);
+
+    POSITION pos = pSprite->GetTimedEffectList()->GetHeadPosition();
+    while (pos != NULL) {
+        CGameEffect* pEffect = pSprite->GetTimedEffectList()->GetNext(pos);
+        if (IsAbilityDrain(pEffect, pSprite) == TRUE) {
+            pSprite->GetTimedEffectList()->RemoveMatchingEffect(pEffect);
+        }
+    }
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    pGame->UpdatePortrait(pGame->GetCharacterPortraitNum(pSprite->GetId()), 1);
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
+// 0x56B340
+BOOLEAN IcewindCGameEffectRestoration::IsAbilityDrain(CGameEffect* pEffect, CGameSprite* pSprite)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+    // __LINE__: 7096
+    UTIL_ASSERT(pEffect != NULL);
+
+    if (pEffect->m_effectID == CGAMEEFFECT_STR
+        || pEffect->m_effectID == CGAMEEFFECT_DEX
+        || pEffect->m_effectID == CGAMEEFFECT_CON
+        || pEffect->m_effectID == CGAMEEFFECT_INT
+        || pEffect->m_effectID == CGAMEEFFECT_WIS
+        || pEffect->m_effectID == CGAMEEFFECT_CHR) {
+        LONG nStat;
+
+        switch (pEffect->m_dwFlags) {
+        case 0:
+            if (pEffect->m_effectAmount < 0) {
+                return TRUE;
+            }
+            // FALLTHROUGH
+        case 1:
+            switch (pEffect->m_effectID) {
+            case CGAMEEFFECT_STR:
+                nStat = pSprite->m_tempStats.m_nSTR;
+                break;
+            case CGAMEEFFECT_DEX:
+                nStat = pSprite->m_tempStats.m_nDEX;
+                break;
+            case CGAMEEFFECT_CON:
+                nStat = pSprite->m_tempStats.m_nCON;
+                break;
+            case CGAMEEFFECT_INT:
+                nStat = pSprite->m_tempStats.m_nINT;
+                break;
+            case CGAMEEFFECT_WIS:
+                nStat = pSprite->m_tempStats.m_nWIS;
+                break;
+            case CGAMEEFFECT_CHR:
+                nStat = pSprite->m_tempStats.m_nCHR;
+                break;
+            default:
+                // NOTE: The original compares with garbage after the
+                // assertion.
+                nStat = 0;
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+                // __LINE__: 7123
+                UTIL_ASSERT(FALSE);
+            }
+
+            if (pEffect->m_effectAmount < nStat) {
+                return TRUE;
+            }
+            // FALLTHROUGH
+        case 2:
+            if (pEffect->m_effectAmount < 100) {
+                return TRUE;
+            }
+            // FALLTHROUGH
+        default:
+            // NOTE: Also reached by the cases above when the effect is not
+            // a drain (original behaviour).
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+            // __LINE__: 7133
+            UTIL_ASSERT(FALSE);
+        }
+    }
+
+    return FALSE;
 }
 
 // -----------------------------------------------------------------------------
