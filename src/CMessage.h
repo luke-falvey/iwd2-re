@@ -239,12 +239,18 @@ public:
     static const BYTE MSG_SUBTYPE_MPSYNCH_REQUEST;
     static const BYTE MSG_SUBTYPE_MPSYNCH_REPLY;
 
+    static const BYTE MSG_TYPE_MAPWORLD;
+    static const BYTE MSG_SUBTYPE_MAPWORLD_REQUEST;
+
     static const BYTE MSG_TYPE_VERSION;
     static const BYTE MSG_SUBTYPE_VERSION_SERVER;
     static const BYTE VERSION_NUM_FIELDS;
 
     static const BYTE MSG_TYPE_LEAVEAREALUA;
     static const BYTE MSG_SUBTYPE_LEAVEAREALUA_PERMIT_REQUEST;
+    static const BYTE LEAVEAREALUA_REPLY_WAITING;
+    static const BYTE LEAVEAREALUA_REPLY_PERMITTED;
+    static const BYTE LEAVEAREALUA_REPLY_BUSY;
 
     static const BYTE MSG_TYPE_LEAVEAREANAME;
     static const BYTE MSG_SUBTYPE_LEAVEAREANAME_PERMIT_REQUEST;
@@ -301,6 +307,7 @@ public:
     BOOL ObjectControlRequest(LONG localObjectID);
     BOOL ObjectControl();
     BOOLEAN OnSwapItemRequest(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN CharacterPartyOrderRequest();
     BOOLEAN SendChatMessage(CString& sChatMessage);
     BOOLEAN OnChatMessage(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     void SetSignalDefaultSecondsToTimeout();
@@ -328,6 +335,7 @@ public:
     BOOLEAN SendChapterAnnounceToServer(BYTE nChapter, CResRef cResRef);
     BOOLEAN ChapterAnnounceStatus(BYTE nChapter, CResRef cResRef);
     BOOLEAN SendLeaveAreaLUAPanic(CPoint ptStart, LONG nFace, CString sArea, CString sParchment);
+    BOOLEAN SendMapWorldRequestToServer(LONG nLeavingEdge);
     BOOLEAN SendMapWorldCancelRequestToServer();
     BOOLEAN SendMapWorldAnnounceStatus(BOOLEAN bActive, PLAYER_ID idController, LONG nLeavingEdge);
     BOOLEAN SendMapWorldRevealArea(CString sAreaResRef);
@@ -337,6 +345,7 @@ public:
     void WeatherBroadcast(WORD wWeatherFlags);
     void TimeSynchBroadcast(ULONG nGameTime, BOOLEAN bCompressTime);
     void TimeChangeToServer(ULONG deltaTime);
+    BYTE LeaveAreaLuaRequestToServer(LONG nCharacterId, CPoint ptStart, LONG nFace, CString sArea, CString sParchment);
     BOOLEAN OnLeaveAreaLuaRequestToServer(INT nMsgFrom, BYTE* pByteMessage, DWORD dwSize);
     BOOLEAN OnLeaveAreaNameRequestToServer(INT nMsgFrom, BYTE* pByteMessage, DWORD dwSize);
     void CleanLeaveAreaLuaRequest();

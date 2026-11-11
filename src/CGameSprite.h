@@ -446,6 +446,8 @@ public:
     static BOOLEAN SHOW_CHARACTER_HP;
     static BOOLEAN GRAVITY_IS_DOWN;
     static INT m_bRollFeedbackEnabled;
+    static const LONG dword_84C7B8;
+    static BOOLEAN byte_8F9AF4;
     static CAIAction m_aiDoAction;
 
     CGameSprite(BYTE* pCreature, LONG creatureSize, int a3, WORD type, DWORD expirationTime, WORD huntingRange, WORD followRange, DWORD timeOfDayVisible, CPoint startPos, WORD facing);
@@ -634,6 +636,7 @@ public:
     SHORT Help();
     SHORT Rest();
     SHORT JoinParty();
+    void sub_751BD0();
     SHORT RandomFly();
     SHORT Dialog(CGameSprite* pTarget);
     SHORT PlayerDialog(CGameSprite* pTarget);

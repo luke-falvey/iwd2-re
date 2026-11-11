@@ -208,6 +208,12 @@ void Icewind586B70::Clear()
     }
 }
 
+// 0x5872C0
+void Icewind586B70::sub_5872C0(CGameSprite* sprite)
+{
+    // TODO: Incomplete.
+}
+
 // 0x587510
 std::vector<int> Icewind586B70::sub_587510()
 {

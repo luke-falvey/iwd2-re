@@ -1022,6 +1022,14 @@ LONG CGameArea::GetNearestDialogMatch(LONG startObject, CResRef dialog, LONG ran
     return nBestId;
 }
 
+// 0x46C9E0
+LONG CGameArea::sub_46C9E0(LONG startObject, SHORT range, const BYTE* terrainTable, BOOL checkLOS)
+{
+    // TODO: Incomplete.
+
+    return CGameObjectArray::INVALID_INDEX;
+}
+
 // 0x46CD20
 void CGameArea::GetAllInRange(POSITION posVertList, const CPoint& center, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, CTypedPtrList<CPtrList, LONG*>& targets, BOOL lineOfSight, BOOL checkForNonSprites)
 {
