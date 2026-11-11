@@ -2690,7 +2690,7 @@ void CGameSprite::AIUpdateWalk()
 
         if (m_currentSearchRequest->m_serviceState == CSearchRequest::STATE_WAITING) {
             if (m_currentSearchRequest->m_collisionDelay > 1) {
-                m_currentSearchRequest--;
+                m_currentSearchRequest->m_collisionDelay--;
                 pathLock.Unlock();
                 return;
             }
@@ -2804,10 +2804,10 @@ void CGameSprite::AIUpdateWalk()
         }
 
         pathLock.Unlock();
+    }
 
-        if (m_pPath == NULL) {
-            return;
-        }
+    if (m_pPath == NULL) {
+        return;
     }
 
     if ((m_posDest.x / 8 == (m_pos.x + 4) / 8 && m_posDest.y / 6 == (m_pos.y + 3) / 6)
