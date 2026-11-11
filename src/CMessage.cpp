@@ -25033,10 +25033,6 @@ BOOL CMessageRemoveInventoryItem::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 // 0x504250
 void CMessageRemoveInventoryItem::Run()
 {
-    // TODO: Incomplete. Only the removal itself is translated; the quick
-    // weapon (43-50) / quick item (15-17) button fix-ups after
-    // `UpdatePersonalItemStatus` (0x5043B2 onwards) are missing.
-
     CGameSprite* pSprite;
 
     BYTE rc;
@@ -25067,6 +25063,25 @@ void CMessageRemoveInventoryItem::Run()
                 pMessage->GetCommType());
 
             g_pBaldurChitin->GetActiveEngine()->UpdatePersonalItemStatus(m_targetId);
+
+            if (m_slotNum >= 43 && m_slotNum <= 50) {
+                // NOTE: Uninline.
+                pSprite->SetQuickWeapon(static_cast<BYTE>(m_slotNum - 43), CButtonData());
+
+                // NOTE: Uninline.
+                pSprite->SetQuickWeapon(static_cast<BYTE>(m_slotNum - 43), static_cast<BYTE>(0));
+            } else if (m_slotNum >= 15 && m_slotNum <= 17) {
+                // NOTE: Uninline.
+                pSprite->SetQuickItem(static_cast<BYTE>(m_slotNum - 15), CButtonData());
+            }
+
+            if ((m_slotNum - 43) / 2 == pSprite->m_nWeaponSet) {
+                pSprite->sub_726F20();
+
+                if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) == g_pBaldurChitin->m_pEngineWorld->GetSelectedCharacter()) {
+                    g_pBaldurChitin->GetObjectGame()->m_cButtonArray.UpdateButtons();
+                }
+            }
         }
 
         g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
