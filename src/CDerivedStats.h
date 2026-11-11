@@ -609,6 +609,7 @@ public:
 class CDerivedStatsLevelPairs {
 public:
     CDerivedStatsLevelPairs();
+    CDerivedStatsLevelPairs& operator=(const CDerivedStatsLevelPairs& other);
     void ClearAll();
 
     /* 0000 */ DWORD m_entries[10][2];
@@ -617,6 +618,8 @@ public:
 // NOTE: Entry of `CDerivedStatsPairList` (8 bytes, copied by 0x4E7720).
 class CDerivedStatsPair {
 public:
+    CDerivedStatsPair();
+
     /* 0000 */ DWORD field_0;
     /* 0004 */ DWORD field_4;
 };
@@ -624,11 +627,13 @@ public:
 // NOTE: List of `CResRef` (copied by 0x4E7680).
 class CDerivedStatsResRefList : public CTypedPtrList<CPtrList, CResRef*> {
 public:
+    CDerivedStatsResRefList& operator=(const CDerivedStatsResRefList& other);
     void ClearAll();
 };
 
 class CDerivedStatsPairList : public CTypedPtrList<CPtrList, CDerivedStatsPair*> {
 public:
+    CDerivedStatsPairList& operator=(const CDerivedStatsPairList& other);
     void ClearAll();
 };
 

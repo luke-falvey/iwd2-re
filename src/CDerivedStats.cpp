@@ -64,6 +64,18 @@ CDerivedStatsLevelPairs::CDerivedStatsLevelPairs()
     }
 }
 
+// 0x4E7070
+CDerivedStatsLevelPairs& CDerivedStatsLevelPairs::operator=(const CDerivedStatsLevelPairs& other)
+{
+    // NOTE: The original copies 9 of the 10 pairs.
+    for (int index = 0; index < 9; index++) {
+        m_entries[index][0] = other.m_entries[index][0];
+        m_entries[index][1] = other.m_entries[index][1];
+    }
+
+    return *this;
+}
+
 // 0x4E7050
 void CDerivedStatsLevelPairs::ClearAll()
 {
@@ -71,6 +83,46 @@ void CDerivedStatsLevelPairs::ClearAll()
         m_entries[index][0] = 0;
         m_entries[index][1] = 0;
     }
+}
+
+// 0x4E7680
+CDerivedStatsResRefList& CDerivedStatsResRefList::operator=(const CDerivedStatsResRefList& other)
+{
+    // NOTE: Does not clear the list first.
+    POSITION pos = other.GetHeadPosition();
+    while (pos != NULL) {
+        CResRef* pResRef = other.GetNext(pos);
+        CResRef* pCopy = new CResRef();
+        *pCopy = *pResRef;
+        AddTail(pCopy);
+    }
+
+    return *this;
+}
+
+// -----------------------------------------------------------------------------
+
+// NOTE: Inlined.
+CDerivedStatsPair::CDerivedStatsPair()
+{
+    field_0 = 0;
+    field_4 = 0;
+}
+
+// 0x4E7720
+CDerivedStatsPairList& CDerivedStatsPairList::operator=(const CDerivedStatsPairList& other)
+{
+    // NOTE: Does not clear the list first.
+    POSITION pos = other.GetHeadPosition();
+    while (pos != NULL) {
+        CDerivedStatsPair* pPair = other.GetNext(pos);
+        CDerivedStatsPair* pCopy = new CDerivedStatsPair();
+        pCopy->field_0 = pPair->field_0;
+        pCopy->field_4 = pPair->field_4;
+        AddTail(pCopy);
+    }
+
+    return *this;
 }
 
 // 0x4E71B0
@@ -133,7 +185,23 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
 
     m_damageReduction.clear();
 
-    // TODO: Incomplete.
+    if (pCreature->field_1B4 != 0) {
+        LONG nAmount = pCreature->field_1B4 * 5;
+        DWORD nEnchantment = pCreature->field_1B4;
+        if (pCreature->field_1B4 == 6) {
+            nAmount = 15;
+            nEnchantment = 1;
+        }
+
+        CDamageReduction damageReduction(nAmount, nEnchantment);
+        damageReduction.m_damageTypes.insert(0);
+        damageReduction.m_damageTypes.insert(0x100000);
+        damageReduction.m_damageTypes.insert(0x1000000);
+        damageReduction.m_damageTypes.insert(0x2000000);
+        damageReduction.m_damageTypes.insert(0x4000000);
+        damageReduction.m_damageTypes.insert(0x8000000);
+        m_damageReduction.insert(m_damageReduction.end(), 1, damageReduction);
+    }
 
     m_nCriticalHitBonus = 0;
     m_nTHAC0 = 0;
@@ -210,7 +278,9 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
     m_visualEffects.reset();
     m_bCasterHold = FALSE;
     m_nEncumberance = 0;
-    m_nMagicDamageResistance = pCreature->m_resistMagicDamageBase;
+    m_nMissileTHAC0Bonus = 0;
+    // NOTE: Unlike its neighbours, the original zero-extends this byte.
+    m_nMagicDamageResistance = static_cast<BYTE>(pCreature->m_resistMagicDamageBase);
     m_nResistPoison = 0;
     m_bDoNotJump = FALSE;
     m_bAuraCleansing = FALSE;
@@ -257,25 +327,37 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
     m_cImmunitiesItemTypeEquip.ClearAll();
     field_290.ClearAll();
     field_2AC.ClearAll();
+    m_appliedColorRanges.ClearAll();
+    m_appliedColorEffects.ClearAll();
     m_cBounceProjectile.RemoveAll();
     m_cBounceEffect.ClearAll();
+    field_300.ClearAll();
+    field_328.ClearAll();
+    field_378.ClearAll();
     field_3C8.RemoveAll();
     field_3E4.RemoveAll();
     field_400.RemoveAll();
     field_41C.RemoveAll();
     m_cImmunitiesItemUse.ClearAll();
     m_cImmunitiesItemTypeUse.ClearAll();
-    m_appliedColorRanges.ClearAll();
-    m_appliedColorEffects.ClearAll();
-
-    // TODO: Incomplete. The original also clears the lists at 0x300, 0x328,
-    // 0x378, 0x4AC-0x538 and 0x554 here.
 
     m_spellImmunities.clear();
     m_naturalImmunities.clear();
     m_lWhenStruck.clear();
 
-    // TODO: Incomplete.
+    field_4AC.ClearAll();
+    field_4C8.ClearAll();
+    field_4E4.ClearAll();
+    field_500.ClearAll();
+    field_51C.ClearAll();
+    field_538.ClearAll();
+    m_cRegeneratedPersistantEffectList.ClearAll();
+
+    if (pSpells != NULL) {
+        m_spells = *pSpells;
+    }
+
+    field_CAC = *pDomainSpells;
 
     for (int buttonIndex = 0; buttonIndex < 40; buttonIndex++) {
         m_disabledButtons[buttonIndex] = FALSE;
@@ -362,15 +444,16 @@ void CDerivedStats::Reload(CGameSprite* pSprite, CCreatureFileHeader* pCreature,
             BOOL bQualifies = FALSE;
 
             CItem* pItem = pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon];
-            ITEM_ABILITY* pAbility = NULL;
+            ITEM_ABILITY* pAbility;
             if (pItem != NULL) {
                 pItem->Demand();
                 pAbility = pItem->GetAbility(pSprite->m_equipment.m_selectedWeaponAbility);
+            } else {
+                pAbility = NULL;
             }
 
             // NOTE: The original dereferences `pAbility` without a check.
-            if (pAbility != NULL
-                && ((pAbility->type & 0xFF) == 4 || (pAbility->type & 0xFF) == 2)) {
+            if ((pAbility->type & 0xFF) == 4 || (pAbility->type & 0xFF) == 2) {
                 bQualifies = TRUE;
             }
 
@@ -489,6 +572,18 @@ CDerivedStats& CDerivedStats::operator=(const CDerivedStats& other)
     m_DamageBonusLeft = other.m_DamageBonusLeft;
     m_nStoneSkins = other.m_nStoneSkins;
     m_spellStates = other.m_spellStates;
+    m_visualEffects = other.m_visualEffects;
+    m_nDamageModFire = other.m_nDamageModFire;
+    m_nDamageModCold = other.m_nDamageModCold;
+    m_nDamageModElectricity = other.m_nDamageModElectricity;
+    m_nDamageModAcid = other.m_nDamageModAcid;
+    m_nDamageModMagic = other.m_nDamageModMagic;
+    m_nDamageModPoison = other.m_nDamageModPoison;
+    m_nDamageModSlashing = other.m_nDamageModSlashing;
+    m_nDamageModPiercing = other.m_nDamageModPiercing;
+    m_nDamageModCrushing = other.m_nDamageModCrushing;
+    m_nDamageModMissile = other.m_nDamageModMissile;
+    field_124 = other.field_124;
     m_cImmunitiesProjectile = other.m_cImmunitiesProjectile;
     m_cImmunitiesEffect = other.m_cImmunitiesEffect;
     m_cImmunitiesAIType = other.m_cImmunitiesAIType;
@@ -504,9 +599,9 @@ CDerivedStats& CDerivedStats::operator=(const CDerivedStats& other)
     m_appliedColorEffects = other.m_appliedColorEffects;
     m_cBounceProjectile = other.m_cBounceProjectile;
     m_cBounceEffect = other.m_cBounceEffect;
-    // m_cBounceSpellLevel = other.m_cBounceSpellLevel;
-    // m_cBounceProjectileLevelDec = other.m_cBounceProjectileLevelDec;
-    // m_cImmunitiesProjectileLevelDec = other.m_cImmunitiesProjectileLevelDec;
+    field_300 = other.field_300;
+    field_328 = other.field_328;
+    field_378 = other.field_378;
     field_3C8 = other.field_3C8;
     field_3E4 = other.field_3E4;
     field_400 = other.field_400;
@@ -518,12 +613,12 @@ CDerivedStats& CDerivedStats::operator=(const CDerivedStats& other)
     m_naturalImmunities = other.m_naturalImmunities;
     m_lWhenStruck = other.m_lWhenStruck;
 
-    // field_4AC = other.field_4AC;
-    // field_4C8 = other.field_4C8;
-    // field_4E4 = other.field_4E4;
-    // field_500 = other.field_500;
-    // field_51C = other.field_51C;
-    // field_538 = other.field_538;
+    field_4AC = other.field_4AC;
+    field_4C8 = other.field_4C8;
+    field_4E4 = other.field_4E4;
+    field_500 = other.field_500;
+    field_51C = other.field_51C;
+    field_538 = other.field_538;
 
     field_128 = other.field_128;
     field_12C = other.field_12C;
@@ -535,8 +630,9 @@ CDerivedStats& CDerivedStats::operator=(const CDerivedStats& other)
 
     memcpy(m_nSkills, other.m_nSkills, sizeof(m_nSkills));
 
-    // field_5AC = other.field_5AC;
-    // field_CAC = other.field_CAC;
+    m_bPreventAISlowDown = other.m_bPreventAISlowDown;
+    m_spells = other.m_spells;
+    field_CAC = other.field_CAC;
 
     // NOTE: Original code uses loop.
     memcpy(m_disabledButtons, other.m_disabledButtons, sizeof(m_disabledButtons));
