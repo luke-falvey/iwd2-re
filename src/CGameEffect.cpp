@@ -6301,6 +6301,71 @@ CGameEffect* CGameEffectSparkle::Copy()
     return copy;
 }
 
+// 0x4B1700
+BOOL CGameEffectSparkle::ApplyEffect(CGameSprite* pSprite)
+{
+    // TODO: Incomplete. The particle cluster class (0xCA bytes, constructor
+    // 0x51AE40, vtables 0x84D624/0x84D618, `CParticle.h`) is not translated,
+    // so no sparkles are created.
+    WORD nType = static_cast<WORD>(m_dwFlags);
+
+    CRect rFx;
+    CPoint ptReference;
+    pSprite->GetAnimation()->CalculateFxRect(rFx, ptReference, pSprite->m_posZ);
+
+    SHORT nHeight = static_cast<SHORT>((rFx.bottom - rFx.top) * 8 / 10);
+
+    CPoint pos = pSprite->GetPos();
+    if (m_source.x != -1 || m_source.y != -1) {
+        if (pSprite->GetPos() != m_source) {
+            CPoint ptDelta;
+            pSprite->sub_756770(ptDelta, m_source);
+            pos += ptDelta;
+        } else {
+            pos.y++;
+        }
+    } else {
+        pos.y++;
+    }
+
+    switch (nType) {
+    case 1:
+        // Creates the particle cluster with (`m_effectAmount`, the word at
+        // 0x84D604 (4), the word at 0x84D5F0 (25)), asserts
+        // `m_wType & TYPE_EXPLOSION`, stores `m_source` at +0xBE and calls
+        // its `AddToArea(pSprite->GetArea(), pos, nHeight, LIST_FRONT)`.
+        break;
+    case 3:
+        // Creates the particle cluster with (`m_effectAmount`, the word at
+        // 0x84D602 (2), `m_duration - m_worldTime.m_gameTime` as WORDs) and calls
+        // its `AddToArea(pSprite->GetArea(), pos, nHeight, LIST_FRONT)`.
+        break;
+    }
+
+    (void)nHeight;
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
+// -----------------------------------------------------------------------------
+
+// TODO: Move to CGameSprite.cpp.
+//
+// 0x756770
+void CGameSprite::sub_756770(CPoint& ptDelta, const CPoint& ptTarget)
+{
+    LONG dx = ptTarget.x - m_pos.x;
+    LONG dy = ptTarget.y - m_pos.y;
+    LONG nDistance = static_cast<LONG>(sqrt(static_cast<double>(dx * dx + dy * dy)));
+
+    ptDelta.x = dx;
+    ptDelta.y = dy;
+    ptDelta.x = ptDelta.x * 15 / nDistance;
+    ptDelta.y = ptDelta.y * 15 / nDistance;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.

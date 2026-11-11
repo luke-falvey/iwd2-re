@@ -749,6 +749,7 @@ public:
     INT GetMulticlassingPenalty();
     void SetColorRange(BYTE rangeValue);
     void sub_6F50A0();
+    void sub_756770(CPoint& ptDelta, const CPoint& ptTarget);
     void DisplaySaveString(DWORD dwSaveType, BYTE bSaved, INT nRoll, INT nBonus, const CString& sSpellName);
     void DisplayFeats(CUIControlTextDisplay* pText);
     void DisplaySkills(CUIControlTextDisplay* pText);
