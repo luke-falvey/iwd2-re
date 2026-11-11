@@ -1090,6 +1090,44 @@ CGameEffect* IcewindCGameEffectVisualSpellHit::Copy()
     return copy;
 }
 
+// 0x5601E0
+BOOL IcewindCGameEffectVisualSpellHit::ApplyEffect(CGameSprite* pSprite)
+{
+    if (pSprite->GetArea() == NULL) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    BOOLEAN bPlayer = FALSE;
+    BYTE nType = m_sourceRes.GetResRef()[2];
+    if (nType == 'P' || nType == 'p') {
+        bPlayer = TRUE;
+    }
+
+    CProjectile* pProjectile = CProjectile::sub_560310(static_cast<WORD>(m_dwFlags), pSprite, bPlayer);
+
+    CMessage* message = new CMessageFireProjectile(static_cast<WORD>(m_dwFlags) + 0x1000,
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        0,
+        pSprite->GetId(),
+        pSprite->GetId(),
+        0);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pSprite->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        0,
+        0);
+
+    m_done = TRUE;
+
+    // NOTE: Returns `FALSE` here, unlike the early exit above.
+    return FALSE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49E4D0
