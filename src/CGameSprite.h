@@ -482,6 +482,8 @@ public:
     /* 00C8 */ virtual void ProcessPendingTriggers();
 
     void AddBlood(SHORT nHeight, SHORT nDirection, SHORT nType);
+    void sub_6F5330();
+    void Shatter(BYTE nType);
     void RemoveReplacementFromArea();
     void AIUpdateWalk();
     void SetPath(LONG* pPath, SHORT nPath);

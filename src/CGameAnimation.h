@@ -22,6 +22,7 @@ public:
     BOOLEAN CanLieDown();
     BOOLEAN DetectedByInfravision();
     BYTE GetColorBlood();
+    BYTE GetColorChunks();
     BYTE GetListType();
     BYTE GetMoveScale();
     BYTE GetMoveScaleDefault();
