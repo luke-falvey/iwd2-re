@@ -1046,6 +1046,7 @@ class CGameEffectLevel : public CGameEffect {
 public:
     CGameEffectLevel(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
 };
 
 class CGameEffectSTRExtra : public CGameEffect {
@@ -1059,6 +1060,8 @@ class CGameEffectRegeneration : public CGameEffect {
 public:
     CGameEffectRegeneration(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target);
     CGameEffect* Copy() override;
+    BOOL ApplyEffect(CGameSprite* pSprite) override;
+    void OnAdd(CGameSprite* pSprite) override;
 };
 
 class CGameEffectDurationCasting : public CGameEffect {

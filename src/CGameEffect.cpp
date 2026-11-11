@@ -9293,6 +9293,89 @@ CGameEffect* CGameEffectLevel::Copy()
     return copy;
 }
 
+// 0x4B7770
+BOOL CGameEffectLevel::ApplyEffect(CGameSprite* pSprite)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
+    // __LINE__: 15980
+    UTIL_ASSERT(m_special < CAIOBJECT_CLASS_MAX && m_special >= 0);
+
+    LONG nAmount;
+    INT nLevel;
+
+    switch (m_dwFlags) {
+    case 0:
+        nAmount = m_effectAmount;
+        nLevel = pSprite->GetBaseStats()->m_characterLevel + nAmount;
+        if (nLevel > 30) {
+            nAmount += 30 - nLevel;
+        }
+        if (nLevel < 0) {
+            nAmount -= nLevel;
+        }
+
+        if (m_durationType == 1) {
+            pSprite->SetClassLevel(m_special, pSprite->GetClassLevel(m_special) + nAmount);
+            m_forceRepass = TRUE;
+            m_done = TRUE;
+            return TRUE;
+        }
+
+        pSprite->m_bonusStats.SetClassLevel(m_special, pSprite->GetClassLevel(m_special) + nAmount);
+        m_done = FALSE;
+        return TRUE;
+    case 1:
+        // NOTE: Unlike `GetClassLevel`, the class levels are indexed with
+        // `m_special` directly (no `- 1`).
+        if (m_durationType == 1) {
+            nAmount = m_effectAmount;
+            nLevel = pSprite->GetBaseStats()->m_characterLevel
+                - pSprite->GetBaseStats()->m_classLevels[m_special]
+                + nAmount;
+            if (nLevel > 30) {
+                nAmount += 30 - nLevel;
+            }
+            if (nLevel < 0) {
+                nAmount -= nLevel;
+            }
+
+            pSprite->SetClassLevel(m_special, nAmount);
+            m_forceRepass = TRUE;
+            m_done = TRUE;
+            return TRUE;
+        }
+
+        nAmount = m_effectAmount;
+        nLevel = pSprite->GetDerivedStats()->m_nLevel
+            - pSprite->GetDerivedStats()->m_nClassLevels[m_special]
+            + nAmount;
+        if (nLevel > 30) {
+            nAmount += 30 - nLevel;
+        }
+        if (nLevel < 0) {
+            nAmount -= nLevel;
+        }
+
+        pSprite->GetDerivedStats()->SetClassLevel(m_special, nAmount);
+        m_done = FALSE;
+        return TRUE;
+    case 2:
+        if (m_durationType == 1) {
+            m_done = TRUE;
+            return TRUE;
+        }
+
+        m_done = FALSE;
+        return TRUE;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
+        // __LINE__: 16083
+        UTIL_ASSERT(FALSE);
+    }
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // NOTE: Inlined.
@@ -9335,6 +9418,81 @@ CGameEffect* CGameEffectRegeneration::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4B6620
+BOOL CGameEffectRegeneration::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_secondaryType != 0) {
+        // NOTE: Uninline.
+        DisplayStringRef(pSprite, 11006);
+    }
+
+    // NOTE: Uninline.
+    AddPortraitIcon(pSprite, 42);
+
+    if (m_secondaryType != 0) {
+        m_special = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+    }
+
+    DWORD duration = m_durationType != 1 ? m_duration : 0;
+
+    CPersistantEffect84C494* pEffect;
+    switch (m_dwFlags) {
+    case 2:
+        pEffect = new CPersistantEffect84C494(m_effectAmount,
+            15,
+            m_special,
+            duration);
+        break;
+    case 3:
+        pEffect = new CPersistantEffect84C494(1,
+            15 * m_effectAmount,
+            m_special,
+            duration);
+        break;
+    case 4:
+        pEffect = new CPersistantEffect84C494(m_effectAmount,
+            105,
+            m_special,
+            duration);
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
+        // __LINE__: 14698
+        UTIL_ASSERT(FALSE);
+    }
+
+    pEffect->m_sourceID = m_sourceID;
+    strcpy(reinterpret_cast<char*>(pEffect->field_29), m_sourceRes.GetResRefStr());
+    pSprite->GetDerivedStats()->m_cRegeneratedPersistantEffectList.AddTail(pEffect);
+
+    return TRUE;
+}
+
+// 0x4B65B0
+void CGameEffectRegeneration::OnAdd(CGameSprite* pSprite)
+{
+    ULONG gameTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+    LONG nRemaining = m_duration - gameTime;
+    LONG nLimit;
+
+    switch (static_cast<WORD>(m_dwFlags)) {
+    case 0:
+        nLimit = 15 * m_effectAmount;
+        if (nRemaining >= nLimit) {
+            nRemaining = nLimit;
+        }
+        break;
+    case 1:
+        nLimit = pSprite->GetBaseStats()->m_hitPoints * m_effectAmount / 100;
+        if (nRemaining >= nLimit) {
+            nRemaining = nLimit;
+        }
+        break;
+    }
+
+    m_duration = gameTime + nRemaining;
 }
 
 // -----------------------------------------------------------------------------
@@ -14319,6 +14477,10 @@ CPersistantEffect84C494::CPersistantEffect84C494(int a1, int a2, int a3, int a4)
     : CPersistantEffect84C4A4(a2, a3, a4)
 {
     field_34 = a1;
+
+    if (field_20 == field_18) {
+        field_20 += field_24;
+    }
 }
 
 // NOTE: Inlined.
