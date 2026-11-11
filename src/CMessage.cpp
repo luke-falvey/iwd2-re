@@ -3840,9 +3840,25 @@ BOOL CBaldurMessage::ObjectControlSuggestion(PLAYER_ID playerToSuggestID, LONG l
 // 0x430910
 BOOLEAN CBaldurMessage::sub_430910(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return FALSE;
+    }
 
-    return FALSE;
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    DWORD remotePlayerID = *reinterpret_cast<DWORD*>(pMessage + cnt);
+    cnt += sizeof(DWORD);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pMessage + cnt);
+
+    LONG localObjectID;
+    if (!g_pBaldurChitin->GetObjectGame()->m_cRemoteObjectArray.Find(remotePlayerID, remoteObjectID, localObjectID)) {
+        return FALSE;
+    }
+
+    ObjectControlRequest(localObjectID);
+
+    return TRUE;
 }
 
 // 0x430980
@@ -3921,7 +3937,29 @@ BOOL CBaldurMessage::ObjectControlRequest(LONG localObjectID)
 // 0x430BE0
 BOOLEAN CBaldurMessage::sub_430BE0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    if (g_pChitin->cNetwork.m_bConnectionEstablished
+        && g_pChitin->cNetwork.m_bIsHost) {
+        DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+        DWORD oldRemotePlayerID = *reinterpret_cast<DWORD*>(pMessage + cnt);
+        cnt += sizeof(DWORD);
+
+        LONG oldRemoteObjectID = *reinterpret_cast<LONG*>(pMessage + cnt);
+        cnt += sizeof(LONG);
+
+        DWORD newRemotePlayerID = *reinterpret_cast<DWORD*>(pMessage + cnt);
+        cnt += sizeof(DWORD);
+
+        LONG newRemoteObjectID = *reinterpret_cast<LONG*>(pMessage + cnt);
+
+        g_pBaldurChitin->GetObjectGame()->m_cRemoteObjectArray.ChangeControl(oldRemotePlayerID,
+            oldRemoteObjectID,
+            newRemotePlayerID,
+            newRemoteObjectID,
+            FALSE);
+
+        return TRUE;
+    }
 
     return FALSE;
 }
@@ -3952,7 +3990,15 @@ BOOL CBaldurMessage::ObjectControl()
 // 0x430D40
 BOOLEAN CBaldurMessage::sub_430D40(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    if (g_pChitin->cNetwork.m_bConnectionEstablished
+        && g_pChitin->cNetwork.m_bIsHost != TRUE) {
+        PLAYER_ID hostPlayerID = g_pChitin->cNetwork.GetHostPlayerID();
+
+        if (g_pChitin->cNetwork.GetPlayerID(nMsgFrom) == hostPlayerID) {
+            g_pBaldurChitin->GetObjectGame()->m_cRemoteObjectArray.UnmarshalControlChanges(pMessage, dwSize);
+            return TRUE;
+        }
+    }
 
     return FALSE;
 }
