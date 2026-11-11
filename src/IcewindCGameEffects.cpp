@@ -3,6 +3,7 @@
 #include "CBaldurChitin.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
+#include "CMessage.h"
 #include "CUtil.h"
 #include "IcewindMisc.h"
 
@@ -1271,6 +1272,22 @@ CGameEffect* IcewindCGameEffectFloatText::Copy()
     return copy;
 }
 
+// 0x566520
+BOOL IcewindCGameEffectFloatText::ApplyEffect(CGameSprite* pSprite)
+{
+    if (m_dwFlags == 0) {
+        CMessage* message = new CMessageFloatText(pSprite->GetId(),
+            pSprite->GetId(),
+            m_effectAmount,
+            FALSE);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49FE30
@@ -1393,6 +1410,28 @@ CGameEffect* IcewindCGameEffectMagicalRest::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x566BA0
+BOOL IcewindCGameEffectMagicalRest::ApplyEffect(CGameSprite* pSprite)
+{
+    pSprite->GetBaseStats()->m_fatigue = 0;
+
+    CGameEffect* pEffect = IcewindMisc::CreateEffectRemoveAllOfType(pSprite, CGAMEEFFECT_FATIGUE, 0);
+
+    CMessage* message = new CMessageAddEffect(pEffect,
+        pSprite->GetId(),
+        pSprite->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_PORTRAITICON,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        39);
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
