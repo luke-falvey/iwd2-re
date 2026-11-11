@@ -132,46 +132,87 @@ def callee_rets(addr: int) -> list[str] | None:
     return sorted({x or "plain" for x in RET_RE.findall(p.read_text(errors="replace"))})
 
 
-def normalise_stack(asm: str) -> tuple[list[str], int]:
-    """Rename [ESP+n] to entry-relative slots. Returns the lines and the number of
-    join points where two paths disagreed about ESP (0 means the tracking is sound)."""
-    lines = [l for l in asm.split("\n") if re.match(r"[0-9A-F]{8} ", l)]
+_RET_CACHE: dict[int, list[int]] = {}
+
+
+def callee_pops(addr: int) -> list[int]:
+    """Stack bytes a direct callee may pop, most likely first."""
+    if addr not in _RET_CACHE:
+        rets = callee_rets(addr) or ["plain"]
+        _RET_CACHE[addr] = sorted({0 if r == "plain" else int(r, 16) for r in rets}, reverse=True)
+    return _RET_CACHE[addr]
+
+
+def _simulate(lines: list[str], choices: dict[int, int]):
+    """One pass over the function. `choices` maps the index of a call whose pop
+    count is not known to the option to take. Returns the renamed lines, the
+    options available at each such call, the number of join points where two
+    paths disagree about ESP, and the index of the first line that proves a
+    choice wrong (None if the pass is consistent)."""
     cur = 0          # ESP relative to its value at entry
     known: dict[int, int] = {}
-    pending = 0      # pushes since the last call or branch, for indirect calls
+    pending = 0      # pushes since the last call
+    saves = 0        # of those, pushes that look like register saves, not arguments
+    saved: set[str] = set()
     dead = False     # previous instruction never falls through
     mismatches = 0
+    first_bad = None
+    restored = {r for r in ("EBX", "ESI", "EDI", "EBP") if any(l[10:].strip() == "POP " + r for l in lines)}
+    table_cur = None  # ESP at the last jump-table dispatch
+    need = 0         # how much more the calls before first_bad should have popped
+    options: dict[int, list[int]] = {}
     out = []
-    for line in lines:
+    for n, line in enumerate(lines):
         addr = int(line[:8], 16)
         ins = line[10:].strip()
         if addr in known:
             if not dead and known[addr] != cur:
                 mismatches += 1
+                if first_bad is None:
+                    first_bad, need = n, known[addr] - cur
             cur = known[addr]
-            pending = 0
+        elif dead and table_cur is not None:
+            cur = table_cur  # a case block reached only through the jump table
         dead = False
 
         def slot(m: re.Match) -> str:
-            s = cur + int(m.group(1), 16)
+            s = cur + int(m.group(1) or "0", 16)
             if s >= 4:
                 return "[arg%d]" % (s // 4)
             return "[ret]" if s == 0 else "[loc_%X]" % -s
 
-        out.append(line[:10] + re.sub(r"\[ESP \+ 0x([0-9a-f]+)\]", slot, ins))
+        out.append(line[:10] + re.sub(r"\[ESP(?: \+ 0x([0-9a-f]+))?\]", slot, ins))
 
         op = ins.split()[0]
         jump = re.match(r"(J[A-Z]+) 0x([0-9a-f]+)", ins)
         if jump:
-            known.setdefault(int(jump.group(2), 16), cur)
-            pending = 0
+            target = int(jump.group(2), 16)
+            if known.setdefault(target, cur) != cur:
+                mismatches += 1
+                if first_bad is None:
+                    first_bad, need = n, known[target] - cur
             dead = op == "JMP"
+        elif op == "JMP":
+            dead = True  # jump table or tail call through a pointer
+            if "*0x4" in ins:
+                table_cur = cur
         elif op == "PUSH":
             cur -= 4
             pending += 1
+            reg = ins[5:]
+            # The first push of a callee-saved register that is popped again
+            # later is a save. A second push while it is saved is an argument.
+            if reg in restored and reg not in saved:
+                saved.add(reg)
+                saves += 1
         elif op == "POP":
             cur += 4
+            saved.discard(ins[4:])
         elif op == "RET":
+            if cur != 0:
+                mismatches += 1
+                if first_bad is None:
+                    first_bad, need = n, -cur
             dead = True
         elif re.match(r"SUB ESP,0x[0-9a-f]+$", ins):
             cur -= int(ins.split("0x")[1], 16)
@@ -180,13 +221,59 @@ def normalise_stack(asm: str) -> tuple[list[str], int]:
         elif op == "CALL":
             direct = re.match(r"CALL 0x([0-9a-f]+)", ins)
             if direct:
-                rets = callee_rets(int(direct.group(1), 16))
-                if rets and len(rets) == 1 and rets[0] != "plain":
-                    cur += int(rets[0], 16)
+                opts = callee_pops(int(direct.group(1), 16))
             else:
-                cur += 4 * pending  # virtual thiscall: the callee pops what was pushed
+                # Through a pointer: the callee pops some of what was pushed
+                # since the last call. All of it is the usual case.
+                opts = [4 * k for k in range(pending, -1, -1)]
+                likely = 4 * (pending - saves)
+                opts.remove(likely)
+                opts.insert(0, likely)
+            if len(opts) > 1:
+                options[n] = opts
+            cur += opts[min(choices.get(n, 0), len(opts) - 1)]
             pending = 0
-    return out, mismatches
+            saves = 0
+    return out, options, mismatches, first_bad, need
+
+
+def normalise_stack(asm: str, budget: int = 400) -> tuple[list[str], int]:
+    """Rename [ESP+n] to entry-relative slots. Returns the lines and the number of
+    places where the tracking is inconsistent (0 means it is sound).
+
+    MSVC 6 addresses locals from ESP, so the same slot has a different offset after
+    every push. Calls through a pointer don't say how much they pop; the search
+    below picks the pop counts that make every join point and every RET agree."""
+    lines = [l for l in asm.splitlines() if re.match(r"[0-9A-F]{8} ", l)]
+    choices: dict[int, int] = {}
+    tried: set[tuple[int, int]] = set()
+    best = None
+    for _ in range(budget):
+        out, options, mismatches, first_bad, need = _simulate(lines, choices)
+        if best is None or mismatches < best[1]:
+            best = (out, mismatches)
+        if first_bad is None:
+            break
+        earlier = sorted((n for n in options if n < first_bad), reverse=True)
+        # Prefer the latest call that can absorb the whole difference.
+        for n in earlier:
+            opts = options[n]
+            want = opts[min(choices.get(n, 0), len(opts) - 1)] + need
+            if want in opts and (n, want) not in tried:
+                tried.add((n, want))
+                choices = {k: v for k, v in choices.items() if k < n}
+                choices[n] = opts.index(want)
+                break
+        else:
+            # Otherwise step the latest call that still has an untried option.
+            for n in earlier:
+                if choices.get(n, 0) + 1 < len(options[n]):
+                    choices = {k: v for k, v in choices.items() if k < n}
+                    choices[n] = choices.get(n, 0) + 1
+                    break
+            else:
+                break
+    return best
 
 
 def main() -> int:
@@ -262,9 +349,16 @@ def main() -> int:
         print("0x%X:" % off, " ;; ".join(row) if row else "(not resolved: grep the class header)")
 
     lines, mismatches = normalise_stack(asm)
-    print("=== ASM (ground truth). Stack references are normalised: [argN] is the Nth stack argument, [loc_X] is a"
-          " local slot; the same name is always the same slot, whatever ESP was. Slot tracking mismatches:", mismatches)
-    print("\n".join(lines))
+    if mismatches == 0:
+        print("=== ASM (ground truth). Stack references are normalised: [argN] is the Nth stack argument, [loc_X] is a"
+              " local slot; the same name is always the same slot, whatever ESP was.")
+        print("\n".join(lines))
+    else:
+        # Wrong slot names are worse than none, so fall back to the raw listing.
+        print("=== ASM (ground truth). STACK SLOTS NOT NORMALISED: ESP could not be tracked through this function"
+              " (%d inconsistencies). [ESP + n] is raw: track every PUSH, POP and callee RET yourself to know which"
+              " slot each reference means." % mismatches)
+        print("\n".join(l for l in asm.splitlines() if re.match(r"[0-9A-F]{8} ", l)))
     return 0
 
 

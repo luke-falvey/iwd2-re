@@ -22,7 +22,12 @@ Input: one function address. Don't edit anything.
    - **Constants** compared or stored, and the value on each return path.
    - **Shape.** Nothing added (NULL checks, fixes) and nothing dropped (leaks, repeated
      calls, dead stores that have side effects).
-4. Report:
+4. Before reporting a difference, re-read the asm lines it rests on and copy them into the
+   report exactly as the packet prints them, address included. Never retype an instruction
+   from memory. If the packet says the stack slots are not normalised, show your ESP count at
+   each line you cite.
+5. Report:
    - `VERDICT: MATCHES` or `VERDICT: DIFFERS`
-   - one line per difference: `0xADDR: asm does X; C++ does Y; fix: Z`
+   - one line per difference: `0xADDR: asm does X; C++ does Y; fix: Z`, followed by the
+     copied asm lines
    - `UNSURE:` lines for anything you could not settle, with the address

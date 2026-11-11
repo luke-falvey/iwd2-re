@@ -9,6 +9,15 @@ $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 Set-Location $repo
 
+# Temporary trace logging (`// DBGTRACE` blocks) must never be committed.
+# Staged or committed content is checked, so local debugging still builds.
+$traced = @(git grep -l --cached "DBGTRACE" -- src 2>$null)
+if ($traced.Count) {
+    Write-Host "DBGTRACE found in tracked content:"
+    $traced | ForEach-Object { Write-Host "  $_" }
+    exit 1
+}
+
 $cmake = (Get-Command cmake -ErrorAction SilentlyContinue).Source
 if (-not $cmake) {
     $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
