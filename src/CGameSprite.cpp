@@ -12548,6 +12548,29 @@ INT CGameSprite::GetAC()
     return 10 + nAC + sub_723F60() + nDexBonus;
 }
 
+// 0x723DB0
+INT CGameSprite::sub_723DB0()
+{
+    // NOTE: Same as `GetAC` without `field_6`.
+    INT nAC = m_derivedStats.field_C
+        + m_derivedStats.field_A
+        + m_derivedStats.field_8;
+
+    INT nDexBonus = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetAbilityScoreModifier(m_derivedStats.m_nDEX);
+
+    // NOTE: Uninline.
+    nDexBonus = sub_724010(nDexBonus);
+
+    if ((m_derivedStats.m_generalState & STATE_BLIND) != 0
+        && nDexBonus > 0
+        && !sub_763150(CGAMESPRITE_FEAT_BLIND_FIGHT)) {
+        nDexBonus = 0;
+    }
+
+    // NOTE: Base armor class (`0x84EBBC`).
+    return 10 + nAC + sub_723F60() + nDexBonus;
+}
+
 // 0x723F60
 INT CGameSprite::sub_723F60()
 {
@@ -18417,6 +18440,446 @@ SHORT CGameSprite::GetCriticalHitBonus()
     return nCriticalHitBonus;
 }
 
+// 0x73B760
+BOOLEAN CGameSprite::Hit(CGameSprite* target, CItem* curWeapon, INT abilityNum, BOOL* pbCritical, BOOL bCheckOffhand, BYTE nAttackCount)
+{
+    BOOL bOffhand;
+    if (bCheckOffhand
+        && m_equipment.m_selectedWeapon != 42
+        && m_equipment.m_items[sub_726800()] != NULL
+        && m_equipment.m_items[sub_726800()]->GetItemType() != 47
+        && m_equipment.m_items[sub_726800()]->GetItemType() != 53
+        && m_equipment.m_items[sub_726800()]->GetItemType() != 49
+        && m_equipment.m_items[sub_726800()]->GetItemType() != 41) {
+        bOffhand = TRUE;
+    } else {
+        bOffhand = FALSE;
+        if (m_equipment.m_items[sub_726800()] == curWeapon) {
+            bOffhand = TRUE;
+        }
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 9288
+    UTIL_ASSERT(nAttackCount <= m_derivedStats.m_nNumberOfAttacks);
+
+    if ((target->m_derivedStats.m_generalState & STATE_HELPLESS) != 0) {
+        return TRUE;
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->m_nTimeStop != 0
+        && g_pBaldurChitin->GetObjectGame()->m_nTimeStopCaster != target->m_id) {
+        return TRUE;
+    }
+
+    if (target->m_derivedStats.m_spellStates[SPLSTATE_TORTOISE_SHELL]) {
+        return TRUE;
+    }
+
+    if (m_derivedStats.m_spellStates[SPLSTATE_BLINK] && rand() % 100 < 20) {
+        FeedBack(62, 0, 0, 0, -1, 0, 0);
+        return FALSE;
+    }
+
+    if (target->m_derivedStats.m_spellStates[SPLSTATE_BLINK] && rand() % 100 < 50) {
+        target->FeedBack(63, 0, 0, 0, -1, 0, 0);
+        return FALSE;
+    }
+
+    curWeapon->Demand();
+
+    const ITEM_ABILITY* curAttack = curWeapon->GetAbility(abilityNum);
+    if (curAttack == NULL) {
+        curAttack = &DEFAULT_ATTACK;
+    }
+
+    // NOTE: Original reads it from a constant at 0x84CEC6.
+    if (curAttack->thac0Bonus == SHORT_MAX) {
+        curWeapon->Release();
+        return TRUE;
+    }
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    const CRuleTables& rule = pGame->GetRuleTables();
+
+    // NOTE: Unused.
+    CAIObjectType typeAI;
+    typeAI.Set(GetAIType());
+
+    SHORT nAC;
+    if ((curAttack->abilityFlags & 0x10000) != 0) {
+        nAC = static_cast<SHORT>(target->sub_723DB0());
+    } else {
+        nAC = static_cast<SHORT>(target->GetAC());
+    }
+
+    if (LOBYTE(curAttack->type) != 2
+        && (m_derivedStats.m_generalState & (STATE_INVISIBLE | STATE_IMPROVEDINVISIBILITY)) != 0
+        && !target->sub_763150(CGAMESPRITE_FEAT_BLIND_FIGHT)
+        && target->m_baseStats.m_barbarianLevel < 2
+        && target->m_baseStats.m_rogueLevel < 3) {
+        nAC -= rule.GetAbilityScoreModifier(target->m_derivedStats.m_nDEX);
+    }
+
+    nAC += sub_73C6A0(target, curWeapon, curAttack);
+
+    // NOTE: Original reads die size from a constant at 0x85BB84.
+    SHORT nRoll = static_cast<SHORT>(CUtil::UtilRandInt(20, m_derivedStats.m_nLuck) + 1);
+
+    INT nAttackBase = static_cast<signed char>(m_baseStats.m_attackBase);
+
+    INT nBaseAttackBonus;
+    INT nNumberOfAttacks;
+    INT nAttackStep;
+    rule.sub_546B60(this, nBaseAttackBonus, nNumberOfAttacks, nAttackStep, TRUE);
+
+    if (!IcewindMisc::IsPC(this)) {
+        if (nAttackBase != 0 && nAttackBase != nBaseAttackBonus) {
+            nBaseAttackBonus = nAttackBase;
+        }
+
+        if (m_derivedStats.m_nNumberOfAttacks != 0
+            && m_derivedStats.m_nNumberOfAttacks != nNumberOfAttacks) {
+            nNumberOfAttacks = m_derivedStats.m_nNumberOfAttacks;
+            nAttackStep = 0;
+        }
+
+        if ((m_baseStats.field_2FB & 0x1) != 0) {
+            nBaseAttackBonus += 15;
+            nNumberOfAttacks += 3;
+        }
+    }
+
+    if (bOffhand) {
+        nAttackCount = 1;
+    }
+
+    BOOLEAN bRanged = FALSE;
+
+    SHORT launcherSlot;
+    CItem* pLauncher = GetLauncher(curAttack, launcherSlot);
+    if (pLauncher != NULL) {
+        pLauncher->Demand();
+    }
+
+    if ((pLauncher != NULL && pLauncher->GetAbility(0) != NULL)
+        || LOBYTE(curAttack->type) == 2) {
+        bRanged = TRUE;
+    }
+
+    if (pLauncher != NULL) {
+        pLauncher->Release();
+    }
+
+    if (m_derivedStats.m_spellStates[SPLSTATE_FEAT_RAPID_SHOT]
+        && bRanged == TRUE
+        && nAttackCount == 1) {
+        nBaseAttackBonus -= 5;
+    }
+
+    nBaseAttackBonus = rule.sub_547020(nBaseAttackBonus, nAttackStep, nAttackCount - 1);
+
+    SHORT nToHit = static_cast<SHORT>(nBaseAttackBonus);
+    if (m_derivedStats.m_spellStates[SPLSTATE_FEAT_RAPID_SHOT] && bRanged == TRUE) {
+        nToHit = static_cast<SHORT>(nBaseAttackBonus - 2);
+    }
+
+    nToHit += sub_73CB10(curWeapon, curAttack);
+    nToHit += sub_73C7E0();
+    nToHit += sub_73C8C0(target);
+
+    // NOTE: Uninline.
+    nToHit += sub_73CA20(curWeapon, curAttack);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 10053
+    UTIL_ASSERT(target != NULL);
+
+    INT nHatedRaceBonus = 0;
+    if (m_typeAI.IsClassValid(CAIObjectType::C_RANGER)
+        && rule.IsHatedRace(target->m_typeAI, m_baseStats)) {
+        BYTE nRace = target->m_typeAI.GetRace();
+        nHatedRaceBonus = rule.GetHatedRaceBonus(nRace, m_baseStats);
+    }
+    nToHit += static_cast<SHORT>(nHatedRaceBonus);
+
+    // NOTE: Uninline.
+    nToHit += sub_73CAE0(curWeapon, curAttack);
+
+    nToHit += sub_73CC40(curWeapon, curAttack);
+    nToHit += sub_73CD00(target, curWeapon, curAttack);
+    nToHit += sub_73CF10(curWeapon, curAttack);
+    nToHit += static_cast<SHORT>(sub_7240A0());
+    nToHit += static_cast<SHORT>(sub_724170());
+    nToHit += sub_73D080(bOffhand);
+    nToHit += sub_73D1B0(target, curAttack);
+
+    // NOTE: Uninline.
+    nToHit += sub_73D420();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 10548
+    UTIL_ASSERT(target != NULL);
+
+    INT nDifficultyMod = 0;
+    if (target->GetAIType().GetEnemyAlly() == CAIObjectType::EA_PC
+        && GetAIType().GetEnemyAlly() != CAIObjectType::EA_PC) {
+        // NOTE: Original reads modifiers from constants at 0x84EAF4-0x84EB00.
+        switch (g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nDifficultyLevel) {
+        case 1:
+            nDifficultyMod = -4;
+            break;
+        case 2:
+            nDifficultyMod = -2;
+            break;
+        case 4:
+            nDifficultyMod = 3;
+            break;
+        case 5:
+            nDifficultyMod = 9;
+            break;
+        }
+    }
+    nToHit += static_cast<SHORT>(nDifficultyMod);
+
+    if (m_derivedStats.m_spellStates[SPLSTATE_SMITE_EVIL] && !bRanged) {
+        INT nCHRBonus = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetAbilityScoreModifier(m_derivedStats.m_nCHR);
+        if (nCHRBonus > 0) {
+            nToHit += static_cast<SHORT>(nCHRBonus);
+        }
+    }
+
+    curWeapon->Release();
+
+    BOOL bHit;
+    if (nRoll == 20) {
+        bHit = TRUE;
+    } else {
+        bHit = nRoll + nToHit >= nAC;
+    }
+
+    BOOL bNotConcealed = sub_73C490(target);
+
+    BOOLEAN bCritical = FALSE;
+
+    // NOTE: Uninline.
+    SHORT nCriticalHitBonus = GetCriticalHitBonus();
+
+    INT nCriticalRoll = 0;
+    if (static_cast<SHORT>(curWeapon->sub_4E9840(curAttack) + nCriticalHitBonus) + nRoll >= 20
+        && (target->m_baseStats.field_2FB & 0x2) == 0) {
+        nCriticalRoll = CUtil::UtilRandInt(20, m_derivedStats.m_nLuck) + 1;
+        bCritical = nToHit + nCriticalRoll >= nAC;
+    }
+
+    if (bNotConcealed == TRUE) {
+        // NOTE: The original passes `nAttackCount` in `BX` and leaves the
+        // upper half of `EBX` (bits of `target`) untouched.
+        FeedBack(FEEDBACK_TOHIT, nRoll, bHit, nToHit, -1, bOffhand, nAttackCount);
+
+        if (nCriticalRoll != 0) {
+            FeedBack(FEEDBACK_CRITICALHITAVOIDED, nCriticalRoll, bCritical, nToHit, -1, bOffhand, nAttackCount);
+        }
+
+        if (bCritical == TRUE) {
+            *pbCritical = TRUE;
+            bHit = TRUE;
+
+            if (pGame->GetOptions()->m_bCriticalHitScreenShake
+                && pGame->GetVisibleArea() == m_pArea) {
+                CRect rView(m_pArea->GetInfinity()->rViewPort);
+                INT x;
+                INT y;
+                m_pArea->GetInfinity()->GetViewPosition(x, y);
+                rView.OffsetRect(x, y);
+                if (rView.PtInRect(m_pos)) {
+                    if (pGame->GetCharacterPortraitNum(m_id) != -1) {
+                        CMessageScreenShake* message = new CMessageScreenShake(5,
+                            10,
+                            -10,
+                            FALSE,
+                            m_id,
+                            m_id);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, TRUE);
+                    }
+                }
+            }
+
+            if (sub_763150(CGAMESPRITE_FEAT_DIRTY_FIGHTING) == TRUE) {
+                BYTE nRace = target->GetAIType().GetRace();
+                if (nRace != CAIOBJECTTYPE_R_UNDEAD
+                    && nRace != CAIOBJECTTYPE_R_GOLEM
+                    && nRace != CAIOBJECTTYPE_R_ELEMENTAL) {
+                    WORD nEffectID = CGAMEEFFECT_BLINDNESS;
+                    if (rand() % 2 == 1) {
+                        nEffectID = CGAMEEFFECT_SLOW;
+                    }
+
+                    ITEM_EFFECT effect;
+                    CGameEffect::ClearItemEffect(&effect, nEffectID);
+                    effect.savingThrow = 4;
+                    effect.saveMod = 4;
+                    // NOTE: Original reads it from a constant at 0x8491A8.
+                    effect.durationType = 0;
+                    effect.targetType = 1;
+                    effect.spellLevel = 1;
+                    effect.effectAmount = 0;
+                    effect.dwFlags = 0;
+                    effect.duration = 35;
+                    effect.numDice = 0;
+                    effect.diceSize = 0;
+
+                    CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                        CPoint(-1, -1),
+                        -1,
+                        CPoint(-1, -1));
+                    pEffect->SetSource(GetPos());
+                    pEffect->SetSourceId(m_id);
+                    pEffect->sub_594020(FALSE);
+
+                    CMessageAddEffect* message = new CMessageAddEffect(pEffect,
+                        m_id,
+                        target->m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                }
+            }
+        }
+
+        if (nRoll == 1) {
+            bHit = FALSE;
+        }
+    } else {
+        bHit = FALSE;
+
+        g_pBaldurChitin->GetTlkTable().SetToken(CString("TARGETNAME"), target->GetName());
+
+        FeedBack(FEEDBACK_TARGETCONCEALED, 0, 0, 0, -1, 0, 0);
+    }
+
+    // NOTE: A hit consumes the fist states in `Damage`, a miss here.
+    if (!bHit && curWeapon == m_equipment.m_items[CGameSpriteEquipment::SLOT_FIST]) {
+        if (m_derivedStats.m_spellStates[SPLSTATE_STUNNING_BLOW_70]) {
+            m_derivedStats.m_spellStates.reset(SPLSTATE_STUNNING_BLOW_70);
+
+            ITEM_EFFECT effect;
+            CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_REMOVEEFFECTOFRESOURCE);
+            effect.targetType = 1;
+            effect.spellLevel = 0;
+            effect.effectAmount = 0;
+            effect.dwFlags = 0;
+            memcpy(effect.res, SPIN232.GetResRef(), RESREF_SIZE);
+            // NOTE: Original reads it from a constant at 0x8491AA.
+            effect.durationType = 1;
+            effect.duration = 0;
+            effect.numDice = 0;
+            effect.diceSize = 0;
+            effect.savingThrow = 0;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                CPoint(-1, -1),
+                -1,
+                CPoint(-1, -1));
+            pEffect->SetSource(GetPos());
+            pEffect->SetSourceId(m_id);
+            pEffect->sub_594020(FALSE);
+
+            CMessageAddEffect* message = new CMessageAddEffect(pEffect,
+                m_id,
+                m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        if (m_derivedStats.m_spellStates[SPLSTATE_QUIVERING_PALM]) {
+            m_derivedStats.m_spellStates.reset(SPLSTATE_QUIVERING_PALM);
+
+            ITEM_EFFECT effect;
+            CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_REMOVEEFFECTOFRESOURCE);
+            effect.targetType = 1;
+            effect.spellLevel = 0;
+            effect.effectAmount = 0;
+            effect.dwFlags = 0;
+            memcpy(effect.res, SPIN233.GetResRef(), RESREF_SIZE);
+            // NOTE: Original reads it from a constant at 0x8491AA.
+            effect.durationType = 1;
+            effect.duration = 0;
+            effect.numDice = 0;
+            effect.diceSize = 0;
+            effect.savingThrow = 0;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                CPoint(-1, -1),
+                -1,
+                CPoint(-1, -1));
+            pEffect->SetSource(GetPos());
+            pEffect->SetSourceId(m_id);
+            pEffect->sub_594020(FALSE);
+
+            CMessageAddEffect* message = new CMessageAddEffect(pEffect,
+                m_id,
+                m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    }
+
+    return static_cast<BOOLEAN>(bHit);
+}
+
+// 0x73C490
+BOOL CGameSprite::sub_73C490(CGameSprite* target)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 9767
+    UTIL_ASSERT(target != NULL);
+
+    BOOL bHit = FALSE;
+    INT nConcealment;
+
+    if ((m_derivedStats.m_generalState & STATE_BLIND) != 0
+        || ((target->m_derivedStats.m_generalState & STATE_INVISIBLE) != 0
+            && (target->m_baseStats.field_2FC & 0x1) != 0)) {
+        nConcealment = 50;
+    } else if ((target->m_derivedStats.m_generalState & STATE_BLUR) != 0
+        || target->m_bHiding == TRUE) {
+        nConcealment = 20;
+    } else {
+        return TRUE;
+    }
+
+    if (CUtil::UtilRandInt(100, m_derivedStats.m_nLuck) >= nConcealment) {
+        bHit = TRUE;
+    }
+
+    if (sub_763150(CGAMESPRITE_FEAT_BLIND_FIGHT) == TRUE) {
+        CString sText;
+        CBaldurEngine* pEngine = g_pBaldurChitin->GetActiveEngine();
+
+        if (!bHit) {
+            if (CUtil::UtilRandInt(100, m_derivedStats.m_nLuck) >= nConcealment) {
+                bHit = TRUE;
+            }
+        }
+
+        if (pEngine != NULL && pEngine == g_pBaldurChitin->m_pEngineWorld) {
+            COLORREF rgbNameColor = CVidPalette::RANGE_COLORS[m_baseStats.m_colors[CVIDPALETTE_RANGE_MAIN_CLOTH]];
+            CString sResult = CBaldurEngine::FetchString(33752 + (bHit != FALSE ? 1 : 0));
+            CString sBlindFight = CBaldurEngine::FetchString(35778);
+            CString sConcealment = CBaldurEngine::FetchString(39823);
+            sText.Format("%s: %s - %s",
+                (LPCSTR)sConcealment,
+                (LPCSTR)sBlindFight,
+                (LPCSTR)sResult);
+            g_pBaldurChitin->m_pEngineWorld->DisplayText(GetName(),
+                sText,
+                rgbNameColor,
+                RGB(215, 215, 190),
+                -1,
+                FALSE);
+        }
+    }
+
+    return bHit;
+}
+
 // 0x73C6A0
 SHORT CGameSprite::sub_73C6A0(CGameSprite* target, CItem* curWeapon, const ITEM_ABILITY* curAttack)
 {
@@ -18669,6 +19132,287 @@ SHORT CGameSprite::sub_73CC40(CItem* curWeapon, const ITEM_ABILITY* curAttack)
     return mod;
 }
 
+// 0x8F9A04
+static char byte_8F9A04[8];
+
+// 0x8F9AF0
+static BOOL dword_8F9AF0;
+
+// NOTE: Race for each letter `A`-`Z` of a `ZZ??` weapon resref. The
+// original indexes the table from 0x8B8444 with the uppercase letter.
+//
+// 0x8B8548
+static const DWORD dword_8B8548[26] = {
+    0x9C, 0x9D, 0xA4, 0x98, 0xA0, 0xA1, 0xA5, 0x99, 0xA8, 0xA7, 0xA6, 0x9B, 0x02,
+    0x04, 0x06, 0x05, 0x03, 0x01, 0x74, 0x96, 0x6C, 0x9F, 0xA2, 0x75, 0x71, 0x73,
+};
+
+// NOTE: Alignment mask and value for each digit `0`-`5` of a `ZZ??` weapon
+// resref.
+//
+// 0x8B85B0
+static const DWORD dword_8B85B0[6][2] = {
+    { 0xF0, 0x1 },
+    { 0xF0, 0x2 },
+    { 0xF0, 0x3 },
+    { 0xF, 0x1 },
+    { 0xF, 0x2 },
+    { 0xF, 0x3 },
+};
+
+// 0x73CD00
+SHORT CGameSprite::sub_73CD00(CGameSprite* target, CItem* curWeapon, const ITEM_ABILITY* curAttack)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 10193
+    UTIL_ASSERT(target != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 10194
+    UTIL_ASSERT(curWeapon != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 10195
+    UTIL_ASSERT(curAttack != NULL);
+
+    SHORT lSlot;
+    CItem* pLauncher = GetLauncher(curAttack, lSlot);
+    if (pLauncher != NULL) {
+        pLauncher->Demand();
+        pLauncher->GetAbility(0);
+    }
+
+    dword_8F9AF0 = FALSE;
+
+    if (_strnicmp(reinterpret_cast<const char*>(curWeapon->cResRef.GetResRef()), "ZZ", 2) == 0) {
+        dword_8F9AF0 = TRUE;
+        strncpy(byte_8F9A04, reinterpret_cast<const char*>(curWeapon->cResRef.GetResRef()), 8);
+    }
+
+    if (pLauncher != NULL) {
+        if (_strnicmp(reinterpret_cast<const char*>(pLauncher->cResRef.GetResRef()), "ZZ", 2) == 0) {
+            dword_8F9AF0 = TRUE;
+            strncpy(byte_8F9A04, reinterpret_cast<const char*>(pLauncher->cResRef.GetResRef()), 8);
+        }
+        pLauncher->Release();
+    }
+
+    if (dword_8F9AF0) {
+        if (!isdigit(byte_8F9A04[3])) {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+            // __LINE__: 10238
+            UTIL_ASSERT(FALSE);
+        }
+
+        BOOL bMatch = FALSE;
+        if (isalpha(byte_8F9A04[2])) {
+            if (dword_8B8548[toupper(byte_8F9A04[2]) - 'A'] == target->m_typeAI.GetRace()) {
+                bMatch = TRUE;
+            }
+        } else if (isdigit(byte_8F9A04[2])) {
+            // NOTE: The masks look swapped, `(alignment & 0xF0) == 1` can
+            // never be true.
+            if ((target->m_typeAI.GetAlignment() & dword_8B85B0[byte_8F9A04[2] - '0'][0]) == dword_8B85B0[byte_8F9A04[2] - '0'][1]) {
+                bMatch = TRUE;
+            }
+        } else {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+            // __LINE__: 10269
+            UTIL_ASSERT(FALSE);
+        }
+
+        if (bMatch) {
+            SHORT nMod = byte_8F9A04[3] - '5';
+            if (byte_8F9A04[3] >= '5') {
+                nMod++;
+            }
+            return nMod;
+        }
+    }
+
+    return 0;
+}
+
+// 0x73CF10
+SHORT CGameSprite::sub_73CF10(CItem* curWeapon, const ITEM_ABILITY* curAttack)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 10289
+    UTIL_ASSERT(curWeapon != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 10290
+    UTIL_ASSERT(curAttack != NULL);
+
+    const CRuleTables& cRule = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
+
+    SHORT lSlot;
+    CItem* pLauncher = GetLauncher(curAttack, lSlot);
+    if (pLauncher != NULL) {
+        pLauncher->Demand();
+        pLauncher->GetAbility(0);
+    }
+
+    SHORT nProficiency = sub_73D440(curWeapon);
+
+    if (pLauncher != NULL) {
+        if (sub_73D440(pLauncher) > nProficiency) {
+            nProficiency = sub_73D440(pLauncher);
+        }
+        pLauncher->Release();
+    }
+
+    if (nProficiency < 0) {
+        return nProficiency;
+    }
+
+    if (nProficiency == 0) {
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1
+            || g_pBaldurChitin->GetActiveEngine() == g_pBaldurChitin->m_pEngineCreateChar) {
+            if ((curAttack->abilityFlags & 0x10000) != 0) {
+                return 0;
+            }
+
+            // NOTE: Original reads it from a constant at 0x84EAE0.
+            return -4;
+        }
+    }
+
+    // NOTE: Original reads the column from a constant at 0x84EBB6.
+    return static_cast<SHORT>(atol(cRule.m_tWeaponSpecialization.GetAt(CPoint(0, nProficiency))));
+}
+
+// 0x73D080
+SHORT CGameSprite::sub_73D080(BOOL bOffhand)
+{
+    SHORT mod = 0;
+
+    if (m_equipment.m_selectedWeapon == 42) {
+        return 0;
+    }
+
+    CItem* pWeapon = m_equipment.m_items[2 * m_nWeaponSet + 43];
+    CItem* pOffhand = m_equipment.m_items[2 * m_nWeaponSet + 44];
+    if (pWeapon != NULL
+        && pOffhand != NULL
+        && pOffhand->GetItemType() != 47
+        && pOffhand->GetItemType() != 53
+        && pOffhand->GetItemType() != 49
+        && pOffhand->GetItemType() != 41) {
+        // NOTE: Original reads them from constants at 0x84EAE4 and 0x84EAE8.
+        if (bOffhand == TRUE) {
+            mod = -10;
+        } else {
+            mod = -6;
+        }
+
+        BOOL bRanger = FALSE;
+        if (m_derivedStats.GetClassLevel(CAIOBJECTTYPE_C_RANGER) > 0
+            && !sub_724690(3)
+            && !sub_724690(2)) {
+            bRanger = TRUE;
+        }
+
+        if (bRanger || sub_763150(CGAMESPRITE_FEAT_AMBIDEXTERITY) == TRUE) {
+            if (bOffhand == TRUE) {
+                mod += 4;
+            }
+        }
+
+        if (bRanger || sub_763150(CGAMESPRITE_FEAT_TWO_WEAPON_FIGHTING) == TRUE) {
+            mod += 2;
+        }
+
+        WORD nItemType = pOffhand->GetItemType();
+        if (nItemType == 16 || nItemType == 19) {
+            mod += 2;
+        }
+    }
+
+    return mod;
+}
+
+// 0x73D1B0
+SHORT CGameSprite::sub_73D1B0(CGameSprite* target, const ITEM_ABILITY* curAttack)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 10432
+    UTIL_ASSERT(target != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 10433
+    UTIL_ASSERT(curAttack != NULL);
+
+    SHORT mod = 0;
+
+    if (LOBYTE(curAttack->type) == 2) {
+        const CPoint& ptTarget = target->GetPos();
+        INT nTargetX = ptTarget.x / CPathSearch::GRID_SQUARE_SIZEX;
+        INT nTargetY = ptTarget.y / CPathSearch::GRID_SQUARE_SIZEY;
+
+        const CPoint& ptSource = GetPos();
+        INT nSourceX = ptSource.x / CPathSearch::GRID_SQUARE_SIZEX;
+        INT nSourceY = ptSource.y / CPathSearch::GRID_SQUARE_SIZEY;
+
+        INT nDistance = (nSourceY - nTargetY) * (nSourceY - nTargetY)
+            + (nSourceX - nTargetX) * (nSourceX - nTargetX);
+
+        // NOTE: Uninline.
+        BYTE nSourceSpace = m_animation.GetPersonalSpace();
+        BYTE nTargetSpace = target->m_animation.GetPersonalSpace();
+
+        nDistance -= static_cast<BYTE>(((nTargetSpace - 1) >> 1) + ((nSourceSpace - 1) >> 1) - 1);
+
+        // NOTE: Original reads ranges and modifiers from constants at
+        // 0x85BB88-0x85BB92.
+        if (nDistance < 3 * 3) {
+            mod = -8;
+            if (sub_763150(CGAMESPRITE_FEAT_PRECISE_SHOT)) {
+                mod += 4;
+            }
+        } else if (nDistance > 64 * 64) {
+            mod = -5;
+        } else if (nDistance > 32 * 32) {
+            mod = -2;
+        }
+    }
+
+    if ((m_derivedStats.m_generalState & STATE_INVISIBLE) != 0
+        || (m_derivedStats.m_generalState & STATE_IMPROVEDINVISIBILITY) != 0) {
+        if (!target->sub_763150(CGAMESPRITE_FEAT_BLIND_FIGHT)
+            || LOBYTE(curAttack->type) == 2) {
+            // NOTE: Original reads it from a constant at 0x85BB86.
+            mod += 2;
+        }
+    }
+
+    if (sub_763150(CGAMESPRITE_FEAT_FIENDSLAYER)) {
+        switch (target->m_typeAI.GetRace()) {
+        case 186:
+        case CAIOBJECTTYPE_R_TANARI:
+        case CAIOBJECTTYPE_R_WYVERN:
+        case CAIOBJECTTYPE_R_DRAKE:
+        case 187:
+        case 188:
+            mod += 2;
+            break;
+        }
+    }
+
+    if (sub_763150(CGAMESPRITE_FEAT_HERETICS_BANE)) {
+        if ((target->GetAIType().m_nClassMask & 0xC) != 0) {
+            mod++;
+        }
+    }
+
+    if ((target->m_derivedStats.m_generalState & STATE_STUNNED) != 0) {
+        // NOTE: Original reads it from a constant at 0x84EAF0.
+        mod += 2;
+    }
+
+    return static_cast<SHORT>(m_derivedStats.m_cToHitBonusList.GetBonus(target->GetAIType()) + mod);
+}
+
 // 0x73D420
 SHORT CGameSprite::sub_73D420()
 {
@@ -18747,6 +19491,620 @@ SHORT CGameSprite::sub_73D440(CItem* curWeapon)
     }
 
     return mod;
+}
+
+// 0x73D560
+CGameEffect* CGameSprite::Damage(CItem* curWeapon, CItem* pLauncher, INT abilityNum, BOOL bCritical, const CAIObjectType& targetType, SHORT nTargetDirection, SHORT nAttackDirection, CGameSprite* target, BOOL bCheckOffhand)
+{
+    const CRuleTables& rule = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
+
+    BOOL bOffhand;
+    if (bCheckOffhand
+        && m_equipment.m_selectedWeapon != 42
+        && m_equipment.m_items[sub_726800()] != NULL
+        && m_equipment.m_items[sub_726800()]->GetItemType() != 53
+        && m_equipment.m_items[sub_726800()]->GetItemType() != 47
+        && m_equipment.m_items[sub_726800()]->GetItemType() != 49
+        && m_equipment.m_items[sub_726800()]->GetItemType() != 41) {
+        bOffhand = TRUE;
+    } else {
+        bOffhand = FALSE;
+    }
+
+    BOOLEAN bDamage = FALSE;
+    SHORT nMinDamage = 0;
+    INT nSneakAttackDamage = 0;
+
+    curWeapon->Demand();
+    const ITEM_ABILITY* curAttack = curWeapon->GetAbility(abilityNum);
+
+    const ITEM_ABILITY* launcherAbility = NULL;
+    if (pLauncher != NULL) {
+        pLauncher->Demand();
+        launcherAbility = pLauncher->GetAbility(0);
+    }
+
+    if (curAttack == NULL) {
+        curAttack = &DEFAULT_ATTACK;
+    }
+
+    SHORT nDamage = 0;
+
+    if (curAttack->damageDiceCount > 0) {
+        nMinDamage = 1;
+    }
+
+    if (m_derivedStats.m_spellStates[SPLSTATE_KAI_64]) {
+        nDamage = curAttack->damageDice * curAttack->damageDiceCount;
+    } else {
+        for (INT nDie = 0; nDie < curAttack->damageDiceCount; nDie++) {
+            nDamage += static_cast<SHORT>(CUtil::UtilRandInt(curAttack->damageDice, m_derivedStats.m_nLuck) + 1);
+        }
+    }
+
+    if (curAttack->damageDiceCount > 0 && curAttack->damageDice > 0) {
+        bDamage = TRUE;
+    }
+
+    if (curAttack->damageDiceBonus != 0) {
+        bDamage = TRUE;
+    }
+
+    if (launcherAbility != NULL) {
+        if (launcherAbility->damageDiceCount > 0) {
+            bDamage = TRUE;
+
+            for (INT nDie = 0; nDie < launcherAbility->damageDiceCount; nDie++) {
+                nDamage += static_cast<SHORT>(CUtil::UtilRandInt(launcherAbility->damageDice, m_derivedStats.m_nLuck) + 1);
+            }
+
+            if (launcherAbility->damageDiceCount > 0 && launcherAbility->damageDice > 0) {
+                bDamage = TRUE;
+            }
+        }
+
+        nDamage += launcherAbility->damageDiceBonus;
+        if (launcherAbility->damageDiceBonus != 0) {
+            bDamage = TRUE;
+        }
+    }
+
+    if (bDamage) {
+        if ((curAttack->abilityFlags & 0x1) != 0
+            || (launcherAbility != NULL && (launcherAbility->abilityFlags & 0x1) != 0)) {
+            INT nSTRBonus = rule.GetAbilityScoreModifier(m_derivedStats.m_nSTR);
+            if (bOffhand == TRUE) {
+                if (nSTRBonus > 1) {
+                    nSTRBonus /= 2;
+                }
+            } else if ((curWeapon->GetFlagsFile() & 0x2) != 0) {
+                if (curWeapon->GetItemIcon() != CResRef("FIST") && nSTRBonus > 0) {
+                    // NOTE: Original reads the multiplier from a constant
+                    // at 0x851DD4.
+                    nSTRBonus = static_cast<INT>(static_cast<float>(nSTRBonus) * 1.5f);
+                }
+            }
+            nDamage += static_cast<SHORT>(nSTRBonus);
+        }
+
+        if (bDamage) {
+            if (LOBYTE(curAttack->type) != 2
+                && m_baseStats.m_rogueLevel != 0
+                && !target->m_derivedStats.m_spellStates[SPLSTATE_SNEAK_ATTACK_IMMUNITY]
+                && (target->m_baseStats.field_2FB & 0x2) == 0) {
+                BOOLEAN bHelpless = FALSE;
+                if ((target->m_derivedStats.m_generalState & STATE_HELPLESS) != 0) {
+                    bHelpless = TRUE;
+                } else {
+                    // NOTE: Uninline.
+                    if (target->m_animation.GetMoveScale() == 0) {
+                        bHelpless = TRUE;
+                    }
+                }
+
+                BOOL bFlanked;
+                if (m_typeAI.GetEnemyAlly() > CAIObjectType::EA_GOODCUTOFF) {
+                    bFlanked = TRUE;
+                } else if (nTargetDirection > 2) {
+                    if (nTargetDirection < 14) {
+                        bFlanked = nAttackDirection > nTargetDirection - 4
+                            && nAttackDirection < nTargetDirection + 4;
+                    } else {
+                        bFlanked = nAttackDirection > nTargetDirection - 4
+                            || nAttackDirection < (nTargetDirection + 4) % 16;
+                    }
+                } else {
+                    bFlanked = nAttackDirection > (nTargetDirection + 12) % 16
+                        || nAttackDirection < nTargetDirection + 4;
+                }
+
+                BOOL bSneakAttack;
+                if (bFlanked) {
+                    BYTE nTargetBarbarianLevel = target->m_baseStats.m_barbarianLevel;
+                    BYTE nTargetRogueLevel = target->m_baseStats.m_rogueLevel;
+                    if ((nTargetBarbarianLevel >= 5 && m_baseStats.m_rogueLevel - nTargetBarbarianLevel < 4)
+                        || (nTargetRogueLevel >= 6 && m_baseStats.m_rogueLevel - nTargetRogueLevel < 4)) {
+                        FeedBack(FEEDBACK_UNCANNYDODGESUCCEEDED, 0, 0, 0, -1, 0, 0);
+                        bSneakAttack = FALSE;
+                    } else {
+                        bSneakAttack = TRUE;
+                    }
+                } else {
+                    bSneakAttack = bHelpless == TRUE;
+                }
+
+                if (bSneakAttack) {
+                    INT nRolls = IcewindMisc::GetSneakAttackRolls(this);
+                    if (nRolls > 0) {
+                        do {
+                            INT nDice = IcewindMisc::GetSneakAttackDice();
+                            nSneakAttackDamage += (nDice != 0 ? rand() % nDice : 0) + 1;
+                            nRolls--;
+                        } while (nRolls != 0);
+                    }
+
+                    if (m_derivedStats.m_spellStates[SPLSTATE_FEAT_ARTERIAL_STRIKE]
+                        && sub_763150(CGAMESPRITE_FEAT_ARTERIAL_STRIKE)) {
+                        ITEM_EFFECT effect;
+                        CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_BLEEDINGWOUNDS);
+                        // NOTE: Original reads it from a constant at 0x8491A8.
+                        effect.durationType = 0;
+                        effect.targetType = 2;
+                        effect.spellLevel = 0;
+                        effect.effectAmount = 1;
+                        effect.dwFlags = 0;
+                        effect.duration = 70;
+                        effect.savingThrow = 0;
+
+                        CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                            CPoint(-1, -1),
+                            -1,
+                            CPoint(-1, -1));
+                        pEffect->SetSource(GetPos());
+                        pEffect->SetSourceId(m_id);
+                        pEffect->sub_594020(FALSE);
+                        pEffect->sub_493400(TRUE);
+                        target->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+
+                        FeedBack(FEEDBACK_CRIPPLINGSTRIKESUCCEEDED, nSneakAttackDamage, 0, 0, 39828, 0, 0);
+                    } else if (m_derivedStats.m_spellStates[SPLSTATE_FEAT_HAMSTRING]
+                        && sub_763150(CGAMESPRITE_FEAT_HAMSTRING)) {
+                        ITEM_EFFECT effect;
+                        CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_MOVEMENTRATEWITHPORTRAIT);
+                        // NOTE: Original reads it from a constant at 0x8491A8.
+                        effect.durationType = 0;
+                        effect.targetType = 2;
+                        effect.spellLevel = 0;
+                        effect.effectAmount = 50;
+                        effect.dwFlags = 2;
+                        effect.duration = 70;
+                        effect.savingThrow = 0;
+
+                        CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                            CPoint(-1, -1),
+                            -1,
+                            CPoint(-1, -1));
+                        pEffect->SetSource(GetPos());
+                        pEffect->SetSourceId(m_id);
+                        pEffect->sub_594020(FALSE);
+                        pEffect->sub_493400(TRUE);
+                        target->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+
+                        FeedBack(FEEDBACK_CRIPPLINGSTRIKESUCCEEDED, nSneakAttackDamage, 0, 0, 39829, 0, 0);
+                    } else {
+                        FeedBack(FEEDBACK_CRIPPLINGSTRIKESUCCEEDED, nSneakAttackDamage, 0, 0, 25053, 0, 0);
+                    }
+
+                    target->AddEffect(IcewindMisc::CreateEffectImmunityToBackstab(this, IcewindMisc::sub_585D90()),
+                        CGameAIBase::EFFECT_LIST_TIMED,
+                        TRUE,
+                        TRUE);
+
+                    if (sub_763150(CGAMESPRITE_FEAT_CRIPPLING_STRIKE)) {
+                        CGameEffect* pEffect = IcewindMisc::CreateEffectSTR(this, -1, 700, 0);
+                        pEffect->sub_594020(FALSE);
+                        pEffect->sub_493400(TRUE);
+                        target->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+                    }
+                }
+            }
+
+            if ((m_derivedStats.m_generalState & STATE_BERSERK) != 0) {
+                nDamage += 2;
+            }
+        }
+    }
+
+    if (m_derivedStats.m_spellStates[SPLSTATE_SMITE_EVIL]
+        && IcewindMisc::IsEvil(target) == TRUE) {
+        nDamage += static_cast<SHORT>(m_derivedStats.GetClassLevel(CAIOBJECTTYPE_C_PALADIN));
+    }
+
+    if (bDamage == TRUE
+        && LOBYTE(curAttack->type) == 1
+        && sub_763150(CGAMESPRITE_FEAT_POWER_ATTACK)
+        && sub_726270(CGAMESPRITE_FEAT_POWER_ATTACK) > 0) {
+        nDamage += static_cast<SHORT>(sub_726270(CGAMESPRITE_FEAT_POWER_ATTACK));
+    }
+
+    nDamage += curAttack->damageDiceBonus;
+
+    if (bDamage) {
+        nDamage += m_derivedStats.m_nDamageBonus;
+
+        // NOTE: Only the low words of these `LONG`s are added.
+        if (bOffhand) {
+            nDamage += static_cast<SHORT>(m_derivedStats.m_DamageBonusLeft);
+        } else {
+            nDamage += static_cast<SHORT>(m_derivedStats.m_DamageBonusRight);
+        }
+    }
+
+    if (pLauncher != NULL) {
+        pLauncher->Release();
+    }
+
+    if (bDamage
+        && rule.IsHatedRace(targetType, m_baseStats)
+        && m_typeAI.IsClassValid(CAIObjectType::C_RANGER)) {
+        nDamage += 4;
+    }
+
+    if (sub_763150(CGAMESPRITE_FEAT_FIENDSLAYER)) {
+        switch (target->m_typeAI.GetRace()) {
+        case 186:
+        case CAIOBJECTTYPE_R_TANARI:
+        case CAIOBJECTTYPE_R_WYVERN:
+        case CAIOBJECTTYPE_R_DRAKE:
+        case 187:
+        case 188:
+            nDamage += 2;
+            break;
+        }
+    }
+
+    if (sub_763150(CGAMESPRITE_FEAT_HERETICS_BANE)) {
+        if ((target->GetAIType().m_nClassMask & 0xC) != 0) {
+            nDamage += 3;
+        }
+    }
+
+    if (curWeapon != m_equipment.m_items[CGameSpriteEquipment::SLOT_FIST]) {
+        if (m_derivedStats.m_spellStates[SPLSTATE_COAT_WEAPON_WITH_POISON]) {
+            m_derivedStats.m_spellStates.set(SPLSTATE_COAT_WEAPON_WITH_POISON, false);
+
+            // NOTE: Uninline.
+            RemovePortraitIcon(116);
+
+            ITEM_EFFECT effect;
+            CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_REMOVEEFFECTOFRESOURCE);
+            effect.targetType = 1;
+            effect.spellLevel = 0;
+            effect.effectAmount = 0;
+            effect.dwFlags = 0;
+            memcpy(effect.res, SPIN231.GetResRef(), RESREF_SIZE);
+            // NOTE: Original reads it from a constant at 0x8491AA.
+            effect.durationType = 1;
+            effect.duration = 0;
+            effect.numDice = 0;
+            effect.diceSize = 0;
+            effect.savingThrow = 0;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                CPoint(-1, -1),
+                -1,
+                CPoint(-1, -1));
+            pEffect->SetSource(GetPos());
+            pEffect->SetSourceId(m_id);
+            pEffect->sub_594020(FALSE);
+
+            CMessageAddEffect* message = new CMessageAddEffect(pEffect,
+                m_id,
+                m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            if (static_cast<BYTE>(target->m_derivedStats.m_nMirrorImages) == 0) {
+                ITEM_EFFECT effect2;
+                CGameEffect::ClearItemEffect(&effect2, CGAMEEFFECT_POISON);
+                effect2.targetType = 2;
+                effect2.spellLevel = 10;
+                effect2.effectAmount = -1 - rand() % 6;
+                effect2.dwFlags = 8;
+                effect2.duration = 7;
+                effect2.savingThrow = 4;
+                // NOTE: Original reads it from a constant at 0x8491A8.
+                effect2.durationType = 0;
+
+                pEffect = CGameEffect::DecodeEffect(&effect2,
+                    CPoint(-1, -1),
+                    -1,
+                    CPoint(-1, -1));
+                pEffect->SetSource(target->GetPos());
+                pEffect->SetSourceId(target->m_id);
+                pEffect->m_special = -1 - rand() % 6;
+                pEffect->sub_594020(FALSE);
+
+                message = new CMessageAddEffect(pEffect,
+                    m_id,
+                    target->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    } else {
+        if (m_derivedStats.m_spellStates[SPLSTATE_STUNNING_BLOW_70]) {
+            m_derivedStats.m_spellStates.reset(SPLSTATE_STUNNING_BLOW_70);
+
+            // NOTE: Uninline.
+            RemovePortraitIcon(134);
+
+            ITEM_EFFECT effect;
+            CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_REMOVEEFFECTOFRESOURCE);
+            effect.targetType = 1;
+            effect.spellLevel = 0;
+            effect.effectAmount = 0;
+            effect.dwFlags = 0;
+            memcpy(effect.res, SPIN232.GetResRef(), RESREF_SIZE);
+            // NOTE: Original reads it from a constant at 0x8491AA.
+            effect.durationType = 1;
+            effect.duration = 0;
+            effect.numDice = 0;
+            effect.diceSize = 0;
+            effect.savingThrow = 0;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                CPoint(-1, -1),
+                -1,
+                CPoint(-1, -1));
+            pEffect->SetSource(GetPos());
+            pEffect->SetSourceId(m_id);
+            pEffect->sub_594020(FALSE);
+
+            CMessageAddEffect* message = new CMessageAddEffect(pEffect,
+                m_id,
+                m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            if (static_cast<BYTE>(target->m_derivedStats.m_nMirrorImages) == 0) {
+                ITEM_EFFECT effect2;
+                CGameEffect::ClearItemEffect(&effect2, CGAMEEFFECT_STUN);
+                // NOTE: Original reads it from a constant at 0x8491A8.
+                effect2.durationType = 0;
+                effect2.targetType = 2;
+                effect2.spellLevel = 1;
+                effect2.effectAmount = 0;
+                effect2.dwFlags = 0;
+                // NOTE: Original reads it from a constant at 0x84EB90.
+                effect2.duration = 14;
+                effect2.numDice = 0;
+                effect2.diceSize = 0;
+                effect2.savingThrow = 4;
+                INT nWISBonus = rule.GetAbilityScoreModifier(m_derivedStats.m_nWIS);
+                effect2.saveMod = nWISBonus + m_derivedStats.GetClassLevel(CAIOBJECTTYPE_C_MONK) / 2 - 1;
+
+                pEffect = CGameEffect::DecodeEffect(&effect2,
+                    CPoint(-1, -1),
+                    -1,
+                    CPoint(-1, -1));
+                pEffect->SetSource(target->GetPos());
+                pEffect->SetSourceId(target->m_id);
+                pEffect->sub_594020(TRUE);
+                pEffect->sub_493400(TRUE);
+
+                message = new CMessageAddEffect(pEffect,
+                    m_id,
+                    target->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        } else if (m_derivedStats.m_spellStates[SPLSTATE_QUIVERING_PALM]) {
+            m_derivedStats.m_spellStates.reset(SPLSTATE_QUIVERING_PALM);
+
+            // NOTE: Uninline.
+            RemovePortraitIcon(135);
+
+            ITEM_EFFECT effect;
+            CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_REMOVEEFFECTOFRESOURCE);
+            effect.targetType = 1;
+            effect.spellLevel = 0;
+            effect.effectAmount = 0;
+            effect.dwFlags = 0;
+            memcpy(effect.res, SPIN233.GetResRef(), RESREF_SIZE);
+            // NOTE: Original reads it from a constant at 0x8491AA.
+            effect.durationType = 1;
+            effect.duration = 0;
+            effect.numDice = 0;
+            effect.diceSize = 0;
+            effect.savingThrow = 0;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                CPoint(-1, -1),
+                -1,
+                CPoint(-1, -1));
+            pEffect->SetSource(GetPos());
+            pEffect->SetSourceId(m_id);
+            pEffect->sub_594020(FALSE);
+
+            CMessageAddEffect* message = new CMessageAddEffect(pEffect,
+                m_id,
+                m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            if (static_cast<BYTE>(target->m_derivedStats.m_nMirrorImages) == 0) {
+                ITEM_EFFECT effect2;
+                CGameEffect::ClearItemEffect(&effect2, CGAMEEFFECT_DEATH);
+                // NOTE: Original reads it from a constant at 0x8491AA.
+                effect2.durationType = 1;
+                effect2.dwFlags = 4;
+                effect2.savingThrow = 4;
+                effect2.targetType = 2;
+                effect2.spellLevel = 1;
+                effect2.effectAmount = 0;
+                effect2.duration = 0;
+                effect2.numDice = 0;
+                effect2.diceSize = 0;
+                INT nWISBonus = rule.GetAbilityScoreModifier(m_derivedStats.m_nWIS);
+                effect2.saveMod = nWISBonus + m_derivedStats.GetClassLevel(CAIOBJECTTYPE_C_MONK) / 2 - 1;
+
+                pEffect = CGameEffect::DecodeEffect(&effect2,
+                    CPoint(-1, -1),
+                    -1,
+                    CPoint(-1, -1));
+                pEffect->SetSource(target->GetPos());
+                pEffect->SetSourceId(target->m_id);
+                pEffect->sub_594020(FALSE);
+
+                message = new CMessageAddEffect(pEffect,
+                    m_id,
+                    target->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    }
+
+    if (_strnicmp(reinterpret_cast<const char*>(curWeapon->cResRef.GetResRef()), "ZZ", 2) == 0) {
+        char szResRef[RESREF_SIZE + 1];
+        strcpy(szResRef, curWeapon->cResRef.GetResRefStr());
+
+        if (!isdigit(szResRef[3])) {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+            // __LINE__: 11270
+            UTIL_ASSERT(FALSE);
+        }
+
+        BOOL bMatch = FALSE;
+        if (isalpha(szResRef[2])) {
+            if (dword_8B8548[toupper(szResRef[2]) - 'A'] == target->m_typeAI.GetRace()) {
+                bMatch = TRUE;
+            }
+        } else if (isdigit(szResRef[2])) {
+            if ((target->m_typeAI.GetAlignment() & dword_8B85B0[szResRef[2] - '0'][0]) == dword_8B85B0[szResRef[2] - '0'][1]) {
+                bMatch = TRUE;
+            }
+        } else {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+            // __LINE__: 11304
+            UTIL_ASSERT(FALSE);
+        }
+
+        if (bMatch) {
+            nDamage += szResRef[3] - '5';
+            if (szResRef[3] >= '5') {
+                nDamage++;
+            }
+        }
+    }
+
+    nDamage += static_cast<SHORT>(m_derivedStats.m_cDamageBonusList.GetBonus(targetType));
+
+    if (nDamage < nMinDamage) {
+        nDamage = nMinDamage;
+    }
+
+    if (bCritical) {
+        nDamage *= static_cast<SHORT>(curWeapon->GetCriticalHitMultiplier());
+    }
+
+    nDamage += static_cast<SHORT>(nSneakAttackDamage);
+
+    // NOTE: Uninitialized in the original. It shares the stack slot with
+    // `nSneakAttackDamage`, which is what the default case keeps.
+    DWORD dwDamageType = nSneakAttackDamage;
+    switch (curAttack->damageType) {
+    case 1:
+        dwDamageType = 0x100000;
+        break;
+    case 2:
+        dwDamageType = 0;
+        break;
+    case 3:
+        dwDamageType = 0x1000000;
+        break;
+    case 4:
+        dwDamageType = 0x2000000;
+        break;
+    case 5:
+        dwDamageType = 0x8000000;
+        break;
+    case 6:
+        if (target != NULL) {
+            dwDamageType = target->m_derivedStats.m_nResistPiercing <= target->m_derivedStats.m_nResistCrushing
+                ? 0x100000
+                : 0;
+        } else {
+            dwDamageType = 0x100000;
+        }
+        break;
+    case 7:
+        if (target != NULL) {
+            dwDamageType = target->m_derivedStats.m_nResistPiercing <= target->m_derivedStats.m_nResistSlashing
+                ? 0x100000
+                : 0x1000000;
+        } else {
+            dwDamageType = 0x100000;
+        }
+        break;
+    case 8:
+        if (target != NULL) {
+            // NOTE: Picks slashing when crushing is resisted less, unlike
+            // the two cases above.
+            dwDamageType = target->m_derivedStats.m_nResistCrushing <= target->m_derivedStats.m_nResistSlashing
+                ? 0x1000000
+                : 0;
+        } else {
+            dwDamageType = 0;
+        }
+        break;
+    case 9:
+        dwDamageType = 0x4000000;
+        break;
+    }
+
+    curWeapon->Release();
+
+    if (nDamage >= target->m_baseStats.m_hitPoints
+        && LOBYTE(curAttack->type) == 1
+        && sub_763150(CGAMESPRITE_FEAT_CLEAVE) == TRUE) {
+        INT nCleave = GetFeatValue(CGAMESPRITE_FEAT_CLEAVE);
+        if (!m_timedEffectList.IsTypeOnList(ICEWIND_CGAMEEFFECT_FEATCLEAVE) || nCleave == 2) {
+            ITEM_EFFECT effect;
+            CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_FEATCLEAVE);
+            effect.targetType = 1;
+            effect.spellLevel = 0;
+            effect.effectAmount = field_5636 - 1;
+            effect.dwFlags = GetFeatValue(CGAMESPRITE_FEAT_CLEAVE);
+            effect.special = target->m_id;
+            // NOTE: Original reads it from a constant at 0x8491A8.
+            effect.durationType = 0;
+            effect.duration = 7;
+            effect.numDice = 0;
+            effect.diceSize = 0;
+            effect.savingThrow = 0;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                CPoint(-1, -1),
+                -1,
+                CPoint(-1, -1));
+            pEffect->SetSource(GetPos());
+            pEffect->SetSourceId(m_id);
+            pEffect->sub_594020(FALSE);
+
+            CMessageAddEffect* message = new CMessageAddEffect(pEffect,
+                m_id,
+                m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    }
+
+    CGameEffectDamage* pDamage = new CGameEffectDamage();
+    pDamage->m_effectAmount = nDamage;
+    pDamage->m_dwFlags = dwDamageType;
+    pDamage->m_source = m_pos;
+    pDamage->m_sourceID = m_id;
+
+    CWeaponIdentification weaponId;
+    curWeapon->LoadWeaponIdentification(weaponId);
+    pDamage->m_special = weaponId.m_attributes;
+
+    return pDamage;
 }
 
 // 0x73EA80

@@ -605,6 +605,7 @@ public:
     LONG GetLevel();
     void sub_723BF0(BOOLEAN a1, BOOLEAN a2);
     INT GetAC();
+    INT sub_723DB0();
     INT sub_723F60();
     void sub_71E760(CDerivedStats& DStats, int a2);
     void sub_722D50(BYTE nClass, SHORT nLevels, int a3);
@@ -690,6 +691,8 @@ public:
     BOOLEAN sub_737910(BOOL a1);
     void CheckReputation();
     SHORT GetCriticalHitBonus();
+    BOOLEAN Hit(CGameSprite* target, CItem* curWeapon, INT abilityNum, BOOL* pbCritical, BOOL bCheckOffhand, BYTE nAttackCount);
+    BOOL sub_73C490(CGameSprite* target);
     SHORT sub_73C6A0(CGameSprite* target, CItem* curWeapon, const ITEM_ABILITY* curAttack);
     SHORT sub_73C7E0();
     SHORT sub_73C8C0(CGameSprite* target);
@@ -698,8 +701,13 @@ public:
     SHORT sub_73CAE0(CItem* curWeapon, const ITEM_ABILITY* curAttack);
     SHORT sub_73CB10(CItem* curWeapon, const ITEM_ABILITY* curAttack);
     SHORT sub_73CC40(CItem* curWeapon, const ITEM_ABILITY* curAttack);
+    SHORT sub_73CD00(CGameSprite* target, CItem* curWeapon, const ITEM_ABILITY* curAttack);
+    SHORT sub_73CF10(CItem* curWeapon, const ITEM_ABILITY* curAttack);
+    SHORT sub_73D080(BOOL bOffhand);
+    SHORT sub_73D1B0(CGameSprite* target, const ITEM_ABILITY* curAttack);
     SHORT sub_73D420();
     SHORT sub_73D440(CItem* curWeapon);
+    CGameEffect* Damage(CItem* curWeapon, CItem* pLauncher, INT abilityNum, BOOL bCritical, const CAIObjectType& targetType, SHORT nTargetDirection, SHORT nAttackDirection, CGameSprite* target, BOOL bCheckOffhand);
     SHORT MoveToPoint();
     SHORT OneSwing();
     SHORT Recoil();
