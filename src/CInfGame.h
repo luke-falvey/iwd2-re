@@ -539,6 +539,7 @@ class CGameFile : public CResHelper<CResGame, 1013> {
 public:
     BYTE* GetData();
     DWORD GetDataSize();
+    void ReleaseData();
 };
 
 #endif /* CINFGAME_H_ */

@@ -1028,3 +1028,11 @@ DWORD CStoreFile::GetDataSize()
 
     return nSize;
 }
+
+// 0x5C7B00
+void CStoreFile::ReleaseData()
+{
+    if (pRes != NULL) {
+        pRes->Release();
+    }
+}

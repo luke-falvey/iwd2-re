@@ -541,3 +541,11 @@ DWORD CWorldMapFile::GetDataSize()
 
     return nSize;
 }
+
+// 0x5C7B00
+void CWorldMapFile::ReleaseData()
+{
+    if (pRes != NULL) {
+        pRes->Release();
+    }
+}

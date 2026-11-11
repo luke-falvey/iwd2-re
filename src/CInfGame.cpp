@@ -13047,3 +13047,11 @@ DWORD CGameFile::GetDataSize()
 
     return nSize;
 }
+
+// 0x5C7B00
+void CGameFile::ReleaseData()
+{
+    if (pRes != NULL) {
+        pRes->Release();
+    }
+}
