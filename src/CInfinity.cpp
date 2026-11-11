@@ -1431,9 +1431,195 @@ BOOL CInfinity::CancelRequestRect(unsigned char a1)
 }
 
 // 0x5CD3C0
-void CInfinity::ScrollingCancelRequestRect(unsigned char a1)
+BOOLEAN CInfinity::ScrollingCancelRequestRect(unsigned char a1)
 {
-    // TODO: Incomplete.
+    int nLeft = field_68;
+    int nTop = field_6C;
+    int nRight = field_70;
+    int nBottom = field_74;
+
+    {
+        int nStartX = (nLeft + 1 < 0 ? 0 : nLeft + 1);
+        int nEndX = (nTilesX - 1 < nRight - 1 ? nTilesX - 1 : nRight - 1);
+        int nStartY = (nTop + 1 < 0 ? 0 : nTop + 1);
+        int nEndY = (nTilesY - 1 < nBottom - 1 ? nTilesY - 1 : nBottom - 1);
+
+        for (int nY = nStartY; nY < nEndY; nY++) {
+            for (int nX = nStartX; nX < nEndX; nX++) {
+                CancelRequestTile(nX, nY, a1);
+            }
+        }
+    }
+
+    switch (field_196) {
+    case 1:
+        {
+            int nStartX = (nLeft < 0 ? 0 : nLeft);
+            int nEndX = (nTilesX - 1 < nRight ? nTilesX - 1 : nRight);
+            int nStartY = (nTop - 1 < 0 ? 0 : nTop - 1);
+            int nEndY = (nTop < 0 ? 0 : nTop);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    CancelRequestTile(nX, nY, a1);
+                }
+            }
+        }
+        break;
+    case 2:
+        {
+            int nStartX = (nLeft < 0 ? 0 : nLeft);
+            int nEndX = (nTilesX - 1 < nRight + 1 ? nTilesX - 1 : nRight + 1);
+            int nStartY = (nTop - 1 < 0 ? 0 : nTop - 1);
+            int nEndY = (nTop < 0 ? 0 : nTop);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    CancelRequestTile(nX, nY, a1);
+                }
+            }
+        }
+        {
+            int nStartX = (nTilesX - 1 < nRight ? nTilesX - 1 : nRight);
+            int nEndX = (nTilesX - 1 < nRight + 1 ? nTilesX - 1 : nRight + 1);
+            int nStartY = (nTop < 0 ? 0 : nTop);
+            int nEndY = (nTilesY - 1 < nBottom ? nTilesY - 1 : nBottom);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    CancelRequestTile(nX, nY, a1);
+                }
+            }
+        }
+        break;
+    case 3:
+        {
+            int nStartX = (nTilesX - 1 < nRight ? nTilesX - 1 : nRight);
+            int nEndX = (nTilesX - 1 < nRight + 1 ? nTilesX - 1 : nRight + 1);
+            int nStartY = (nTop < 0 ? 0 : nTop);
+            int nEndY = (nTilesY - 1 < nBottom ? nTilesY - 1 : nBottom);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    CancelRequestTile(nX, nY, a1);
+                }
+            }
+        }
+        break;
+    case 4:
+        {
+            int nStartX = (nLeft < 0 ? 0 : nLeft);
+            int nEndX = (nTilesX - 1 < nRight + 1 ? nTilesX - 1 : nRight + 1);
+            int nStartY = (nTilesY - 1 < nBottom ? nTilesY - 1 : nBottom);
+            int nEndY = (nTilesY - 1 < nBottom + 1 ? nTilesY - 1 : nBottom + 1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    CancelRequestTile(nX, nY, a1);
+                }
+            }
+        }
+        {
+            int nStartX = (nTilesX - 1 < nRight ? nTilesX - 1 : nRight);
+            int nEndX = (nTilesX - 1 < nRight + 1 ? nTilesX - 1 : nRight + 1);
+            int nStartY = (nTop < 0 ? 0 : nTop);
+            int nEndY = (nTilesY - 1 < nBottom ? nTilesY - 1 : nBottom);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    CancelRequestTile(nX, nY, a1);
+                }
+            }
+        }
+        break;
+    case 5:
+        {
+            int nStartX = (nLeft < 0 ? 0 : nLeft);
+            int nEndX = (nTilesX - 1 < nRight ? nTilesX - 1 : nRight);
+            int nStartY = (nTilesY - 1 < nBottom ? nTilesY - 1 : nBottom);
+            int nEndY = (nTilesY - 1 < nBottom + 1 ? nTilesY - 1 : nBottom + 1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    CancelRequestTile(nX, nY, a1);
+                }
+            }
+        }
+        break;
+    case 6:
+        {
+            int nStartX = (nLeft - 1 < 0 ? 0 : nLeft - 1);
+            int nEndX = (nTilesX - 1 < nRight ? nTilesX - 1 : nRight);
+            int nStartY = (nTilesY - 1 < nBottom ? nTilesY - 1 : nBottom);
+            int nEndY = (nTilesY - 1 < nBottom + 1 ? nTilesY - 1 : nBottom + 1);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    CancelRequestTile(nX, nY, a1);
+                }
+            }
+        }
+        {
+            int nStartX = (nLeft - 1 < 0 ? 0 : nLeft - 1);
+            int nEndX = (nLeft < 0 ? 0 : nLeft);
+            int nStartY = (nTop < 0 ? 0 : nTop);
+            int nEndY = (nTilesY - 1 < nBottom ? nTilesY - 1 : nBottom);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    CancelRequestTile(nX, nY, a1);
+                }
+            }
+        }
+        break;
+    case 7:
+        {
+            int nStartX = (nLeft - 1 < 0 ? 0 : nLeft - 1);
+            int nEndX = (nLeft < 0 ? 0 : nLeft);
+            int nStartY = (nTop < 0 ? 0 : nTop);
+            int nEndY = (nTilesY - 1 < nBottom ? nTilesY - 1 : nBottom);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    CancelRequestTile(nX, nY, a1);
+                }
+            }
+        }
+        break;
+    case 8:
+        {
+            int nStartX = (nLeft - 1 < 0 ? 0 : nLeft - 1);
+            int nEndX = (nTilesX - 1 < nRight ? nTilesX - 1 : nRight);
+            int nStartY = (nTop - 1 < 0 ? 0 : nTop - 1);
+            int nEndY = (nTop < 0 ? 0 : nTop);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    CancelRequestTile(nX, nY, a1);
+                }
+            }
+        }
+        {
+            int nStartX = (nLeft - 1 < 0 ? 0 : nLeft - 1);
+            int nEndX = (nLeft < 0 ? 0 : nLeft);
+            int nStartY = (nTop < 0 ? 0 : nTop);
+            int nEndY = (nTilesY - 1 < nBottom ? nTilesY - 1 : nBottom);
+
+            for (int nY = nStartY; nY < nEndY; nY++) {
+                for (int nX = nStartX; nX < nEndX; nX++) {
+                    CancelRequestTile(nX, nY, a1);
+                }
+            }
+        }
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\Infinity.cpp
+        // __LINE__: 2669
+        UTIL_ASSERT(FALSE);
+        break;
+    }
+
+    return TRUE;
 }
 
 // 0x5CDA70

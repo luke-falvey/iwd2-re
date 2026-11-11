@@ -690,7 +690,51 @@ void CSpawn::Read(CMemINISection* pSection)
 
     // NOTE: Uninline.
     if (GetINIKey(pSection, SpecKey, sValue)) {
-        // TODO: Incomplete.
+        int nPos = sValue.Find('[');
+        if (nPos >= 0) {
+            CStringArray Values;
+            int aValues[8] = { 0 };
+
+            nPos++;
+            sValue = sValue.Mid(nPos);
+
+            nPos = sValue.Find(']');
+            if (nPos <= 0) {
+                return;
+            }
+
+            sValue = sValue.Left(nPos);
+
+            int nCount = ReadValues(sValue, Values);
+            for (int nIndex = 0; nIndex < nCount && nIndex < 8; nIndex++) {
+                aValues[nIndex] = atoi(Values[nIndex]);
+            }
+
+            field_14.Set(CAIObjectType(aValues[0],
+                aValues[1],
+                aValues[2],
+                aValues[3],
+                aValues[4],
+                aValues[5],
+                aValues[6],
+                aValues[7],
+                -1,
+                0,
+                0));
+            field_13E = TRUE;
+        } else {
+            CAIObjectType type(0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0);
+
+            sValue.TrimRight();
+            sValue.TrimLeft();
+
+            field_14.Set(type);
+
+            // NOTE: Uninline.
+            field_14.SetName(sValue);
+
+            field_13E = TRUE;
+        }
     } else {
         field_13E = FALSE;
     }

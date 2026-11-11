@@ -1691,7 +1691,165 @@ void CGameSprite::sub_6F50A0()
 // 0x6F5330
 void CGameSprite::sub_6F5330()
 {
-    // TODO: Incomplete.
+    if (m_bBumped) {
+        m_ptBumpedFrom.x = -1;
+        m_bBumped = FALSE;
+        m_ptBumpedFrom.y = -1;
+    }
+
+    if (m_bVisibleMonster) {
+        m_bVisibleMonster = FALSE;
+        m_pArea->m_nVisibleMonster--;
+    }
+
+    if (m_bInfravisionOn) {
+        m_bInfravisionOn = FALSE;
+        m_pArea->m_nInfravision--;
+    }
+
+    if (g_pBaldurChitin->cNetwork.m_bIsHost == TRUE) {
+        CString sName1(m_baseStats.field_2A2);
+        sName1.TrimLeft();
+        sName1.TrimRight();
+
+        CString sName2(m_baseStats.field_2C2);
+        sName2.TrimLeft();
+        sName2.TrimRight();
+
+        CString sVar;
+        CString sGlobal("GLOBAL");
+
+        if (m_baseStats.field_295) {
+            sVar = m_scriptName;
+            sVar += "_DEAD";
+
+            CVariable* pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sVar);
+            if (pVariable != NULL) {
+                pVariable->m_intValue = 1;
+
+                CMessage* message = new CMessageSetVariable(sVar, sGlobal, pVariable->m_intValue, 0, m_id, m_id, 0);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            } else {
+                CVariable* pNewVariable = new CVariable();
+                pNewVariable->SetName(sVar);
+                pNewVariable->m_intValue = 1;
+                g_pBaldurChitin->m_pObjectGame->m_variables.AddKey(*pNewVariable);
+
+                CMessage* message = new CMessageSetVariable(sVar, sGlobal, pNewVariable->m_intValue, 0, m_id, m_id, 0);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                delete pNewVariable;
+            }
+        }
+
+        sub_6F50A0();
+
+        if (m_baseStats.field_296) {
+            sVar = "KILL_";
+            sVar += GetRaceString(GetAIType().m_nRace);
+            sVar += "_CNT";
+
+            CVariable* pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sVar);
+            if (pVariable != NULL) {
+                pVariable->m_intValue++;
+
+                CMessage* message = new CMessageSetVariable(sVar, sGlobal, pVariable->m_intValue, 0, m_id, m_id, 0);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            } else {
+                CVariable cNewVariable;
+                cNewVariable.SetName(sVar);
+                cNewVariable.m_intValue = 1;
+                g_pBaldurChitin->m_pObjectGame->m_variables.AddKey(cNewVariable);
+
+                CMessage* message = new CMessageSetVariable(sVar, sGlobal, cNewVariable.m_intValue, 0, m_id, m_id, 0);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+
+        if (strcmp(sName1, "") != 0) {
+            sVar = sName1;
+
+            CVariable* pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sVar);
+            if (pVariable != NULL) {
+                pVariable->m_intValue = 1;
+
+                CMessage* message = new CMessageSetVariable(sVar, sGlobal, pVariable->m_intValue, 0, m_id, m_id, 0);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            } else {
+                CVariable cNewVariable;
+                cNewVariable.SetName(sVar);
+                cNewVariable.m_intValue = 1;
+                g_pBaldurChitin->m_pObjectGame->m_variables.AddKey(cNewVariable);
+
+                CMessage* message = new CMessageSetVariable(sVar, sGlobal, cNewVariable.m_intValue, 0, m_id, m_id, 0);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+
+        if (strcmp(sName2, "") != 0) {
+            CString sFirst;
+            CString sSecond;
+            CString sUpper(sName2);
+            sUpper.MakeUpper();
+
+            INT nIndex = sUpper.Find(":");
+            if (nIndex >= 0) {
+                sFirst = sUpper.Left(nIndex);
+                sSecond = sUpper.Right(sUpper.GetLength() - nIndex - 1);
+            } else {
+                sSecond = sUpper;
+            }
+
+            if (strcmp(sFirst, "") != 0) {
+                sVar = sFirst;
+
+                CVariable* pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sVar);
+                if (pVariable != NULL) {
+                    pVariable->m_intValue++;
+
+                    CMessage* message = new CMessageSetVariable(sVar, sGlobal, pVariable->m_intValue, 0, m_id, m_id, 0);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                } else {
+                    CVariable cNewVariable;
+                    cNewVariable.SetName(sVar);
+                    cNewVariable.m_intValue = 1;
+                    g_pBaldurChitin->m_pObjectGame->m_variables.AddKey(cNewVariable);
+
+                    CMessage* message = new CMessageSetVariable(sVar, sGlobal, cNewVariable.m_intValue, 0, m_id, m_id, 0);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                }
+            }
+
+            if (strcmp(sSecond, "") != 0) {
+                sVar = sSecond;
+
+                CVariable* pVariable = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sVar);
+                if (pVariable != NULL) {
+                    pVariable->m_intValue++;
+
+                    CMessage* message = new CMessageSetVariable(sVar, sGlobal, pVariable->m_intValue, 0, m_id, m_id, 0);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                } else {
+                    CVariable cNewVariable;
+                    cNewVariable.SetName(sVar);
+                    cNewVariable.m_intValue = 1;
+                    g_pBaldurChitin->m_pObjectGame->m_variables.AddKey(cNewVariable);
+
+                    CMessage* message = new CMessageSetVariable(sVar, sGlobal, cNewVariable.m_intValue, 0, m_id, m_id, 0);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                }
+            }
+        }
+
+        // NOTE: `m_bIsHost` was already checked to be TRUE above, so the
+        // block below can never be entered.
+        if (g_pChitin->cNetwork.m_nServiceProvider != CNetwork::SERV_PROV_NULL
+            && g_pBaldurChitin->m_pObjectGame->GetCharacterPortraitNum(m_id) != -1
+            && g_pBaldurChitin->cNetwork.m_bIsHost == FALSE
+            && g_pBaldurChitin->m_pEngineWorld != g_pBaldurChitin->pActiveEngine) {
+            g_pBaldurChitin->pActiveEngine->SelectEngine(g_pBaldurChitin->m_pEngineWorld);
+        }
+    }
 }
 
 // 0x6F5FF0

@@ -1,6 +1,9 @@
 #include "CBlood.h"
 
+#include "CBaldurChitin.h"
 #include "CParticle.h"
+#include "CUtil.h"
+#include "CVidMode.h"
 
 // 0x84D5AC
 const BYTE CBlood::NUM_COLORS = CBLOOD_NUM_COLORS;
@@ -120,7 +123,185 @@ void CBlood::Render(CVidMode* pVidMode, INT nSurface)
 // 0x519C40
 void CBlood::CalcBoundingRect()
 {
-    // TODO: Incomplete.
+    switch (m_bloodType) {
+    case PULSATING_ARTERY:
+        switch (m_nDirection) {
+        case 0:
+            m_rBounding.SetRect(((m_pos.x - 0x14) < 0) ? 0 : (m_pos.x - 0x14),
+                                ((m_pos.y - m_posZ - 0x28) < 0) ? 0 : (m_pos.y - m_posZ - 0x28),
+                                m_pos.x + 0x14,
+                                m_pos.y - m_posZ + 0x28);
+            m_refPoint.x = m_pos.x - 0x14;
+            m_refPoint.y = m_pos.y - m_posZ - 0x28;
+            break;
+        case 1:
+        case 2:
+        case 3:
+            m_rBounding.SetRect(((m_pos.x - 0x41) < 0) ? 0 : (m_pos.x - 0x41),
+                                ((m_pos.y - m_posZ - 0x28) < 0) ? 0 : (m_pos.y - m_posZ - 0x28),
+                                m_pos.x + 0xA,
+                                m_pos.y - m_posZ + 0x28);
+            m_refPoint.x = m_pos.x - 0x41;
+            m_refPoint.y = m_pos.y - m_posZ - 0x28;
+            break;
+        case 4:
+            m_rBounding.SetRect(((m_pos.x - 0x41) < 0) ? 0 : (m_pos.x - 0x41),
+                                ((m_pos.y - m_posZ - 0x28) < 0) ? 0 : (m_pos.y - m_posZ - 0x28),
+                                m_pos.x + 0xF,
+                                m_pos.y - m_posZ + 0x28);
+            m_refPoint.x = m_pos.x - 0x41;
+            m_refPoint.y = m_pos.y - m_posZ - 0x28;
+            break;
+        case 5:
+        case 6:
+        case 7:
+            m_rBounding.SetRect(((m_pos.x - 0x41) < 0) ? 0 : (m_pos.x - 0x41),
+                                ((m_pos.y - m_posZ - 0x32) < 0) ? 0 : (m_pos.y - m_posZ - 0x32),
+                                m_pos.x + 0x14,
+                                m_pos.y - m_posZ + 0x28);
+            m_refPoint.x = m_pos.x - 0x41;
+            m_refPoint.y = m_pos.y - m_posZ - 0x32;
+            break;
+        case 8:
+            m_rBounding.SetRect(((m_pos.x - 0x14) < 0) ? 0 : (m_pos.x - 0x14),
+                                ((m_pos.y - m_posZ - 0x32) < 0) ? 0 : (m_pos.y - m_posZ - 0x32),
+                                m_pos.x + 0x14,
+                                m_pos.y - m_posZ + 0x14);
+            m_refPoint.x = m_pos.x - 0x14;
+            m_refPoint.y = m_pos.y - m_posZ - 0x32;
+            break;
+        case 9:
+        case 10:
+        case 11:
+            m_rBounding.SetRect(((m_pos.x - 0xA) < 0) ? 0 : (m_pos.x - 0xA),
+                                ((m_pos.y - m_posZ - 0x32) < 0) ? 0 : (m_pos.y - m_posZ - 0x32),
+                                m_pos.x + 0x3C,
+                                m_pos.y - m_posZ + 0x28);
+            m_refPoint.x = m_pos.x - 0xA;
+            m_refPoint.y = m_pos.y - m_posZ - 0x32;
+            break;
+        case 12:
+            m_rBounding.SetRect(((m_pos.x - 0xA) < 0) ? 0 : (m_pos.x - 0xA),
+                                ((m_pos.y - m_posZ - 0x28) < 0) ? 0 : (m_pos.y - m_posZ - 0x28),
+                                m_pos.x + 0x46,
+                                m_pos.y - m_posZ + 0x28);
+            m_refPoint.x = m_pos.x - 0xA;
+            m_refPoint.y = m_pos.y - m_posZ - 0x28;
+            break;
+        case 13:
+        case 14:
+        case 15:
+            m_rBounding.SetRect(((m_pos.x - 0xA) < 0) ? 0 : (m_pos.x - 0xA),
+                                ((m_pos.y - m_posZ - 0x28) < 0) ? 0 : (m_pos.y - m_posZ - 0x28),
+                                m_pos.x + 0x41,
+                                m_pos.y - m_posZ + 0x2D);
+            m_refPoint.x = m_pos.x - 0xA;
+            m_refPoint.y = m_pos.y - m_posZ - 0x28;
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\CParticle.cpp
+            // __LINE__: 559
+            UTIL_ASSERT(FALSE);
+            break;
+        }
+        break;
+    case EXPLODING_DEATH: {
+        CSize size;
+        g_pBaldurChitin->GetCurrentVideoMode()->GetFXSize(size);
+
+        size.cx--;
+        size.cy--;
+
+        m_rBounding.SetRect(((m_pos.x - (size.cx >> 1)) < 0) ? 0 : (m_pos.x - (size.cx >> 1)),
+                            ((m_pos.y - m_posZ - (size.cy >> 1)) < 0) ? 0 : (m_pos.y - m_posZ - (size.cy >> 1)),
+                            m_pos.x + (size.cx >> 1),
+                            m_pos.y - m_posZ + (size.cy >> 1));
+        m_refPoint.x = m_pos.x - (size.cx >> 1);
+        m_refPoint.y = m_pos.y - (size.cy >> 1) - m_posZ;
+        break;
+    }
+    default:
+        switch (m_nDirection) {
+        case 0:
+            m_rBounding.SetRect(((m_pos.x - 0x2D) < 0) ? 0 : (m_pos.x - 0x2D),
+                                ((m_pos.y - m_posZ - 0xA) < 0) ? 0 : (m_pos.y - m_posZ - 0xA),
+                                m_pos.x + 0x2D,
+                                m_pos.y - m_posZ + 0x50);
+            m_refPoint.x = m_pos.x - 0x2D;
+            m_refPoint.y = m_pos.y - m_posZ - 0xA;
+            break;
+        case 1:
+        case 2:
+        case 3:
+            m_rBounding.SetRect(((m_pos.x - 0x41) < 0) ? 0 : (m_pos.x - 0x41),
+                                ((m_pos.y - m_posZ - 0xA) < 0) ? 0 : (m_pos.y - m_posZ - 0xA),
+                                m_pos.x + 0xA,
+                                m_pos.y - m_posZ + 0x50);
+            m_refPoint.x = m_pos.x - 0x41;
+            m_refPoint.y = m_pos.y - m_posZ - 0xA;
+            break;
+        case 4:
+            m_rBounding.SetRect(((m_pos.x - 0x41) < 0) ? 0 : (m_pos.x - 0x41),
+                                ((m_pos.y - m_posZ - 0xF) < 0) ? 0 : (m_pos.y - m_posZ - 0xF),
+                                m_pos.x + 0xF,
+                                m_pos.y - m_posZ + 0x46);
+            m_refPoint.x = m_pos.x - 0x41;
+            m_refPoint.y = m_pos.y - m_posZ - 0xF;
+            break;
+        case 5:
+        case 6:
+        case 7:
+            m_rBounding.SetRect(((m_pos.x - 0x41) < 0) ? 0 : (m_pos.x - 0x41),
+                                ((m_pos.y - m_posZ - 0x1E) < 0) ? 0 : (m_pos.y - m_posZ - 0x1E),
+                                m_pos.x + 0x14,
+                                m_pos.y - m_posZ + 0x3C);
+            m_refPoint.x = m_pos.x - 0x41;
+            m_refPoint.y = m_pos.y - m_posZ - 0x1E;
+            break;
+        case 8:
+            m_rBounding.SetRect(((m_pos.x - 0x2D) < 0) ? 0 : (m_pos.x - 0x2D),
+                                ((m_pos.y - m_posZ - 0x1E) < 0) ? 0 : (m_pos.y - m_posZ - 0x1E),
+                                m_pos.x + 0x2D,
+                                m_pos.y - m_posZ + 0x32);
+            m_refPoint.x = m_pos.x - 0x2D;
+            m_refPoint.y = m_pos.y - m_posZ - 0x1E;
+            break;
+        case 9:
+        case 10:
+        case 11:
+            m_rBounding.SetRect(((m_pos.x - 0xA) < 0) ? 0 : (m_pos.x - 0xA),
+                                ((m_pos.y - m_posZ - 0x1E) < 0) ? 0 : (m_pos.y - m_posZ - 0x1E),
+                                m_pos.x + 0x3C,
+                                m_pos.y - m_posZ + 0x32);
+            m_refPoint.x = m_pos.x - 0xA;
+            m_refPoint.y = m_pos.y - m_posZ - 0x1E;
+            break;
+        case 12:
+            m_rBounding.SetRect(((m_pos.x - 0xA) < 0) ? 0 : (m_pos.x - 0xA),
+                                ((m_pos.y - m_posZ - 0xA) < 0) ? 0 : (m_pos.y - m_posZ - 0xA),
+                                m_pos.x + 0x46,
+                                m_pos.y - m_posZ + 0x46);
+            m_refPoint.x = m_pos.x - 0xA;
+            m_refPoint.y = m_pos.y - m_posZ - 0xA;
+            break;
+        case 13:
+        case 14:
+        case 15:
+            m_rBounding.SetRect(((m_pos.x - 0xA) < 0) ? 0 : (m_pos.x - 0xA),
+                                ((m_pos.y - m_posZ - 0xA) < 0) ? 0 : (m_pos.y - m_posZ - 0xA),
+                                m_pos.x + 0x41,
+                                m_pos.y - m_posZ + 0x4B);
+            m_refPoint.x = m_pos.x - 0xA;
+            m_refPoint.y = m_pos.y - m_posZ - 0xA;
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\CParticle.cpp
+            // __LINE__: 624
+            UTIL_ASSERT(FALSE);
+            break;
+        }
+        break;
+    }
 }
 
 // 0x51A2A0
