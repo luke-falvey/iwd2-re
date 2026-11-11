@@ -9762,7 +9762,178 @@ CGameButtonList* CGameSprite::sub_715BD0()
 // 0x716770
 void CGameSprite::sub_716770(CButtonData& cButtonData)
 {
-    // TODO: Incomplete.
+    // NOTE: Original takes a pointer.
+    CButtonData* pData = &cButtonData;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+    // __LINE__: 17075
+    UTIL_ASSERT(pData != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+    // __LINE__: 17078
+    // NOTE: Original expression is `pData->m_abilityId.m_nClass == CAIOBJECT_CLASS_CLERIC`.
+    UTIL_ASSERT(pData->m_abilityId.m_nClass == CAIOBJECTTYPE_C_CLERIC);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+    // __LINE__: 17079
+    UTIL_ASSERT(pData->m_abilityId.field_1E == 0);
+
+    UINT nButtonLevel = pData->m_abilityId.field_1D;
+
+    BYTE nClass = CAIOBJECTTYPE_C_CLERIC;
+    UINT nClassLevel = m_derivedStats.GetClassLevel(CAIOBJECTTYPE_C_CLERIC);
+    UINT nMaxLevel = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetMaxSpellLevel(nClass, nClassLevel);
+
+    UINT nCastLevel;
+    if (nButtonLevel < nMaxLevel) {
+        nCastLevel = nButtonLevel;
+    } else {
+        nCastLevel = nMaxLevel;
+    }
+
+    // NOTE: Original reads the column from constants at 0x84EA4C (0) and
+    // 0x84EA50 (1).
+    INT nColumn = 0;
+    if (IcewindMisc::IsEvil(this) == TRUE) {
+        nColumn = 1;
+    }
+
+    CResRef cResRef;
+    BOOLEAN bFound = FALSE;
+    CSpell* pSpell = NULL;
+
+    while (nCastLevel > 0 && !bFound) {
+        cResRef = g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_tSpontaneousCasting.GetAt(CPoint(nColumn, nCastLevel - 1));
+
+        pSpell = new CSpell(cResRef);
+        if (pSpell->Demand() == TRUE) {
+            bFound = TRUE;
+        } else {
+            delete pSpell;
+            pSpell = NULL;
+            nCastLevel--;
+        }
+    }
+
+    if (!bFound) {
+        return;
+    }
+
+    if (pSpell->pRes == NULL) {
+        pSpell->Release();
+        delete pSpell;
+        return;
+    }
+
+    SHORT nCasterLevel = GetCasterLevel(pSpell, pData->m_abilityId.m_nClass, 0);
+    if (nCasterLevel <= 1) {
+        nCasterLevel = 1;
+    }
+
+    SPELL_ABILITY* pBestAbility = NULL;
+    INT nAbilityNum = 0;
+    if (pSpell->GetAbilityCount() > 0) {
+        do {
+            if (pSpell->GetAbility(nAbilityNum)->minCasterLevel > nCasterLevel) {
+                break;
+            }
+
+            pBestAbility = pSpell->GetAbility(nAbilityNum);
+            nAbilityNum++;
+        } while (nAbilityNum < pSpell->GetAbilityCount());
+    }
+
+    BYTE nAbilityClass = pData->m_abilityId.m_nClass;
+
+    CButtonData buttonData;
+
+    if (pBestAbility != NULL) {
+        if (pBestAbility->quickSlotType == 2) {
+            UINT nSpellId = 0;
+            if (g_pBaldurChitin->GetObjectGame()->m_spells.Find(cResRef, nSpellId) == TRUE) {
+                buttonData.m_icon = CString(pBestAbility->quickSlotIcon);
+                buttonData.m_abilityId.m_res = cResRef;
+                buttonData.m_abilityId.m_targetType = pBestAbility->actionType;
+                buttonData.m_abilityId.m_itemType = 3;
+
+                if (cResRef == CGameSprite::SPWI110) {
+                    buttonData.m_bDisabled = TRUE;
+                    buttonData.m_abilityId.field_10 = 0x2D23;
+                    buttonData.m_name = 0x2D23;
+                    buttonData.m_count = 1;
+                } else {
+                    INT nSpellType = 0;
+                    switch (pSpell->GetCasterType()) {
+                    case 1:
+                        nSpellType = 0;
+                        break;
+                    case 2:
+                        nSpellType = 1;
+                        break;
+                    case 4:
+                        nSpellType = 2;
+                        break;
+                    }
+
+                    // NOTE: Uninline.
+                    buttonData.m_bDisabled = GetActiveStats()->m_disabledSpellTypes[nSpellType];
+                    buttonData.m_abilityId.field_1D = static_cast<BYTE>(nCastLevel);
+                    buttonData.m_abilityId.m_nClass = nAbilityClass;
+                    buttonData.m_abilityId.field_1E = 0;
+                    buttonData.m_abilityId.field_10 = pSpell->GetGenericName();
+                    buttonData.m_abilityId.field_18 = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetClassSuffixStringRef(CAIOBJECTTYPE_C_CLERIC);
+                    buttonData.m_name = pSpell->GetGenericName();
+                    buttonData.m_count = 1;
+                }
+            }
+        }
+    }
+
+    pSpell->Release();
+    delete pSpell;
+
+    UINT nSpellLevel = nButtonLevel - 1;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+    // __LINE__: 26177
+    UTIL_ASSERT(nSpellLevel < CSPELLLIST_MAX_LEVELS);
+
+    UINT nClassIndex = g_pBaldurChitin->GetObjectGame()->GetSpellcasterIndex(nAbilityClass);
+
+    UINT nId = 0;
+    if (g_pBaldurChitin->GetObjectGame()->m_spells.Find(pData->m_abilityId.m_res, nId) == TRUE) {
+        CGameSpriteGroupedSpellList* pGrouped = m_spells.Get(nClassIndex);
+
+        UINT nLevel = nSpellLevel;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+        // __LINE__: 26832
+        UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+        CGameSpriteSpellList* pList = &pGrouped->m_lists[nLevel];
+
+        UINT nIndex = 0;
+
+        // NOTE: Uninline.
+        if (pList->Find(nId, nIndex)) {
+            CGameSpriteSpellListEntry& entry = pList->m_List[nIndex];
+
+            INT nRemaining = entry.field_8 - 1;
+            if (nRemaining < 0) {
+                nRemaining = 0;
+            }
+
+            pList->field_10 -= entry.field_8;
+            entry.field_8 = nRemaining;
+            pList->field_10 += nRemaining;
+        }
+    }
+
+    CheckQuickLists(&pData->m_abilityId, -1, FALSE, FALSE);
+
+    FeedBack(FEEDBACK_SPONTANEOUSCASTING, 0, 0, 0, buttonData.m_abilityId.field_10, 0, 0);
+
+    sub_71A0E0(buttonData, FALSE);
 }
 
 // 0x716E80
