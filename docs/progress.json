@@ -6,15 +6,15 @@
   ],
   "functions_total": 9831,
   "functions_done": 7714,
-  "functions_complete": 7392,
-  "incomplete_markers": 353,
+  "functions_complete": 7396,
+  "incomplete_markers": 349,
   "incomplete_by_file": {
     "src/CMessage.cpp": 85,
     "src/CProjectilePart6.cpp": 35,
     "src/CProjectilePart3.cpp": 20,
     "src/CProjectilePart5.cpp": 19,
-    "src/CGameSprite.cpp": 18,
     "src/CProjectilePart1.cpp": 16,
+    "src/CGameSprite.cpp": 14,
     "src/CScreenCharacter.cpp": 11,
     "src/CDerivedStats.cpp": 9,
     "src/CInfGame.cpp": 9,
@@ -3788,7 +3788,7 @@
   ],
   "bytes_total": 3846937,
   "bytes_done": 3421875,
-  "bytes_complete": 3042858,
+  "bytes_complete": 3053335,
   "largest_stubs": [
     {
       "addr": "0x4DB160",
@@ -3941,16 +3941,6 @@
       "size": 3103
     },
     {
-      "addr": "0x756930",
-      "name": "CGameSprite_B3AUTO_00756930",
-      "size": 2973
-    },
-    {
-      "addr": "0x7473E0",
-      "name": "CGameSprite_B3AUTO_007473e0",
-      "size": 2939
-    },
-    {
       "addr": "0x76B160",
       "name": "CSpawn_Execute",
       "size": 2927
@@ -3986,9 +3976,19 @@
       "size": 2577
     },
     {
-      "addr": "0x755A70",
-      "name": "CGameSprite_B3AUTO_00755a70",
-      "size": 2462
+      "addr": "0x715BD0",
+      "name": "CGameSprite_GetInnateQuickButtons",
+      "size": 2411
+    },
+    {
+      "addr": "0x5E3B80",
+      "name": "CScreenCharacter_OnBackButtonClick",
+      "size": 2402
+    },
+    {
+      "addr": "0x429A90",
+      "name": "FUN_00429a90",
+      "size": 2400
     }
   ],
   "next": [
