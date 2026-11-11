@@ -2217,9 +2217,6 @@ void CScreenStore::GetStoreItem(INT nIndex, CScreenStoreItem& cItem)
 // 0x676EF0
 void CScreenStore::UpdateStoreItems()
 {
-    // TODO: Incomplete. `sub_54CFE0` (`DoItemRandomize`, `CStore`, `(INT nIndex, CItem& cItem)`, returns
-    // BOOL) is still a stub in CStore.cpp and cannot be called yet. Its call below is replaced by a
-    // placeholder that behaves as if it always returned TRUE.
     CTypedPtrList<CPtrList, CScreenStoreItem*> lSelected(10);
 
     CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
@@ -2254,13 +2251,12 @@ void CScreenStore::UpdateStoreItems()
     m_lStoreItems.RemoveAll();
 
     for (INT nIndex = 0; nIndex < m_pStore->m_lInventory.GetCount(); nIndex++) {
-        // NOTE: Leaked when `sub_54CFE0` returns FALSE.
+        // NOTE: Leaked when `DoItemRandomize` returns FALSE.
         CScreenStoreItem* pStoreItem = new CScreenStoreItem();
 
         m_pStore->GetItem(nIndex, cItem);
 
-        // TODO: `if (m_pStore->sub_54CFE0(nIndex, cItem))`.
-        if (TRUE) {
+        if (m_pStore->DoItemRandomize(nIndex, cItem)) {
             CItem* pItem = new CItem(cItem);
 
             // NOTE: Result unused.
