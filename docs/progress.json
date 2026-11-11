@@ -5,9 +5,9 @@
     "0x7DA200"
   ],
   "functions_total": 9831,
-  "functions_done": 7698,
-  "functions_complete": 7304,
-  "incomplete_markers": 426,
+  "functions_done": 7700,
+  "functions_complete": 7323,
+  "incomplete_markers": 406,
   "incomplete_by_file": {
     "src/CMessage.cpp": 85,
     "src/CGameSprite.cpp": 38,
@@ -16,7 +16,6 @@
     "src/CProjectilePart5.cpp": 19,
     "src/CScreenCharacter.cpp": 19,
     "src/CProjectilePart1.cpp": 16,
-    "src/CStore.cpp": 15,
     "src/CInfGame.cpp": 13,
     "src/CDerivedStats.cpp": 9,
     "src/CProjectilePart2.cpp": 9,
@@ -26,10 +25,9 @@
     "src/CVidPoly.cpp": 7,
     "src/CParticle.cpp": 6,
     "src/CScreenInventory.cpp": 6,
-    "src/CScreenStore.cpp": 6,
     "src/CAIGroup.cpp": 5,
     "src/CGameAIBase.cpp": 5,
-    "src/CScreenSpellbook.cpp": 5,
+    "src/CScreenStore.cpp": 5,
     "src/CUIControlEdit.cpp": 5,
     "src/CBlood.cpp": 4,
     "src/CGameSpy.cpp": 4,
@@ -47,8 +45,8 @@
     "src/CGameArea.cpp": 2,
     "src/CGameAreaNotes.cpp": 2,
     "src/CImm.cpp": 2,
-    "src/CRuleTables.cpp": 2,
     "src/CScreenMultiPlayer.cpp": 2,
+    "src/CScreenSpellbook.cpp": 2,
     "src/CSearchBitmap.cpp": 2,
     "src/CSpawn.cpp": 2,
     "src/CUIControlEditMultiLine.cpp": 2,
@@ -60,6 +58,7 @@
     "src/CGameContainer.cpp": 1,
     "src/CGameSpawning.cpp": 1,
     "src/CMoveList.cpp": 1,
+    "src/CRuleTables.cpp": 1,
     "src/CScreenChapter.cpp": 1,
     "src/CScreenMap.cpp": 1,
     "src/CScreenSave.cpp": 1,
@@ -72,7 +71,7 @@
     "src/CWarp.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10234,
+  "annotations_total": 10236,
   "annotations_not_function_start": 2514,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -1228,22 +1227,6 @@
     "0x7C22D0": [
       "src/CSoundProperties.cpp",
       "src/CSoundProperties.cpp"
-    ],
-    "0x54C1D0": [
-      "src/CStore.cpp",
-      "src/CStore.cpp"
-    ],
-    "0x54C5B0": [
-      "src/CStore.cpp",
-      "src/CStore.cpp"
-    ],
-    "0x54CAF0": [
-      "src/CStore.cpp",
-      "src/CStore.cpp"
-    ],
-    "0x54CCB0": [
-      "src/CStore.cpp",
-      "src/CStore.cpp"
     ],
     "0x77B6F0": [
       "src/CUIControlFactory.cpp",
@@ -3807,8 +3790,8 @@
     "0xA1917C"
   ],
   "bytes_total": 3846937,
-  "bytes_done": 3410549,
-  "bytes_complete": 2957850,
+  "bytes_done": 3412137,
+  "bytes_complete": 2973688,
   "largest_stubs": [
     {
       "addr": "0x4DB160",
