@@ -162,7 +162,6 @@ void CProjectileSingleTarget850E84::Fire(CGameArea* pArea, LONG source, LONG tar
 // 0x799CA0
 void CProjectileSingleTarget850E84::DeliverEffects()
 {
-    // TODO: Incomplete.
 }
 
 // 0x57BE80

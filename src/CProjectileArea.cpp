@@ -91,6 +91,8 @@ void CProjectileArea::sub_5704E0(CGameAIBase* pSource)
 // 0x56FAF0
 void CProjectileArea::AIUpdate()
 {
+    // TODO: Incomplete.
+
     CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
     if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
@@ -246,6 +248,8 @@ void CProjectileArea::Fire(CGameArea* pArea, LONG source, LONG target, CPoint ta
 // 0x56F410
 void CProjectileArea::OnArrival()
 {
+    // TODO: Incomplete.
+
     if (m_callBackProjectile != CGameObjectArray::INVALID_INDEX) {
         CProjectile* pProjectile;
         BYTE rc;
