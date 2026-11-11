@@ -3,6 +3,7 @@
 #include "CAIScript.h"
 #include "CBaldurChitin.h"
 #include "CBaldurProjector.h"
+#include "CBlood.h"
 #include "CGameAnimationType.h"
 #include "CGameArea.h"
 #include "CGameSprite.h"
@@ -11,6 +12,7 @@
 #include "CSpell.h"
 #include "CUtil.h"
 #include "CVidPalette.h"
+#include "Icewind586B70.h"
 #include "IcewindCGameEffects.h"
 #include "IcewindMisc.h"
 
@@ -2303,6 +2305,673 @@ CGameEffect* CGameEffectDeath::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// NOTE: Inlined in `CGameEffectDeath::ApplyEffect`.
+static void AddDeathAction(CGameSprite* pSprite)
+{
+    // NOTE: Action ID is the `CAIAction` constant at 0x8477AC (21).
+    CAIAction action(21, CPoint(-1, -1), 0, -1);
+
+    CMessage* message = new CMessageAddAction(action, pSprite->GetId(), pSprite->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+}
+
+// 0x4AB510
+BOOL CGameEffectDeath::ApplyEffect(CGameSprite* pSprite)
+{
+    BOOLEAN bAddAction = FALSE;
+
+    // NOTE: Uninline.
+    if (pSprite->GetAnimation()->IsInvulnerable()) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if (field_18C == 0 && g_pBaldurChitin->GetObjectGame()->m_gameSave.m_cutScene == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    pSprite->sub_6F5330();
+
+    if ((pSprite->GetDerivedStats()->m_generalState & STATE_DEAD) != 0) {
+        if (pSprite->m_nSequence == CGameSprite::SEQ_SLEEP) {
+            pSprite->SetSequence(CGameSprite::SEQ_TWITCH);
+            m_done = TRUE;
+            return TRUE;
+        }
+
+        if (pSprite->m_nSequence != CGameSprite::SEQ_DIE
+            && pSprite->m_nSequence != CGameSprite::SEQ_TWITCH) {
+            pSprite->SetSequence(CGameSprite::SEQ_DIE);
+        }
+
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    pSprite->AutoPause(16);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+        CString sName(pSprite->m_scriptName);
+        g_pBaldurChitin->m_pEngineWorld->StartDeathReaction(sName);
+    }
+
+    if ((pSprite->GetBaseStats()->m_flags & 0x2000) != 0) {
+        g_pBaldurChitin->GetObjectGame()->ReadyCharacterTerminationSequence(1, -1);
+    } else {
+        BOOLEAN bPartyAlive = FALSE;
+
+        for (BYTE nIndex = 0; nIndex < 6; nIndex++) {
+            LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetFixedOrderCharacterId(nIndex);
+            if (nCharacterId != pSprite->GetId()
+                && nCharacterId != CGameObjectArray::INVALID_INDEX) {
+                CGameSprite* pCharacter;
+
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pCharacter),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    if (pCharacter->GetBaseStats()->m_hitPoints > 0) {
+                        bPartyAlive = TRUE;
+                    }
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                }
+            }
+        }
+
+        if (!bPartyAlive) {
+            g_pBaldurChitin->GetObjectGame()->ReadyCharacterTerminationSequence(2, -1);
+        }
+    }
+
+    pSprite->m_hasColorEffects = TRUE;
+
+    if (g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nGore != 0) {
+        if (!pSprite->field_70FE) {
+            CMessage* message = new CMessagePlaySound(CGameSprite::SOUND_DYING,
+                TRUE,
+                FALSE,
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    } else {
+        if (!pSprite->field_70FE) {
+            // NOTE: Sound ID is the `CGameSprite` constant at 0x85BB69 (6).
+            CMessage* message = new CMessagePlaySound(6,
+                TRUE,
+                FALSE,
+                pSprite->GetId(),
+                pSprite->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    }
+
+    pSprite->m_animationRunning = TRUE;
+
+    pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_HOLDCREATURE,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        -1);
+    pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_HOLDCREATURE,
+        pSprite->GetEquipedEffectList()->GetPosCurrent(),
+        -1);
+    pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_PORTRAITICON,
+        pSprite->GetEquipedEffectList()->GetPosCurrent(),
+        13);
+    pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_PORTRAITICON,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        13);
+
+    SHORT nDirection = pSprite->GetDirection(m_source);
+    LONG posZ = pSprite->m_posZ;
+    BOOL bFrozen = FALSE;
+
+    if (m_dwFlags == 0x10) {
+        ITEM_EFFECT* effect = new ITEM_EFFECT;
+        CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_DEATH);
+        effect->dwFlags = g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nGore != 0 ? 0x40 : 0x4;
+        effect->durationType = 4;
+        effect->duration = 5;
+
+        CGameEffect* pEffect = CGameEffect::DecodeEffect(effect,
+            pSprite->GetPos(),
+            pSprite->GetId(),
+            CPoint(-1, -1));
+
+        CMessage* message = new CMessageAddEffect(pEffect->Copy(),
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        if (pEffect != NULL) {
+            delete pEffect;
+        }
+
+        delete effect;
+    }
+
+    if (m_dwFlags == 0x20) {
+        ITEM_EFFECT* effect = new ITEM_EFFECT;
+        CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_DEATH);
+        effect->dwFlags = 0x80;
+        effect->durationType = 4;
+        effect->duration = 5;
+
+        CGameEffect* pEffect = CGameEffect::DecodeEffect(effect,
+            pSprite->GetPos(),
+            pSprite->GetId(),
+            CPoint(-1, -1));
+
+        CMessage* message = new CMessageAddEffect(pEffect->Copy(),
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        if (pEffect != NULL) {
+            delete pEffect;
+        }
+
+        delete effect;
+    }
+
+    if ((g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+            || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID)
+        && g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+        CMessage* message = new CMessageSpriteDeath(m_dwFlags,
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+        || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+        CAITrigger trigger(CAITRIGGER_DIE, pSprite->GetAIType(), 0);
+
+        CMessage* message = new CMessageSetTrigger(trigger,
+            pSprite->GetId(),
+            pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    BYTE nShatterType = 0xFF;
+
+    pSprite->GetTimedEffectList()->RemoveAllEffectsIgnoreMoreThenPermanent(pSprite->GetTimedEffectList()->GetPosCurrent(),
+        TRUE,
+        FALSE,
+        0,
+        0);
+
+    pSprite->GetDerivedStats()->m_generalState &= ~STATE_POISONED;
+    pSprite->GetBaseStats()->m_generalState &= ~STATE_POISONED;
+    pSprite->GetDerivedStats()->m_generalState &= ~STATE_DISEASED;
+    pSprite->GetBaseStats()->m_generalState &= ~STATE_DISEASED;
+
+    pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_DISEASE,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        -1);
+    pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_DISEASE,
+        pSprite->GetEquipedEffectList()->GetPosCurrent(),
+        -1);
+    pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_POISON,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        -1);
+    pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_POISON,
+        pSprite->GetEquipedEffectList()->GetPosCurrent(),
+        -1);
+    pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_PORTRAITICON,
+        pSprite->GetEquipedEffectList()->GetPosCurrent(),
+        6);
+    pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_PORTRAITICON,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        6);
+    pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_PORTRAITICON,
+        pSprite->GetEquipedEffectList()->GetPosCurrent(),
+        7);
+    pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_PORTRAITICON,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        7);
+    pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_GREASEPOOL,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        -1);
+    pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_ENTANGLE,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        -1);
+    pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_WEBHOLD,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        -1);
+
+    // FIXME: Uses `m_timedEffectList` position for `m_equipedEffectList`.
+    pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_GREASEPOOL,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        -1);
+    pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_ENTANGLE,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        -1);
+    pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+        CGAMEEFFECT_WEBHOLD,
+        pSprite->GetTimedEffectList()->GetPosCurrent(),
+        -1);
+
+    if (pSprite->Orderable(FALSE)) {
+        pSprite->Unselect();
+
+        CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+        pGame->UpdatePortrait(pGame->GetCharacterPortraitNum(pSprite->GetId()), 1);
+        g_pBaldurChitin->GetObjectGame()->SelectToolbar();
+
+        if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+            || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+            pSprite->m_bSendSpriteUpdate = TRUE;
+        }
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nGore == 0) {
+        switch (m_dwFlags) {
+        case 0x0:
+        case 0x1:
+        case 0x2:
+        case 0x8:
+        case 0x40:
+        case 0x80:
+        case 0x100:
+            m_dwFlags = 0x4;
+            break;
+        }
+    }
+
+    CString sResRef;
+
+    // NOTE: Uninline.
+    pSprite->GetAnimation()->GetAnimationResRef(sResRef, CGameAnimationType::RANGE_BODY);
+
+    if (strcmp(sResRef, "MGEN") == 0
+        || strcmp(sResRef, "MKG1") == 0
+        || strcmp(sResRef, "MKG2") == 0
+        || strcmp(sResRef, "MKG3") == 0) {
+        m_dwFlags = 0x4;
+    }
+
+    pSprite->GetDerivedStats()->m_bDoNotJump = TRUE;
+
+    switch (m_dwFlags) {
+    case 0x0:
+        pSprite->GetBaseStats()->m_hitPoints = -10;
+        pSprite->GetBaseStats()->m_generalState |= STATE_ACID_DEATH | STATE_DEAD;
+        pSprite->GetDerivedStats()->m_generalState |= STATE_ACID_DEATH | STATE_DEAD;
+        break;
+    case 0x1:
+        pSprite->GetBaseStats()->m_hitPoints = -10;
+        pSprite->GetBaseStats()->m_generalState |= STATE_FLAME_DEATH | STATE_DEAD;
+        pSprite->GetDerivedStats()->m_generalState |= STATE_FLAME_DEATH | STATE_DEAD;
+        pSprite->m_persistantEffects.AddTail(new CPersistantEffectFireDeath());
+        break;
+    case 0x2:
+        pSprite->GetBaseStats()->m_hitPoints = -10;
+        pSprite->GetBaseStats()->m_generalState |= STATE_EXPLODING_DEATH | STATE_DEAD;
+        pSprite->GetDerivedStats()->m_generalState |= STATE_EXPLODING_DEATH | STATE_DEAD;
+        break;
+    case 0x4:
+        pSprite->GetBaseStats()->m_hitPoints = 0;
+        pSprite->GetBaseStats()->m_generalState |= STATE_DEAD;
+        pSprite->GetDerivedStats()->m_generalState |= STATE_DEAD;
+        pSprite->AddBlood(0, nDirection, CBlood::GUSH_HIGH);
+        pSprite->SetSequence(CGameSprite::SEQ_DIE);
+        break;
+    case 0x400:
+        bAddAction = TRUE;
+        // FALLTHROUGH
+    case 0x8:
+        pSprite->GetBaseStats()->m_hitPoints = -10;
+        pSprite->GetBaseStats()->m_generalState |= STATE_EXPLODING_DEATH | STATE_DEAD;
+        pSprite->GetDerivedStats()->m_generalState |= STATE_EXPLODING_DEATH | STATE_DEAD;
+        pSprite->SetSequence(CGameSprite::SEQ_DIE);
+
+        // NOTE: Uninline.
+        if (pSprite->GetAnimation()->GetColorChunks() == 0xFF) {
+            pSprite->AddBlood(0, nDirection, CBlood::GUSH_HIGH);
+        } else {
+            PlaySound(CResRef("GORE"), pSprite);
+            nShatterType = 2;
+        }
+        break;
+    case 0x10:
+        pSprite->GetBaseStats()->m_hitPoints = 0;
+        pSprite->GetBaseStats()->m_generalState |= STATE_STONE_DEATH;
+        pSprite->GetDerivedStats()->m_generalState |= STATE_STONE_DEATH;
+        pSprite->m_animationRunning = FALSE;
+
+        // NOTE: Uninline.
+        if (pSprite->GetAnimation()->IsFalseColor()) {
+            pSprite->m_hasColorRangeEffects = TRUE;
+
+            for (int nRange = 0; nRange < 7; nRange++) {
+                CColorRange* pColorRange = new CColorRange();
+                pColorRange->m_range = static_cast<BYTE>(nRange);
+                pColorRange->m_color = CVidPalette::STONE;
+                pSprite->GetDerivedStats()->m_appliedColorRanges.AddTail(pColorRange);
+
+                // NOTE: Uninline.
+                pSprite->GetAnimation()->SetColorRange(static_cast<BYTE>(nRange), CVidPalette::STONE);
+            }
+        }
+
+        bFrozen = TRUE;
+        break;
+    case 0x20:
+        pSprite->GetBaseStats()->m_hitPoints = 0;
+
+        if (g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nGore == 0) {
+            pSprite->GetBaseStats()->m_generalState |= STATE_DEAD;
+            pSprite->GetDerivedStats()->m_generalState |= STATE_DEAD;
+            pSprite->SetSequence(CGameSprite::SEQ_DIE);
+        } else {
+            pSprite->GetBaseStats()->m_generalState |= STATE_FROZEN_DEATH;
+            pSprite->GetDerivedStats()->m_generalState |= STATE_FROZEN_DEATH;
+            pSprite->m_animationRunning = FALSE;
+            bFrozen = TRUE;
+        }
+
+        // NOTE: Uninline.
+        if (pSprite->GetAnimation()->IsFalseColor()) {
+            pSprite->m_hasColorRangeEffects = TRUE;
+
+            for (int nRange = 0; nRange < 7; nRange++) {
+                CColorRange* pColorRange = new CColorRange();
+                pColorRange->m_range = static_cast<BYTE>(nRange);
+                pColorRange->m_color = CVidPalette::ICE;
+                pSprite->GetDerivedStats()->m_appliedColorRanges.AddTail(pColorRange);
+
+                // NOTE: Uninline.
+                pSprite->GetAnimation()->SetColorRange(static_cast<BYTE>(nRange), CVidPalette::ICE);
+            }
+        }
+        break;
+    case 0x40:
+        pSprite->GetBaseStats()->m_hitPoints = -10;
+        pSprite->GetBaseStats()->m_generalState |= STATE_EXPLODING_DEATH | STATE_DEAD;
+        pSprite->GetDerivedStats()->m_generalState |= STATE_EXPLODING_DEATH | STATE_DEAD;
+        pSprite->SetSequence(CGameSprite::SEQ_DIE);
+        PlaySound(CResRef("SHATTER"), pSprite);
+        nShatterType = 1;
+
+        // TODO: Incomplete. Creates two 0xCA-byte particle objects
+        // (constructor 0x51AE40, args: the words at 0x84D5EC, 0x84D604 and
+        // 0x84D5F0, asserts `m_wType & TYPE_EXPLOSION` from CParticle.h).
+        // The first gets velocity `m_source` (+0xBE/+0xC2), the second
+        // `-m_source`, both get `+0xC6 = 100` and are added with vtable
+        // slot 0x08 (`AddToArea`) to `pSprite->m_pArea` at
+        // `pSprite->GetPos()`, height `(rFx.bottom - rFx.top) * 5 / 10`
+        // (`rFx` from `CalculateFxRect` with `posZ`), `LIST_BACK`.
+        break;
+    case 0x80:
+        pSprite->GetBaseStats()->m_hitPoints = -10;
+        pSprite->GetBaseStats()->m_generalState |= STATE_EXPLODING_DEATH | STATE_DEAD;
+        pSprite->GetDerivedStats()->m_generalState |= STATE_EXPLODING_DEATH | STATE_DEAD;
+        PlaySound(CResRef("SHATTER"), pSprite);
+        nShatterType = 0;
+
+        // TODO: Incomplete. Same particle objects as in case 0x40, but
+        // constructed with the word at 0x84D5EA instead of 0x84D5EC.
+        break;
+    case 0x100:
+        pSprite->GetBaseStats()->m_hitPoints = -10;
+        pSprite->GetBaseStats()->m_generalState |= STATE_FLAME_DEATH | STATE_DEAD;
+        pSprite->GetDerivedStats()->m_generalState |= STATE_FLAME_DEATH | STATE_DEAD;
+        pSprite->m_persistantEffects.AddTail(new CPersistantEffectElectricDeath());
+        break;
+    case 0x200:
+        bAddAction = TRUE;
+        // FALLTHROUGH
+    case 0x800:
+        pSprite->GetBaseStats()->m_hitPoints = -10;
+        pSprite->GetBaseStats()->m_generalState |= STATE_DEAD;
+        pSprite->GetDerivedStats()->m_generalState |= STATE_DEAD;
+        pSprite->SetSequence(CGameSprite::SEQ_DIE);
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
+        // __LINE__: 7596
+        UTIL_ASSERT_MSG(FALSE, "Weird death type");
+    }
+
+    // NOTE: Unused (consumed only by the untranslated particle code above).
+    (void)posZ;
+
+    if (!bFrozen) {
+        if (pSprite->GetVertListType() == CGameObject::LIST_BACK) {
+            pSprite->GetDerivedStats()->m_generalState |= STATE_SLEEPING;
+        }
+
+        pSprite->MoveToBack();
+
+        if (nShatterType != 0xFF
+            && pSprite->GetBaseStats()->m_hitPoints <= -30
+            && g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+            pSprite->Shatter(nShatterType);
+
+            if (bAddAction == TRUE) {
+                // NOTE: The action is added twice.
+                AddDeathAction(pSprite);
+                AddDeathAction(pSprite);
+            }
+        } else {
+            if (nShatterType != 0xFF
+                && pSprite->GetBaseStats()->m_hitPoints <= -10) {
+                pSprite->Shatter(nShatterType);
+            }
+
+            if (bAddAction == TRUE) {
+                AddDeathAction(pSprite);
+            }
+        }
+
+        CAIObjectType typeAI(pSprite->GetAIType());
+        typeAI.m_nGeneral = CAIObjectType::G_DEAD;
+        pSprite->SetAIType(typeAI, FALSE, FALSE);
+
+        typeAI.Set(pSprite->m_startTypeAI);
+        typeAI.m_nGeneral = CAIObjectType::G_DEAD;
+        pSprite->m_startTypeAI.Set(typeAI);
+
+        if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+            || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+            pSprite->DropInventory(FALSE, CString(""));
+        }
+
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) == -1) {
+            if ((pSprite->GetBaseStats()->m_flags & 0x2) != 0) {
+                pSprite->m_expirationTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+                pSprite->DropInventory(TRUE, CString(""));
+            }
+        } else {
+            if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+                || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+                CMessage* message = new CMessageVisibilityMapMove(FALSE,
+                    pSprite->GetId(),
+                    pSprite->GetId());
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    } else {
+        CAIObjectType typeAI(pSprite->GetAIType());
+        typeAI.m_nGeneral = CAIObjectType::G_FROZEN;
+        pSprite->SetAIType(typeAI, FALSE, FALSE);
+
+        typeAI.Set(pSprite->m_startTypeAI);
+        typeAI.m_nGeneral = CAIObjectType::G_FROZEN;
+        pSprite->m_startTypeAI.Set(typeAI);
+
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) == -1) {
+            if ((pSprite->GetBaseStats()->m_flags & 0x2) != 0) {
+                pSprite->m_expirationTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+            }
+        } else {
+            if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+                || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+                CMessage* message = new CMessageVisibilityMapMove(FALSE,
+                    pSprite->GetId(),
+                    pSprite->GetId());
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    }
+
+    pSprite->ClearAI(FALSE);
+    pSprite->SetCurrAction(CAIAction::NULL_ACTION);
+    pSprite->DropPath();
+    pSprite->DropSearchRequest();
+    pSprite->m_talkingCounter = 0;
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    pGame->UpdatePortrait(pGame->GetCharacterPortraitNum(pSprite->GetId()), 1);
+
+    if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+        || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+        pSprite->m_bSendSpriteUpdate = TRUE;
+    }
+
+    pSprite->field_7110 = 0;
+
+    // NOTE: Morale is the `CGameSprite` constant at 0x85BC7E (10).
+    pSprite->GetBaseStats()->m_morale = 10;
+
+    Icewind586B70::Instance()->sub_586DC0(pSprite);
+
+    CMessage* message89 = new CMessage89(pSprite->GetId(), pSprite->GetId(), pSprite->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message89, FALSE);
+
+    Icewind586B70::Instance()->Remove(pSprite);
+
+    CMessage* message96 = new CMessage96(pSprite->GetId(), pSprite->GetId(), pSprite->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message96, FALSE);
+
+    m_done = TRUE;
+
+    return FALSE;
+}
+
+// 0x4AD3C0
+void CGameEffectDeath::OnAdd(CGameSprite* pSprite)
+{
+    if (m_sourceID != CGameObjectArray::INVALID_INDEX) {
+        if ((pSprite->GetBaseStats()->m_generalState & (STATE_DEAD | STATE_STONE_DEATH | STATE_FROZEN_DEATH)) == 0) {
+            CAITrigger killed(CAITRIGGER_KILLED, pSprite->GetAIType(), 0);
+            killed.m_specificID = pSprite->GetBaseStats()->m_xpValue;
+
+            CMessage* message = new CMessageSetTrigger(killed, pSprite->GetId(), m_sourceID);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        CAITrigger die(CAITRIGGER_DIE, 0);
+
+        CMessage* message = new CMessageSetTrigger(die, m_sourceID, pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    } else {
+        CAITrigger die(CAITRIGGER_DIE, 0);
+
+        CMessage* message = new CMessageSetTrigger(die, pSprite->GetId(), pSprite->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    CTypedPtrList<CPtrList, LONG*> targets(10);
+
+    if (pSprite->GetArea() != NULL) {
+        pSprite->GetArea()->GetAllInRange(pSprite->GetPos(),
+            CAIObjectType::ANYONE,
+            pSprite->GetHelpRange(),
+            pSprite->GetTerrainTable(),
+            targets,
+            FALSE,
+            FALSE);
+    }
+
+    CAITrigger died(CAITRIGGER_DIED, pSprite->GetAIType(), 0);
+    CVariable var;
+    CString sName;
+    sName = CGameAIBase::DEAD_GLOBAL_PREFIX + pSprite->m_scriptName;
+
+    if (g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sName) != NULL) {
+        CMessage* message = new CMessageSetVariable(sName,
+            CString("GLOBAL"),
+            1,
+            1,
+            pSprite->GetId(),
+            pSprite->GetId(),
+            0);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    } else {
+        var.SetName(sName);
+        var.m_intValue = 1;
+        g_pBaldurChitin->GetObjectGame()->m_variables.AddKey(var);
+
+        CMessage* message = new CMessageSetVariable(sName,
+            CString("GLOBAL"),
+            1,
+            0,
+            pSprite->GetId(),
+            pSprite->GetId(),
+            0);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    POSITION pos = targets.GetHeadPosition();
+    while (pos != NULL) {
+        LONG nTarget = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+        CMessage* message = new CMessageSetTrigger(died, pSprite->GetId(), nTarget);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+        for (SHORT nIndex = 0; nIndex < g_pBaldurChitin->GetObjectGame()->m_nCharacters; nIndex++) {
+            // NOTE: Trigger ID 0x88 has no named constant yet.
+            CAITrigger trigger(0x88, pSprite->GetAIType(), 0);
+
+            CMessage* message = new CMessageSetTrigger(trigger,
+                pSprite->GetId(),
+                g_pBaldurChitin->GetObjectGame()->GetCharacterId(nIndex));
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    }
+}
+
+// 0x6F5330
+void CGameSprite::sub_6F5330()
+{
+    // TODO: Incomplete. Belongs to `CGameSprite.cpp` (3259 bytes).
+}
+
+// 0x70A810
+void CGameSprite::Shatter(BYTE nType)
+{
+    // TODO: Incomplete. Belongs to `CGameSprite.cpp` (1547 bytes).
 }
 
 // 0x4ADC90

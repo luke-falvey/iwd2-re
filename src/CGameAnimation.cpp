@@ -109,6 +109,16 @@ BYTE CGameAnimation::GetColorBlood()
 }
 
 // NOTE: Inlined.
+BYTE CGameAnimation::GetColorChunks()
+{
+    // __FILE__: .\Include\ObjAnimation.h
+    // __LINE__: 2085
+    UTIL_ASSERT(m_animation != NULL);
+
+    return m_animation->GetColorChunks();
+}
+
+// NOTE: Inlined.
 void CGameAnimation::SetAnimationType(USHORT animationID, BYTE* colorRangeValues, WORD facing)
 {
     if (m_animation != NULL) {
@@ -246,6 +256,16 @@ BOOL CGameAnimation::IsFalseColor()
     UTIL_ASSERT(m_animation != NULL);
 
     return m_animation->IsFalseColor();
+}
+
+// NOTE: Inlined.
+BOOL CGameAnimation::IsInvulnerable()
+{
+    // __FILE__: .\Include\ObjAnimation.h
+    // __LINE__: 2100
+    UTIL_ASSERT(m_animation != NULL);
+
+    return m_animation->IsInvulnerable();
 }
 
 // NOTE: Inlined.
