@@ -70,6 +70,7 @@ public:
     BOOL TogglePauseGame(char a2, char a3, int a4);
     BOOLEAN ReadyMovie(const CResRef& res, BOOLEAN bForcedFromServer);
     BOOLEAN ReadyEndCredits(BOOLEAN bForcedFromServer);
+    BOOL StartDialog(CGameSprite* pNPC, CGameSprite* pCharacter, BOOLEAN bPlayerInitiated, BOOLEAN a4);
     void EndDialog(BOOLEAN bForceExecution, BOOLEAN fullEnd);
     void MoveToArea(CString areaName);
     void SaveScreen();

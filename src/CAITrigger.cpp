@@ -8,6 +8,9 @@ const SHORT CAITrigger::NO_TRIGGER = 0;
 // 0x847DA4
 const SHORT CAITrigger::RECEIVEDORDER = 6;
 
+// 0x847DA6
+const SHORT CAITrigger::SAID = CAITRIGGER_SAID;
+
 // 0x847DD0
 const SHORT CAITrigger::SEE = CAITRIGGER_SEE;
 

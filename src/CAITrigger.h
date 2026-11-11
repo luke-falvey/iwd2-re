@@ -244,6 +244,7 @@ public:
     static const SHORT HEARD;
     static const SHORT ONCREATION;
     static const SHORT RECEIVEDORDER;
+    static const SHORT SAID;
     static const SHORT SEE;
     static const SHORT TIMEREXPIRED;
     static const SHORT TRIGGER;

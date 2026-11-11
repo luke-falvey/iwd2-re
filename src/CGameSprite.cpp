@@ -14,6 +14,7 @@
 #include "CInfCursor.h"
 #include "CInfGame.h"
 #include "CItem.h"
+#include "CObjectMarker.h"
 #include "CPathSearch.h"
 #include "CProjectile.h"
 #include "CScreenCharacter.h"
@@ -16063,25 +16064,496 @@ SHORT CGameSprite::RandomFly()
 // 0x752DD0
 SHORT CGameSprite::Dialog(CGameSprite* pTarget)
 {
-    // TODO: Incomplete.
+    if (pTarget == NULL) {
+        return ACTION_ERROR;
+    }
 
-    return ACTION_ERROR;
+    if (!CanSpeak(FALSE, FALSE)) {
+        return ACTION_ERROR;
+    }
+
+    if (!pTarget->CanSpeak(FALSE, TRUE)) {
+        return ACTION_ERROR;
+    }
+
+    if ((m_derivedStats.m_generalState & STATE_CHARMED) != 0) {
+        return ACTION_ERROR;
+    }
+
+    if (m_dialog == "" && (m_baseStats.m_flags & 0x800) != 0) {
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) == -1) {
+            m_dialog = "multig";
+        }
+    }
+
+    if (m_actionCount == 0) {
+        PlayDialogSound(this);
+    }
+
+    const CPoint& ptTargetPos = pTarget->GetPos();
+    CPoint ptTarget(ptTargetPos.x / CPathSearch::GRID_SQUARE_SIZEX,
+        ptTargetPos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    const CPoint& ptSelfPos = GetPos();
+    CPoint ptSelf(ptSelfPos.x / CPathSearch::GRID_SQUARE_SIZEX,
+        ptSelfPos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    LONG nDistance = CAIUtil::CountSquares(ptSelf, ptTarget);
+    nDistance *= nDistance;
+
+    LONG nRange;
+    if (field_7106 != 0) {
+        nRange = field_7106 * field_7106;
+    } else {
+        BYTE nPersonalSpace = m_animation.GetPersonalSpace();
+        BYTE nTargetPersonalSpace = pTarget->m_animation.GetPersonalSpace();
+        nRange = ((nTargetPersonalSpace - 1) >> 1) + ((nPersonalSpace - 1) >> 1) - 1;
+    }
+
+    BOOL bInRange;
+    if (field_7106 != 0) {
+        bInRange = nDistance <= nRange;
+    } else {
+        bInRange = nDistance <= (nRange + 2) * (nRange + 2)
+            && m_pArea->CheckLOS(pTarget->GetPos(),
+                GetPos(),
+                m_visibleTerrainTable,
+                static_cast<BOOLEAN>(pTarget->Orderable(FALSE)));
+    }
+
+    SHORT actionReturn;
+
+    if (bInRange) {
+        m_lTalkedTo.Set(pTarget->GetAIType());
+        pTarget->m_lTalkedTo.Set(GetAIType());
+
+        if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+            BYTE nResult = g_pBaldurChitin->GetBaldurMessage()->SendDialogRequestToServer(FALSE);
+            if (nResult == CBaldurMessage::DIALOG_REQUESTPENDING) {
+                return ACTION_NORMAL;
+            }
+
+            if (nResult == 0) {
+                return ACTION_ERROR;
+            }
+
+            if (nResult == CBaldurMessage::DIALOG_NOT_PERMITTED) {
+                return ACTION_ERROR;
+            }
+        }
+
+        if (!g_pBaldurChitin->m_pEngineWorld->StartDialog(pTarget, this, FALSE, FALSE)) {
+            return ACTION_ERROR;
+        }
+
+        CMessage* message;
+
+        message = new CMessageClearDialogActions(pTarget->GetId(), pTarget->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        if (m_typeAI.GetEnemyAlly() != CAIObjectType::EA_PC
+            && (m_derivedStats.m_generalState & STATE_CHARMED) == 0) {
+            message = new CMessageSetNumTimesTalkedTo(m_nNumberOfTimesTalkedTo + 1, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        if (pTarget->m_typeAI.GetEnemyAlly() != CAIObjectType::EA_PC
+            && (m_derivedStats.m_generalState & STATE_CHARMED) == 0) {
+            message = new CMessageSetNumTimesTalkedTo(pTarget->m_nNumberOfTimesTalkedTo + 1,
+                m_id,
+                pTarget->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        actionReturn = ACTION_DONE;
+
+        CAITrigger targetSaid(CAITrigger::SAID, pTarget->GetAIType(), 0);
+        message = new CMessageSetTrigger(targetSaid, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        CAITrigger selfSaid(CAITrigger::SAID, GetAIType(), 0);
+        message = new CMessageSetTrigger(selfSaid, m_id, pTarget->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        return actionReturn;
+    }
+
+    actionReturn = MoveToObject(pTarget);
+    if (actionReturn == ACTION_DONE) {
+        actionReturn = ACTION_INTERRUPTABLE;
+    }
+
+    if (actionReturn == ACTION_ERROR
+        && m_pArea->CheckLOS(pTarget->GetPos(),
+            GetPos(),
+            m_visibleTerrainTable,
+            static_cast<BOOLEAN>(pTarget->Orderable(FALSE)))) {
+        if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+            BYTE nResult = g_pBaldurChitin->GetBaldurMessage()->SendDialogRequestToServer(FALSE);
+            if (nResult == CBaldurMessage::DIALOG_REQUESTPENDING) {
+                return ACTION_NORMAL;
+            }
+
+            if (nResult == 0 || nResult == CBaldurMessage::DIALOG_NOT_PERMITTED) {
+                return ACTION_ERROR;
+            }
+        }
+
+        if (!g_pBaldurChitin->m_pEngineWorld->StartDialog(pTarget, this, FALSE, FALSE)) {
+            return ACTION_ERROR;
+        }
+
+        CMessage* message;
+
+        message = new CMessageClearDialogActions(pTarget->GetId(), pTarget->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        if (m_typeAI.GetEnemyAlly() != CAIObjectType::EA_PC
+            && (m_derivedStats.m_generalState & STATE_CHARMED) == 0) {
+            message = new CMessageSetNumTimesTalkedTo(m_nNumberOfTimesTalkedTo + 1, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        if (pTarget->m_typeAI.GetEnemyAlly() != CAIObjectType::EA_PC
+            && (m_derivedStats.m_generalState & STATE_CHARMED) == 0) {
+            message = new CMessageSetNumTimesTalkedTo(pTarget->m_nNumberOfTimesTalkedTo + 1,
+                m_id,
+                pTarget->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        actionReturn = ACTION_DONE;
+
+        CAITrigger targetSaid(CAITrigger::SAID, pTarget->GetAIType(), 0);
+        message = new CMessageSetTrigger(targetSaid, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        CAITrigger selfSaid(CAITrigger::SAID, GetAIType(), 0);
+        message = new CMessageSetTrigger(selfSaid, m_id, pTarget->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    return actionReturn;
 }
 
 // 0x7537A0
 SHORT CGameSprite::PlayerDialog(CGameSprite* pTarget)
 {
-    // TODO: Incomplete.
+    if (pTarget == NULL) {
+        return ACTION_ERROR;
+    }
 
-    return ACTION_ERROR;
+    if (pTarget->m_bEscapingArea == TRUE) {
+        return ACTION_ERROR;
+    }
+
+    // NOTE: Literals compared against unnamed `const SHORT` at 0x84784C and
+    // 0x8478D4.
+    if (pTarget->m_curAction.m_actionID == 108
+        || pTarget->m_curAction.m_actionID == 176) {
+        return ACTION_ERROR;
+    }
+
+    if (m_currentActionId == 108 || m_currentActionId == 176) {
+        return ACTION_ERROR;
+    }
+
+    if (!CanSpeak(FALSE, FALSE)) {
+        return ACTION_ERROR;
+    }
+
+    if (!pTarget->CanSpeak(FALSE, TRUE)) {
+        return ACTION_ERROR;
+    }
+
+    if (pTarget->m_moraleFailure) {
+        return ACTION_ERROR;
+    }
+
+    DWORD dwTargetState = pTarget->m_derivedStats.m_generalState;
+    if ((dwTargetState & (STATE_PANIC | STATE_STUNNED)) != 0) {
+        return ACTION_ERROR;
+    }
+
+    if ((dwTargetState & STATE_BERSERK) != 0 && m_berserkActive) {
+        return ACTION_ERROR;
+    }
+
+    if ((dwTargetState & (STATE_CONFUSED | STATE_FEEBLEMINDED)) != 0) {
+        return ACTION_ERROR;
+    }
+
+    if (m_actionCount == 0) {
+        PlayDialogSound(pTarget);
+    }
+
+    const CPoint& ptTargetPos = pTarget->GetPos();
+    CPoint ptTarget(ptTargetPos.x / CPathSearch::GRID_SQUARE_SIZEX,
+        ptTargetPos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    const CPoint& ptSelfPos = GetPos();
+    CPoint ptSelf(ptSelfPos.x / CPathSearch::GRID_SQUARE_SIZEX,
+        ptSelfPos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    LONG nDistance = CAIUtil::CountSquares(ptSelf, ptTarget);
+    nDistance *= nDistance;
+
+    BYTE nPersonalSpace = m_animation.GetPersonalSpace();
+    BYTE nTargetPersonalSpace = pTarget->m_animation.GetPersonalSpace();
+    BYTE nRange = static_cast<BYTE>(((nTargetPersonalSpace - 1) >> 1) + ((nPersonalSpace - 1) >> 1) - 1);
+
+    SHORT actionReturn;
+    CMessage* message;
+
+    if (nDistance <= (nRange + 2) * (nRange + 2)
+        && m_pArea->CheckLOS(pTarget->GetPos(),
+            GetPos(),
+            m_visibleTerrainTable,
+            static_cast<BOOLEAN>(pTarget->Orderable(FALSE)))) {
+        if (!IsVisibleToCaller(FALSE)) {
+            ITEM_EFFECT effect;
+            CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+            // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+            effect.durationType = 1;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                m_pos,
+                m_id,
+                CPoint(-1, -1));
+
+            message = new CMessageAddEffect(pEffect, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        if (m_derivedStats.m_spellStates[SPLSTATE_SANCTUARY]) {
+            ITEM_EFFECT effect;
+            CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_DISPELSANCTUARY);
+            // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+            effect.durationType = 1;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                m_pos,
+                m_id,
+                CPoint(-1, -1));
+
+            message = new CMessageAddEffect(pEffect, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        m_lTalkedTo.Set(pTarget->GetAIType());
+        pTarget->m_lTalkedTo.Set(GetAIType());
+
+        if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+            BYTE nResult = g_pBaldurChitin->GetBaldurMessage()->SendDialogRequestToServer(TRUE);
+            if (nResult == CBaldurMessage::DIALOG_REQUESTPENDING) {
+                return ACTION_NORMAL;
+            }
+
+            if (nResult == CBaldurMessage::DIALOG_NOT_PERMITTED) {
+                DisplayTextRef(GetNameRef(), 10945, RGB(255, 0, 0), RGB(255, 0, 0));
+                return ACTION_ERROR;
+            }
+
+            if (nResult == 0) {
+                return ACTION_ERROR;
+            }
+        }
+
+        if (!g_pBaldurChitin->m_pEngineWorld->StartDialog(this, pTarget, TRUE, FALSE)) {
+            return ACTION_ERROR;
+        }
+
+        message = new CMessageClearDialogActions(pTarget->GetId(), pTarget->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        if (m_typeAI.GetEnemyAlly() != CAIObjectType::EA_PC
+            && (m_derivedStats.m_generalState & STATE_CHARMED) == 0) {
+            message = new CMessageSetNumTimesTalkedTo(m_nNumberOfTimesTalkedTo + 1, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        if (pTarget->m_typeAI.GetEnemyAlly() != CAIObjectType::EA_PC
+            && (m_derivedStats.m_generalState & STATE_CHARMED) == 0) {
+            message = new CMessageSetNumTimesTalkedTo(pTarget->m_nNumberOfTimesTalkedTo + 1,
+                m_id,
+                pTarget->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        actionReturn = ACTION_DONE;
+
+        CAITrigger targetSaid(CAITrigger::SAID, pTarget->GetAIType(), 0);
+        message = new CMessageSetTrigger(targetSaid, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        CAITrigger selfSaid(CAITrigger::SAID, GetAIType(), 0);
+        message = new CMessageSetTrigger(selfSaid, m_id, pTarget->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        return actionReturn;
+    }
+
+    actionReturn = MoveToObject(pTarget);
+    if (actionReturn == ACTION_DONE) {
+        actionReturn = ACTION_INTERRUPTABLE;
+    }
+
+    if (actionReturn == ACTION_ERROR
+        && m_pArea->CheckLOS(pTarget->GetPos(),
+            GetPos(),
+            m_visibleTerrainTable,
+            static_cast<BOOLEAN>(pTarget->Orderable(FALSE)))) {
+        if (!IsVisibleToCaller(FALSE)) {
+            ITEM_EFFECT effect;
+            CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+            // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+            effect.durationType = 1;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                m_pos,
+                m_id,
+                CPoint(-1, -1));
+
+            message = new CMessageAddEffect(pEffect, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        if (m_derivedStats.m_spellStates[SPLSTATE_SANCTUARY]) {
+            ITEM_EFFECT effect;
+            CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_DISPELSANCTUARY);
+            // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+            effect.durationType = 1;
+
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                m_pos,
+                m_id,
+                CPoint(-1, -1));
+
+            message = new CMessageAddEffect(pEffect, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+            BYTE nResult = g_pBaldurChitin->GetBaldurMessage()->SendDialogRequestToServer(TRUE);
+            if (nResult == CBaldurMessage::DIALOG_REQUESTPENDING) {
+                return ACTION_NORMAL;
+            }
+
+            if (nResult == CBaldurMessage::DIALOG_NOT_PERMITTED) {
+                DisplayTextRef(GetNameRef(), 10945, RGB(255, 0, 0), RGB(255, 0, 0));
+                return ACTION_ERROR;
+            }
+
+            if (nResult == 0) {
+                return ACTION_ERROR;
+            }
+        }
+
+        if (!g_pBaldurChitin->m_pEngineWorld->StartDialog(this, pTarget, TRUE, FALSE)) {
+            return ACTION_ERROR;
+        }
+
+        message = new CMessageClearDialogActions(pTarget->GetId(), pTarget->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        if (m_typeAI.GetEnemyAlly() != CAIObjectType::EA_PC
+            && (m_derivedStats.m_generalState & STATE_CHARMED) == 0) {
+            message = new CMessageSetNumTimesTalkedTo(m_nNumberOfTimesTalkedTo + 1, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        if (pTarget->m_typeAI.GetEnemyAlly() != CAIObjectType::EA_PC
+            && (m_derivedStats.m_generalState & STATE_CHARMED) == 0) {
+            message = new CMessageSetNumTimesTalkedTo(pTarget->m_nNumberOfTimesTalkedTo + 1,
+                m_id,
+                pTarget->GetId());
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        actionReturn = ACTION_DONE;
+
+        CAITrigger targetSaid(CAITrigger::SAID, pTarget->GetAIType(), 0);
+        message = new CMessageSetTrigger(targetSaid, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        CAITrigger selfSaid(CAITrigger::SAID, GetAIType(), 0);
+        message = new CMessageSetTrigger(selfSaid, m_id, pTarget->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    return actionReturn;
 }
 
 // 0x7543B0
 SHORT CGameSprite::StartDialog(CGameSprite* pTarget)
 {
-    // TODO: Incomplete.
+    if (pTarget == NULL
+        || !CanSpeak(FALSE, FALSE)
+        || !pTarget->CanSpeak(FALSE, TRUE)
+        || (m_derivedStats.m_generalState & STATE_CHARMED) != 0) {
+        return ACTION_ERROR;
+    }
 
-    return ACTION_ERROR;
+    if (m_curAction.m_actionID != CAIAction::STARTDIALOGUENOSET) {
+        m_dialog = m_curAction.GetString1();
+    }
+
+    m_lTalkedTo.Set(pTarget->GetAIType());
+    pTarget->m_lTalkedTo.Set(GetAIType());
+
+    if (m_actionCount == 0) {
+        PlayDialogSound(this);
+    }
+
+    if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+        BYTE nResult = g_pBaldurChitin->GetBaldurMessage()->SendDialogRequestToServer(FALSE);
+        if (nResult == CBaldurMessage::DIALOG_REQUESTPENDING) {
+            return ACTION_NORMAL;
+        }
+
+        if (nResult == 0) {
+            return ACTION_ERROR;
+        }
+
+        if (nResult == CBaldurMessage::DIALOG_NOT_PERMITTED) {
+            return ACTION_ERROR;
+        }
+    }
+
+    if (!g_pBaldurChitin->m_pEngineWorld->StartDialog(pTarget, this, FALSE, FALSE)) {
+        return ACTION_ERROR;
+    }
+
+    CMessage* message;
+
+    message = new CMessageClearDialogActions(pTarget->GetId(), pTarget->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    if (m_typeAI.GetEnemyAlly() != CAIObjectType::EA_PC
+        && (m_derivedStats.m_generalState & STATE_CHARMED) == 0) {
+        message = new CMessageSetNumTimesTalkedTo(m_nNumberOfTimesTalkedTo + 1, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    if (pTarget->m_typeAI.GetEnemyAlly() != CAIObjectType::EA_PC
+        && (m_derivedStats.m_generalState & STATE_CHARMED) == 0) {
+        message = new CMessageSetNumTimesTalkedTo(pTarget->m_nNumberOfTimesTalkedTo + 1,
+            m_id,
+            pTarget->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    SHORT actionReturn = ACTION_DONE;
+
+    CAITrigger targetSaid(CAITrigger::SAID, pTarget->GetAIType(), 0);
+    message = new CMessageSetTrigger(targetSaid, m_id, m_id);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    CAITrigger selfSaid(CAITrigger::SAID, GetAIType(), 0);
+    message = new CMessageSetTrigger(selfSaid, m_id, pTarget->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    return actionReturn;
 }
 
 // 0x754870
@@ -16106,9 +16578,59 @@ void CGameSprite::SelectWeaponAbility(unsigned char a1, unsigned char a2, unsign
 // 0x754980
 SHORT CGameSprite::Interact(CGameSprite* pTarget)
 {
-    // TODO: Incomplete.
+    if (pTarget == NULL) {
+        return ACTION_ERROR;
+    }
 
-    return ACTION_ERROR;
+    m_interactingWith.Set(pTarget->GetAIType());
+    m_lTalkedTo.Set(pTarget->GetAIType());
+    pTarget->m_lTalkedTo.Set(GetAIType());
+
+    if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+        BYTE nResult = g_pBaldurChitin->GetBaldurMessage()->SendDialogRequestToServer(FALSE);
+        if (nResult == CBaldurMessage::DIALOG_REQUESTPENDING) {
+            return ACTION_NORMAL;
+        }
+
+        if (nResult == 0 || nResult == CBaldurMessage::DIALOG_NOT_PERMITTED) {
+            return ACTION_ERROR;
+        }
+    }
+
+    if (!g_pBaldurChitin->m_pEngineWorld->StartDialog(pTarget, this, FALSE, TRUE)) {
+        return ACTION_ERROR;
+    }
+
+    CMessage* message;
+
+    message = new CMessageClearDialogActions(pTarget->GetId(), pTarget->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    if (m_typeAI.GetEnemyAlly() != CAIObjectType::EA_PC
+        && (m_derivedStats.m_generalState & STATE_CHARMED) == 0) {
+        message = new CMessageSetNumTimesTalkedTo(m_nNumberOfTimesTalkedTo + 1, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    if (pTarget->m_typeAI.GetEnemyAlly() != CAIObjectType::EA_PC
+        && (m_derivedStats.m_generalState & STATE_CHARMED) == 0) {
+        message = new CMessageSetNumTimesTalkedTo(pTarget->m_nNumberOfTimesTalkedTo + 1,
+            m_id,
+            pTarget->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    SHORT actionReturn = ACTION_DONE;
+
+    CAITrigger targetSaid(CAITrigger::SAID, pTarget->GetAIType(), 0);
+    message = new CMessageSetTrigger(targetSaid, m_id, m_id);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    CAITrigger selfSaid(CAITrigger::SAID, GetAIType(), 0);
+    message = new CMessageSetTrigger(selfSaid, m_id, pTarget->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    return actionReturn;
 }
 
 // 0x754D70
@@ -16471,17 +16993,119 @@ SHORT CGameSprite::sub_75F240()
 // 0x75F270
 SHORT CGameSprite::ReturnToSavedLocation()
 {
-    // TODO: Incomplete.
+    if (m_baseStats.field_2E4 == 0 || m_baseStats.field_2E6 == 0) {
+        return ACTION_DONE;
+    }
 
-    return ACTION_ERROR;
+    CPoint dest;
+    if (m_curAction.m_actionID == 302) {
+        dest = m_pos;
+    } else {
+        dest.x = static_cast<WORD>(m_baseStats.field_2E4);
+        dest.y = static_cast<WORD>(m_baseStats.field_2E6);
+    }
+
+    SHORT actionReturn = sub_73FEC0(dest, m_curAction.m_specificID);
+    if (actionReturn != ACTION_DONE && actionReturn != ACTION_ERROR) {
+        m_lastActionID = CAIAction::MOVETOPOINT;
+        return actionReturn;
+    }
+
+    SetDirection(static_cast<SHORT>(m_baseStats.field_2E8));
+
+    if (m_pos.x != -1 || m_pos.y != -1 || m_pArea != NULL) {
+        CMessage* message = new CMessageSpriteUpdate(this, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    if (m_curAction.m_actionID == 262) {
+        m_removeFromArea = TRUE;
+    }
+
+    return actionReturn;
 }
 
 // 0x75F3D0
 SHORT CGameSprite::sub_75F3D0(int a1)
 {
-    // TODO: Incomplete.
+    if (m_id == 0 || m_pArea == NULL) {
+        return ACTION_ERROR;
+    }
 
-    return ACTION_ERROR;
+    BYTE bHide = static_cast<BYTE>(a1);
+    if (bHide == TRUE) {
+        if (m_baseStats.field_294 == TRUE) {
+            return ACTION_DONE;
+        }
+
+        if (m_typeAI.sub_40CCA0(this, TRUE) != NULL) {
+            // NOTE: Uninline (without `NULL` check).
+            m_pArea->m_pObjectMarker->RemoveObject(m_id);
+        }
+
+        if (field_7430 == TRUE) {
+            m_pArea->m_search.RemoveObject(CPoint(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                                               m_pos.y / CPathSearch::GRID_SQUARE_SIZEY),
+                m_typeAI.GetEnemyAlly(),
+                m_animation.GetPersonalSpace(),
+                field_54A8,
+                field_7430);
+        }
+
+        m_baseStats.field_294 = TRUE;
+        return ACTION_DONE;
+    }
+
+    if (bHide != FALSE) {
+        return ACTION_ERROR;
+    }
+
+    if (m_baseStats.field_294 == FALSE) {
+        return ACTION_DONE;
+    }
+
+    // NOTE: Result is unused.
+    if ((m_animation.GetAnimationId() & 0xF000) == 0x4000
+        && m_animation.GetAnimationId() >= 0x4400) {
+        m_pArea->m_search.GetNearestOpenSquare(CPoint(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                                                   m_pos.y / CPathSearch::GRID_SQUARE_SIZEY),
+            m_visibleTerrainTable,
+            m_animation.GetPersonalSpace(),
+            -1);
+    } else {
+        m_pArea->m_search.GetNearestOpenSquare(CPoint(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                                                   m_pos.y / CPathSearch::GRID_SQUARE_SIZEY),
+            m_terrainTable,
+            m_animation.GetPersonalSpace(),
+            -1);
+    }
+
+    if (m_typeAI.sub_40CCA0(this, TRUE) != NULL) {
+        // NOTE: Uninline (without `NULL` check).
+        m_pArea->m_pObjectMarker->RemoveObject(m_id);
+    }
+
+    if (field_7430 == TRUE) {
+        m_pArea->m_search.RemoveObject(CPoint(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                                           m_pos.y / CPathSearch::GRID_SQUARE_SIZEY),
+            m_typeAI.GetEnemyAlly(),
+            m_animation.GetPersonalSpace(),
+            field_54A8,
+            field_7430);
+    }
+
+    // NOTE: Uninline (without `NULL` check).
+    m_pArea->m_pObjectMarker->AddObject(m_id);
+
+    m_pArea->m_search.AddObject(CPoint(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                                    m_pos.y / CPathSearch::GRID_SQUARE_SIZEY),
+        m_typeAI.GetEnemyAlly(),
+        m_animation.GetPersonalSpace(),
+        field_54A8,
+        field_7430);
+
+    m_baseStats.field_294 = FALSE;
+    return ACTION_DONE;
 }
 
 // 0x75F800

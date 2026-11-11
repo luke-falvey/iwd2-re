@@ -1545,6 +1545,14 @@ BOOLEAN CScreenWorld::ReadyEndCredits(BOOLEAN bForcedFromServer)
     }
 }
 
+// 0x68EA00
+BOOL CScreenWorld::StartDialog(CGameSprite* pNPC, CGameSprite* pCharacter, BOOLEAN bPlayerInitiated, BOOLEAN a4)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x68F9D0
 void CScreenWorld::EndDialog(BOOLEAN bForceExecution, BOOLEAN fullEnd)
 {
