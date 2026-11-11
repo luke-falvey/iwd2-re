@@ -31,6 +31,7 @@ public:
     void sub_586FC0(CGameSprite* sprite);
     void sub_587190();
     void Clear();
+    void sub_5872C0(CGameSprite* sprite);
     std::vector<int> sub_587510();
     int GetCount();
 

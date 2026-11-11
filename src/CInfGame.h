@@ -135,6 +135,7 @@ public:
     static const DWORD PROGRESSBAR_GAME_ADDITIONAL;
     static const DWORD PROGRESSBAR_REQUESTS_ADDITIONAL;
     static const DWORD PROGRESSBAR_CACHING_ADDITIONAL;
+    static const BYTE byte_8518BC;
 
     static const SHORT FEEDBACK_GOLD;
     static const SHORT FEEDBACK_EXPERIENCE;
@@ -481,6 +482,9 @@ public:
     /* 4A8E */ BOOLEAN m_bPartyAI;
     /* 4A8F */ BOOLEAN m_bShowAreaNotes;
     /* 4A90 */ BYTE m_nTravelScreenImageToUse;
+    // NOTE: At 0x4A91 in the original. Not annotated because the preceding
+    // members are a known layout mismatch.
+    CResRef m_cResParchment;
     /* 4A9A */ DWORD m_dwLastProgressRenderTickCount;
     /* 4A9E */ DWORD m_dwLastProgressMsgTickCount;
     /* 4AA2 */ ULONG m_nLastSaveTime;

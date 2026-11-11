@@ -585,6 +585,12 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_MPSETTINGS_NIGHTMAREMODE = 78;
 // 0x84CF8A
 const BYTE CBaldurMessage::MSG_SUBTYPE_MPSETTINGS_DEMAND_NIGHTMAREMODE = 110;
 
+// 0x84CF8B
+const BYTE CBaldurMessage::MSG_TYPE_MAPWORLD = 109;
+
+// 0x84CF8C
+const BYTE CBaldurMessage::MSG_SUBTYPE_MAPWORLD_REQUEST = 114;
+
 // 0x84CF96
 const BYTE CBaldurMessage::byte_84CF96 = 'Y';
 
@@ -684,11 +690,23 @@ const BYTE CBaldurMessage::MSG_TYPE_LEAVEAREALUA = 88;
 // 0x84CFD4
 const BYTE CBaldurMessage::MSG_SUBTYPE_LEAVEAREALUA_PERMIT_REQUEST = 82;
 
+// 0x84CFD8
+const BYTE CBaldurMessage::LEAVEAREALUA_REPLY_WAITING = 2;
+
+// 0x84CFD9
+const BYTE CBaldurMessage::LEAVEAREALUA_REPLY_PERMITTED = 3;
+
+// 0x84CFDA
+const BYTE CBaldurMessage::LEAVEAREALUA_REPLY_BUSY = 4;
+
 // 0x84CFDB
 const BYTE CBaldurMessage::MSG_TYPE_LEAVEAREANAME = 120;
 
 // 0x84CFDC
 const BYTE CBaldurMessage::MSG_SUBTYPE_LEAVEAREANAME_PERMIT_REQUEST = 82;
+
+// 0x84CFDF
+const BYTE CBaldurMessage::LEAVEAREANAME_REPLY_WAITING = 2;
 
 // 0x4294F0
 CBaldurMessage::CBaldurMessage()
@@ -2479,6 +2497,14 @@ BOOLEAN CBaldurMessage::OnSwapItemRequest(INT nMsgFrom, BYTE* pMessage, DWORD dw
     return FALSE;
 }
 
+// 0x432050
+BOOLEAN CBaldurMessage::CharacterPartyOrderRequest()
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x4324E0
 BOOLEAN CBaldurMessage::sub_4324E0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
@@ -3551,6 +3577,38 @@ BOOLEAN CBaldurMessage::sub_435040(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
     return FALSE;
 }
 
+// 0x435150
+BOOLEAN CBaldurMessage::SendMapWorldRequestToServer(LONG nLeavingEdge)
+{
+    CString sHostName;
+
+    if (g_pChitin->cNetwork.GetSessionOpen()
+        && g_pChitin->cNetwork.GetSessionHosting() != TRUE) {
+        g_pChitin->cNetwork.GetHostPlayerName(sHostName);
+
+        if (sHostName != "") {
+            DWORD dwSize = sizeof(LONG);
+            BYTE* pMessage = CreateBuffer(dwSize);
+            if (pMessage != NULL) {
+                *reinterpret_cast<LONG*>(pMessage) = nLeavingEdge;
+
+                g_pChitin->cNetwork.SendSpecificMessage(sHostName,
+                    CNetwork::SEND_GUARANTEED,
+                    MSG_TYPE_MAPWORLD,
+                    MSG_SUBTYPE_MAPWORLD_REQUEST,
+                    pMessage,
+                    dwSize);
+
+                DestroyBuffer(pMessage);
+
+                return TRUE;
+            }
+        }
+    }
+
+    return FALSE;
+}
+
 // 0x4352A0
 BOOLEAN CBaldurMessage::sub_4352A0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
@@ -3784,6 +3842,14 @@ BOOLEAN CBaldurMessage::OnTimeChangeToServer(INT nMsgFrom, BYTE* pMessage, DWORD
     return TRUE;
 }
 
+// 0x4373E0
+BYTE CBaldurMessage::LeaveAreaLuaRequestToServer(LONG nCharacterId, CPoint ptStart, LONG nFace, CString sArea, CString sParchment)
+{
+    // TODO: Incomplete.
+
+    return 0;
+}
+
 // 0x437950
 BOOLEAN CBaldurMessage::OnLeaveAreaLuaRequestToServer(INT nMsgFrom, BYTE* pByteMessage, DWORD dwSize)
 {
@@ -3798,6 +3864,14 @@ BOOLEAN CBaldurMessage::sub_438560(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
     // TODO: Incomplete.
 
     return FALSE;
+}
+
+// 0x438710
+BYTE CBaldurMessage::LeaveAreaNameRequestToServer(LONG nCharacterId, LONG nTriggerId, CString sArea)
+{
+    // TODO: Incomplete.
+
+    return 0;
 }
 
 // 0x438BF0

@@ -243,6 +243,8 @@ public:
 
     static const SHORT READY_COUNT;
     static const SHORT USER_OVERRIDE_COUNT;
+    static const SHORT RANDOM_WALK_CHOICES;
+    static const SHORT RANDOM_WALK_WAIT_TIME;
 
     static const BYTE SEQ_ATTACK;
     static const BYTE SEQ_AWAKE;
@@ -444,6 +446,9 @@ public:
     static BOOLEAN SHOW_CHARACTER_HP;
     static BOOLEAN GRAVITY_IS_DOWN;
     static INT m_bRollFeedbackEnabled;
+    static const LONG dword_84C7B8;
+    static BOOLEAN byte_8F9AF4;
+    static BOOLEAN byte_8F9AF5;
     static CAIAction m_aiDoAction;
 
     CGameSprite(BYTE* pCreature, LONG creatureSize, int a3, WORD type, DWORD expirationTime, WORD huntingRange, WORD followRange, DWORD timeOfDayVisible, CPoint startPos, WORD facing);
@@ -612,9 +617,10 @@ public:
     CGameObject* sub_733340();
     SHORT Attack(CGameSprite* pTarget);
     SHORT AttackReevaluate();
+    SHORT Swing(CGameSprite* pTarget);
     SHORT sub_73EA80(CGameSprite* pTarget);
     SHORT MoveToObject(CGameAIBase* pTarget);
-    SHORT sub_73FEC0(const CPoint& dest, BOOL a2);
+    SHORT sub_73FEC0(const CPoint& dest, LONG range);
     SHORT Spell(CGameAIBase* pTarget);
     SHORT SpellPoint();
     SHORT RunAwayFrom(CGameSprite* pTarget);
@@ -632,6 +638,7 @@ public:
     SHORT Help();
     SHORT Rest();
     SHORT JoinParty();
+    void sub_751BD0();
     SHORT RandomFly();
     SHORT Dialog(CGameSprite* pTarget);
     SHORT PlayerDialog(CGameSprite* pTarget);
@@ -661,6 +668,7 @@ public:
     void ClearStoredPaths();
     void ClearDialogActions();
     BOOL HandleEffects();
+    CPoint sub_734720(LONG** ppPath, LONG* pnPath, SHORT range, BOOLEAN* pbExtended);
     void FeedBack(WORD nFeedBackId, LONG a2, LONG a3, LONG a4, LONG a5, LONG a6, LONG a7);
     BOOLEAN sub_737910(BOOL a1);
     SHORT GetCriticalHitBonus();

@@ -36,6 +36,7 @@ public:
     static const SHORT LEADER;
     static const SHORT MOVETOPOINTNORECTICLE;
     static const SHORT LEAVEAREA;
+    static const SHORT LEAVEAREANAME;
     static const SHORT GROUPATTACK;
     static const SHORT SPELLPOINT;
     static const SHORT USEITEMPOINT;
@@ -47,6 +48,7 @@ public:
     static const SHORT STARTDIALOG;
     static const SHORT PLAYERDIALOG;
     static const SHORT APPLYSPELL;
+    static const SHORT ESCAPEAREADESTROY;
     static const SHORT MOVETOOBJECTFOLLOW;
     static const SHORT BREAKINSTANTS;
     static const SHORT REALLYFORCESPELL;
