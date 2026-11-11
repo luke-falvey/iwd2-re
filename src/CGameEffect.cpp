@@ -4,6 +4,7 @@
 #include "CBaldurChitin.h"
 #include "CBaldurProjector.h"
 #include "CBlood.h"
+#include "CCreatureFile.h"
 #include "CGameAnimationType.h"
 #include "CGameArea.h"
 #include "CGameSprite.h"
@@ -11400,6 +11401,88 @@ CGameEffect* CGameEffectReplaceSelf::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4BD050
+BOOL CGameEffectReplaceSelf::ApplyEffect(CGameSprite* pSprite)
+{
+    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(m_res, 1009, TRUE) == NULL) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) == -1) {
+        if (m_dwFlags != 0 && g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nGore != 0) {
+            CGameEffectDeath* pDeath = new CGameEffectDeath();
+            pDeath->m_source = m_source;
+            pDeath->m_sourceID = m_sourceID;
+            pDeath->m_dwFlags = 8;
+            pDeath->m_effectAmount = 1;
+            pDeath->m_casterLevel = m_casterLevel;
+            pSprite->AddEffect(pDeath, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+        } else {
+            pSprite->m_removeFromArea = TRUE;
+        }
+    } else {
+        CGameEffectDeath* pDeath = new CGameEffectDeath();
+        pDeath->m_source = m_source;
+        pDeath->m_sourceID = m_sourceID;
+        pDeath->m_dwFlags = 8;
+        pSprite->AddEffect(pDeath, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+    }
+
+    CPoint pos = pSprite->GetPos();
+
+    CCreatureFile creatureData;
+
+    // NOTE: Uninline.
+    creatureData.SetResRef(m_res, TRUE, TRUE);
+
+    CGameSprite* pNewSprite = new CGameSprite(creatureData.GetData(),
+        creatureData.GetDataSize(),
+        0,
+        0,
+        -1,
+        0,
+        0,
+        0x7FFFFFFF,
+        CPoint(-1, -1),
+        0);
+
+    // NOTE: The original `SetResRef` (0x42FDC0) takes a `CString` by value,
+    // here it's converted through `CResRef`.
+    pNewSprite->SetResRef(CResRef(creatureData.GetResRef().GetResRefStr()));
+    creatureData.ReleaseData();
+
+    if (pNewSprite != NULL) {
+        LONG nNewSpriteId = pNewSprite->GetId();
+
+        CString sResRef;
+        m_res.CopyToString(sResRef);
+        pNewSprite->SetResRef(CResRef(sResRef));
+
+        if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nNewSpriteId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pNewSprite),
+                INFINITE)
+            == CGameObjectArray::SUCCESS) {
+            BYTE listType = pNewSprite->m_animation.GetListType();
+            pNewSprite->AddToArea(pSprite->GetArea(), pos, 0, listType);
+
+            CVariable creatureName;
+            creatureName.SetName(CString(pNewSprite->GetScriptName()));
+            creatureName.m_intValue = nNewSpriteId;
+            pSprite->GetArea()->m_namedCreatures.AddKey(creatureName);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nNewSpriteId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            m_done = TRUE;
+        }
+    }
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
