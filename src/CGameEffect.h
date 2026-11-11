@@ -456,6 +456,7 @@ public:
     void sub_4A7750(CGameSprite* pSprite);
     void sub_4A8DF0(DWORD nDamageType, CGameSprite* pSprite);
     void sub_4AB0A0(CGameSprite* pSprite, LONG nDamage);
+    CString sub_4AB370();
 };
 
 class CGameEffectDeath : public CGameEffect {
