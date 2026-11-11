@@ -1146,6 +1146,58 @@ CGameEffect* IcewindCGameEffectRemoveEffectOfResource::Copy()
     return copy;
 }
 
+// 0x563A20
+BOOL IcewindCGameEffectRemoveEffectOfResource::ApplyEffect(CGameSprite* pSprite)
+{
+    std::string sRes(static_cast<LPCSTR>(m_res.GetResRefStr()));
+    for (std::string::iterator it = sRes.begin(); it != sRes.end(); it++) {
+        *it = toupper(*it);
+    }
+
+    for (INT nList = 0; nList < 2; nList++) {
+        CGameEffectList* pList;
+
+        switch (nList) {
+        case 0:
+            if (m_dwFlags != 0 && m_dwFlags != 1) {
+                continue;
+            }
+            pList = pSprite->GetEquipedEffectList();
+            break;
+        case 1:
+            if (m_dwFlags != 0 && m_dwFlags != 2) {
+                continue;
+            }
+            pList = pSprite->GetTimedEffectList();
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+            // __LINE__: 3035
+            UTIL_ASSERT(FALSE);
+        }
+
+        POSITION pos = pList->GetHeadPosition();
+        while (pos != NULL) {
+            POSITION posOld = pos;
+            CGameEffect* pEffect = pList->GetNext(pos);
+
+            std::string sSourceRes(static_cast<LPCSTR>(pEffect->m_sourceRes.GetResRefStr()));
+            for (std::string::iterator it = sSourceRes.begin(); it != sSourceRes.end(); it++) {
+                *it = toupper(*it);
+            }
+
+            if (sRes.compare(0, sRes.size(), sSourceRes.c_str(), sSourceRes.size()) == 0) {
+                pList->RemoveAt(posOld);
+                delete pEffect;
+            }
+        }
+    }
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49E5C0
@@ -1162,6 +1214,78 @@ CGameEffect* IcewindCGameEffectSalamanderAura::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x49FC40
+BOOL IcewindCGameEffectSalamanderAura::UsesDice()
+{
+    return TRUE;
+}
+
+// 0x563D30
+BOOL IcewindCGameEffectSalamanderAura::ApplyEffect(CGameSprite* pSprite)
+{
+    if (IcewindMisc::IsDead(pSprite) == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    CGameEffect* pCopy = Copy();
+    pCopy->m_duration = 7;
+    // NOTE: Original reads it from a constant at 0x8491B0.
+    pCopy->m_durationType = 4;
+    pSprite->AddEffect(pCopy, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+
+    CProjectileArea* pProjectile = new CProjectileArea(100);
+
+    CGameEffect* pEffect;
+    switch (m_dwFlags) {
+    case 0:
+        pEffect = IcewindMisc::CreateEffectImmunitySpell(pSprite, m_sourceRes.GetResRef(), 3, 10, 0, 2);
+        pEffect->m_sourceRes = m_sourceRes;
+        pProjectile->AddEffect(pEffect);
+
+        pEffect = IcewindMisc::sub_5853B0(pSprite,
+            m_numDice,
+            m_diceSize,
+            m_effectAmount,
+            static_cast<BYTE>(m_spellLevel),
+            0);
+        pEffect->m_sourceRes = m_sourceRes;
+        pProjectile->AddEffect(pEffect);
+        break;
+    case 1:
+        pEffect = IcewindMisc::CreateEffectImmunitySpell(pSprite, m_sourceRes.GetResRef(), 25, 10, 0, 2);
+        pEffect->m_sourceRes = m_sourceRes;
+        pEffect->m_casterLevel = m_casterLevel;
+        pProjectile->AddEffect(pEffect);
+
+        pEffect = IcewindMisc::sub_5853E0(pSprite,
+            m_numDice,
+            m_diceSize,
+            m_effectAmount,
+            static_cast<BYTE>(m_spellLevel),
+            0);
+        pEffect->m_sourceRes = m_sourceRes;
+        pEffect->m_casterLevel = m_casterLevel;
+        pProjectile->AddEffect(pEffect);
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+        // __LINE__: 3123
+        UTIL_ASSERT(FALSE);
+    }
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pSprite->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        0,
+        0);
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -1182,6 +1306,61 @@ CGameEffect* IcewindCGameEffectUmberHulkGaze::Copy()
     return copy;
 }
 
+// 0x563F70
+BOOL IcewindCGameEffectUmberHulkGaze::ApplyEffect(CGameSprite* pSprite)
+{
+    if (IcewindMisc::IsDead(pSprite) == TRUE) {
+        m_done = TRUE;
+        return TRUE;
+    }
+
+    CGameEffect* pCopy = Copy();
+    pCopy->m_duration = 7;
+    // NOTE: Original reads it from a constant at 0x8491B0.
+    pCopy->m_durationType = 4;
+    pSprite->AddEffect(pCopy, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+
+    CProjectileArea* pProjectile = new CProjectileArea(275);
+    pProjectile->sub_5704E0(pSprite);
+
+    CGameEffect* pEffect;
+
+    pEffect = IcewindMisc::CreateEffectImmunitySpell(pSprite, reinterpret_cast<const BYTE*>("SpIn994"), 17, 10, 0, 2);
+    pEffect->m_sourceRes = CResRef("SpIn994");
+    pProjectile->AddEffect(pEffect);
+
+    pEffect = IcewindMisc::CreateEffectImmunitySpell(pSprite, reinterpret_cast<const BYTE*>("SpIn994"), 27, 10, 0, 2);
+    pEffect->m_sourceRes = CResRef("SpIn994");
+    pProjectile->AddEffect(pEffect);
+
+    pEffect = IcewindMisc::CreateEffectImmunitySpell(pSprite, reinterpret_cast<const BYTE*>("SpIn994"), 29, 10, 0, 2);
+    pEffect->m_sourceRes = CResRef("SpIn994");
+    pProjectile->AddEffect(pEffect);
+
+    pEffect = IcewindMisc::CreateEffectImmunitySpell(pSprite, reinterpret_cast<const BYTE*>("SpIn994"), 23, 10, 0, 2);
+    pEffect->m_sourceRes = CResRef("SpIn994");
+    pProjectile->AddEffect(pEffect);
+
+    pEffect = IcewindMisc::CreateEffectConfusion(pSprite, m_effectAmount, static_cast<BYTE>(m_spellLevel), 16);
+    pEffect->m_sourceRes = CResRef("SpIn994");
+    pProjectile->AddEffect(pEffect);
+
+    pEffect = IcewindMisc::CreateEffectImmunitySpell(pSprite, reinterpret_cast<const BYTE*>("SpIn994"), 0, m_effectAmount, 0, 2);
+    pEffect->m_sourceRes = CResRef("SpIn994");
+    pProjectile->AddEffect(pEffect);
+
+    pProjectile->Fire(pSprite->GetArea(),
+        pSprite->GetId(),
+        pSprite->GetId(),
+        pSprite->GetPos(),
+        0,
+        0);
+
+    m_done = TRUE;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49E7A0
@@ -1198,6 +1377,40 @@ CGameEffect* IcewindCGameEffectImmunityToResource::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x564200
+BOOL IcewindCGameEffectImmunityToResource::ApplyEffect(CGameSprite* pSprite)
+{
+    switch (m_dwFlags) {
+    case 0:
+        break;
+    case 1: {
+            CVariable* pVar = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(CString(m_res.GetResRefStr()));
+            if (pVar != NULL) {
+                if (pVar->m_intValue == 0) {
+                    m_done = TRUE;
+                    return TRUE;
+                }
+
+                pVar->m_intValue = 0;
+            }
+            break;
+        }
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameEffects.cpp
+        // __LINE__: 3327
+        UTIL_ASSERT(FALSE);
+    }
+
+    std::string sRes(static_cast<LPCSTR>(m_sourceRes.GetResRefStr()));
+    if (sRes.length() != 0) {
+        pSprite->GetDerivedStats()->m_spellImmunities.insert(sRes);
+    } else {
+        m_done = TRUE;
+    }
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -1218,6 +1431,18 @@ CGameEffect* IcewindCGameEffectAnimationRemove::Copy()
     return copy;
 }
 
+// 0x564460
+BOOL IcewindCGameEffectAnimationRemove::ApplyEffect(CGameSprite* pSprite)
+{
+    pSprite->sub_75F3D0(1);
+    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+        CMessage* message = new CMessage90(pSprite->GetId(), pSprite->GetId(), 1);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x49E980
@@ -1234,6 +1459,13 @@ CGameEffect* IcewindCGameEffectImmunityToEffectAndResource::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x5644D0
+BOOL IcewindCGameEffectImmunityToEffectAndResource::ApplyEffect(CGameSprite* pSprite)
+{
+    pSprite->GetDerivedStats()->m_naturalImmunities.insert(m_dwFlags);
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -1259,6 +1491,12 @@ void IcewindCGameEffectDominate::OnAdd(CGameSprite* pSprite)
 {
     m_numDice = -1;
     m_diceSize = -1;
+}
+
+// 0x564580
+void IcewindCGameEffectDominate::OnRemove(CGameSprite* pSprite)
+{
+    Icewind586B70::Instance()->Remove(pSprite);
 }
 
 // -----------------------------------------------------------------------------
