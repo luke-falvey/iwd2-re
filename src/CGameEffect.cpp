@@ -11,6 +11,7 @@
 #include "CInfGame.h"
 #include "CItem.h"
 #include "CResEffect.h"
+#include "CScreenInventory.h"
 #include "CScreenWorld.h"
 #include "CSevenEyes.h"
 #include "CSpell.h"
@@ -5402,6 +5403,88 @@ CGameEffect* CGameEffectRemoveCurse::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// 0x4BB920
+BOOL CGameEffectRemoveCurse::ApplyEffect(CGameSprite* pSprite)
+{
+    CGameSpriteEquipment* pEquipment = pSprite->GetEquipment();
+    SHORT nSelectedWeapon = pEquipment->m_selectedWeapon;
+    SHORT nLauncherSlot = pSprite->GetLauncherSlot(pEquipment->m_selectedWeapon,
+        pEquipment->m_selectedWeaponAbility);
+    BOOL bChanged = FALSE;
+
+    for (INT nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+        CItem* pItem = pEquipment->m_items[nSlot];
+        if (pItem == NULL || (pItem->GetFlagsFile() & 0x10) == 0) {
+            continue;
+        }
+
+        if (nSlot < 10) {
+            pSprite->Unequip(nSlot);
+        } else if (nSlot == nSelectedWeapon) {
+            pSprite->Unequip(nSlot);
+            bChanged = TRUE;
+
+            CAbilityId ab;
+            ab.m_itemType = 2;
+            ab.m_itemNum = nSelectedWeapon;
+            ab.m_abilityNum = pEquipment->m_selectedWeaponAbility;
+            pSprite->CheckQuickLists(&ab, 0, TRUE, FALSE);
+        } else if (nSlot == nLauncherSlot) {
+            pSprite->Unequip(nSlot);
+            bChanged = TRUE;
+        }
+
+        BOOL bPlaced = FALSE;
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pSprite->GetId()) != -1) {
+            for (USHORT nIndex = 0; nIndex < CScreenInventory::PERSONAL_INVENTORY_SIZE; nIndex++) {
+                if (bPlaced) {
+                    break;
+                }
+
+                if (pEquipment->m_items[18 + nIndex] == NULL) {
+                    pEquipment->m_items[18 + nIndex] = pEquipment->m_items[nSlot];
+                    pEquipment->m_items[nSlot] = NULL;
+                    bPlaced = TRUE;
+                }
+            }
+        } else {
+            if (pSprite->GetObjectType() != CGameObject::TYPE_SPRITE) {
+                continue;
+            }
+
+            for (INT nIndex = 0; nIndex < 28; nIndex++) {
+                if (bPlaced) {
+                    break;
+                }
+
+                if (pEquipment->m_items[CGameSpriteEquipment::SLOT_MISC + nIndex] == NULL) {
+                    pEquipment->m_items[CGameSpriteEquipment::SLOT_MISC + nIndex] = pEquipment->m_items[nSlot];
+                    pEquipment->m_items[nSlot] = NULL;
+                    bPlaced = TRUE;
+                }
+            }
+        }
+
+        if (!bPlaced) {
+            pSprite->PutItemGround(pEquipment->m_items[nSlot]);
+            pEquipment->m_items[nSlot] = NULL;
+        }
+    }
+
+    if (bChanged) {
+        pSprite->EquipMostDamagingMelee();
+    }
+
+    CMessageSpriteEquipment* pMessage = new CMessageSpriteEquipment(pSprite,
+        pSprite->GetId(),
+        pSprite->GetId());
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
