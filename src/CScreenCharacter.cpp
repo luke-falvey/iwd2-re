@@ -6472,38 +6472,64 @@ void CScreenCharacter::ResetCustomizeBiographyPanel(CUIPanel* pPanel, CGameSprit
 }
 
 // 0x5EFB60
-void CScreenCharacter::sub_5EFB60(char* pBuffer, STRREF strDescription)
+void CScreenCharacter::sub_5EFB60(FILE* pFile, STRREF strDescription)
 {
-    // TODO: Incomplete.
+    CString sText = CString("     ") + FetchString(strDescription);
+
+    int nLength = sText.GetLength();
+    int nOffset = 0;
+
+    if (nLength > 0) {
+        do {
+            CString sLine = sText.Mid(nOffset, 70);
+
+            int nIndex = sLine.Find('\n');
+            if (nIndex != -1) {
+                sLine.SetAt(nIndex, '\0');
+                fprintf(pFile, "%s\n", (LPCSTR)sLine);
+            } else {
+                if (sLine.GetLength() < 70) {
+                    fputs(sLine, pFile);
+                    break;
+                }
+
+                nIndex = sLine.ReverseFind(' ');
+                sLine.SetAt(nIndex, '\0');
+                fprintf(pFile, "%s\n", (LPCSTR)sLine);
+            }
+
+            nOffset += nIndex + 1;
+        } while (nOffset < nLength);
+    }
 }
 
 // 0x5EFCC0
-void CScreenCharacter::sub_5EFCC0(char* pBuffer, CItem* pItem, BYTE a3, BYTE a4)
+void CScreenCharacter::sub_5EFCC0(FILE* pFile, CItem* pItem, BYTE a3, BYTE a4)
 {
     WORD nUsageCount = pItem->GetUsageCount(0);
 
     if (nUsageCount > 1) {
         if ((pItem->m_flags & 0x1) != 0) {
             if (a3) {
-                sprintf(pBuffer,
+                fprintf(pFile,
                     "-- %s (%d) *\n",
                     (LPCSTR)FetchString(pItem->GetGenericName()),
                     nUsageCount);
             } else {
-                sprintf(pBuffer,
+                fprintf(pFile,
                     "-- %s (%d)\n",
                     (LPCSTR)FetchString(pItem->GetGenericName()),
                     nUsageCount);
             }
         } else {
             if (a3) {
-                sprintf(pBuffer,
+                fprintf(pFile,
                     "-- %s (%d) - %s *\n",
                     (LPCSTR)FetchString(pItem->GetGenericName()),
                     nUsageCount,
                     (LPCSTR)FetchString(17108));
             } else {
-                sprintf(pBuffer,
+                fprintf(pFile,
                     "-- %s (%d) - %s\n",
                     (LPCSTR)FetchString(pItem->GetGenericName()),
                     nUsageCount,
@@ -6513,22 +6539,22 @@ void CScreenCharacter::sub_5EFCC0(char* pBuffer, CItem* pItem, BYTE a3, BYTE a4)
     } else {
         if ((pItem->m_flags & 0x1) != 0) {
             if (a3) {
-                sprintf(pBuffer,
+                fprintf(pFile,
                     "-- %s *\n",
                     (LPCSTR)FetchString(pItem->GetGenericName()));
             } else {
-                sprintf(pBuffer,
+                fprintf(pFile,
                     "-- %s\n",
                     (LPCSTR)FetchString(pItem->GetGenericName()));
             }
         } else {
             if (a3) {
-                sprintf(pBuffer,
+                fprintf(pFile,
                     "-- %s - %s *\n",
                     (LPCSTR)FetchString(pItem->GetGenericName()),
                     (LPCSTR)FetchString(17108));
             } else {
-                sprintf(pBuffer,
+                fprintf(pFile,
                     "-- %s - %s\n",
                     (LPCSTR)FetchString(pItem->GetGenericName()),
                     (LPCSTR)FetchString(17108));
@@ -6537,8 +6563,8 @@ void CScreenCharacter::sub_5EFCC0(char* pBuffer, CItem* pItem, BYTE a3, BYTE a4)
     }
 
     if (a4) {
-        sub_5EFB60(pBuffer, pItem->GetDescription());
-        strcat(pBuffer, "\n\n\n");
+        sub_5EFB60(pFile, pItem->GetDescription());
+        fputs("\n\n\n", pFile);
     }
 }
 
