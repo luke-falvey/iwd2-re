@@ -1212,3 +1212,15 @@ void CCtrlAltDelete::AddAllSpellsOfClass(const BYTE& nClass, UINT nAmount)
         }
     }
 }
+
+// 0x4EDF60
+void CCtrlAltDelete::JeffKAttacks()
+{
+    CreateCreature("JeffK");
+}
+
+// 0x4EDF80
+void CCtrlAltDelete::JeffKDefends()
+{
+    CreateCreature("JeffK2");
+}

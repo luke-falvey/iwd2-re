@@ -210,6 +210,8 @@ target_sources(iwd2-core PRIVATE
     "src/CItem.h"
     "src/CKeyInfo.cpp"
     "src/CKeyInfo.h"
+    "src/CLUAConsole.cpp"
+    "src/CLUAConsole.h"
     "src/CMarker.cpp"
     "src/CMarker.h"
     "src/CMemINI.cpp"

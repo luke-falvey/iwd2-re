@@ -137,6 +137,12 @@ public:
 
     // 0x4EDCA0
     void AddAllSpellsOfClass(const BYTE& nClass, UINT nAmount);
+
+    // 0x4EDF60
+    void JeffKAttacks();
+
+    // 0x4EDF80
+    void JeffKDefends();
 };
 
 #endif /* CVARIABLEHASH_H_ */
