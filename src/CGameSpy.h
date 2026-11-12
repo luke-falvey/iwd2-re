@@ -10,13 +10,19 @@ public:
     ~CGameSpy();
     BOOLEAN sub_4D0B20(SOCKET* pSocket, BOOLEAN a2);
     BOOLEAN sub_4D1EC0(BOOL a1);
-    void sub_4D2060();
+    BOOLEAN sub_4D2060();
     BOOLEAN sub_4D2210();
     BOOLEAN sub_4D2310();
+    BOOLEAN sub_4D0980();
+    BOOLEAN sub_4D0B80(SOCKET s, DWORD* pAddr, WORD* pPort, char** ppBuf, DWORD* pLen);
+    void sub_4D15D0(DWORD nAddr, DWORD nPort, char* pBuf, DWORD nLen);
 
     /* 0000 */ unsigned char field_0;
     /* 0001 */ unsigned char field_1;
     /* 0002 */ int field_2;
+    /* 0006 */ DWORD field_6;
+    /* 000A */ SOCKET field_A;
+    /* 000E */ SOCKET field_E;
     /* 0012 */ int field_12;
     /* 0016 */ int field_16;
     /* 001A */ int field_1A;
