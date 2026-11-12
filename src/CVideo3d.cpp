@@ -2360,6 +2360,162 @@ void CVidInf::DoTextOut3d(UINT nSurface, const CString& sText, int x, int y, COL
     field_178.TextOut3d(sText, x, y + 16, screenRect, 0, 0);
 }
 
+// 0x7BE5A0
+BOOLEAN CVidInf::PrintSurfaceToBmp3d(LPBYTE& pRGBBytes, int nSurface, const CRect& rSurface, LONG& size, short nScale)
+{
+    INT nROffset = static_cast<INT>(m_dwRBitShift) / 8;
+    INT nGOffset = static_cast<INT>(m_dwGBitShift) / 8;
+    INT nBOffset = static_cast<INT>(m_dwBBitShift) / 8;
+
+    INT nWidth = (rSurface.right - rSurface.left) / nScale;
+    INT nHeight = (rSurface.bottom - rSurface.top) / nScale;
+
+    // NOTE: Row padding of the 24-bit rows: `-nWidth & 3` is `nWidth * 3`
+    // modulo 4.
+    INT nPad = -nWidth & 3;
+    if (nPad != 0) {
+        nPad = 4 - nPad;
+    }
+
+    size = (nWidth * 3 + nPad) * nHeight + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+    pRGBBytes = new BYTE[size];
+
+    // __FILE__: C:\Projects\Icewind2\src\chitin\ChVideo3d.cpp
+    // __LINE__: 2418
+    UTIL_ASSERT(pRGBBytes != NULL);
+
+    LPBYTE pDest = pRGBBytes;
+
+    BITMAPFILEHEADER bmfh;
+    bmfh.bfType = 0x4D42;
+    bmfh.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+    bmfh.bfSize = size;
+    bmfh.bfReserved1 = 0;
+    bmfh.bfReserved2 = 0;
+    *reinterpret_cast<BITMAPFILEHEADER*>(pDest) = bmfh;
+    pDest += sizeof(BITMAPFILEHEADER);
+
+    BITMAPINFOHEADER bmih;
+    bmih.biWidth = nWidth;
+    bmih.biHeight = nHeight;
+    bmih.biSize = sizeof(BITMAPINFOHEADER);
+    bmih.biPlanes = 1;
+    bmih.biBitCount = 24;
+    bmih.biCompression = BI_RGB;
+    bmih.biSizeImage = 0;
+    bmih.biXPelsPerMeter = 0;
+    bmih.biYPelsPerMeter = 0;
+    bmih.biClrImportant = 0;
+    bmih.biClrUsed = 0x1000000;
+    *reinterpret_cast<BITMAPINFOHEADER*>(pDest) = bmih;
+    pDest += sizeof(BITMAPINFOHEADER);
+
+    CVideo3d::glDisable(GL_TEXTURE_2D);
+    g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
+
+    CVideo3d::glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
+
+    CVideo3d::glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
+
+    INT nPitch = (rSurface.right - rSurface.left) << 2;
+    LPBYTE pPixels = new BYTE[(rSurface.bottom - rSurface.top) * nPitch];
+
+    // __FILE__: C:\Projects\Icewind2\src\chitin\ChVideo3d.cpp
+    // __LINE__: 2462
+    // clang-format off
+    UTIL_ASSERT(pPixels!=NULL);
+    // clang-format on
+
+    memset(pPixels, 0xFF, (rSurface.bottom - rSurface.top) * nPitch);
+
+    CVideo3d::glReadBuffer(GL_BACK);
+    g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
+
+    CVideo3d::glReadPixels(rSurface.left,
+        CVideo::SCREENHEIGHT - rSurface.bottom,
+        rSurface.right - rSurface.left,
+        rSurface.bottom - rSurface.top,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        pPixels);
+
+    if (!CheckResults3d(1)) {
+        delete pPixels;
+        delete pRGBBytes;
+        pRGBBytes = NULL;
+        return FALSE;
+    }
+
+    INT nPixelBytes = (rSurface.bottom - rSurface.top) * nPitch;
+    INT k;
+    for (k = 0; k < nPixelBytes; k++) {
+        if (pPixels[k] != 0xFF) {
+            break;
+        }
+    }
+
+    if (k == nPixelBytes) {
+        delete pPixels;
+        delete pRGBBytes;
+        pRGBBytes = NULL;
+        return FALSE;
+    }
+
+    LPBYTE pSrc = pPixels;
+    INT nBlockH = nScale;
+    INT nBlockW;
+    INT x;
+    SHORT i;
+    SHORT j;
+    INT nSumR;
+    INT nSumG;
+    INT nSumB;
+    INT nCount;
+
+    for (INT y = nHeight; y > 0; y--) {
+        // NOTE: Sets the block height it already holds.
+        if (y == nHeight - 1) {
+            nBlockH = nScale;
+        }
+
+        for (x = 0; x < nWidth; x++) {
+            nSumR = 0;
+            nSumG = 0;
+            nSumB = 0;
+
+            if (x == nWidth - 1) {
+                nBlockW = rSurface.right - (nWidth - 1) * nScale - rSurface.left;
+            } else {
+                nBlockW = nScale;
+            }
+
+            for (j = 0; j < nBlockH; j++) {
+                for (i = 0; i < nBlockW * 4; i += 4) {
+                    nSumB += pSrc[i + j * nPitch + nBOffset];
+                    nSumG += pSrc[i + j * nPitch + nGOffset];
+                    nSumR += pSrc[i + j * nPitch + nROffset];
+                }
+            }
+
+            nCount = nBlockW * nBlockH;
+            *pDest++ = static_cast<BYTE>(nSumB / nCount);
+            *pDest++ = static_cast<BYTE>(nSumG / nCount);
+            *pDest++ = static_cast<BYTE>(nSumR / nCount);
+
+            pSrc += nBlockW * 4;
+        }
+
+        pDest += nPad;
+        pSrc += (nBlockH - 1) * nPitch;
+    }
+
+    delete pPixels;
+
+    return TRUE;
+}
+
 // -----------------------------------------------------------------------------
 
 // 0x7BEA80

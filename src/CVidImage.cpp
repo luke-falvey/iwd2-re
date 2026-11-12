@@ -18,6 +18,9 @@ DWORD CVidImage::rgbTempPal[256];
 // 0x9060F0
 BYTE* CVidImage::m_pTranslucentTable;
 
+// 0x9060F4
+DWORD CVidImage::rgbBlendPal[256];
+
 // 0x9068F8
 INT CVidImage::m_nTranslucentTableRefs;
 
@@ -61,6 +64,29 @@ CVidImage::~CVidImage()
             m_pTranslucentTable = NULL;
         }
     }
+}
+
+// 0x7ACCB0
+BOOL CVidImage::InitTranslucentTable()
+{
+    m_pTranslucentTable = new BYTE[0x20000];
+    if (m_pTranslucentTable == NULL) {
+        return FALSE;
+    }
+
+    // Blend table indexed by [nDest * 0x800 + nSrc * 0x20 + nLevel] for 6-bit
+    // components and 32 translucency levels.
+    INT nLevel = 0;
+    for (INT nWeight = 64; nWeight > 0; nWeight -= 2) {
+        for (INT nSrc = 0; nSrc < 64; nSrc++) {
+            for (INT nDest = 0; nDest < 64; nDest++) {
+                m_pTranslucentTable[nDest * 0x800 + nSrc * 0x20 + nLevel] = static_cast<BYTE>((nSrc * nWeight + nDest * 2 * nLevel) >> 6);
+            }
+        }
+        nLevel++;
+    }
+
+    return TRUE;
 }
 
 // #binary-identical
@@ -681,6 +707,73 @@ BOOL CVidTile::BltStencilTile8To16(WORD* pSurface, LONG lPitch, BYTE* pData, BYT
     return TRUE;
 }
 
+// 0x7B25E0
+BOOL CVidTile::BltBlendTile8To16(WORD* pSurface, LONG lPitch, BYTE* pData, BYTE* pBlendData, CResTile* pResBlend, BYTE nBlend, const CSize& blitSize, LONG nDataJump, DWORD dwFlags)
+{
+    LONG cx = blitSize.cx;
+    LONG cy = blitSize.cy;
+    INT nDataIndex = 0;
+    CVidPalette cBlendPalette(CVidPalette::TYPE_RESOURCE);
+
+    DWORD dwRBitMask = g_pChitin->GetCurrentVideoMode()->m_dwRBitMask;
+    DWORD dwGBitMask = g_pChitin->GetCurrentVideoMode()->m_dwGBitMask;
+    DWORD dwBBitMask = g_pChitin->GetCurrentVideoMode()->m_dwBBitMask;
+    BYTE nRBitShift = static_cast<BYTE>(g_pChitin->GetCurrentVideoMode()->m_dwRBitShift);
+    BYTE nGBitShift = static_cast<BYTE>(g_pChitin->GetCurrentVideoMode()->m_dwGBitShift);
+    BYTE nBBitShift = static_cast<BYTE>(g_pChitin->GetCurrentVideoMode()->m_dwBBitShift);
+
+    // NOTE: Uninline.
+    if (m_pTranslucentTable == NULL && !InitTranslucentTable()) {
+        return FALSE;
+    }
+
+    // Reduce 8-bit `nBlend` to the 5-bit level of the table.
+    int nShift = 8;
+    do {
+        nShift >>= 1;
+        nBlend >>= 1;
+    } while (nShift > 1);
+
+    m_cPalette.SetPalette(pRes->m_pPalette,
+        256,
+        CVidPalette::TYPE_RESOURCE);
+    cBlendPalette.SetPalette(pResBlend->m_pPalette,
+        256,
+        CVidPalette::TYPE_RESOURCE);
+
+    m_cPalette.Realize(rgbTempPal,
+        16,
+        dwFlags | 0x400000,
+        &m_paletteAffects,
+        255);
+    cBlendPalette.Realize(rgbBlendPal,
+        16,
+        dwFlags | 0x400000,
+        &m_paletteAffects,
+        255);
+
+    LONG nSurfaceJump = (lPitch >> 1) - cx;
+
+    for (LONG y = 0; y < cy; y++) {
+        for (LONG x = 0; x < cx; x++) {
+            WORD nColor = static_cast<WORD>(rgbTempPal[pData[nDataIndex]]);
+            WORD nBlendColor = static_cast<WORD>(rgbBlendPal[pBlendData[nDataIndex]]);
+
+            WORD r = m_pTranslucentTable[(((((((dwRBitMask & 0xFFFF) & nColor) >> nRBitShift) << 6) + (((dwRBitMask & 0xFFFF) & nBlendColor) >> nRBitShift)) << 5) + nBlend)];
+            WORD g = m_pTranslucentTable[(((((((dwGBitMask & 0xFFFF) & nColor) >> nGBitShift) << 6) + (((dwGBitMask & 0xFFFF) & nBlendColor) >> nGBitShift)) << 5) + nBlend)];
+            WORD b = m_pTranslucentTable[(((((((dwBBitMask & 0xFFFF) & nColor) >> nBBitShift) << 6) + (((dwBBitMask & 0xFFFF) & nBlendColor) >> nBBitShift)) << 5) + nBlend)];
+
+            *pSurface++ = static_cast<WORD>((b << nBBitShift) | (g << nGBitShift) | (r << nRBitShift));
+            nDataIndex++;
+        }
+
+        pSurface += nSurfaceJump;
+        nDataIndex += nDataJump;
+    }
+
+    return TRUE;
+}
+
 // 0x7CDD00
 BOOL CVidTile::BltTile8To24(DWORD* pSurface, LONG lPitch, BYTE* pData, const CSize& blitSize, LONG nDataJump, DWORD dwFlags)
 {
@@ -905,6 +998,158 @@ BOOL CVidTile::BltStencilTile8To32(DWORD* pSurface, LONG lPitch, BYTE* pData, BY
 
         pSurface = reinterpret_cast<DWORD*>(reinterpret_cast<BYTE*>(pSurface) + nSurfaceJump);
         nDataIndex += nDataJump;
+    }
+
+    return TRUE;
+}
+
+// 0x7CE3D0
+BOOL CVidTile::BltBlendTile8To24(BYTE* pSurface, LONG lPitch, BYTE* pData, BYTE* pBlendData, CResTile* pResBlend, BYTE nBlend, const CSize& blitSize, LONG nDataJump, DWORD dwFlags)
+{
+    LONG cx = blitSize.cx;
+    LONG cy = blitSize.cy;
+    INT nDataIndex = 0;
+    CVidPalette cBlendPalette(CVidPalette::TYPE_RESOURCE);
+
+    DWORD dwRBitMask = g_pChitin->GetCurrentVideoMode()->m_dwRBitMask;
+    DWORD dwGBitMask = g_pChitin->GetCurrentVideoMode()->m_dwGBitMask;
+    DWORD dwBBitMask = g_pChitin->GetCurrentVideoMode()->m_dwBBitMask;
+    BYTE nRBitShift = static_cast<BYTE>(g_pChitin->GetCurrentVideoMode()->m_dwRBitShift);
+    BYTE nGBitShift = static_cast<BYTE>(g_pChitin->GetCurrentVideoMode()->m_dwGBitShift);
+    BYTE nBBitShift = static_cast<BYTE>(g_pChitin->GetCurrentVideoMode()->m_dwBBitShift);
+
+    if (m_pTranslucentTable == NULL && !InitTranslucentTable()) {
+        return FALSE;
+    }
+
+    // Reduce 8-bit `nBlend` to the 5-bit level of the table.
+    int nShift = 8;
+    do {
+        nShift >>= 1;
+        nBlend >>= 1;
+    } while (nShift > 1);
+
+    m_cPalette.SetPalette(pRes->m_pPalette,
+        256,
+        CVidPalette::TYPE_RESOURCE);
+    cBlendPalette.SetPalette(pResBlend->m_pPalette,
+        256,
+        CVidPalette::TYPE_RESOURCE);
+
+    m_cPalette.Realize(rgbTempPal,
+        24,
+        dwFlags | 0x400000,
+        &m_paletteAffects,
+        255);
+    cBlendPalette.Realize(rgbBlendPal,
+        24,
+        dwFlags | 0x400000,
+        &m_paletteAffects,
+        255);
+
+    LONG nSurfaceJump = lPitch - cx * 3;
+
+    DWORD nColor;
+    DWORD nBlendColor;
+    DWORD r;
+    DWORD g;
+    DWORD b;
+
+    for (LONG y = 0; y < cy; y++) {
+        // NOTE: All pixels but the last are written as DWORDs.
+        for (LONG x = 0; x < cx - 1; x++) {
+            nColor = rgbTempPal[pData[nDataIndex]];
+            nBlendColor = rgbBlendPal[pBlendData[nDataIndex]];
+
+            r = m_pTranslucentTable[(((((nColor & dwRBitMask) >> nRBitShift) << 6) + ((nBlendColor & dwRBitMask) >> nRBitShift)) << 5) + nBlend];
+            g = m_pTranslucentTable[(((((nColor & dwGBitMask) >> nGBitShift) << 6) + ((nBlendColor & dwGBitMask) >> nGBitShift)) << 5) + nBlend];
+            b = m_pTranslucentTable[(((((nColor & dwBBitMask) >> nBBitShift) << 6) + ((nBlendColor & dwBBitMask) >> nBBitShift)) << 5) + nBlend];
+
+            *reinterpret_cast<DWORD*>(pSurface) = (r << nRBitShift) | (g << nGBitShift) | (b << nBBitShift);
+            pSurface += 3;
+            nDataIndex++;
+        }
+
+        nColor = rgbTempPal[pData[nDataIndex]];
+        nBlendColor = rgbBlendPal[pBlendData[nDataIndex]];
+
+        r = m_pTranslucentTable[(((((nColor & dwRBitMask) >> nRBitShift) << 6) + ((nBlendColor & dwRBitMask) >> nRBitShift)) << 5) + nBlend];
+        g = m_pTranslucentTable[(((((nColor & dwGBitMask) >> nGBitShift) << 6) + ((nBlendColor & dwGBitMask) >> nGBitShift)) << 5) + nBlend];
+        b = m_pTranslucentTable[(((((nColor & dwBBitMask) >> nBBitShift) << 6) + ((nBlendColor & dwBBitMask) >> nBBitShift)) << 5) + nBlend];
+
+        DWORD dwPixel = (b << nBBitShift) | (r << nRBitShift) | (g << nGBitShift);
+        *reinterpret_cast<WORD*>(pSurface) = static_cast<WORD>(dwPixel);
+        pSurface[2] = static_cast<BYTE>(dwPixel >> 16);
+
+        // NOTE: The last pixel of the row does not advance `nDataIndex`.
+        pSurface += nSurfaceJump + 3;
+        nDataIndex += nDataJump;
+    }
+
+    return TRUE;
+}
+
+// 0x7CE930
+BOOL CVidTile::BltBlendTile8To32(DWORD* pSurface, LONG lPitch, BYTE* pData, BYTE* pBlendData, CResTile* pResBlend, BYTE nBlend, const CSize& blitSize, LONG nDataJump, DWORD dwFlags)
+{
+    LONG cx = blitSize.cx;
+    LONG cy = blitSize.cy;
+    INT nDataIndex = 0;
+    CVidPalette cBlendPalette(CVidPalette::TYPE_RESOURCE);
+
+    DWORD dwRBitMask = g_pChitin->GetCurrentVideoMode()->m_dwRBitMask;
+    DWORD dwGBitMask = g_pChitin->GetCurrentVideoMode()->m_dwGBitMask;
+    DWORD dwBBitMask = g_pChitin->GetCurrentVideoMode()->m_dwBBitMask;
+    BYTE nRBitShift = static_cast<BYTE>(g_pChitin->GetCurrentVideoMode()->m_dwRBitShift);
+    BYTE nGBitShift = static_cast<BYTE>(g_pChitin->GetCurrentVideoMode()->m_dwGBitShift);
+    BYTE nBBitShift = static_cast<BYTE>(g_pChitin->GetCurrentVideoMode()->m_dwBBitShift);
+
+    if (m_pTranslucentTable == NULL && !InitTranslucentTable()) {
+        return FALSE;
+    }
+
+    // Reduce 8-bit `nBlend` to the 5-bit level of the table.
+    int nShift = 8;
+    do {
+        nShift >>= 1;
+        nBlend >>= 1;
+    } while (nShift > 1);
+
+    m_cPalette.SetPalette(pRes->m_pPalette,
+        256,
+        CVidPalette::TYPE_RESOURCE);
+    cBlendPalette.SetPalette(pResBlend->m_pPalette,
+        256,
+        CVidPalette::TYPE_RESOURCE);
+
+    m_cPalette.Realize(rgbTempPal,
+        32,
+        dwFlags | 0x400000,
+        &m_paletteAffects,
+        255);
+    cBlendPalette.Realize(rgbBlendPal,
+        32,
+        dwFlags | 0x400000,
+        &m_paletteAffects,
+        255);
+
+    LONG nSurfaceJump = (lPitch >> 2) - cx;
+
+    for (LONG y = 0; y < cy; y++) {
+        for (LONG x = 0; x < cx; x++) {
+            DWORD nColor = rgbTempPal[pData[nDataIndex]];
+            DWORD nBlendColor = rgbBlendPal[pBlendData[nDataIndex]];
+
+            DWORD r = m_pTranslucentTable[(((((nColor & dwRBitMask) >> nRBitShift) << 6) + ((nBlendColor & dwRBitMask) >> nRBitShift)) << 5) + nBlend];
+            DWORD g = m_pTranslucentTable[(((((nColor & dwGBitMask) >> nGBitShift) << 6) + ((nBlendColor & dwGBitMask) >> nGBitShift)) << 5) + nBlend];
+            DWORD b = m_pTranslucentTable[(((((nColor & dwBBitMask) >> nBBitShift) << 6) + ((nBlendColor & dwBBitMask) >> nBBitShift)) << 5) + nBlend];
+
+            *pSurface++ = (b << nBBitShift) | (g << nGBitShift) | (r << nRBitShift);
+            nDataIndex++;
+        }
+
+        nDataIndex += nDataJump;
+        pSurface += nSurfaceJump;
     }
 
     return TRUE;

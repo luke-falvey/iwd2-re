@@ -14,11 +14,13 @@ class CResTile;
 class CVidImage {
 public:
     static DWORD rgbTempPal[256];
+    static DWORD rgbBlendPal[256];
     static BYTE* m_pTranslucentTable;
     static INT m_nTranslucentTableRefs;
 
     CVidImage();
     ~CVidImage();
+    BOOL InitTranslucentTable();
     COLORREF GetTintColor();
     void SetAddColor(COLORREF rgbNewColor);
     void SetTintColor(COLORREF rgbNewColor);
@@ -53,6 +55,10 @@ public:
 
     BOOL BltTile8To32(DWORD* pSurface, LONG lPitch, BYTE* pData, const CSize& blitSize, LONG nDataJump, DWORD dwFlags);
     BOOL BltStencilTile8To32(DWORD* pSurface, LONG lPitch, BYTE* pData, BYTE* pStencilData, const CSize& blitSize, LONG nDataJump, DWORD dwFlags);
+
+    BOOL BltBlendTile8To16(WORD* pSurface, LONG lPitch, BYTE* pData, BYTE* pBlendData, CResTile* pResBlend, BYTE nBlend, const CSize& blitSize, LONG nDataJump, DWORD dwFlags);
+    BOOL BltBlendTile8To24(BYTE* pSurface, LONG lPitch, BYTE* pData, BYTE* pBlendData, CResTile* pResBlend, BYTE nBlend, const CSize& blitSize, LONG nDataJump, DWORD dwFlags);
+    BOOL BltBlendTile8To32(DWORD* pSurface, LONG lPitch, BYTE* pData, BYTE* pBlendData, CResTile* pResBlend, BYTE nBlend, const CSize& blitSize, LONG nDataJump, DWORD dwFlags);
 
     BOOL BltStencilTile8to32_3d(DWORD* pSurface, LONG lPitch, BYTE* pData, BYTE* pStencilData, const CSize& blitSize, LONG nDataJump, DWORD dwAlpha, DWORD dwFlags);
     BOOL ReadyTexture(INT nTextureId, DWORD dwFlags, DWORD dwAlpha);

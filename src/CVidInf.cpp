@@ -1988,6 +1988,234 @@ BOOLEAN CVidInf::SaveScreen()
     return TRUE;
 }
 
+// 0x79EC20
+BOOLEAN CVidInf::PrintSurfaceToBmp(LPBYTE& data, int nSurface, const CRect& rSurface, LONG& size, short nScale)
+{
+    if (g_pChitin->cVideo.m_bIs3dAccelerated) {
+        return PrintSurfaceToBmp3d(data, nSurface, rSurface, size, nScale);
+    }
+
+    INT nWidth = (rSurface.right - rSurface.left) / nScale;
+    INT nHeight = (rSurface.bottom - rSurface.top) / nScale;
+
+    // NOTE: Row padding of the 24-bit rows: `-nWidth & 3` is `nWidth * 3`
+    // modulo 4.
+    INT nPad = -nWidth & 3;
+    if (nPad != 0) {
+        nPad = 4 - nPad;
+    }
+
+    size = (nWidth * 3 + nPad) * nHeight + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+    data = new BYTE[size];
+    if (data == NULL) {
+        // __FILE__: C:\Projects\Icewind2\src\chitin\ChVideo.cpp
+        // __LINE__: 9217
+        UTIL_ASSERT(FALSE);
+    }
+
+    LPBYTE pDest = data;
+
+    BITMAPFILEHEADER bmfh;
+    bmfh.bfType = 0x4D42;
+    bmfh.bfSize = size;
+    bmfh.bfReserved1 = 0;
+    bmfh.bfReserved2 = 0;
+    bmfh.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+    *reinterpret_cast<BITMAPFILEHEADER*>(pDest) = bmfh;
+    pDest += sizeof(BITMAPFILEHEADER);
+
+    BITMAPINFOHEADER bmih;
+    bmih.biSize = sizeof(BITMAPINFOHEADER);
+    bmih.biWidth = nWidth;
+    bmih.biHeight = nHeight;
+    bmih.biPlanes = 1;
+    bmih.biBitCount = 24;
+    bmih.biCompression = BI_RGB;
+    bmih.biSizeImage = 0;
+    bmih.biXPelsPerMeter = 0;
+    bmih.biYPelsPerMeter = 0;
+    bmih.biClrUsed = 0x1000000;
+    bmih.biClrImportant = 0;
+    *reinterpret_cast<BITMAPINFOHEADER*>(pDest) = bmih;
+    pDest += sizeof(BITMAPINFOHEADER);
+
+    DDSURFACEDESC ddsd;
+    ddsd.dwSize = sizeof(DDSURFACEDESC);
+
+    CRect rLock(rSurface);
+    if (!LockSurface(nSurface, &ddsd, rLock)) {
+        delete data;
+        data = NULL;
+        return FALSE;
+    }
+
+    INT nBlockW;
+    INT nBlockH;
+    INT y;
+    INT x;
+    SHORT i;
+    SHORT j;
+    INT nSumR;
+    INT nSumG;
+    INT nSumB;
+    INT nCount;
+
+    switch (g_pChitin->cVideo.m_nBpp) {
+    case 16: {
+        // NOTE: The masks and shifts are DWORDs: the asm reads their low
+        // words and shifts unsigned.
+        WORD* pSrc = reinterpret_cast<WORD*>(ddsd.lpSurface) + (ddsd.lPitch >> 1) * (nHeight - 1) * nScale;
+        nBlockH = nScale;
+        for (y = nHeight; y > 0; y--) {
+            // NOTE: Sets the block height it already holds.
+            if (y == nHeight - 1) {
+                nBlockH = nScale;
+            }
+
+            for (x = 0; x < nWidth; x++) {
+                nSumR = 0;
+                nSumG = 0;
+                nSumB = 0;
+
+                if (x == nWidth - 1) {
+                    nBlockW = rSurface.right - (nWidth - 1) * nScale - rSurface.left;
+                } else {
+                    nBlockW = nScale;
+                }
+
+                for (j = 0; j < nBlockH; j++) {
+                    for (i = 0; i < nBlockW; i++) {
+                        WORD nPixel = pSrc[(ddsd.lPitch >> 1) * j + i];
+                        nSumB += (nPixel & m_dwBBitMask) >> m_dwBBitShift;
+                        nSumG += (nPixel & m_dwGBitMask) >> m_dwGBitShift;
+                        nSumR += (nPixel & m_dwRBitMask) >> m_dwRBitShift;
+                    }
+                }
+
+                nCount = nBlockW * nBlockH;
+                *pDest++ = static_cast<BYTE>((nSumB / nCount << 8) >> m_dwBBitCount);
+                *pDest++ = static_cast<BYTE>((nSumG / nCount << 8) >> m_dwGBitCount);
+                *pDest++ = static_cast<BYTE>((nSumR / nCount << 8) >> m_dwRBitCount);
+
+                pSrc += nBlockW;
+            }
+
+            pDest += nPad;
+
+            // NOTE: `nBlockW` is uninitialized when `nWidth` is not positive.
+            pSrc += -((ddsd.lPitch >> 1) * nBlockH + (nBlockW + (x - 1) * nScale));
+        }
+        break;
+    }
+    case 24: {
+        INT nROffset = static_cast<INT>(m_dwRBitShift) / 8;
+        INT nGOffset = static_cast<INT>(m_dwGBitShift) / 8;
+        INT nBOffset = static_cast<INT>(m_dwBBitShift) / 8;
+
+        LPBYTE pSrc = reinterpret_cast<LPBYTE>(ddsd.lpSurface) + (nHeight - 1) * nScale * ddsd.lPitch;
+        nBlockH = nScale;
+        for (y = nHeight; y > 0; y--) {
+            // NOTE: Sets the block height it already holds.
+            if (y == nHeight - 1) {
+                nBlockH = nScale;
+            }
+
+            for (x = 0; x < nWidth; x++) {
+                nSumR = 0;
+                nSumG = 0;
+                nSumB = 0;
+
+                if (x == nWidth - 1) {
+                    nBlockW = rSurface.right - (nWidth - 1) * nScale - rSurface.left;
+                } else {
+                    nBlockW = nScale;
+                }
+
+                for (j = 0; j < nBlockH; j++) {
+                    for (i = 0; i < nBlockW * 3; i += 3) {
+                        nSumB += pSrc[i + nBOffset + j * ddsd.lPitch];
+                        nSumG += pSrc[i + nGOffset + j * ddsd.lPitch];
+                        nSumR += pSrc[i + nROffset + j * ddsd.lPitch];
+                    }
+                }
+
+                nCount = nBlockW * nBlockH;
+                *pDest++ = static_cast<BYTE>(nSumB / nCount);
+                *pDest++ = static_cast<BYTE>(nSumG / nCount);
+                *pDest++ = static_cast<BYTE>(nSumR / nCount);
+
+                pSrc += nBlockW * 3;
+            }
+
+            pDest += nPad;
+
+            // NOTE: `nBlockW` is uninitialized when `nWidth` is not positive.
+            pSrc += -(ddsd.lPitch * nBlockH) - ((x - 1) * nScale + nBlockW) * 3;
+        }
+        break;
+    }
+    case 32: {
+        INT nROffset = static_cast<INT>(m_dwRBitShift) / 8;
+        INT nGOffset = static_cast<INT>(m_dwGBitShift) / 8;
+        INT nBOffset = static_cast<INT>(m_dwBBitShift) / 8;
+
+        LPBYTE pSrc = reinterpret_cast<LPBYTE>(ddsd.lpSurface) + (nHeight - 1) * nScale * ddsd.lPitch;
+        nBlockH = nScale;
+        for (y = nHeight; y > 0; y--) {
+            // NOTE: Sets the block height it already holds.
+            if (y == nHeight - 1) {
+                nBlockH = nScale;
+            }
+
+            for (x = 0; x < nWidth; x++) {
+                nSumR = 0;
+                nSumG = 0;
+                nSumB = 0;
+
+                if (x == nWidth - 1) {
+                    nBlockW = rSurface.right - (nWidth - 1) * nScale - rSurface.left;
+                } else {
+                    nBlockW = nScale;
+                }
+
+                for (j = 0; j < nBlockH; j++) {
+                    for (i = 0; i < nBlockW * 4; i += 4) {
+                        nSumB += pSrc[i + nBOffset + j * ddsd.lPitch];
+                        nSumG += pSrc[i + nGOffset + j * ddsd.lPitch];
+                        nSumR += pSrc[i + nROffset + j * ddsd.lPitch];
+                    }
+                }
+
+                nCount = nBlockW * nBlockH;
+                *pDest++ = static_cast<BYTE>(nSumB / nCount);
+                *pDest++ = static_cast<BYTE>(nSumG / nCount);
+                *pDest++ = static_cast<BYTE>(nSumR / nCount);
+
+                pSrc += nBlockW * 4;
+            }
+
+            pDest += nPad;
+
+            // NOTE: `nBlockW` is uninitialized when `nWidth` is not positive.
+            pSrc += -(ddsd.lPitch * nBlockH) - ((x - 1) * nScale + nBlockW) * 4;
+        }
+        break;
+    }
+    default:
+        // NOTE: Uninline.
+        UnLockSurface(nSurface, ddsd.lpSurface);
+
+        delete data;
+        data = NULL;
+        return FALSE;
+    }
+
+    // NOTE: Uninline.
+    UnLockSurface(nSurface, ddsd.lpSurface);
+
+    return TRUE;
+}
+
 // 0x79F6A0
 BOOL CVidInf::RenderPointer()
 {
