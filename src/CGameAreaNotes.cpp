@@ -1,6 +1,8 @@
 #include "CGameAreaNotes.h"
 
 #include "CBaldurChitin.h"
+#include "CGameArea.h"
+#include "CMessage.h"
 #include "CScreenMap.h"
 #include "CUIPanel.h"
 #include "CUtil.h"
@@ -193,7 +195,7 @@ void CGameAreaNotes::GetGridSquare(CPoint pt, CPoint& sq, BOOL a3)
 }
 
 // 0x47AEE0
-BOOL CGameAreaNotes::AddButton(CPoint pt)
+BOOL CGameAreaNotes::AddButton(const CPoint& pt)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameAreaNotes.cpp
     // __LINE__: 468
@@ -295,7 +297,125 @@ BOOL CGameAreaNotes::sub_47B150(WORD startX, WORD startY, CString szNote, DWORD 
 // 0x47B330
 void CGameAreaNotes::Add(CString area, WORD startX, WORD startY, CString szNote, DWORD dwFlags, STRREF strRef)
 {
-    // TODO: Incomplete.
+    STR_RES strRes;
+    CPoint sq;
+
+    if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+        if (!g_pChitin->cNetwork.m_bIsHost) {
+            if (!g_pBaldurChitin->m_cBaldurMessage.m_bInOnAreaMapNoteAnnounce) {
+                g_pBaldurChitin->GetBaldurMessage()->sub_43A210(area, startX, startY, szNote, dwFlags, strRef);
+                return;
+            }
+        } else {
+            if (strRef == -1) {
+                strRef = g_pBaldurChitin->GetTlkTable().m_override.Add(szNote);
+            }
+
+            g_pBaldurChitin->GetBaldurMessage()->sub_43A5C0(area, startX, startY, szNote, dwFlags, strRef);
+        }
+    }
+
+    if (!m_bInitialized) {
+        if (sub_47B150(startX, startY, szNote, dwFlags, strRef)) {
+            return;
+        }
+
+        m_cAreaNote.m_dwflags = dwFlags;
+        m_cAreaNote.m_startX = startX;
+        m_cAreaNote.m_startY = startY;
+
+        if (strRef == -1) {
+            m_cAreaNote.m_note = g_pBaldurChitin->GetTlkTable().m_override.Add(szNote);
+        } else {
+            strRes.szText = szNote;
+            g_pBaldurChitin->GetTlkTable().m_override.AddUserEntry(strRef, strRes);
+            m_cAreaNote.m_note = strRef;
+        }
+
+        // NOTE: Uninline.
+        AddANote(m_cAreaNote);
+
+        return;
+    }
+
+    GetGridSquare(CPoint(startX, startY), sq, TRUE);
+
+    if (!IsANoteThere(sq)) {
+        if (g_pBaldurChitin->pActiveEngine != g_pBaldurChitin->m_pEngineMap) {
+            if (sub_47B150(startX, startY, szNote, dwFlags, strRef)) {
+                field_8E = TRUE;
+                return;
+            }
+        }
+
+        if (szNote.GetLength() > 0) {
+            m_cAreaNote.m_dwflags = dwFlags;
+            m_cAreaNote.m_startX = startX;
+            m_cAreaNote.m_startY = startY;
+
+            if (strRef == -1) {
+                m_cAreaNote.m_note = g_pBaldurChitin->GetTlkTable().m_override.Add(szNote);
+            } else {
+                strRes.szText = szNote;
+                g_pBaldurChitin->GetTlkTable().m_override.AddUserEntry(strRef, strRes);
+                m_cAreaNote.m_note = strRef;
+            }
+
+            if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+                if (g_pBaldurChitin->pActiveEngine == g_pBaldurChitin->m_pEngineMap) {
+                    field_8D = (m_cAreaNote.m_dwflags >> 16) & 0xFF;
+                    AddButton(sq);
+
+                    // NOTE: Uninline.
+                    AddANote(m_cAreaNote);
+
+                    CUIControlButtonMapAreaMap* pMapControl = static_cast<CUIControlButtonMapAreaMap*>(g_pBaldurChitin->m_pEngineMap->GetManager()->GetPanel(2)->GetControl(2));
+                    if (strcmp(area, pMapControl->m_pArea->m_resRef.GetResRefStr()) == 0) {
+                        if (g_pBaldurChitin->m_pEngineMap->GetTopPopup() == NULL) {
+                            static_cast<CUIControlButtonMapAreaMap*>(g_pBaldurChitin->m_pEngineMap->GetManager()->GetPanel(2)->GetControl(2))->field_7BC = TRUE;
+                            static_cast<CUIControlButtonMapAreaMap*>(g_pBaldurChitin->m_pEngineMap->GetManager()->GetPanel(2)->GetControl(2))->InvalidateRect();
+                        }
+                    }
+                } else {
+                    // NOTE: Uninline.
+                    AddANote(m_cAreaNote);
+
+                    field_8E = TRUE;
+                }
+            }
+        }
+    } else {
+        // NOTE: Uninline.
+        CAreaUserNote* pNote = GetNoteAt(sq);
+
+        if (szNote.GetLength() == 0) {
+            DeleteANote(pNote->m_id);
+            return;
+        }
+
+        pNote->m_dwflags = (pNote->m_dwflags & 0xFFFF) | dwFlags;
+
+        CUIControlButtonMapNote* pNoteControl = static_cast<CUIControlButtonMapNote*>(g_pBaldurChitin->m_pEngineMap->GetManager()->GetPanel(2)->GetControl(pNote->m_id));
+        pNoteControl->m_cVidCell.SequenceSet(min(static_cast<WORD>(dwFlags >> 16), 7));
+
+        // NOTE: Uninline.
+        STRREF strNote = GetNoteButtonText(pNote->m_id);
+
+        strRes.szText = szNote;
+        g_pBaldurChitin->GetTlkTable().m_override.AddUserEntry(strNote, strRes);
+
+        if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+            if (g_pBaldurChitin->pActiveEngine == g_pBaldurChitin->m_pEngineMap) {
+                CUIControlButtonMapAreaMap* pMapControl = static_cast<CUIControlButtonMapAreaMap*>(g_pBaldurChitin->m_pEngineMap->GetManager()->GetPanel(2)->GetControl(2));
+                if (strcmp(area, pMapControl->m_pArea->m_resRef.GetResRefStr()) == 0) {
+                    if (g_pBaldurChitin->m_pEngineMap->GetTopPopup() == NULL) {
+                        static_cast<CUIControlButtonMapAreaMap*>(g_pBaldurChitin->m_pEngineMap->GetManager()->GetPanel(2)->GetControl(2))->field_7BC = TRUE;
+                        static_cast<CUIControlButtonMapAreaMap*>(g_pBaldurChitin->m_pEngineMap->GetManager()->GetPanel(2)->GetControl(2))->InvalidateRect();
+                    }
+                }
+            }
+        }
+    }
 }
 
 // 0x47BAD0

@@ -500,6 +500,8 @@ public:
     BOOLEAN sub_439250(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_43A470(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_43A7C0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    void sub_43A210(CString sArea, WORD startX, WORD startY, CString szNote, DWORD dwFlags, STRREF strRef);
+    void sub_43A5C0(CString sArea, WORD startX, WORD startY, CString szNote, DWORD dwFlags, STRREF strRef);
     BOOLEAN sub_43B080(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_43B1A0(CString sAreaString, BOOLEAN bVote);
     BOOLEAN sub_43B380(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);

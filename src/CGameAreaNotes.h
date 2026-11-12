@@ -15,7 +15,7 @@ public:
     ~CGameAreaNotes();
     void IntrnlInitialize();
     void GetGridSquare(CPoint pt, CPoint& sq, BOOL a3);
-    BOOL AddButton(CPoint pt);
+    BOOL AddButton(const CPoint& pt);
     BOOL AddANote(const CAreaUserNote& cNote);
     void Add();
     BYTE sub_47B140();

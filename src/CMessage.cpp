@@ -8647,6 +8647,18 @@ BOOLEAN CBaldurMessage::OnAnnounceJournalEntryChange(INT nMsgFrom, BYTE* pByteMe
     return TRUE;
 }
 
+// 0x43A210
+void CBaldurMessage::sub_43A210(CString sArea, WORD startX, WORD startY, CString szNote, DWORD dwFlags, STRREF strRef)
+{
+    // TODO: Incomplete.
+}
+
+// 0x43A5C0
+void CBaldurMessage::sub_43A5C0(CString sArea, WORD startX, WORD startY, CString szNote, DWORD dwFlags, STRREF strRef)
+{
+    // TODO: Incomplete.
+}
+
 // 0x43A470
 BOOLEAN CBaldurMessage::sub_43A470(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
