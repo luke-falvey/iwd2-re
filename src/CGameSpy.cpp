@@ -1,3 +1,4 @@
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include "CGameSpy.h"
 
 #include <winsock2.h>
@@ -61,9 +62,70 @@ BOOLEAN CGameSpy::sub_4D0B20(SOCKET* pSocket, BOOLEAN a2)
 // 0x4D0980
 BOOLEAN CGameSpy::sub_4D0980()
 {
-    // TODO: Incomplete.
+    CString sHost;
+    sHost = "master.gamespy.com";
 
-    return FALSE;
+    hostent* pHost = NULL;
+    char buffer[0x400];
+
+    EnterCriticalSection(&(g_pChitin->cNetwork.field_F6A));
+
+    if (!field_0) {
+        WSADATA wsaData;
+        WSAStartup(2, &wsaData);
+        if (wsaData.wVersion != 2) {
+            WSACleanup();
+            field_0 = 0;
+        } else {
+            field_0 = 1;
+        }
+
+        if (!field_0) {
+            // NOTE: Original code leaves the critical section entered on
+            // this path.
+            return FALSE;
+        }
+    }
+
+    CWnd* pWnd = g_pChitin->GetWnd();
+    HANDLE hRequest = WSAAsyncGetHostByName(pWnd != NULL ? pWnd->GetSafeHwnd() : NULL,
+        0x402,
+        sHost,
+        buffer,
+        0x400);
+
+    field_26 = 0;
+
+    if (hRequest == NULL) {
+        field_0 = 0;
+        WSACleanup();
+    } else {
+        BYTE nTries = 0;
+        do {
+            nTries++;
+            SleepEx(300, FALSE);
+        } while (!field_26 && nTries < 10);
+
+        if (!field_26) {
+            WSACancelAsyncRequest(hRequest);
+            field_0 = 0;
+            WSACleanup();
+        } else {
+            pHost = reinterpret_cast<hostent*>(buffer);
+        }
+    }
+
+    if (field_0 == 1) {
+        if (pHost != NULL) {
+            field_6 = *reinterpret_cast<DWORD*>(pHost->h_addr_list[0]);
+        } else {
+            field_0 = 0;
+            WSACleanup();
+        }
+    }
+
+    LeaveCriticalSection(&(g_pChitin->cNetwork.field_F6A));
+    return field_0;
 }
 
 // 0x4D0B80
