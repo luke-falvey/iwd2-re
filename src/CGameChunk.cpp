@@ -73,7 +73,84 @@ CGameChunk::~CGameChunk()
 // 0x70F800
 void CGameChunk::AIUpdate()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    BOOL bPlaySound = FALSE;
+
+    if (field_88 == 0) {
+        field_99--;
+        if (field_99 == 0) {
+            RemoveFromArea();
+        }
+        return;
+    }
+
+    CPoint ptGrid(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX, m_pos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    m_posZ -= field_94;
+    field_94--;
+
+    if (m_posZ >= 0) {
+        m_posZ = 0;
+
+        SHORT nTableIndex;
+        m_pArea->m_search.GetLOSCost(ptGrid, m_terrainTable, nTableIndex, FALSE);
+
+        if (nTableIndex == 12) {
+            RemoveFromArea();
+            return;
+        }
+
+        if (field_98 > 0) {
+            field_94 = (rand() % 3 + 1) * field_98;
+            bPlaySound = TRUE;
+            field_98--;
+        } else {
+            field_88 = 0;
+        }
+    }
+
+    LONG nOldHeight = m_pArea->GetHeightOffset(m_pos, CGameObject::LIST_BACK);
+
+    m_pos.x += field_8C.x;
+    m_pos.y += field_8C.y;
+
+    LONG nNewHeight = m_pArea->GetHeightOffset(m_pos, CGameObject::LIST_BACK);
+
+    CPoint ptNewGrid(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX, m_pos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    if (ptGrid.x != ptNewGrid.x || ptGrid.y != ptNewGrid.y) {
+        SHORT nTableIndex;
+        if (ptNewGrid.x < m_pArea->m_search.m_GridSquareDimensions.cx
+            && ptNewGrid.y < m_pArea->m_search.m_GridSquareDimensions.cy
+            && m_pArea->m_search.GetLOSCost(ptNewGrid, m_terrainTable, nTableIndex, FALSE) != CPathSearch::COST_IMPASSABLE) {
+            // NOTE: The heights are truncated to a SHORT.
+            m_posZ += static_cast<SHORT>(nNewHeight) - static_cast<SHORT>(nOldHeight);
+        } else {
+            if (ptGrid.x != ptNewGrid.x) {
+                m_pos.x += -field_8C.x * 2;
+                field_8C.x = -field_8C.x;
+            }
+
+            if (ptGrid.y != ptNewGrid.y) {
+                m_pos.y += -field_8C.y * 2;
+                field_8C.y = -field_8C.y;
+            }
+
+            bPlaySound = TRUE;
+        }
+    }
+
+    m_animation.IncrementFrame();
+
+    if (bPlaySound) {
+        if (!m_sound.IsSoundPlaying()) {
+            m_sound.Play(m_pos.x, m_pos.y, 0, 0);
+        }
+    }
 }
 
 // 0x70F740
