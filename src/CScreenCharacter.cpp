@@ -2759,6 +2759,7 @@ void CScreenCharacter::UpdateGeneralInformation(CUIControlTextDisplay* pText, CG
 
     if ((pDStats->m_generalState & STATE_DEAD) != 0) {
         UpdateText(pText, "%s", (LPCSTR)FetchString(11829)); // "DEAD"
+        UpdateText(pText, "");
     }
 
     // FIXME: Calls `GetEffectiveCharacterLevel` twice.
