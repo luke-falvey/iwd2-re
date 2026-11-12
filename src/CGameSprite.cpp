@@ -29453,6 +29453,51 @@ void CGameSprite::sub_756770(CPoint& ptDelta, const CPoint& ptTarget)
     ptDelta.y = ptDelta.y * 15 / nDistance;
 }
 
+// 0x7567F0
+BOOL CGameSprite::sub_7567F0(CSpell* pSpell, const CPoint& ptTarget, BYTE nClass, DWORD nSpecialization)
+{
+    pSpell->Demand();
+
+    SHORT nCasterLevel = GetCasterLevel(pSpell, nClass, nSpecialization);
+
+    SPELL_ABILITY* pAbility = NULL;
+
+    if (pSpell->GetAbilityCount() > 0) {
+        LONG nAbility = 0;
+        do {
+            if (pSpell->GetAbility(nAbility)->minCasterLevel > nCasterLevel) {
+                break;
+            }
+
+            pAbility = pSpell->GetAbility(nAbility);
+            nAbility++;
+        } while (nAbility < pSpell->GetAbilityCount());
+    }
+
+    if (pAbility != NULL) {
+        if (pAbility->range == 0xFFFF) {
+            pSpell->Release();
+            return TRUE;
+        }
+
+        INT nTargetX = ptTarget.x / CPathSearch::GRID_SQUARE_SIZEX;
+        INT nTargetY = ptTarget.y / CPathSearch::GRID_SQUARE_SIZEY;
+
+        const CPoint& ptPos = GetPos();
+        INT nDX = ptPos.x / CPathSearch::GRID_SQUARE_SIZEX - nTargetX;
+        INT nDY = ptPos.y / CPathSearch::GRID_SQUARE_SIZEY - nTargetY;
+        INT nRange = pAbility->range + 2;
+
+        if (nDX * nDX + nDY * nDY <= nRange * nRange) {
+            pSpell->Release();
+            return TRUE;
+        }
+    }
+
+    pSpell->Release();
+    return FALSE;
+}
+
 // 0x756930
 void CGameSprite::sub_756930(CItem* pItem, CItem* pLauncher)
 {
