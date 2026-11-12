@@ -1895,3 +1895,10 @@
 0x7D7880
 0x7D7930
 0x7D7BD0
+# Not a function start: inline-assembly local subroutine (CALLed from 0x7B3FF8, uses the
+# caller's EBP frame) of CVidBitmap::BltBmp24To16Tint (0x7B3B70): the grey/tint/add/light
+# per-pixel effects. The repo body covers it (BltBmpApplyEffects in CVidBitmap.cpp).
+0x7B3F66
+# Not a function start: the fill loop and RET of CVidImage::InitTranslucentTable (0x7ACCB0),
+# which Ghidra split after the allocation check. The repo body of 0x7ACCB0 covers it.
+0x7ACCCD
