@@ -16,6 +16,7 @@ public:
     /* 000C */ virtual void AIUpdate();
     /* 0028 */ virtual BOOLEAN CanSaveGame(STRREF& strError);
     /* 0048 */ virtual void RemoveFromArea();
+    /* 004C */ virtual void Render(CGameArea* pArea, CVidMode* pVidMode, int nSurface);
     /* 0050 */ virtual BOOLEAN DoAIUpdate(BOOLEAN active, LONG counter);
 
     void SetText(const CPoint& pt, BYTE nDuration, BYTE nBeginFade, const CString& sText);

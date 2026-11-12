@@ -1,7 +1,9 @@
 #include "CGameText.h"
 
 #include "CBaldurChitin.h"
+#include "CGameAnimation.h"
 #include "CGameArea.h"
+#include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CInfinity.h"
 #include "CUtil.h"
@@ -247,6 +249,157 @@ BOOL CGameText::sub_4CB9B0()
     rView.bottom = pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + rView.top;
 
     return rView.IntersectRect(rText, rView);
+}
+
+// 0x4CBB20
+void CGameText::Render(CGameArea* pArea, CVidMode* pVidMode, int nSurface)
+{
+    CInfinity* pInfinity = &(m_pArea->m_cInfinity);
+    BOOLEAN bFade = FALSE;
+    DWORD dwFlags = CInfinity::FXPREP_CLEARFILL | 0x20001;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameText.cpp
+    // __LINE__: 550
+    UTIL_ASSERT(pVidMode != NULL);
+
+    if (static_cast<BYTE>(m_nLines) == 0) {
+        return;
+    }
+
+    CSize size;
+    CPoint ptCenter;
+    CRect rFx;
+    if (m_vidCell.GetRes() != NULL) {
+        if (m_nDuration < m_nBeginFade) {
+            bFade = TRUE;
+        }
+
+        m_vidCell.GetCurrentCenterPoint(ptCenter, FALSE);
+        m_vidCell.GetCurrentFrameSize(size, FALSE);
+        rFx.SetRect(0, 0, size.cx, size.cy);
+    } else {
+        pVidMode->GetFXSize(size);
+        size.cx /= 2;
+        size.cy /= 2;
+        rFx.SetRect(0, 0, size.cx - 1, size.cy - 1);
+
+        if (static_cast<BYTE>(m_nLines) == 1) {
+            ptCenter.x = m_textFont.GetStringLength(m_szLine[0], FALSE) / 2;
+        } else {
+            ptCenter.x = size.cx / 2;
+        }
+
+        ptCenter.y = static_cast<BYTE>(m_nLines) * size.cy / m_nMaxLines / 2;
+    }
+
+    CRect rClip(PADDING.cx,
+        PADDING.cy,
+        rFx.right - PADDING.cx,
+        rFx.bottom - PADDING.cy);
+
+    CRect rText(m_pos.x - ptCenter.x,
+        m_pos.y - m_posZ - ptCenter.y,
+        m_pos.x + ptCenter.x,
+        m_pos.y - m_posZ + ptCenter.y);
+
+    CRect rView;
+    rView.left = pInfinity->nCurrentX;
+    rView.top = pInfinity->nCurrentY;
+    rView.right = pInfinity->rViewPort.right - pInfinity->rViewPort.left + rView.left;
+    rView.bottom = pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + rView.top;
+
+    if (!rView.IntersectRect(rText, rView)) {
+        return;
+    }
+
+    if (field_1C != 0) {
+        // NOTE: Unused.
+        CString sUnused;
+
+        CGameObjectArray* pObjectArray = g_pBaldurChitin->GetObjectGame()->GetObjectArray();
+        CGameObject* pObject;
+
+        BYTE rc;
+        do {
+            rc = pObjectArray->GetShare(field_1C,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            return;
+        }
+
+        CPoint& ptPos = pObject->GetPos();
+        LONG nX = ptPos.x;
+        LONG nY = ptPos.y;
+
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            CGameAnimation* pAnimation = &(static_cast<CGameSprite*>(pObject)->m_animation);
+            if (pAnimation->GetAnimationId() == 0xE048) {
+                m_pos.x = nX;
+                m_pos.y = nY + 5 * (static_cast<BYTE>(m_nLines) - 20);
+            } else {
+                BYTE nPersonalSpace = pAnimation->GetPersonalSpace();
+                m_pos.x = nX;
+                m_pos.y = nY + 5 * (static_cast<BYTE>(m_nLines) - 7 * nPersonalSpace);
+            }
+        } else if (pObject->GetObjectType() != CGameObject::TYPE_TRIGGER) {
+            m_pos.x = nX;
+            m_pos.y = nY + 5 * (-3 - static_cast<BYTE>(m_nLines));
+        }
+
+        pObjectArray->ReleaseShare(field_1C,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    CRect rShadow;
+    rShadow.left = m_pos.x - ptCenter.x - 4;
+    rShadow.top = m_pos.y - m_posZ - ptCenter.y - 2;
+    rShadow.right = m_pos.x + ptCenter.x + 4;
+    rShadow.bottom = m_pos.y - m_posZ + ptCenter.y + 2;
+    pInfinity->ShadowRect(rShadow);
+
+    CPoint ptPos(m_pos.x, m_pos.y - m_posZ);
+    pInfinity->FXPrep(rFx, dwFlags, nSurface, ptPos, ptCenter);
+
+    if (!pInfinity->FXLock(rFx, dwFlags)) {
+        return;
+    }
+
+    if (m_vidCell.GetRes() != NULL) {
+        pInfinity->FXRender(&m_vidCell, ptCenter.x, ptCenter.y, dwFlags, 0);
+    }
+
+    if (m_textFont.GetRes()->Demand() != NULL) {
+        for (BYTE nLine = 0; nLine < static_cast<BYTE>(m_nLines); nLine++) {
+            pInfinity->FXTextOut(&m_textFont,
+                m_szLine[nLine],
+                PADDING.cx,
+                PADDING.cy + m_textFont.GetFontHeight(TRUE) * nLine + m_textFont.GetBaseLineHeight(TRUE),
+                rClip,
+                dwFlags,
+                TRUE);
+        }
+
+        m_textFont.GetRes()->Release();
+    }
+
+    if (bFade) {
+        pInfinity->FXUnlock(dwFlags, &rFx, CPoint(m_pos.x + ptCenter.x, m_pos.y + ptCenter.y));
+    } else {
+        pInfinity->FXUnlock(dwFlags, NULL, CPoint(0, 0));
+    }
+
+    pInfinity->FXBltFrom(nSurface,
+        rFx,
+        m_pos.x,
+        m_pos.y - m_posZ,
+        ptCenter.x,
+        ptCenter.y,
+        dwFlags | 1);
 }
 
 // 0x4CC0D0
