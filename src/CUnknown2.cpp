@@ -27,5 +27,37 @@ BOOL CUnknown2::sub_799C90()
 // 0x7C25B0
 void CUnknown2::sub_7C25B0()
 {
-    // TODO: Incomplete.
+    POSITION pos = field_C.GetHeadPosition();
+    while (pos != NULL) {
+        CUnknown2Entry* pEntry = static_cast<CUnknown2Entry*>(field_C.GetAt(pos));
+        IUnknown2Entry* pInterface = pEntry->pInterface;
+
+        // NOTE: When `pInterface` is NULL, the original code does not advance
+        // to the next node.
+        if (pInterface != NULL) {
+            pInterface->field_38();
+            pInterface->Release();
+
+            POSITION posRemove = pos;
+            pEntry = static_cast<CUnknown2Entry*>(field_C.GetNext(pos));
+            field_C.RemoveAt(posRemove);
+            delete pEntry;
+        }
+    }
+
+    if (field_8 != NULL) {
+        field_8->Release();
+    }
+
+    field_8 = NULL;
+    if (field_4 != NULL) {
+        field_4->Release();
+    }
+
+    field_4 = NULL;
+    if (field_0 != NULL) {
+        field_0->Release();
+    }
+
+    field_0 = NULL;
 }

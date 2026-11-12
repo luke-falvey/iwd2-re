@@ -3,6 +3,29 @@
 
 #include "mfc.h"
 
+#include <unknwn.h>
+
+// NOTE: Interface of the objects held by `CUnknown2::field_C`. Only `Release`
+// and the method at vtable offset 0x38 are known.
+struct IUnknown2Entry : public IUnknown {
+    virtual void STDMETHODCALLTYPE field_0C() = 0;
+    virtual void STDMETHODCALLTYPE field_10() = 0;
+    virtual void STDMETHODCALLTYPE field_14() = 0;
+    virtual void STDMETHODCALLTYPE field_18() = 0;
+    virtual void STDMETHODCALLTYPE field_1C() = 0;
+    virtual void STDMETHODCALLTYPE field_20() = 0;
+    virtual void STDMETHODCALLTYPE field_24() = 0;
+    virtual void STDMETHODCALLTYPE field_28() = 0;
+    virtual void STDMETHODCALLTYPE field_2C() = 0;
+    virtual void STDMETHODCALLTYPE field_30() = 0;
+    virtual void STDMETHODCALLTYPE field_34() = 0;
+    virtual void STDMETHODCALLTYPE field_38() = 0;
+};
+
+struct CUnknown2Entry {
+    IUnknown2Entry* pInterface;
+};
+
 // Unknown class in `CSoundMixer`.
 class CUnknown2 {
 public:
@@ -11,9 +34,9 @@ public:
     BOOL sub_799C90();
     void sub_7C25B0();
 
-    int field_0;
-    int field_4;
-    int field_8;
+    IUnknown* field_0;
+    IUnknown* field_4;
+    IUnknown* field_8;
     CPtrList field_C;
     int field_28;
     int field_2C;
