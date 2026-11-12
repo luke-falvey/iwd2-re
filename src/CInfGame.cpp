@@ -11996,9 +11996,178 @@ BOOLEAN CInfGame::RestParty(int a2, unsigned char a3)
 // 0x5C1350
 BOOLEAN CInfGame::RestPartyPrivate(INT nHP, BOOLEAN bRenting)
 {
-    // TODO: Incomplete.
+    // NOTE: Original reads action ID from a constant at 0x847834.
+    CAIAction action;
+    action.m_actionID = 96;
 
-    return FALSE;
+    // NOTE: Original reads trigger ID from a constant.
+    CAITrigger trigger(147, 0);
+
+    g_pBaldurChitin->GetObjectGame()->sub_5CADF0();
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(CHAPTER_GLOBAL);
+
+        g_pBaldurChitin->m_cBaldurMessage.SendRestAnnounce(nHP, bRenting, FALSE);
+
+        BOOLEAN bFlag = TRUE;
+        INT nTotal = 0;
+        INT nRate = nHP;
+
+        if (bRenting || !GetVisibleArea()->CheckRestEncounter()) {
+            SHORT nCharacters = m_nCharacters;
+
+            if (m_bHealPartyOnRest) {
+                CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+                for (SHORT nPortrait = 0; nPortrait < nCharacters; nPortrait++) {
+                    // NOTE: Uninline.
+                    LONG nCharacterId = pGame->GetCharacterId(nPortrait);
+
+                    CGameSprite* pSprite;
+
+                    BYTE rc;
+                    do {
+                        rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            reinterpret_cast<CGameObject**>(&pSprite),
+                            INFINITE);
+                    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                    if (rc == CGameObjectArray::SUCCESS) {
+                        if ((pSprite->m_baseStats.m_generalState & STATE_DEAD) == 0) {
+                            INT nDiff = pSprite->m_baseStats.m_maxHitPointsBase - pSprite->m_baseStats.m_hitPoints;
+                            if (nDiff > 1) {
+                                bFlag = FALSE;
+                            }
+
+                            nTotal += nDiff;
+
+                            INT nLevel = pSprite->m_derivedStats.GetClassMaskLevel(0xC);
+                            if (nLevel > 0) {
+                                nRate += nLevel * 19 + 5;
+                            }
+
+                            nLevel = pSprite->m_derivedStats.GetClassMaskLevel(0xC0);
+                            if (nLevel > 9) {
+                                nRate += nLevel * 19 - 147;
+                            }
+                        }
+
+                        pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                    }
+                }
+            } else {
+                nTotal = nHP;
+            }
+
+            if (nRate > 0) {
+                INT nCount = nTotal / nRate;
+                if (nTotal % nRate != 0) {
+                    nCount++;
+                }
+                nTotal = nCount * nRate;
+            }
+
+            if (m_bHealPartyOnRest) {
+                if (nTotal > nRate) {
+                    m_worldTime.AddCurrentTime(CRuleTables::TIME_RESTING * nTotal * 100 / (nRate * 100) + CRuleTables::TIME_RESTING);
+                    FeedBack(FEEDBACK_TIMEPASSEDREST,
+                        CRuleTables::TIME_RESTING * nTotal * 100 / (nRate * 100) + CRuleTables::TIME_RESTING,
+                        TRUE);
+                } else if (bFlag == TRUE) {
+                    m_worldTime.AddCurrentTime(CRuleTables::TIME_RESTING);
+                    FeedBack(FEEDBACK_TIMEPASSEDREST, CRuleTables::TIME_RESTING, TRUE);
+                } else {
+                    m_worldTime.AddCurrentTime(CRuleTables::TIME_RESTING * 2);
+                    FeedBack(FEEDBACK_TIMEPASSEDREST, CRuleTables::TIME_RESTING * 2, TRUE);
+                }
+            } else {
+                m_worldTime.AddCurrentTime(CRuleTables::TIME_RESTING);
+                FeedBack(FEEDBACK_TIMEPASSEDREST, CRuleTables::TIME_RESTING, TRUE);
+            }
+
+            for (SHORT nPortrait = 0; nPortrait < nCharacters; nPortrait++) {
+                // NOTE: Uninline.
+                LONG nCharacterId = GetCharacterId(nPortrait);
+
+                CGameEffectHeal* pEffect = new CGameEffectHeal();
+                if (m_bHealPartyOnRest) {
+                    pEffect->m_effectAmount = 1000;
+                } else {
+                    pEffect->m_effectAmount = nTotal;
+                }
+
+                CMessageAddEffect* pAddEffect = new CMessageAddEffect(pEffect,
+                    nCharacterId,
+                    nCharacterId);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pAddEffect, FALSE);
+
+                CMessageAddAction* pAddAction = new CMessageAddAction(action,
+                    nCharacterId,
+                    nCharacterId);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pAddAction, FALSE);
+
+                CMessageSetTrigger* pSetTrigger = new CMessageSetTrigger(trigger,
+                    nCharacterId,
+                    nCharacterId);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pSetTrigger, FALSE);
+            }
+
+            // NOTE: Original reads action ID from a constant at 0x847908
+            // and duration from a constant at 0x847F84.
+            CAIAction leaderAction;
+            leaderAction = CAIAction(203, CPoint(35, 0), 0, -1);
+            g_pBaldurChitin->GetObjectGame()->GetGroup()->GroupAction(CAIAction(CAIAction::NO_ACTION, CPoint(-1, -1), 0, -1),
+                TRUE,
+                &leaderAction);
+        }
+    }
+
+    BOOLEAN bResult = FALSE;
+
+    if (!bRenting) {
+        CScreenWorld* pWorld = g_pBaldurChitin->m_pEngineWorld;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 18368
+        UTIL_ASSERT(pWorld != NULL);
+
+        if (g_pBaldurChitin->GetActiveEngine() != pWorld) {
+            g_pBaldurChitin->GetActiveEngine()->SelectEngine(pWorld);
+        }
+    } else {
+        bResult = TRUE;
+    }
+
+    if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE && !bRenting) {
+        g_pBaldurChitin->m_cBaldurMessage.SendSignal(CBaldurMessage::SIGNAL_SERVER,
+            CBaldurMessage::SIGNAL_END_MAJOR_EVENT);
+    }
+
+    CScreenWorld* pWorld = g_pBaldurChitin->m_pEngineWorld;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 18481
+    UTIL_ASSERT(pWorld != NULL);
+
+    if (g_pBaldurChitin->GetActiveEngine() != pWorld) {
+        CCacheStatus::dword_8D0BA8 = TRUE;
+
+        g_pBaldurChitin->GetActiveEngine()->SelectEngine(pWorld);
+
+        if (bRenting
+            && !g_pChitin->cNetwork.m_bIsHost
+            && g_pChitin->cNetwork.m_nServiceProvider != CNetwork::SERV_PROV_NULL) {
+            g_pBaldurChitin->m_cBaldurMessage.sub_436C00();
+        }
+    }
+
+    g_pBaldurChitin->GetObjectGame()->m_cButtonArray.ResetState();
+
+    return bResult;
 }
 
 // 0x5C1E30
