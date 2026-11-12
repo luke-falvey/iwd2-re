@@ -2131,3 +2131,40 @@
 0x54446E
 0x7A6895
 0x7D1C06
+# catch (CException* e) funclets and Ghidra-split tails of functions whose repo bodies now
+# have the matching try/catch blocks (the try ranges come from the functions' TryBlockMaps):
+# CTlkFileOverride::Open 0x7B5A50 (0x7B5ACB), CTlkFileOverride::CloseFiles 0x7B5C30
+# (0x7B5C8D), CTlkFileOverrideHeader::Unmarshal 0x7B5DE0 (0x7B604F first Seek/Read,
+# 0x7B6025 entry Seek/new/Read), CTlkFileOverrideHeader::Marshal 0x7B6190 (0x7B6228,
+# 0x7B625B; 0x7B626C is its SetLength tail), CTlkFileOverrideText::AddString 0x7B62A0
+# (0x7B647E, 0x7B64C3, 0x7B64D1; 0x7B64DF is the shared `return 0` tail),
+# CTlkFileOverrideText::RemoveString 0x7B6500 (0x7B65C7, 0x7B6632, 0x7B6640),
+# CTlkTable::Fetch 0x7941D0 (0x794756 entry Seek, 0x79465F string Seek),
+# CResCache::AccessFileInCache 0x78C130 (0x78C342 SetStatus), CResCache::CopyFile 0x78C4F0
+# (0x78CA51 header Read, 0x78C88A chunk header Read, 0x78C853 chunk Read, 0x78C8E4
+# uncompressed Read/Write, 0x78C9F7 Remove), CResCache::DeleteFileFromCache 0x78CAC0
+# (0x78CD25 Remove), CDimm::WriteFile 0x789090 (0x7891C9 Write).
+0x7B5ACB
+0x7B5C8D
+0x7B604F
+0x7B6025
+0x7B6228
+0x7B625B
+0x7B626C
+0x7B647E
+0x7B64C3
+0x7B64D1
+0x7B64DF
+0x7B65C7
+0x7B6632
+0x7B6640
+0x794756
+0x79465F
+0x78C342
+0x78CA51
+0x78C88A
+0x78C853
+0x78C8E4
+0x78C9F7
+0x78CD25
+0x7891C9

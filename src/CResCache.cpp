@@ -100,9 +100,12 @@ void CResCache::AccessFileInCache(UINT nIndex)
 
                     cFileStatus.m_mtime = CTime::GetCurrentTime();
 
-                    // NOTE: There is unknown unwind stack changes around
-                    // `SetStatus`, not sure how to replicate it.
-                    CFile::SetStatus(v3, cFileStatus);
+                    try {
+                        CFile::SetStatus(v3, cFileStatus);
+                    } catch (CException* e) {
+                        e->Delete();
+                        return;
+                    }
 
                     // NOTE: `m_size` is `LONG` in VC6, but `ULONGLONG` in
                     // more modern versions.
@@ -196,7 +199,16 @@ BOOL CResCache::CopyFile(UINT nIndex, const CString& sName, const CString& sSrcF
     }
 
     char header[12];
-    if (input.Read(header, sizeof(header)) != sizeof(header)) {
+    UINT nHeaderBytesRead;
+    try {
+        nHeaderBytesRead = input.Read(header, sizeof(header));
+    } catch (CException* e) {
+        e->Delete();
+        input.Close();
+        return FALSE;
+    }
+
+    if (nHeaderBytesRead != sizeof(header)) {
         input.Close();
         return FALSE;
     }
@@ -264,7 +276,20 @@ BOOL CResCache::CopyFile(UINT nIndex, const CString& sName, const CString& sSrcF
     while (nTotalBytesRead < nTotalBytesToRead) {
         if (bCompressed) {
             DWORD chunkHeader[2];
-            if (input.Read(chunkHeader, sizeof(chunkHeader)) == sizeof(chunkHeader)) {
+            UINT nChunkHeaderBytesRead;
+            try {
+                nChunkHeaderBytesRead = input.Read(chunkHeader, sizeof(chunkHeader));
+            } catch (CException* e) {
+                e->Delete();
+                input.Close();
+                delete pBuffer;
+                if (pCompressedBuffer != NULL) {
+                    delete pCompressedBuffer;
+                }
+                return FALSE;
+            }
+
+            if (nChunkHeaderBytesRead == sizeof(chunkHeader)) {
                 nTotalBytesRead += sizeof(chunkHeader);
 
                 DWORD nUncompressedChunkSize = chunkHeader[0];
@@ -296,7 +321,18 @@ BOOL CResCache::CopyFile(UINT nIndex, const CString& sName, const CString& sSrcF
                     }
                 }
 
-                nBytesRead = input.Read(pCompressedBuffer, nCompressedChunkSize);
+                try {
+                    nBytesRead = input.Read(pCompressedBuffer, nCompressedChunkSize);
+                } catch (CException* e) {
+                    e->Delete();
+                    field_118 = 1;
+                    delete pBuffer;
+                    if (pCompressedBuffer != NULL) {
+                        delete pCompressedBuffer;
+                    }
+                    return FALSE;
+                }
+
                 if (nBytesRead != nCompressedChunkSize) {
                     field_118 = 1;
 
@@ -317,8 +353,13 @@ BOOL CResCache::CopyFile(UINT nIndex, const CString& sName, const CString& sSrcF
                 field_118 = 1;
             }
         } else {
-            nBytesRead = input.Read(pBuffer, nBufferSize);
-            output.Write(pBuffer, nBytesRead);
+            try {
+                nBytesRead = input.Read(pBuffer, nBufferSize);
+                output.Write(pBuffer, nBytesRead);
+            } catch (CException* e) {
+                e->Delete();
+                field_118 = 1;
+            }
         }
 
         if (field_118 == 1) {
@@ -353,7 +394,11 @@ BOOL CResCache::CopyFile(UINT nIndex, const CString& sName, const CString& sSrcF
     delete pBuffer;
 
     if (field_118 == 1) {
-        CFile::Remove(sDstFileName);
+        try {
+            CFile::Remove(sDstFileName);
+        } catch (CException* e) {
+            e->Delete();
+        }
         return FALSE;
     }
 
@@ -406,7 +451,12 @@ BOOL CResCache::DeleteFileFromCache(UINT nIndex)
 
     file.Close();
 
-    CFile::Remove(sResolvedFileName);
+    try {
+        CFile::Remove(sResolvedFileName);
+    } catch (CException* e) {
+        e->Delete();
+        return FALSE;
+    }
 
     if (g_pChitin->cDimm.m_cKeyTable.m_bInitialized) {
         if (nIndex < g_pChitin->cDimm.m_cKeyTable.m_nResFiles) {

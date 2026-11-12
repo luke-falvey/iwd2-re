@@ -131,7 +131,13 @@ BOOLEAN CTlkTable::Fetch(DWORD dwStrId, STR_RES& strRes)
         return FALSE;
     }
 
-    pFile->Seek(nEntryOffset, CFile::SeekPosition::begin);
+    try {
+        pFile->Seek(nEntryOffset, CFile::SeekPosition::begin);
+    } catch (CException* e) {
+        e->Delete();
+        lock.Unlock();
+        return FALSE;
+    }
 
     STR_RES_HEADER strResHeader;
     if (pFile->Read(&strResHeader, sizeof(strResHeader)) != sizeof(strResHeader)) {
@@ -162,7 +168,18 @@ BOOLEAN CTlkTable::Fetch(DWORD dwStrId, STR_RES& strRes)
             return FALSE;
         }
 
-        pFile->Seek(nStringOffset, CFile::SeekPosition::begin);
+        try {
+            pFile->Seek(nStringOffset, CFile::SeekPosition::begin);
+        } catch (CException* e) {
+            strRes.szText = "";
+            strRes.cSound.SetResRef(CResRef(""), FALSE, TRUE);
+            strRes.cSound.m_nPitchVariance = 0;
+            strRes.cSound.m_nVolumeVariance = 0;
+
+            e->Delete();
+            lock.Unlock();
+            return FALSE;
+        }
 
         UINT nRead = pFile->Read(sText.GetBuffer(strResHeader.strSize), strResHeader.strSize);
 
