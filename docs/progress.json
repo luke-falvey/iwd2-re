@@ -4,16 +4,16 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 8175,
-  "functions_done": 7988,
-  "functions_complete": 7986,
+  "functions_total": 8099,
+  "functions_done": 8003,
+  "functions_complete": 8001,
   "incomplete_markers": 3,
   "incomplete_by_file": {
     "src/BalDataTypes.h": 1,
     "src/CScreenChapter.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10619,
+  "annotations_total": 10634,
   "annotations_not_function_start": 2608,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -153,10 +153,6 @@
       "src/IcewindCGameEffects.cpp"
     ],
     "0x8CD2E0": [
-      "src/CBaldurEngine.cpp",
-      "src/CBaldurEngine.cpp"
-    ],
-    "0x4277C0": [
       "src/CBaldurEngine.cpp",
       "src/CBaldurEngine.cpp"
     ],
@@ -773,7 +769,6 @@
       "src/CMessage.cpp",
       "src/CMessage.cpp",
       "src/CMessage.cpp",
-      "src/CMessage.cpp",
       "src/CMessage.cpp"
     ],
     "0x4536E0": [
@@ -792,10 +787,6 @@
       "src/CMessage.cpp",
       "src/CMessage.cpp",
       "src/CMessage.cpp",
-      "src/CMessage.cpp",
-      "src/CMessage.cpp"
-    ],
-    "0x40A0F0": [
       "src/CMessage.cpp",
       "src/CMessage.cpp"
     ],
@@ -1010,10 +1001,6 @@
       "src/CScreenConnection.cpp",
       "src/CScreenStore.cpp"
     ],
-    "0x5FA8D0": [
-      "src/CScreenConnection.cpp",
-      "src/CScreenConnection.cpp"
-    ],
     "0x67F640": [
       "src/CScreenCreateChar.cpp",
       "src/CScreenCreateChar.cpp",
@@ -1033,14 +1020,6 @@
       "src/CScreenCreateChar.cpp",
       "src/CScreenMovies.cpp",
       "src/CUIControlFactory.cpp"
-    ],
-    "0x634950": [
-      "src/CScreenInventory.cpp",
-      "src/CScreenInventory.cpp"
-    ],
-    "0x634280": [
-      "src/CScreenInventory.cpp",
-      "src/CScreenInventory.cpp"
     ],
     "0x686660": [
       "src/CScreenJournal.cpp",
@@ -1138,10 +1117,6 @@
     "0x673170": [
       "src/CScreenStore.cpp",
       "src/music/adecode.cpp"
-    ],
-    "0x6A0310": [
-      "src/CScreenWorldMap.cpp",
-      "src/CScreenWorldMap.cpp"
     ],
     "0x7C22D0": [
       "src/CSoundProperties.cpp",
@@ -3803,9 +3778,9 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3719530,
-  "bytes_done": 3693180,
-  "bytes_complete": 3692351,
+  "bytes_total": 3711706,
+  "bytes_done": 3698474,
+  "bytes_complete": 3697645,
   "largest_stubs": [
     {
       "addr": "0x5D4190",
@@ -3828,14 +3803,8 @@
     {
       "addr": "0x442990",
       "name": "CResHelper_CResUnknown_SetResRef",
-      "translated_callers": 68,
+      "translated_callers": 69,
       "size": 228
-    },
-    {
-      "addr": "0x77F190",
-      "name": "FUN_0077f190",
-      "translated_callers": 17,
-      "size": 40
     },
     {
       "addr": "0x402A50",
@@ -4118,6 +4087,12 @@
       "name": "FUN_005370c0",
       "translated_callers": 1,
       "size": 217
+    },
+    {
+      "addr": "0x5402E0",
+      "name": "FUN_005402e0",
+      "translated_callers": 1,
+      "size": 77
     }
   ]
 }
