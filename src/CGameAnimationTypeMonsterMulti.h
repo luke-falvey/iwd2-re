@@ -20,12 +20,14 @@ public:
     /* 0084 */ BOOL IsEndOfSequence() override;
     /* 0088 */ void IncrementFrame() override;
     /* 008C */ void DecrementFrame() override;
+    /* 0090 */ void Render(CInfinity* pInfinity, CVidMode* pVidMode, INT nSurface, const CRect& rectFX, const CPoint& ptNewPos, const CPoint& ptReference, DWORD dwRenderFlags, COLORREF rgbTintColor, const CRect& rGCBounds, BOOL bDithered, BOOL bFadeOut, LONG posZ, BYTE transparency) override;
     /* 0094 */ void ClearColorEffects(BYTE colorRange) override;
     /* 0098 */ void ClearColorEffectsAll() override;
     /* 009C */ void SetColorEffect(BYTE effectType, BYTE colorRange, COLORREF tintColor, BYTE periodLength) override;
     /* 00A0 */ void SetColorEffectAll(BYTE effectType, COLORREF tintColor, BYTE periodLength) override;
     /* 00A4 */ void SetColorRange(BYTE colorRange, BYTE rangeValue) override;
     /* 00A8 */ void SetColorRangeAll(BYTE rangeValue) override;
+    /* 00AC */ SHORT SetSequence(SHORT nSequence) override;
     /* 00B0 */ void CalculateFxRectMax(CRect& rFx, CPoint& ptReference, LONG posZ) override;
     /* 00C4 */ SHORT GetCastHeight() override;
     /* 00C8 */ SHORT GetCurrentFrame() override;
