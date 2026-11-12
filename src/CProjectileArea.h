@@ -24,6 +24,8 @@ public:
 
 class CProjectileAreaVisual2 : public CProjectileAreaVisual {
 public:
+    CProjectileAreaVisual2();
+
     /* 002C */ BOOLEAN field_2C;
     /* 002E */ LONG field_2E;
 };
@@ -46,6 +48,8 @@ public:
 
 class CProjectileAreaVisual3 : public CProjectileAreaVisual {
 public:
+    CProjectileAreaVisual3();
+
     /* 002C */ CProjectileArea5868E0* field_2C;
     /* 0030 */ LONG field_30;
     /* 0034 */ BOOLEAN field_34;
@@ -62,6 +66,14 @@ public:
 // not known.
 class CProjectileArea84F0DC : public CGameObject {
 public:
+    // NOTE: Element of `m_pCells` (16 bytes each).
+    struct CELL {
+        LONG nOffsetY;
+        LONG nOffsetX;
+        LONG nVelocityY;
+        LONG nVelocityX;
+    };
+
     CProjectileArea84F0DC(const CProjectileAreaVisual* a1, const CProjectileAreaVisual2* a2, const CProjectileAreaVisual3* a3, CGameArea* pArea, const CPoint* pos, SHORT a6, BYTE a7, BYTE a8, WORD a9);
 
     /* 006E */ BYTE m_terrainTable[16];
@@ -75,11 +87,11 @@ public:
     /* 018B */ BYTE field_18B;
     /* 018C */ LONG field_18C;
     /* 0190 */ LONG field_190;
-    /* 0194 */ BYTE* field_194;
+    /* 0194 */ BYTE* m_pGrid;
     /* 0198 */ LONG field_198;
     /* 019C */ LONG field_19C;
-    /* 01A0 */ void* field_1A0;
-    /* 01A4 */ BYTE* field_1A4;
+    /* 01A0 */ CELL* m_pCells;
+    /* 01A4 */ BYTE* m_pCellStates;
     /* 01A8 */ CSound field_1A8;
     /* 020C */ CString field_20C;
     /* 0210 */ CProjectileAreaVisual2 field_210;

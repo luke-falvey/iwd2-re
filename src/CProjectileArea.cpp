@@ -1,5 +1,8 @@
 #include "CProjectileArea.h"
 
+#include <math.h>
+#include <string.h>
+
 #include "CBaldurChitin.h"
 #include "CGameAIBase.h"
 #include "CGameArea.h"
@@ -8,6 +11,7 @@
 #include "CGameEffect.h"
 #include "CInfGame.h"
 #include "CParticle.h"
+#include "CPathSearch.h"
 #include "CUtil.h"
 #include "IcewindMisc.h"
 
@@ -16,6 +20,27 @@ CProjectileArea5868E0::CProjectileArea5868E0()
 {
     field_10 = 0;
     field_0.reserve(512);
+}
+
+// 0x56FDC0
+CProjectileAreaVisual2::CProjectileAreaVisual2()
+{
+    field_2C = FALSE;
+    field_2E = 0x7FFFFFFF;
+}
+
+// 0x56FE30
+CProjectileAreaVisual3::CProjectileAreaVisual3()
+{
+    field_2C = NULL;
+    field_30 = 0;
+    field_34 = FALSE;
+    field_35 = FALSE;
+    field_36 = FALSE;
+    field_44 = FALSE;
+    field_38 = 250;
+    field_3C = 6;
+    field_40 = 30;
 }
 
 // 0x56EDD0
@@ -61,11 +86,6 @@ CProjectileArea::CProjectileArea(SHORT a1)
 CProjectileArea84F0DC::CProjectileArea84F0DC(const CProjectileAreaVisual* a1, const CProjectileAreaVisual2* a2, const CProjectileAreaVisual3* a3, CGameArea* pArea, const CPoint* pos, SHORT a6, BYTE a7, BYTE a8, WORD a9)
     : field_164(CVidPalette::TYPE_RANGE)
 {
-    // TODO: Incomplete. Translated up to 0x56C638. The remaining part (from
-    // 0x56C638) allocates the lookup buffers `field_194`, `field_1A0` and
-    // `field_1A4`, fills them, copies the terrain table, adds the object to
-    // the object array and to the area.
-
     field_29C = 0;
     field_2A0 = FALSE;
     field_28C = 0;
@@ -95,7 +115,140 @@ CProjectileArea84F0DC::CProjectileArea84F0DC(const CProjectileAreaVisual* a1, co
 
     field_7E = 0;
     field_80 = 0;
-    field_1A0 = NULL;
+    m_pCells = NULL;
+
+    LONG nRadius = a6 - 1;
+    LONG nCells = nRadius / CPathSearch::GRID_SQUARE_SIZEX + 1;
+    field_18C = nCells;
+    field_190 = nCells;
+
+    m_pGrid = new BYTE[(nCells * 2 + 1) * (nCells * 2 + 1)];
+    if (m_pGrid == NULL) {
+        // NOTE: Deletes the object that is still under construction.
+        delete this;
+        return;
+    }
+
+    nCells = nRadius / (CPathSearch::GRID_SQUARE_SIZEX * 2) + 1;
+    field_18C = nCells;
+    field_190 = nCells;
+
+    LONG nIndex = g_pBaldurChitin->GetCurrentVideoMode()->GetEllipseArcPixelList(field_18C, field_18C, m_pGrid);
+    field_198 = nIndex + 1;
+    m_pGrid[field_198 - 1] = 1;
+
+    nIndex = g_pBaldurChitin->GetCurrentVideoMode()->GetEllipseArcPixelList(field_190, field_18C, m_pGrid + field_198);
+    field_19C = nIndex + 1;
+    m_pGrid[field_198 + field_19C - 1] = 1;
+
+    nCells = nRadius / CPathSearch::GRID_SQUARE_SIZEX + 1;
+    field_18C = nCells;
+    field_190 = nCells;
+
+    m_pCells = new CELL[(field_19C + field_198) * 4];
+    if (m_pCells == NULL) {
+        // NOTE: Deletes the object that is still under construction.
+        delete this;
+        return;
+    }
+
+    m_pCellStates = new BYTE[(field_19C + field_198) * 4];
+    if (m_pCellStates == NULL) {
+        // NOTE: Deletes the object that is still under construction.
+        delete this;
+        return;
+    }
+
+    memset(m_pCellStates, 0, (field_198 + field_19C) * 4);
+
+    LONG nOriginX = pos->x;
+    LONG nOriginY = pos->y * 4 / 3;
+    LONG nCurX = nOriginX;
+    LONG nCurY = a6 + nOriginY;
+
+    for (SHORT i = 0; i < field_198; i++) {
+        LONG dx = nCurX - nOriginX;
+        LONG dy = nCurY - nOriginY;
+        LONG nDistance = static_cast<LONG>(sqrt(static_cast<double>(dx * dx + dy * dy)) + 0.5);
+
+        m_pCells[i].nOffsetX = 0;
+        m_pCells[field_198 + field_19C + i].nOffsetX = 0;
+        m_pCells[i + (field_198 + field_19C) * 2].nOffsetX = 0;
+        m_pCells[i + (field_198 + field_19C) * 3].nOffsetX = 0;
+
+        m_pCells[i].nOffsetY = 0;
+        m_pCells[field_198 + field_19C + i].nOffsetY = 0;
+        m_pCells[i + (field_198 + field_19C) * 2].nOffsetY = 0;
+        m_pCells[i + (field_198 + field_19C) * 3].nOffsetY = 0;
+
+        m_pCells[i].nVelocityX = ((dx << CGameSprite::EXACT_SCALE) * a7) / nDistance;
+        m_pCells[field_198 + field_19C + i].nVelocityX = m_pCells[i].nVelocityX;
+
+        if (m_pCells[i].nVelocityX == 0) {
+            m_pCellStates[i + (field_198 + field_19C) * 2] = 2;
+            m_pCellStates[i + (field_198 + field_19C) * 3] = 2;
+        }
+
+        m_pCells[i + (field_198 + field_19C) * 2].nVelocityX = -m_pCells[i].nVelocityX;
+        m_pCells[i + (field_198 + field_19C) * 3].nVelocityX = -m_pCells[i].nVelocityX;
+
+        m_pCells[i].nVelocityY = ((dy << CGameSprite::EXACT_SCALE) * a7) / nDistance;
+        m_pCells[field_198 + field_19C + i].nVelocityY = -m_pCells[i].nVelocityY;
+        m_pCells[i + (field_198 + field_19C) * 2].nVelocityY = m_pCells[i].nVelocityY;
+        m_pCells[i + (field_198 + field_19C) * 3].nVelocityY = -m_pCells[i].nVelocityY;
+
+        nCurX += CPathSearch::GRID_SQUARE_SIZEX * 2;
+        nCurY -= m_pGrid[i] * CPathSearch::GRID_SQUARE_SIZEY * 2;
+    }
+
+    nCurX = a6 + nOriginX;
+    nCurY = nOriginY;
+
+    for (SHORT i = 0; i < field_19C; i++) {
+        LONG dx = nCurX - nOriginX;
+        LONG dy = nCurY - nOriginY;
+        LONG nDistance = static_cast<LONG>(sqrt(static_cast<double>(dx * dx + dy * dy)) + 0.5);
+
+        m_pCells[field_198 + i].nOffsetX = 0;
+        m_pCells[field_198 * 2 + field_19C + i].nOffsetX = 0;
+        m_pCells[i + (field_198 + field_19C) * 2 + field_198].nOffsetX = 0;
+        m_pCells[i + (field_198 + field_19C) * 3 + field_198].nOffsetX = 0;
+
+        m_pCells[field_198 + i].nOffsetY = 0;
+        m_pCells[field_198 * 2 + field_19C + i].nOffsetY = 0;
+        m_pCells[i + (field_198 + field_19C) * 2 + field_198].nOffsetY = 0;
+        m_pCells[i + (field_198 + field_19C) * 3 + field_198].nOffsetY = 0;
+
+        m_pCells[field_198 + i].nVelocityX = ((dx << CGameSprite::EXACT_SCALE) * a7) / nDistance;
+        m_pCells[field_198 * 2 + field_19C + i].nVelocityX = m_pCells[field_198 + i].nVelocityX;
+        m_pCells[i + (field_198 + field_19C) * 2 + field_198].nVelocityX = -m_pCells[field_198 + i].nVelocityX;
+        m_pCells[i + (field_198 + field_19C) * 3 + field_198].nVelocityX = -m_pCells[field_198 + i].nVelocityX;
+
+        m_pCells[field_198 + i].nVelocityY = ((dy << CGameSprite::EXACT_SCALE) * a7) / nDistance;
+        m_pCells[field_198 * 2 + field_19C + i].nVelocityY = -m_pCells[field_198 + i].nVelocityY;
+        m_pCells[i + (field_198 + field_19C) * 2 + field_198].nVelocityY = m_pCells[field_198 + i].nVelocityY;
+        m_pCells[i + (field_198 + field_19C) * 3 + field_198].nVelocityY = -m_pCells[field_198 + i].nVelocityY;
+
+        // NOTE: Tests the entry at `i`, not at `field_198 + i`.
+        if (m_pCells[i].nVelocityY == 0) {
+            m_pCellStates[field_198 * 2 + field_19C + i] = 2;
+            m_pCellStates[i + (field_198 + field_19C) * 3 + field_198] = 2;
+        }
+
+        nCurX -= m_pGrid[field_198 + i] * CPathSearch::GRID_SQUARE_SIZEX * 2;
+        nCurY += CPathSearch::GRID_SQUARE_SIZEY * 2;
+    }
+
+    // NOTE: Original copies the table from 0x8A8154.
+    memcpy(m_terrainTable, CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE, 16);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Add(&m_id, this, INFINITE) != CGameObjectArray::SUCCESS) {
+        // NOTE: Deletes the object that is still under construction.
+        delete this;
+        return;
+    }
+
+    CGameObject::AddToArea(pArea, *pos, 0, CGameObject::LIST_FRONT);
 }
 
 // 0x5703F0
