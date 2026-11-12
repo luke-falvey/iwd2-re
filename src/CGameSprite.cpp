@@ -14529,7 +14529,135 @@ void CGameSprite::sub_71E760(CDerivedStats& DStats, int a2)
 // 0x722820
 void CGameSprite::sub_722820()
 {
-    // TODO: Incomplete.
+    CAIObjectType type;
+    type.Set(m_startTypeAI);
+
+    switch (type.m_nRace) {
+    case CAIOBJECTTYPE_R_HUMAN:
+        switch (type.m_nSubRace) {
+        case CAIOBJECTTYPE_SUBRACE_HUMAN_AASIMAR:
+        case CAIOBJECTTYPE_SUBRACE_HUMAN_TIEFLING:
+            m_baseStats.m_generalState |= STATE_INFRAVISION;
+            break;
+        }
+        break;
+    case CAIOBJECTTYPE_R_ELF:
+        switch (type.m_nSubRace) {
+        case CAIOBJECTTYPE_SUBRACE_PURERACE:
+            break;
+        case CAIOBJECTTYPE_SUBRACE_ELF_DROW:
+            m_baseStats.m_generalState |= STATE_INFRAVISION;
+            break;
+        case CAIOBJECTTYPE_SUBRACE_ELF_WILD:
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+            // __LINE__: 23869
+            UTIL_ASSERT(FALSE);
+            break;
+        }
+        break;
+    case CAIOBJECTTYPE_R_HALF_ELF:
+        if (type.m_nSubRace != CAIOBJECTTYPE_SUBRACE_PURERACE) {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+            // __LINE__: 23887
+            UTIL_ASSERT(FALSE);
+        }
+        break;
+    case CAIOBJECTTYPE_R_DWARF:
+        m_baseStats.m_generalState |= STATE_INFRAVISION;
+        switch (type.m_nSubRace) {
+        case CAIOBJECTTYPE_SUBRACE_PURERACE:
+        case CAIOBJECTTYPE_SUBRACE_DWARF_GOLD:
+        case CAIOBJECTTYPE_SUBRACE_DWARF_GRAY:
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+            // __LINE__: 23918
+            UTIL_ASSERT(FALSE);
+            break;
+        }
+        break;
+    case CAIOBJECTTYPE_R_HALFLING:
+        switch (type.m_nSubRace) {
+        case CAIOBJECTTYPE_SUBRACE_PURERACE:
+        case CAIOBJECTTYPE_SUBRACE_HALFLING_STRONGHEART:
+        case CAIOBJECTTYPE_SUBRACE_HALFLING_GHOSTWISE:
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+            // __LINE__: 23946
+            UTIL_ASSERT(FALSE);
+            break;
+        }
+        break;
+    case CAIOBJECTTYPE_R_GNOME:
+        switch (type.m_nSubRace) {
+        case CAIOBJECTTYPE_SUBRACE_PURERACE:
+            break;
+        case CAIOBJECTTYPE_SUBRACE_GNOME_DEEP:
+            m_baseStats.m_generalState |= STATE_INFRAVISION | STATE_NONDETECTION;
+            // NOTE: Base armor class (`0x84EBBC`) + 4.
+            m_baseStats.field_3E = 10 + 4;
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+            // __LINE__: 23977
+            UTIL_ASSERT(FALSE);
+            break;
+        }
+        break;
+    case CAIOBJECTTYPE_R_HALF_ORC:
+        m_baseStats.m_generalState |= STATE_INFRAVISION;
+        if (type.m_nSubRace != CAIOBJECTTYPE_SUBRACE_PURERACE) {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+            // __LINE__: 23998
+            UTIL_ASSERT(FALSE);
+        }
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+        // __LINE__: 24006
+        UTIL_ASSERT(FALSE);
+        break;
+    }
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    CString sRace = pGame->GetRuleTables().GetRaceString(type.m_nRace, type.m_nSubRace);
+    CString sFile = pGame->GetRuleTables().m_tRaceSpAb.GetAt(CRuleTables::SPECIAL_ABILITIES_FILE, sRace);
+
+    if (strcmp(sFile, "") != 0) {
+        C2DArray cTable;
+        cTable.Load(CResRef(sFile));
+
+        for (UINT nRow = 0; nRow < cTable.GetHeight(); nRow++) {
+            // NOTE: Uninline. Columns are read from globals at 0x84EB38 (0) and 0x84EB3C (1).
+            CResRef resSpell(cTable.GetAt(CPoint(0, nRow)));
+
+            if (strcmp(resSpell.GetResRefStr(), "") != 0) {
+                // NOTE: Uninline.
+                UINT nCount = atol(cTable.GetAt(CPoint(1, nRow)));
+
+                if (nCount == 1) {
+                    UINT nID = 0;
+                    if (g_pBaldurChitin->GetObjectGame()->GetInnateSpells()->Find(resSpell, nID)) {
+                        UINT nIndex;
+
+                        // NOTE: Uninline.
+                        if (!m_innateSpells.Find(nID, nIndex)) {
+                            AddSpecialAbility(resSpell, FALSE);
+                        }
+                    }
+                } else {
+                    while (nCount > 0) {
+                        AddSpecialAbility(resSpell, FALSE);
+                        nCount--;
+                    }
+                }
+            }
+        }
+    }
 }
 
 // 0x722D50
