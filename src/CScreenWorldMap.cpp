@@ -910,6 +910,10 @@ void CScreenWorldMap::OnAreaMouseClick(DWORD nArea, const CPoint& ptMousePos)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenWorldMap.cpp
         // __LINE__: 1842
         UTIL_ASSERT(bResult);
+
+        // NOTE: The original leaves the area pointer in the register that
+        // holds the link (0x69AF5F); it is only read if the path is empty.
+        pLink = reinterpret_cast<CWorldMapLinks*>(pArea);
     }
 
     pWorldMap->GetArea(pWorldMap->sub_55A3A0(), nSrcArea);
