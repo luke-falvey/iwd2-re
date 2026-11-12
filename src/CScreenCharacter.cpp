@@ -5735,7 +5735,97 @@ void CScreenCharacter::UpdateCharacterStatus(LONG nCharacterId)
 // 0x5E87E0
 void CScreenCharacter::sub_5E87E0(CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
+    CUIPanel* pPanel = m_cUIManager.GetPanel(56);
+
+    const CRuleTables& ruleTables = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
+
+    HighlightLabel(pPanel,
+        0x1000000C,
+        m_nExtraFeats != 0,
+        COLOR_LABEL_HIGHLIGHT_BONUS);
+    UpdateLabel(pPanel,
+        0x1000000C,
+        "%d",
+        m_nExtraFeats);
+
+    SHORT nMaxHitPoints = pSprite->m_derivedStats.m_nMaxHitPoints;
+    WORD nMaxHitPointsBase = pSprite->m_baseStats.m_maxHitPointsBase;
+    SHORT nHitPointsBase = pSprite->m_baseStats.m_hitPoints;
+    LONG nHPCONBonusTotalOld = pSprite->m_nHPCONBonusTotalOld;
+
+    pSprite->field_562C = 1;
+    pSprite->ProcessEffectList();
+
+    pSprite->m_baseStats.m_hitPoints = nHitPointsBase;
+    pSprite->m_derivedStats.m_nMaxHitPoints = nMaxHitPoints;
+    pSprite->m_baseStats.m_maxHitPointsBase = nMaxHitPointsBase;
+    pSprite->m_nHPCONBonusTotalOld = nHPCONBonusTotalOld;
+
+    // NOTE: Constant at 0x84EA66. The original loads `m_nTopFeat` as an
+    // unsigned word.
+    m_nTopFeat = max(0, min(static_cast<USHORT>(m_nTopFeat), 75 - 9));
+
+    for (DWORD nIndex = 0; nIndex < 9; nIndex++) {
+        UpdateLabel(pPanel,
+            0x10000001 + nIndex,
+            "%s",
+            (LPCSTR)FetchString(ruleTables.GetFeatName(ruleTables.GetFeatId(static_cast<USHORT>(m_nTopFeat) + nIndex))));
+    }
+
+    CUIControlButton* pDone = static_cast<CUIControlButton*>(pPanel->GetControl(0));
+    pDone->SetEnabled(IsDoneButtonClickable(pSprite));
+
+    CUIControlScrollBar* pScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(104));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 10806
+    UTIL_ASSERT(pScrollBar != NULL);
+
+    CScreenCharacter* pCharacter = g_pBaldurChitin->m_pEngineCharacter;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 17070
+    UTIL_ASSERT(pCharacter != NULL);
+
+    pScrollBar->AdjustScrollBar(pCharacter->m_nTopFeat, 75, 9);
+
+    DWORD nButtonID = 15;
+    for (DWORD nIndex = 0; nButtonID < 33; nIndex++) {
+        BOOL bEnable = pSprite->sub_763A40(ruleTables.GetFeatId(static_cast<USHORT>(m_nTopFeat) + nIndex), 1)
+            && m_nExtraFeats > 0;
+
+        CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButtonID - 1));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 10824
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetActive(bEnable);
+        pButton->SetEnabled(bEnable);
+
+        HighlightLabel(pPanel,
+            0x10000001 + nIndex,
+            bEnable == FALSE,
+            COLOR_LABEL_DISABLE);
+
+        bEnable = FALSE;
+        if (m_storedFeats[static_cast<USHORT>(m_nTopFeat) + nIndex] < pSprite->GetFeatValue(static_cast<USHORT>(m_nTopFeat) + nIndex)) {
+            bEnable = TRUE;
+        }
+
+        pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButtonID));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 10836
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetActive(bEnable);
+        pButton->SetEnabled(bEnable);
+
+        nButtonID += 2;
+    }
+
+    pPanel->InvalidateRect(NULL);
 }
 
 // 0x5E8B70
