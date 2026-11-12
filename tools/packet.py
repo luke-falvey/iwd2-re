@@ -143,6 +143,12 @@ def callee_pops(addr: int) -> list[int]:
     return _RET_CACHE[addr]
 
 
+# CGameObject vtable slots that take no stack arguments: GetObjectType, GetAIType,
+# GetPos, GetVertListPos, GetVertListType, RemoveFromArea, OnArrival, RemoveSelf.
+# Only a first guess: the search still overrides it when the function disagrees.
+ZERO_ARG_SLOTS = {0x04, 0x10, 0x1C, 0x20, 0x24, 0x48, 0x70, 0x74}
+
+
 def _simulate(lines: list[str], choices: dict[int, int]):
     """One pass over the function. `choices` maps the index of a call whose pop
     count is not known to the option to take. Returns the renamed lines, the
@@ -227,12 +233,21 @@ def _simulate(lines: list[str], choices: dict[int, int]):
                 # since the last call. All of it is the usual case.
                 opts = [4 * k for k in range(pending, -1, -1)]
                 likely = 4 * (pending - saves)
+                # Getters every game object has take no stack arguments, so
+                # pushes made before them belong to a later call. Without
+                # this, `PUSH a; PUSH b; CALL [vtbl+0x1c]; PUSH ...; CALL f`
+                # is ambiguous and the slots in between come out 8 bytes off.
+                virt = re.match(r"CALL dword ptr \[E[A-Z]{2} \+ 0x([0-9a-f]+)\]$", ins)
+                if virt and int(virt.group(1), 16) in ZERO_ARG_SLOTS:
+                    likely = 0
                 opts.remove(likely)
                 opts.insert(0, likely)
             if len(opts) > 1:
                 options[n] = opts
-            cur += opts[min(choices.get(n, 0), len(opts) - 1)]
-            pending = 0
+            popped = opts[min(choices.get(n, 0), len(opts) - 1)]
+            cur += popped
+            # Pushes the callee left on the stack are arguments of a later call.
+            pending = max(0, pending - saves - popped // 4) if not direct else 0
             saves = 0
     return out, options, mismatches, first_bad, need
 
