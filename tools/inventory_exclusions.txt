@@ -379,3 +379,16 @@
 # this->m_pchData, then calls CString::operator= (0x7FCD57) with the source. Called to
 # build by-value CString arguments in 0x5A7E40 and 0x60BA30.
 0x5A9660
+
+# CScreenCreateChar helpers that are compiler/library instantiations:
+# 0x4464A0 and 0x5F9810/0x60BB80 copy/erase 16-byte elements of an STL vector;
+# 0x448580 clears a std::list (frees nodes via operator delete, sentinel node);
+# 0x4436C0 and 0x443810 are implicit destructors of CObList-derived list classes;
+# 0x47A5C0 is CResHelper<T,nType>::SetResRef (template in CRes.h).
+0x4464A0
+0x448580
+0x4436C0
+0x443810
+0x5F9810
+0x60BB80
+0x47A5C0
