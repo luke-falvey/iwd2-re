@@ -9708,30 +9708,130 @@ CString CScreenCharacter::sub_5EFFD0(BOOLEAN& bFlag)
     sub_5EF9E0(pFile, FetchString(11767), pDStats->m_nResistMissile, 1);
     sub_5EF9E0(pFile, FetchString(38135), pDStats->m_nResistPoison, 1);
 
-    // 0x5F594B - 0x5F5C15 (0x2CA bytes): "\n" x2; spell lists:
-    // `CGameSprite::GetSpells` (0x724730), `GetSpellcasterClass`, class name
-    // (0x541DA0), "%s Spells:\n" (0x8B32E8), "Level: %1d\n" (0x8B32DC),
-    // "    %.*s (%3d/%3d)\n" (0x8B32C8) with asserts at FileFormat.h lines
-    // 0x9D9/0x985/0x986 (CSPELLLIST_MAX_LEVELS) and InfGame.h 0x28C/0x28D.
-    // SECTION NOT TRANSLATED.
+    // 0x5F594A - 0x5F5C2D: Spell lists.
+    fputs("\n", pFile);
+    fputs("\n", pFile);
 
-    // 0x5F5C15 - 0x5F5E5E (0x249 bytes): "Domain Spells:\n" (0x8B32B8) with
-    // the same per-level loop over `m_domainSpells`.
-    // SECTION NOT TRANSLATED.
+    for (UINT nClassIndex = 0; nClassIndex < CSPELLLIST_NUM_CLASSES; nClassIndex++) {
+        // NOTE: `GetSpells` takes a reference to `BYTE` and the original
+        // passes a temporary copy of the index.
+        if (pSprite->GetSpells(nClassIndex)->m_nHighestLevel > 0) {
+            fprintf(pFile,
+                "%s Spells:\n",
+                (LPCSTR)rule.GetClassString(g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nClassIndex), 0));
 
-    // 0x5F5E5E - 0x5F6001 (0x1A3 bytes): innate spells: `GetInnateSpells`
-    // (0x5F6810), `CSpellListArray::GetSize` (0x5F66F0), Get (0x5F6710,
-    // 0x5F6790), `CSpell` resource blocks (0x45B240/0x45B210), 0x799E80,
-    // `CResRef::GetResRef`, "    %.*s (%3d/%3d)\n".
-    // SECTION NOT TRANSLATED.
+            for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+                // NOTE: Uninline.
+                if (pSprite->GetSpells(nClassIndex)->GetSpellsAtLevel(nLevel)->m_List.size() > 0) {
+                    // NOTE: The level is printed zero-based.
+                    fprintf(pFile, "Level: %1d\n", nLevel);
 
-    // 0x5F6001 - 0x5F60D2 (0xD1 bytes): songs (`GetSongs` 0x5F6820) and
-    // `GetMasterSongLookup` (0x58FEC0).
-    // SECTION NOT TRANSLATED.
+                    // NOTE: Uninline.
+                    for (UINT nIndex = 0; nIndex < pSprite->GetSpells(nClassIndex)->GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+                        // NOTE: Uninline.
+                        CGameSpriteSpellListEntry* pEntry = pSprite->GetSpells(nClassIndex)->GetSpellsAtLevel(nLevel)->Get(nIndex);
+                        UINT nSpellId = pEntry->m_nID;
 
-    // 0x5F60D2 - 0x5F6100 (0x2E bytes): shapeshifts (`GetShapeshifts`
-    // 0x58FED0 / 0x5F6800) and three "\n" `fputs`.
-    // SECTION NOT TRANSLATED.
+                        // NOTE: Uninline.
+                        CResRef resRef = g_pBaldurChitin->GetObjectGame()->m_spells.Get(nSpellId);
+
+                        fprintf(pFile,
+                            "    %.*s (%3d/%3d)\n",
+                            RESREF_SIZE,
+                            resRef.GetResRef(),
+                            pEntry->field_8,
+                            pEntry->field_4);
+                    }
+                }
+            }
+        }
+    }
+
+    // 0x5F5C2D - 0x5F5E5E: Domain spells.
+    if (pSprite->m_domainSpells.m_nHighestLevel > 0) {
+        fprintf(pFile, "Domain Spells:\n");
+
+        for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+            // NOTE: Uninline.
+            if (pSprite->m_domainSpells.GetSpellsAtLevel(nLevel)->m_List.size() > 0) {
+                // NOTE: The level is printed zero-based.
+                fprintf(pFile, "Level: %1d\n", nLevel);
+
+                // NOTE: Uninline.
+                for (UINT nIndex = 0; nIndex < pSprite->m_domainSpells.GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+                    // NOTE: Uninline.
+                    CGameSpriteSpellListEntry* pEntry = pSprite->m_domainSpells.GetSpellsAtLevel(nLevel)->Get(nIndex);
+                    UINT nSpellId = pEntry->m_nID;
+
+                    // NOTE: Uninline.
+                    CResRef resRef = g_pBaldurChitin->GetObjectGame()->m_spells.Get(nSpellId);
+
+                    fprintf(pFile,
+                        "    %.*s (%3d/%3d)\n",
+                        RESREF_SIZE,
+                        resRef.GetResRef(),
+                        pEntry->field_8,
+                        pEntry->field_4);
+                }
+            }
+        }
+    }
+
+    // 0x5F5E5E - 0x5F5F35: Innate spells.
+    if (pSprite->m_innateSpells.m_List.size() > 0) {
+        for (UINT nIndex = 0; nIndex < pSprite->GetInnateSpells()->m_List.size(); nIndex++) {
+            CGameSpriteSpellListEntry* pEntry = pSprite->GetInnateSpells()->Get(nIndex);
+            UINT nSpellId = pEntry->m_nID;
+
+            CResRef resRef = g_pBaldurChitin->GetObjectGame()->GetInnateSpells()->Get(nSpellId);
+
+            fprintf(pFile,
+                "    %.*s (%3d/%3d)\n",
+                RESREF_SIZE,
+                resRef.GetResRef(),
+                pEntry->field_8,
+                pEntry->field_4);
+        }
+    }
+
+    // 0x5F5F35 - 0x5F6001: Songs.
+    if (pSprite->GetSongs()->m_List.size() > 0) {
+        for (UINT nIndex = 0; nIndex < pSprite->GetSongs()->m_List.size(); nIndex++) {
+            CGameSpriteSpellListEntry* pEntry = pSprite->GetSongs()->Get(nIndex);
+            UINT nSpellId = pEntry->m_nID;
+
+            CResRef resRef = g_pBaldurChitin->GetObjectGame()->GetMasterSongLookup().Get(nSpellId);
+
+            fprintf(pFile,
+                "    %.*s (%3d/%3d)\n",
+                RESREF_SIZE,
+                resRef.GetResRef(),
+                pEntry->field_8,
+                pEntry->field_4);
+        }
+    }
+
+    // 0x5F6001 - 0x5F60D1: Shapeshifts.
+    if (pSprite->GetShapeshifts()->m_List.size() > 0) {
+        for (UINT nIndex = 0; nIndex < pSprite->GetShapeshifts()->m_List.size(); nIndex++) {
+            CGameSpriteSpellListEntry* pEntry = pSprite->GetShapeshifts()->Get(nIndex);
+            UINT nSpellId = pEntry->m_nID;
+
+            CResRef resRef = g_pBaldurChitin->GetObjectGame()->GetShapeshifts()->Get(nSpellId);
+
+            fprintf(pFile,
+                "    %.*s (%3d/%3d)\n",
+                RESREF_SIZE,
+                resRef.GetResRef(),
+                pEntry->field_8,
+                pEntry->field_4);
+        }
+    }
+
+    // 0x5F60D1 - 0x5F60F2
+    fputs("\n", pFile);
+    fputs("\n", pFile);
+    fputs("\n", pFile);
 
     // 0x5F6100 - 0x5F6345 (0x245 bytes): `CALL [EDX + 0xA0]` then the
     // function pointer at 0x847310 with ("Game Options", "Output Full Detailed
