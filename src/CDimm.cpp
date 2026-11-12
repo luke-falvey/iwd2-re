@@ -1049,6 +1049,58 @@ BOOL CDimm::DirectoryCopyFiles(const CString& sSource, const CString& sDest)
     return bResult;
 }
 
+// 0x784470
+BOOL CDimm::CopyMPTempFiles(const CString& sSource, const CString& sPattern, const CString& sDest)
+{
+    CString sResolvedSource;
+    CString sResolvedDest;
+    CString sExistingFileName;
+    CString sNewFileName;
+    CString sTemp;
+    CString sFullPattern;
+
+    if (!g_pChitin->lAliases.ResolveFileName(sSource, sResolvedSource)) {
+        sResolvedSource = sSource;
+    }
+
+    if (!g_pChitin->lAliases.ResolveFileName(sDest, sResolvedDest)) {
+        sResolvedDest = sDest;
+    }
+
+    if (!WriteSetUp(sDest + "foo.bar", sTemp)) {
+        return FALSE;
+    }
+
+    if (sResolvedSource.Right(1) == CString('\\')
+        || sPattern.Left(1) == CString('\\')) {
+        sFullPattern = sResolvedSource + sPattern;
+    } else {
+        sFullPattern = sResolvedSource + "\\" + sPattern;
+    }
+
+    WIN32_FIND_DATAA findFileData;
+    HANDLE hFindFile = FindFirstFileA(sFullPattern, &findFileData);
+    if (hFindFile == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    BOOL bResult = TRUE;
+    do {
+        if ((findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) {
+            sExistingFileName = sResolvedSource + findFileData.cFileName;
+            sNewFileName = sResolvedDest + findFileData.cFileName;
+
+            if (!CopyFileA(sExistingFileName, sNewFileName, FALSE)) {
+                bResult = FALSE;
+            }
+        }
+    } while (FindNextFileA(hFindFile, &findFileData));
+
+    FindClose(hFindFile);
+
+    return bResult;
+}
+
 // 0x784880
 BOOL CDimm::DirectoryRemoveFiles(const CString& sDirectoryName)
 {
