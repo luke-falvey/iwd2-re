@@ -4308,8 +4308,7 @@ void CScreenCreateChar::UpdateCharacterStats(CGameSprite* pSprite)
     pSprite->GetDerivedStats()->m_classMask = 0;
     pSprite->GetDerivedStats()->m_nXP = 0;
 
-    // TODO: Incomplete.
-    // DStats = *pSprite->GetDerivedStats();
+    DStats = *pSprite->GetDerivedStats();
 
     ruleTables.GetNextLevel(typeAI.m_nClass, *pSprite->GetDerivedStats(), pSprite);
 
@@ -4448,7 +4447,52 @@ void CScreenCreateChar::UpdateCharacterStats(CGameSprite* pSprite)
     pSprite->GetBaseStats()->m_resistCrushingBase += static_cast<BYTE>(atol(ruleTables.m_tClassRsMd.GetAt(CRuleTables::BLUDGEONING, sClass)));
     pSprite->GetBaseStats()->m_resistPiercingBase += static_cast<BYTE>(atol(ruleTables.m_tClassRsMd.GetAt(CRuleTables::PIERCING, sClass)));
 
-    // TODO: Incomplete (base skills).
+    if (typeAI.m_nClass == CAIOBJECTTYPE_C_CLERIC) {
+        INT nDeityIndex;
+        switch (pSprite->GetSpecialization()) {
+        case SPECMASK_CLERIC_ILMATER:
+            nDeityIndex = 0;
+            break;
+        case SPECMASK_CLERIC_LATHANDER:
+            nDeityIndex = 1;
+            break;
+        case SPECMASK_CLERIC_SELUNE:
+            nDeityIndex = 2;
+            break;
+        case SPECMASK_CLERIC_HELM:
+            nDeityIndex = 3;
+            break;
+        case SPECMASK_CLERIC_OGHMA:
+            nDeityIndex = 4;
+            break;
+        case SPECMASK_CLERIC_TEMPUS:
+            nDeityIndex = 5;
+            break;
+        case SPECMASK_CLERIC_BANE:
+            nDeityIndex = 6;
+            break;
+        case SPECMASK_CLERIC_MASK:
+            nDeityIndex = 7;
+            break;
+        case SPECMASK_CLERIC_TALOS:
+            nDeityIndex = 8;
+            break;
+        default:
+            nDeityIndex = v2;
+            break;
+        }
+
+        for (INT nSkill = 0; nSkill < ruleTables.m_tSkills.GetHeight(); nSkill++) {
+            INT nBonus = atol(ruleTables.m_tSkills.GetAt(CPoint(nDeityIndex + 15, nSkill)));
+            INT nValue = pSprite->GetSkillValue(nSkill);
+            if (nBonus > 0) {
+                if (nBonus > nValue) {
+                    nValue = nBonus;
+                }
+                pSprite->SetSkillValue(nSkill, nValue);
+            }
+        }
+    }
 
     UpdateCharacterAppearance();
 }
