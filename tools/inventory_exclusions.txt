@@ -189,3 +189,23 @@
 # std::bitset<N> range check (library): builds the exception object for
 # "invalid bitset<N> position" and throws it with __CxxThrowException.
 0x4C5790
+
+# CMessageMoveGlobal destructor (implicit, 0x4670C0): destroys the CString at +0xC
+# (CString destructor 0x7FCC1A) and restores the CMessage vtable (0x847B40).
+0x4670C0
+
+# std::set<LONG>::insert(const LONG&) (library): red-black tree walk comparing the
+# key with the LONG at node+0xC, nil sentinel at 0x8D48B4, rebalancing inline.
+0x4C4690
+
+# std::set<LONG>::find(const LONG&) (library): lower-bound walk with the same nil
+# sentinel (0x8D48B4), then a check that the found key is not greater than the key.
+0x570620
+
+# CTypedPtrList<CPtrList, T*>::AddTail (instantiation): loads the argument and tail
+# calls CPtrList::AddTail (0x7FBE4E) with one stack argument.
+0x516FC0
+
+# std::list<T>::list(const allocator&) (library): copies the allocator byte, allocates
+# the 0xC byte head node linked to itself and sets the size to 0.
+0x516FD0

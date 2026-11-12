@@ -30658,7 +30658,87 @@ BOOL CMessage108::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 // 0x515CC0
 void CMessage108::Run()
 {
-    // TODO: Incomplete.
+    CStore* pStore;
+
+    if (g_pChitin->cNetwork.m_bIsHost) {
+        pStore = g_pBaldurChitin->GetObjectGame()->GetServerStore(m_cResStore);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+        // __LINE__: 31433
+        UTIL_ASSERT(pStore != NULL);
+
+        pStore->m_header.m_nBuyMarkUp = field_14;
+        pStore->m_header.m_nSellMarkDown = field_18;
+        pStore->m_header.m_nAdditionalMarkDown = field_1C;
+    } else if (g_pChitin->cNetwork.m_bConnectionEstablished) {
+        CStore::InvalidateStore(m_cResStore);
+    }
+
+    pStore = g_pBaldurChitin->m_pEngineStore->m_pStore;
+    if (pStore != NULL) {
+        if (pStore->m_resRef == m_cResStore) {
+            g_pBaldurChitin->GetObjectGame()->ChangeStoreMarkup(m_cResStore, field_14, field_18, field_1C);
+            g_pBaldurChitin->m_pEngineStore->UpdateStoreCost();
+
+            LONG nCharacterId = g_pBaldurChitin->m_pEngineWorld->m_internalLoadedDialog.m_characterIndex;
+            if (nCharacterId != CGameObjectArray::BAD_INDEX) {
+                CGameObject* pObject;
+
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        &pObject,
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    // NOTE: Uninline.
+                    if (pObject->InControl()) {
+                        g_pBaldurChitin->m_pEngineStore->UpdateMainPanel();
+                    }
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                }
+            }
+        } else {
+            pStore = g_pBaldurChitin->m_pEngineStore->m_pBag;
+            if (pStore != NULL && pStore->m_resRef == m_cResStore) {
+                g_pBaldurChitin->GetObjectGame()->ChangeStoreMarkup(m_cResStore, field_14, field_18, field_1C);
+                g_pBaldurChitin->m_pEngineStore->UpdateGroupCost();
+
+                LONG nCharacterId = g_pBaldurChitin->m_pEngineWorld->m_internalLoadedDialog.m_characterIndex;
+                if (nCharacterId != CGameObjectArray::BAD_INDEX) {
+                    CGameObject* pObject;
+
+                    BYTE rc;
+                    do {
+                        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            &pObject,
+                            INFINITE);
+                    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                    if (rc == CGameObjectArray::SUCCESS) {
+                        // NOTE: Uninline.
+                        if (pObject->InControl()) {
+                            g_pBaldurChitin->m_pEngineStore->UpdateMainPanel();
+                        }
+
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                    }
+                }
+            }
+        }
+    }
+
+    if (g_pChitin->cNetwork.m_bIsHost) {
+        g_pBaldurChitin->GetObjectGame()->ReleaseServerStore(m_cResStore);
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -31702,5 +31782,35 @@ BOOL CMessage117::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 // 0x516B70
 void CMessage117::Run()
 {
-    // TODO: Incomplete.
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (pSprite->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            std::list<CDerivedStatsWhenStruck>& lWhenStruck = pSprite->m_derivedStats.m_lWhenStruck;
+
+            std::list<CDerivedStatsWhenStruck>::iterator it = lWhenStruck.begin();
+            while (it != lWhenStruck.end()) {
+                lWhenStruck.erase(it++);
+            }
+
+            CDerivedStatsWhenStruck whenStruck;
+            whenStruck.m_sourceRes = field_C;
+            whenStruck.m_res = field_14;
+            whenStruck.m_nCasterLevel = field_1C;
+            whenStruck.m_target = field_20;
+            lWhenStruck.push_back(whenStruck);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
 }
