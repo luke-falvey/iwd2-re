@@ -7309,7 +7309,7 @@ void CUIControlButtonInventoryHistoryIcon::SetItem(CItem* pItem)
     }
 }
 
-// 0x634950
+// 0x633F10
 BOOL CUIControlButtonInventoryHistoryIcon::Render(BOOL bForce)
 {
     CVidCell vcIcon;
@@ -7379,8 +7379,8 @@ BOOL CUIControlButtonInventoryHistoryIcon::Render(BOOL bForce)
         rClip.IntersectRect(rFrame, m_rDirty);
 
         vcIcon.Render(0,
-            ptCenter.x + (m_size.cx - frameSize.cx) / 2,
-            ptCenter.y + (m_size.cy - frameSize.cy) / 2,
+            x + ptCenter.x + (m_size.cx - frameSize.cx) / 2,
+            y + ptCenter.y + (m_size.cy - frameSize.cy) / 2,
             rClip,
             NULL,
             0,
@@ -7400,7 +7400,7 @@ CUIControlButtonInventoryAbilitiesAbility::CUIControlButtonInventoryAbilitiesAbi
     m_nSelectedFrame = 0;
 }
 
-// 0x634280
+// 0x634390
 CUIControlButtonInventoryAbilitiesAbility::~CUIControlButtonInventoryAbilitiesAbility()
 {
 }

@@ -2154,3 +2154,136 @@
 0x5AF0ED
 0x564157
 0x650064
+# Static-object helpers (compiler-generated): 0x48C2E0 and 0x78CAA0 atexit destructors of
+# static CString arrays (`eh vector destructor iterator` 0x7E78DE with CString::~CString,
+# 170 and 7 elements); 0x426F50 / 0x426F60 dynamic initialisers of two static objects at
+# 0x8CF670 / 0x8CD330 (constructor 0x78A990 from a string literal).
+0x48C2E0
+0x78CAA0
+0x426F50
+0x426F60
+# Compiler-generated array helpers: 0x443400 destructor of a 7 x 0x100 array member (each
+# element a 9 x 0x1C array, element destructor 0x443370) at sprite +0x5AC, called from
+# unwind funclets; 0x6F2CF0 default-argument constructor thunk (calls 0x727BD0 with 10)
+# passed to `eh vector constructor iterator` from 0x6EF990.
+0x443400
+0x6F2CF0
+# Implicit destructors of CRes subclasses (store the vtable, jump to CRes::~CRes 0x77E2F0);
+# the deleting thunks are 0x401A00 and 0x423740.
+0x401A20
+0x423760
+# CPersistantEffect scalar deleting destructor (trivial destructor body).
+0x4A7490
+# Implicit CBaldurEngine destructor (m_cUIManager then CWarp::~CWarp).
+0x4278E0
+# Implicit destructors of CProjectile subclasses: member destructors (CVidCell +0x192,
+# CVidBitmap/CVidPalette +0x26C, CStrings) followed by the inlined CProjectile and
+# CGameObject destructors; called only from their deleting thunks 0x529990, 0x529AB0,
+# 0x534770.
+0x5299B0
+0x529AD0
+0x534790
+# Emitted copy of the inline CTlkFileOverride::~CTlkFileOverride (header body `{ }`):
+# m_text (CFile), m_header, two CStrings.
+0x794050
+# MFC CCriticalSection constructor (CSyncObject(NULL) 0x7E6C5E, vtable 0x848218,
+# InitializeCriticalSection) emitted out of line.
+0x780A90
+# MFC template instances: CArray<16-byte element> destructor 0x6A0A80 and Serialize 0x6A0AA0
+# (vtable 0x85A884, CArchive::WriteCount 0x801522 / ReadCount 0x801550); CList destructors
+# 0x78D7F0 (CList<CString>, vtable 0x85DBF8), 0x646940 (vtable 0x856598), 0x5477A0 (vtable
+# 0x84EBCC) (RemoveAll inlined, CPlex::FreeDataChain 0x7FB7C8); CList<CString>::Serialize
+# 0x78D860 (SerializeElements 0x801134).
+0x6A0A80
+0x6A0AA0
+0x78D7F0
+0x646940
+0x5477A0
+0x78D860
+# MSVC 6 iostream (library): 0x428F90 endl, 0x429100 / 0x429170 ostream osfx / flush,
+# 0x4291F0 operator<<(ostream&, const char*), 0x429061 / 0x4293CB their split bodies
+# (setstate, uncaught_exception 0x7F9A0E), 0x429032 / 0x42939F their catch(...) funclets
+# (setstate(badbit, true) 0x7F964A).
+0x428F90
+0x429032
+0x429061
+0x429100
+0x429170
+0x4291F0
+0x42939F
+0x4293CB
+# MSVC 6 std::logic_error-family exceptions with a ref-counted std::string (library):
+# 0x45E4C0 / 0x45E6D0 copy constructors, 0x45E620 / 0x45E690 _Xlen/_Xran-style throwers
+# (_CxxThrowException 0x7E8930), 0x45E640 destructor, 0x45E830 std::string _Tidy,
+# 0x45EA70 npos-like constant helper called from 0x45E870.
+0x45E4C0
+0x45E620
+0x45E640
+0x45E690
+0x45E6D0
+0x45E830
+0x45EA70
+# MSVC 6 red-black tree internals (library): nil 0x8D48B4 set: 0x4C5010 erase/destructor
+# (lockit 0x7F9A11/0x7F9AAD), 0x4C5410 _Copy, 0x4C54A0 _Erase, 0x4C5750 _Max, 0x4C5B30
+# _Lrotate, 0x4C5B90 _Rrotate, 0x4C5D10 _Buynode, 0x529BF0 erase(begin, end) / clear;
+# nil 0x8D13E8 (std::set<std::string>): 0x4C5C50 _Lrotate, 0x4C5CB0 _Rrotate.
+0x4C5010
+0x4C5410
+0x4C54A0
+0x4C5750
+0x4C5B30
+0x4C5B90
+0x4C5D10
+0x529BF0
+0x4C5C50
+0x4C5CB0
+# Not function starts: parts of translated functions that Ghidra split off; the repo bodies
+# cover them. 0x642530 jump-table case (3, 4, 50 -> OnErrorButtonClick(0)) of
+# CScreenMap::OnDoneButtonClick 0x6424D0; 0x494E49 body of CGameEffectResistMagic::Copy
+# 0x494E30; 0x699E4A body of CScreenWorldMap::EngineDeactivated 0x699E40; 0x54446E shared
+# tail (Fetch strClass, sClass = szText) of CRuleTables::GetClassStringMixed 0x544120;
+# 0x7A6895 body of CNetworkEnumSessionsCallback 0x7A6840; 0x7D1C06 body of soundAllocate
+# 0x7D1BF0.
+0x642530
+0x494E49
+0x699E4A
+0x54446E
+0x7A6895
+0x7D1C06
+# catch (CException* e) funclets and Ghidra-split tails of functions whose repo bodies now
+# have the matching try/catch blocks (the try ranges come from the functions' TryBlockMaps):
+# CTlkFileOverride::Open 0x7B5A50 (0x7B5ACB), CTlkFileOverride::CloseFiles 0x7B5C30
+# (0x7B5C8D), CTlkFileOverrideHeader::Unmarshal 0x7B5DE0 (0x7B604F first Seek/Read,
+# 0x7B6025 entry Seek/new/Read), CTlkFileOverrideHeader::Marshal 0x7B6190 (0x7B6228,
+# 0x7B625B; 0x7B626C is its SetLength tail), CTlkFileOverrideText::AddString 0x7B62A0
+# (0x7B647E, 0x7B64C3, 0x7B64D1; 0x7B64DF is the shared `return 0` tail),
+# CTlkFileOverrideText::RemoveString 0x7B6500 (0x7B65C7, 0x7B6632, 0x7B6640),
+# CTlkTable::Fetch 0x7941D0 (0x794756 entry Seek, 0x79465F string Seek),
+# CResCache::AccessFileInCache 0x78C130 (0x78C342 SetStatus), CResCache::CopyFile 0x78C4F0
+# (0x78CA51 header Read, 0x78C88A chunk header Read, 0x78C853 chunk Read, 0x78C8E4
+# uncompressed Read/Write, 0x78C9F7 Remove), CResCache::DeleteFileFromCache 0x78CAC0
+# (0x78CD25 Remove), CDimm::WriteFile 0x789090 (0x7891C9 Write).
+0x7B5ACB
+0x7B5C8D
+0x7B604F
+0x7B6025
+0x7B6228
+0x7B625B
+0x7B626C
+0x7B647E
+0x7B64C3
+0x7B64D1
+0x7B64DF
+0x7B65C7
+0x7B6632
+0x7B6640
+0x794756
+0x79465F
+0x78C342
+0x78CA51
+0x78C88A
+0x78C853
+0x78C8E4
+0x78C9F7
+0x78CD25
+0x7891C9

@@ -16098,7 +16098,9 @@ CSpellResRefList::CSpellResRefList()
     m_nCount = 0;
 }
 
-// NOTE: Inlined.
+// NOTE: Inlined in most places; an out-of-line copy exists at 0x59EB40.
+//
+// 0x59EB40
 CSpellResRefList::~CSpellResRefList()
 {
     if (m_pList != NULL) {

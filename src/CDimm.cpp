@@ -3337,7 +3337,14 @@ BOOL CDimm::WriteFile(const CString& sDirName, const CString& sFileName, LPVOID 
 
     if (cFile.Open(sResolvedFileName, CFile::OpenFlags::modeCreate | CFile::OpenFlags::typeBinary | CFile::OpenFlags::modeWrite, NULL)) {
         bResult = TRUE;
-        cFile.Write(lpBuf, dwSize);
+
+        try {
+            cFile.Write(lpBuf, dwSize);
+        } catch (CException* e) {
+            e->Delete();
+            bResult = FALSE;
+        }
+
         cFile.Close();
     }
 

@@ -43,8 +43,13 @@ DWORD CTlkFileOverrideText::AddString(const CString& sString)
     DWORD nPrevOffset = -1;
     INT nParts = sString.GetLength() / 512 + 1;
 
-    Seek(0, SeekPosition::begin);
-    Read(&m_nNextFreeOffset, 4);
+    try {
+        Seek(0, SeekPosition::begin);
+        Read(&m_nNextFreeOffset, 4);
+    } catch (CException* e) {
+        e->Delete();
+        return 0;
+    }
 
     DWORD nNextFreeOffset = m_nNextFreeOffset;
     DWORD nStringOffset = nNextFreeOffset;
@@ -98,16 +103,26 @@ DWORD CTlkFileOverrideText::AddString(const CString& sString)
 
         entry.m_nNextOffset = nNextOffset;
 
-        Seek(nCurrOffset, SeekPosition::begin);
-        Write(&entry, sizeof(CTlkFileOverrideTextEntry));
+        try {
+            Seek(nCurrOffset, SeekPosition::begin);
+            Write(&entry, sizeof(CTlkFileOverrideTextEntry));
+        } catch (CException* e) {
+            e->Delete();
+            return 0;
+        }
 
         nPrevOffset = nCurrOffset;
     }
 
     m_nNextFreeOffset = nNextOffset;
 
-    Seek(0, SeekPosition::begin);
-    Write(&m_nNextFreeOffset, 4);
+    try {
+        Seek(0, SeekPosition::begin);
+        Write(&m_nNextFreeOffset, 4);
+    } catch (CException* e) {
+        e->Delete();
+        return 0;
+    }
 
     return nStringOffset;
 }
@@ -119,29 +134,45 @@ void CTlkFileOverrideText::RemoveString(DWORD nOffset)
     DWORD nCurrOffset = nOffset;
     DWORD nPrevOffset = nOffset;
 
-    Seek(0, SeekPosition::begin);
-    Read(&m_nNextFreeOffset, 4);
+    try {
+        Seek(0, SeekPosition::begin);
+        Read(&m_nNextFreeOffset, 4);
+    } catch (CException* e) {
+        e->Delete();
+        return;
+    }
 
     while (nCurrOffset != -1) {
         nPrevOffset = nCurrOffset;
 
-        Seek(nCurrOffset, SeekPosition::begin);
-        Read(&entry, sizeof(CTlkFileOverrideTextEntry));
+        try {
+            Seek(nCurrOffset, SeekPosition::begin);
+            Read(&entry, sizeof(CTlkFileOverrideTextEntry));
 
-        nCurrOffset = entry.m_nNextOffset;
-        memset(entry.m_text, 0, 512);
+            nCurrOffset = entry.m_nNextOffset;
+            memset(entry.m_text, 0, 512);
 
-        Seek(nPrevOffset, SeekPosition::begin);
-        Write(&entry, sizeof(CTlkFileOverrideTextEntry));
+            Seek(nPrevOffset, SeekPosition::begin);
+            Write(&entry, sizeof(CTlkFileOverrideTextEntry));
+        } catch (CException* e) {
+            e->Delete();
+            return;
+        }
     }
 
     entry.m_nNextOffset = m_nNextFreeOffset;
-    Seek(nPrevOffset, SeekPosition::begin);
-    Write(&entry, sizeof(CTlkFileOverrideTextEntry));
 
-    m_nNextFreeOffset = nOffset;
-    Seek(0, SeekPosition::begin);
-    Write(&m_nNextFreeOffset, 4);
+    try {
+        Seek(nPrevOffset, SeekPosition::begin);
+        Write(&entry, sizeof(CTlkFileOverrideTextEntry));
+
+        m_nNextFreeOffset = nOffset;
+        Seek(0, SeekPosition::begin);
+        Write(&m_nNextFreeOffset, 4);
+    } catch (CException* e) {
+        e->Delete();
+        return;
+    }
 }
 
 // 0x7B6650
@@ -154,7 +185,14 @@ void CTlkFileOverrideText::GetString(DWORD nOffset, CString& sString)
     while (nOffset != -1) {
         DWORD nPrevOffset = nOffset;
 
-        Seek(nOffset, SeekPosition::begin);
+        try {
+            Seek(nOffset, SeekPosition::begin);
+        } catch (CException* e) {
+            sString = "";
+            e->Delete();
+            return;
+        }
+
         Read(&entry, sizeof(entry));
 
         nOffset = entry.m_nNextOffset;
@@ -163,9 +201,13 @@ void CTlkFileOverrideText::GetString(DWORD nOffset, CString& sString)
         memcpy(buffer, entry.m_text, 512);
 
         sTemp += buffer;
+
+        if (nPrevOffset == nOffset) {
+            break;
+        }
     }
 
-    sTemp.TrimRight();
+    CUtil::TrimRight(sTemp);
     sString = sTemp;
 }
 
@@ -209,9 +251,16 @@ BOOLEAN CTlkFileOverrideHeader::Unmarshal()
     int index;
     UINT nBytesRead;
 
-    Seek(0, SeekPosition::begin);
+    try {
+        Seek(0, SeekPosition::begin);
 
-    nBytesRead = Read(&m_header, sizeof(CTlkFileOverrideHeaderFileHeader));
+        nBytesRead = Read(&m_header, sizeof(CTlkFileOverrideHeaderFileHeader));
+    } catch (CException* e) {
+        e->Delete();
+        m_bOpen = FALSE;
+        return FALSE;
+    }
+
     if (nBytesRead != 0) {
         if (nBytesRead != sizeof(CTlkFileOverrideHeaderFileHeader)) {
             // __FILE__: C:\Projects\Icewind2\src\chitin\ChTlkTblOverride.cpp
@@ -256,10 +305,22 @@ BOOLEAN CTlkFileOverrideHeader::Unmarshal()
                 UTIL_ASSERT_MSG(FALSE, "Corrupt Override file");
             }
 
-            Seek(sizeof(CTlkFileOverrideHeaderEntry) * index + sizeof(CTlkFileOverrideHeaderFileHeader), SeekPosition::begin);
+            CTlkFileOverrideHeaderEntry* pKey;
+            try {
+                Seek(sizeof(CTlkFileOverrideHeaderEntry) * index + sizeof(CTlkFileOverrideHeaderFileHeader), SeekPosition::begin);
 
-            CTlkFileOverrideHeaderEntry* pKey = new CTlkFileOverrideHeaderEntry;
-            nBytesRead = Read(pKey, sizeof(CTlkFileOverrideHeaderEntry));
+                pKey = new CTlkFileOverrideHeaderEntry;
+                nBytesRead = Read(pKey, sizeof(CTlkFileOverrideHeaderEntry));
+            } catch (CException* e) {
+                e->Delete();
+
+                // __FILE__: C:\Projects\Icewind2\src\chitin\ChTlkTblOverride.cpp
+                // __LINE__: 989
+                UTIL_ASSERT_MSG(FALSE, "Corrupt Override file");
+
+                return FALSE;
+            }
+
             if (nBytesRead != sizeof(CTlkFileOverrideHeaderEntry)) {
                 // __FILE__: C:\Projects\Icewind2\src\chitin\ChTlkTblOverride.cpp
                 // __LINE__: 996
@@ -288,7 +349,7 @@ BOOLEAN CTlkFileOverrideHeader::Unmarshal()
         }
     }
 
-    return FALSE;
+    return TRUE;
 }
 
 // 0x7B6070
@@ -370,24 +431,36 @@ CTlkFileOverrideHeaderEntry* CTlkFileOverrideHeader::FindKey(DWORD strId)
 // 0x7B6190
 void CTlkFileOverrideHeader::Marshal()
 {
-    Seek(0, SeekPosition::begin);
-
     int writtenEntries = 0;
     int writtenBytes = 0;
 
-    for (int index = 0; index < m_nEntryCount; index++) {
-        if (m_ppEntries[index] != NULL) {
-            Seek(sizeof(CTlkFileOverrideHeaderEntry) * writtenEntries + sizeof(CTlkFileOverrideHeaderFileHeader), SeekPosition::begin);
-            Write(m_ppEntries[index], sizeof(CTlkFileOverrideHeaderEntry));
-            writtenEntries++;
-            writtenBytes += sizeof(CTlkFileOverrideHeaderEntry);
+    try {
+        Seek(0, SeekPosition::begin);
+
+        for (int index = 0; index < m_nEntryCount; index++) {
+            if (m_ppEntries[index] != NULL
+                && (m_ppEntries[index]->dwFlags & 0x8000) == 0) {
+                Seek(sizeof(CTlkFileOverrideHeaderEntry) * writtenEntries + sizeof(CTlkFileOverrideHeaderFileHeader), SeekPosition::begin);
+                Write(m_ppEntries[index], sizeof(CTlkFileOverrideHeaderEntry));
+                writtenEntries++;
+                writtenBytes += sizeof(CTlkFileOverrideHeaderEntry);
+            }
         }
+
+        Seek(0, SeekPosition::begin);
+    } catch (CException* e) {
+        e->Delete();
     }
 
-    Seek(0, SeekPosition::begin);
     m_header.nEntryCount = writtenEntries;
     memcpy(&(m_header.nFileType), "TLK ", 4);
-    Write(&m_header, sizeof(CTlkFileOverrideHeaderFileHeader));
+
+    try {
+        Write(&m_header, sizeof(CTlkFileOverrideHeaderFileHeader));
+    } catch (CException* e) {
+        e->Delete();
+    }
+
     SetLength(writtenBytes + sizeof(CTlkFileOverrideHeaderFileHeader));
 }
 
@@ -478,7 +551,12 @@ void CTlkFileOverride::Open(const CString& sHeaderFileName, const CString& sText
     if (m_header.m_bOpen) {
         m_header.Unmarshal();
 
-        m_text.m_bOpen = m_text.Open(sTextFileName, CFile::OpenFlags::modeReadWrite | CFile::OpenFlags::modeCreate | CFile::OpenFlags::modeNoTruncate, NULL);
+        try {
+            m_text.m_bOpen = m_text.Open(sTextFileName, CFile::OpenFlags::modeReadWrite | CFile::OpenFlags::modeCreate | CFile::OpenFlags::modeNoTruncate, NULL);
+        } catch (CException* e) {
+            e->Delete();
+            m_text.m_bOpen = FALSE;
+        }
     } else {
         m_text.m_bOpen = FALSE;
     }
@@ -532,13 +610,17 @@ DWORD CTlkFileOverride::Add(const CString& sText)
 // 0x7B5C30
 void CTlkFileOverride::CloseFiles()
 {
-    if (m_header.m_bOpen) {
-        m_header.Close();
-        m_header.m_bOpen = FALSE;
-    }
+    try {
+        if (m_header.m_bOpen) {
+            m_header.Close();
+            m_header.m_bOpen = FALSE;
+        }
 
-    if (m_text.m_bOpen) {
-        m_text.Close();
-        m_text.m_bOpen = FALSE;
+        if (m_text.m_bOpen) {
+            m_text.Close();
+            m_text.m_bOpen = FALSE;
+        }
+    } catch (CException* e) {
+        e->Delete();
     }
 }

@@ -159,6 +159,7 @@ public:
     BOOLEAN ScrollingCancelRequestRect(unsigned char a1);
     BOOL DetachVRamRect();
     BOOL DrawEllipse(const CPoint& ptCenter, const CSize& axes, COLORREF rgbColor);
+    BOOL ShadowRect(const CRect& rRect);
     BOOL DrawHighlightRect(const CRect& rSquare, COLORREF rgbColor, BYTE width);
     INT GetSegmentPoints(POINT** ppPoints, int nEndX, int nEndY, int nStartX, int nStartY);
     CPoint GetWorldCoordinates(const CPoint& ptScreen);

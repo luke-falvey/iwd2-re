@@ -1714,6 +1714,27 @@ BOOL CInfinity::DrawEllipse(const CPoint& ptCenter, const CSize& axes, COLORREF 
         rgbColor);
 }
 
+// 0x5CDD00
+BOOL CInfinity::ShadowRect(const CRect& rRect)
+{
+    CRect rNormal(rRect);
+    rNormal.NormalizeRect();
+
+    CRect rActual;
+    rActual.left = rNormal.left + rViewPort.left - nCurrentX;
+    rActual.top = rNormal.top + rViewPort.top - nCurrentY;
+    rActual.right = rActual.left + rNormal.Width();
+    rActual.bottom = rActual.top + rNormal.Height();
+
+    CRect rClip;
+    rClip.left = rViewPort.left;
+    rClip.top = rViewPort.top;
+    rClip.right = rViewPort.right - 1;
+    rClip.bottom = rViewPort.bottom - 1;
+
+    return pVidMode->ShadowRect(rActual, 0, rClip);
+}
+
 // 0x5CDDC0
 BOOL CInfinity::DrawHighlightRect(const CRect& rSquare, COLORREF rgbColor, BYTE width)
 {

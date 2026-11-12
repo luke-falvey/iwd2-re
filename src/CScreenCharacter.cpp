@@ -614,6 +614,111 @@ void CScreenCharacter::EngineGameUninit()
     m_cUIManager.fUninit();
 }
 
+// 0x5D72D0
+void CScreenCharacter::OnKeyDown(SHORT nKeysFlags)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    for (SHORT nKeyFlag = 0; nKeyFlag < nKeysFlags; nKeyFlag++) {
+        if (m_pVirtualKeysFlags[nKeyFlag] == VK_ESCAPE) {
+            if (GetTopPopup() != NULL) {
+                OnCancelButtonClick();
+            } else {
+                SelectEngine(g_pBaldurChitin->GetScreenWorld());
+            }
+            continue;
+        }
+
+        if (m_pVirtualKeysFlags[nKeyFlag] == VK_RETURN) {
+            if (GetTopPopup() != NULL && GetTopPopup()->m_nID != 51) {
+                OnDoneButtonClick();
+                continue;
+            }
+        } else {
+            if (m_cUIManager.OnKeyDown(m_pVirtualKeysFlags[nKeyFlag])) {
+                continue;
+            }
+        }
+
+        switch (m_pVirtualKeysFlags[nKeyFlag]) {
+        case VK_TAB:
+            m_cUIManager.ForceToolTip();
+            break;
+        case VK_LEFT:
+        case VK_NUMPAD4:
+            if (GetTopPopup() != NULL && GetTopPopup()->m_nID == 18) {
+                CUIControlButton* pButton = static_cast<CUIControlButton*>(GetManager()->GetPanel(18)->GetControl(1));
+                if (pButton != NULL) {
+                    pButton->OnLButtonClick(CPoint(0, 0));
+                }
+            }
+            break;
+        case VK_RIGHT:
+        case VK_NUMPAD6:
+            if (GetTopPopup() != NULL && GetTopPopup()->m_nID == 18) {
+                CUIControlButton* pButton = static_cast<CUIControlButton*>(GetManager()->GetPanel(18)->GetControl(2));
+                if (pButton != NULL) {
+                    pButton->OnLButtonClick(CPoint(0, 0));
+                }
+            }
+            break;
+        case VK_SNAPSHOT:
+            g_pBaldurChitin->GetCurrentVideoMode()->PrintScreen();
+            break;
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+            if (GetTopPopup() == NULL) {
+                OnPortraitLClick(m_pVirtualKeysFlags[nKeyFlag] - '1');
+            }
+            break;
+        default:
+            if (GetTopPopup() == NULL) {
+                for (SHORT index = 0; index < CINFGAME_KEYMAP_SIZE; index++) {
+                    // NOTE: Uninline.
+                    if (pGame->GetKeymap(index) == m_pVirtualKeysFlags[nKeyFlag]
+                        && pGame->GetKeymapFlag(index) == m_bCtrlKeyDown) {
+                        switch (index) {
+                        case 0:
+                            g_pBaldurChitin->GetActiveEngine()->OnLeftPanelButtonClick(5);
+                            break;
+                        case 1:
+                            g_pBaldurChitin->GetActiveEngine()->OnLeftPanelButtonClick(8);
+                            break;
+                        case 2:
+                            g_pBaldurChitin->GetActiveEngine()->OnLeftPanelButtonClick(0);
+                            break;
+                        case 3:
+                            g_pBaldurChitin->GetActiveEngine()->OnLeftPanelButtonClick(6);
+                            break;
+                        case 4:
+                            g_pBaldurChitin->GetActiveEngine()->OnLeftPanelButtonClick(7);
+                            break;
+                        case 5:
+                            g_pBaldurChitin->GetActiveEngine()->OnLeftPanelButtonClick(4);
+                            break;
+                        case 6:
+                            g_pBaldurChitin->GetActiveEngine()->OnLeftPanelButtonClick(9);
+                            break;
+                        case 7:
+                            g_pBaldurChitin->GetActiveEngine()->OnLeftPanelButtonClick(13);
+                            break;
+                        case 29:
+                            OnRestButtonClick();
+                            break;
+                        }
+                        break;
+                    }
+                }
+            }
+            break;
+        }
+    }
+}
+
 // 0x5D76E0
 void CScreenCharacter::OnMouseMove(CPoint pt)
 {

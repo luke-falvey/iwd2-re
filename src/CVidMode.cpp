@@ -1366,6 +1366,107 @@ BOOL CVidMode::DrawRect(const CRect& r, UINT nSurface, const CRect& rClip, COLOR
     return TRUE;
 }
 
+// NOTE: Halves every colour channel of the pixels of `r` (clipped to `rClip`)
+// on surface `nSurface`. The three pixel loops are an `__asm` block in the
+// original: they count down with `DEC`/`JNZ`, so they are written as
+// `do`/`while` loops (a zero width or height runs 2^32 times, as in the
+// original).
+//
+// 0x797E70
+BOOL CVidMode::ShadowRect(const CRect& r, UINT nSurface, const CRect& rClip)
+{
+    CRect rDest(r);
+    if (!rDest.IntersectRect(rClip, r)) {
+        return FALSE;
+    }
+
+    CRect rLock;
+    rLock.left = max(rDest.left, rClip.left);
+    rLock.top = max(rDest.top, rClip.top);
+    rLock.right = min(rDest.right, rClip.right);
+    rLock.bottom = min(rDest.bottom, rClip.bottom);
+
+    INT x1 = rDest.left - rLock.left;
+    INT y1 = rDest.top - rLock.top;
+    INT x2 = x1 + rDest.Width();
+    INT y2 = y1 + rDest.Height();
+
+    DDSURFACEDESC ddsd;
+    ddsd.dwSize = sizeof(ddsd);
+
+    if (!LockSurface(nSurface, &ddsd, rLock)) {
+        return FALSE;
+    }
+
+    INT nHeight = y2 - y1;
+    DWORD dwMask = ((ddsd.ddpfPixelFormat.dwBBitMask >> 1) & ddsd.ddpfPixelFormat.dwBBitMask)
+        + ((ddsd.ddpfPixelFormat.dwGBitMask >> 1) & ddsd.ddpfPixelFormat.dwGBitMask)
+        + ((ddsd.ddpfPixelFormat.dwRBitMask >> 1) & ddsd.ddpfPixelFormat.dwRBitMask);
+    INT nWidth = x2 - x1;
+
+    LONG nSkip;
+    INT nRows;
+    INT nColumns;
+
+    switch (g_pChitin->cVideo.GetBitsPerPixels()) {
+    case 16:
+        nSkip = ddsd.lPitch - nWidth * 2;
+        {
+            WORD* pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(ddsd.lpSurface) + ddsd.lPitch * y1) + x1;
+            nRows = nHeight;
+            do {
+                nColumns = nWidth;
+                do {
+                    *pSurface = static_cast<WORD>((*pSurface >> 1) & dwMask);
+                    pSurface++;
+                } while (--nColumns != 0);
+                pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(pSurface) + nSkip);
+            } while (--nRows != 0);
+        }
+        break;
+    case 24:
+        nSkip = ddsd.lPitch - nWidth * 3;
+        {
+            BYTE* pSurface = reinterpret_cast<BYTE*>(ddsd.lpSurface) + ddsd.lPitch * y1 + x1 * 3;
+            nRows = nHeight;
+            do {
+                nColumns = nWidth;
+                do {
+                    // NOTE: The original reads the pixel's bytes in the order
+                    // 1, 2, 0 into bits 16, 8, 0 and stores a whole dword back,
+                    // so it also overwrites the first byte of the next pixel.
+                    DWORD dwPixel = (pSurface[1] << 16) | (pSurface[2] << 8) | pSurface[0];
+                    *reinterpret_cast<DWORD*>(pSurface) = (dwPixel >> 1) & dwMask;
+                    pSurface += 3;
+                } while (--nColumns != 0);
+                pSurface += nSkip;
+            } while (--nRows != 0);
+        }
+        break;
+    case 32:
+        nSkip = ddsd.lPitch - nWidth * 4;
+        {
+            DWORD* pSurface = reinterpret_cast<DWORD*>(reinterpret_cast<BYTE*>(ddsd.lpSurface) + ddsd.lPitch * y1) + x1;
+            nRows = nHeight;
+            do {
+                nColumns = nWidth;
+                do {
+                    *pSurface = (*pSurface >> 1) & dwMask;
+                    pSurface++;
+                } while (--nColumns != 0);
+                pSurface = reinterpret_cast<DWORD*>(reinterpret_cast<BYTE*>(pSurface) + nSkip);
+            } while (--nRows != 0);
+        }
+        break;
+    }
+
+    // NOTE: Uninline. The original locks `nSurface` but unlocks surface 0
+    // (`CVIDINF_SURFACE_BACK`).
+    UnLockSurface(0, ddsd.lpSurface);
+
+    return TRUE;
+}
+
 // #binary-identical
 // 0x798780
 BOOL CVidMode::DrawRecticle(const CVIDMODE_RECTICLE_DESCRIPTION& rd, const CRect& rClip, COLORREF rgbColor)

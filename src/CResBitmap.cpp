@@ -244,6 +244,7 @@ BYTE CResBitmap::GetPixelValue(int x, int y, BOOL bDoubleSize)
     return 0;
 }
 
+// 0x77F190
 int CResBitmap::Release()
 {
     int rc = CRes::Release();

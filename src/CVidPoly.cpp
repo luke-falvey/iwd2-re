@@ -532,6 +532,15 @@ CVidPolyCacheEntry::CVidPolyCacheEntry()
     m_pVertices = NULL;
 }
 
+// NOTE: The body is only the base and member constructors: `CPtrList(10)`
+// and the inlined `CCriticalSection` constructor of `m_cs`.
+//
+// 0x7C1D70
+CVidPolyCache::CVidPolyCache()
+    : CPtrList(10)
+{
+}
+
 // 0x7C0CF0
 CVidPolyCache::~CVidPolyCache()
 {
