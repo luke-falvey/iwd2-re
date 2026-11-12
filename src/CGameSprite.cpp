@@ -25295,7 +25295,196 @@ SHORT CGameSprite::SpellPoint()
         return ACTION_ERROR;
     }
 
-    // TODO: Incomplete. Asm 0x743D9D-0x74466F is not translated yet.
+    // NOTE: Unlike `Spell`, this is keyed on the cast counter rather than
+    // `m_bStartedCasting`, and there is no concentration check against the
+    // nearest enemy and no spellcraft feedback.
+    if (m_castCounter == 0) {
+        sub_755A70(m_curSpell, pAbility, ptDest);
+    }
+
+    INT nMentalSpeed = m_derivedStats.m_nMentalSpeed;
+
+    INT nAbilitySpeed = pAbility->speedFactor - nMentalSpeed;
+    if (nAbilitySpeed < 0) {
+        nAbilitySpeed = 0;
+    }
+
+    INT nSpeed = m_speedFactor - nMentalSpeed;
+    if (nSpeed < 0) {
+        nSpeed = 0;
+    }
+
+    m_speedFactor = static_cast<SHORT>(nSpeed);
+
+    INT nCastTime = (static_cast<SHORT>(nAbilitySpeed) * 100) / 10;
+
+    if (m_castCounter < nCastTime) {
+        if (field_9D15 == 1
+            || (field_5582 != 0 && m_curSpell->GetCasterType() != 4)) {
+            INT nDisrupt = field_5582;
+            INT nLevel = m_curSpell->GetLevel();
+
+            if (field_9D15 != 1) {
+                if (field_9D14 == 0) {
+                    field_9D14 = 1;
+
+                    INT nBonus = 0;
+                    if (GetFeatValue(CGAMESPRITE_FEAT_COMBAT_CASTING)) {
+                        nBonus = 4;
+                    }
+
+                    INT nDC = nLevel + nDisrupt + 10;
+                    INT nRoll = CUtil::UtilRandInt(20, m_derivedStats.m_nLuck) + 1;
+
+                    // NOTE: The skill is sign extended.
+                    INT nSkill = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_CONCENTRATION]);
+                    if ((m_baseStats.field_2FB & 0x1) != 0) {
+                        nSkill += 10;
+                    }
+
+                    FeedBack(0x53, nRoll, nSkill - nBonus, nBonus, 0x9BA2, nDisrupt, nLevel);
+
+                    field_9D15 = nSkill + nRoll < nDC;
+                }
+            }
+
+            if (field_9D15 == 1) {
+                FeedBack(0x37, 0, 0, 0, -1, 0, 0);
+                m_curSpell->Release();
+                return ACTION_DONE;
+            }
+        } else {
+            if (nSequence != CGameSprite::SEQ_CONJURE && m_castCounter < nCastTime - 4) {
+                CMessage* message = new CMessageSetSequence(CGameSprite::SEQ_CONJURE, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            } else if (nSequence != CGameSprite::SEQ_CAST && m_castCounter >= nCastTime - 4) {
+                CMessage* message = new CMessageSetSequence(CGameSprite::SEQ_CAST, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                ApplyCastingEffectPost(m_curSpell, pAbility);
+            }
+        }
+
+        m_curSpell->Release();
+        return ACTION_NORMAL;
+    }
+
+    INT nFailRoll = rand() % 100;
+    BOOL bFailed = FALSE;
+
+    nSpellType = m_curSpell->GetCasterType();
+    if (nSpellType != 4) {
+        switch (nClass) {
+        case CAIOBJECTTYPE_C_CLERIC:
+        case CAIOBJECTTYPE_C_DRUID:
+        case CAIOBJECTTYPE_C_PALADIN:
+        case CAIOBJECTTYPE_C_RANGER:
+            nSpellType = 2;
+            if (CheckDivineFailure(nFailRoll)) {
+                FeedBack(0x3D, 0, 0, 0, -1, 0, 0);
+                bFailed = TRUE;
+            }
+            break;
+        default:
+            nSpellType = 1;
+            if (CheckAranceFailure(nFailRoll)) {
+                FeedBack(0x3D, 0, 0, 0, -1, 0, 0);
+                bFailed = TRUE;
+            }
+            break;
+        }
+    }
+
+    if ((m_curSpell->GetItemFlags() & 0x2000) != 0
+        && (m_pArea->GetHeader()->m_areaType & 0x1) == 0) {
+        FeedBack(0x16, 0, 0, 0, -1, 0, 0);
+        bFailed = TRUE;
+    }
+
+    if (field_9D15 == 1
+        || (field_5582 != 0 && m_curSpell->GetCasterType() != 4)) {
+        INT nDisrupt = field_5582;
+        INT nLevel = m_curSpell->GetLevel();
+
+        if (field_9D15 != 1) {
+            if (field_9D14 == 0) {
+                field_9D14 = 1;
+
+                INT nBonus = 0;
+                if (GetFeatValue(CGAMESPRITE_FEAT_COMBAT_CASTING)) {
+                    nBonus = 4;
+                }
+
+                INT nDC = nLevel + nDisrupt + 10;
+                INT nRoll = CUtil::UtilRandInt(20, m_derivedStats.m_nLuck) + 1;
+
+                // NOTE: The skill is sign extended.
+                INT nSkill = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_CONCENTRATION]);
+                if ((m_baseStats.field_2FB & 0x1) != 0) {
+                    nSkill += 10;
+                }
+
+                FeedBack(0x53, nRoll, nSkill - nBonus, nBonus, 0x9BA2, nDisrupt, nLevel);
+
+                field_9D15 = nSkill + nRoll < nDC;
+            }
+        }
+
+        if (field_9D15 == 1) {
+            // NOTE: Unlike `Spell`, this returns ACTION_ERROR.
+            FeedBack(0x37, 0, 0, 0, -1, 0, 0);
+            m_curSpell->Release();
+            return ACTION_ERROR;
+        }
+    }
+
+    if (bFailed) {
+        // NOTE: Unlike `Spell`, this returns ACTION_ERROR.
+        m_curSpell->Release();
+        return ACTION_ERROR;
+    }
+
+    if (m_derivedStats.m_spellStates[SPLSTATE_WEB]
+        && m_curSpell->GetCasterType() != 4) {
+        INT nDisrupt = field_5582;
+        INT nLevel = m_curSpell->GetLevel();
+
+        INT nBonus = 0;
+        if (GetFeatValue(CGAMESPRITE_FEAT_COMBAT_CASTING)) {
+            nBonus = 4;
+        }
+
+        INT nDC = nLevel + nDisrupt + 10;
+        INT nRoll = CUtil::UtilRandInt(20, m_derivedStats.m_nLuck) + 1;
+
+        // NOTE: The skill is sign extended.
+        INT nSkill = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_CONCENTRATION]);
+        if ((m_baseStats.field_2FB & 0x1) != 0) {
+            nSkill += 10;
+        }
+
+        FeedBack(0x53, nRoll, nSkill - nBonus, nBonus, 0x9BA2, nDisrupt, nLevel);
+
+        // NOTE: Unlike the checks above, the spell is disrupted when the roll
+        // is not below the DC. Unlike `Spell`, this returns ACTION_ERROR.
+        if (nSkill + nRoll >= nDC) {
+            FeedBack(0x37, 0, 0, 0, -1, 0, 0);
+            m_curSpell->Release();
+            return ACTION_ERROR;
+        }
+    }
+
+    if ((m_curSpell->GetItemFlags() & 0x2000) != 0
+        && (m_pArea->GetHeader()->m_areaType & 0x1) == 0) {
+        FeedBack(0x16, 0, 0, 0, -1, 0, 0);
+
+        m_curSpell->Release();
+        AutoPause(0x40);
+        AutoPause(0x400);
+        return ACTION_DONE;
+    }
+
+    // TODO: Incomplete. Asm 0x74430C-0x74466F is not translated yet.
 
     return ACTION_ERROR;
 }
