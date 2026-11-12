@@ -6022,8 +6022,8 @@ BOOL CScreenStore::sub_67E560(SHORT nPortraitNum, const CResRef& cResSpell)
             POSITION pos = pSprite->m_timedEffectList.GetHeadPosition();
             while (pos != NULL) {
                 CGameEffect* pEffect = pSprite->m_timedEffectList.GetNext(pos);
-                // NOTE: Byte test on `m_effectAmount2`.
-                if ((static_cast<BYTE>(pEffect->m_effectAmount2) & 1) != 0) {
+                // NOTE: Byte test on `m_flags`.
+                if ((static_cast<BYTE>(pEffect->m_flags) & 1) != 0) {
                     bResult = TRUE;
                     goto done;
                 }
@@ -6032,8 +6032,8 @@ BOOL CScreenStore::sub_67E560(SHORT nPortraitNum, const CResRef& cResSpell)
             pos = pSprite->m_equipedEffectList.GetHeadPosition();
             while (pos != NULL) {
                 CGameEffect* pEffect = pSprite->m_equipedEffectList.GetNext(pos);
-                // NOTE: Byte test on `m_effectAmount2`.
-                if ((static_cast<BYTE>(pEffect->m_effectAmount2) & 1) != 0) {
+                // NOTE: Byte test on `m_flags`.
+                if ((static_cast<BYTE>(pEffect->m_flags) & 1) != 0) {
                     bResult = TRUE;
                     goto done;
                 }
