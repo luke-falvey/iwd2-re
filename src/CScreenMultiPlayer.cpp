@@ -11,6 +11,7 @@
 #include "CScreenCreateChar.h"
 #include "CScreenStart.h"
 #include "CScreenWorld.h"
+#include "CSpell.h"
 #include "CUIControlButton.h"
 #include "CUIControlEdit.h"
 #include "CUIControlFactory.h"
@@ -2553,7 +2554,262 @@ void CScreenMultiPlayer::UpdateExperienceEntry(CUIControlTextDisplay* pText, con
 // 0x64E2C0
 void CScreenMultiPlayer::ResetViewCharacterPanel(CUIPanel* pPanel)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
+    // __LINE__: 4106
+    UTIL_ASSERT(pGame != NULL);
+
+    CString sName;
+    CString sUnused;
+    CString sRace;
+    CString sGender;
+    CString sAlignment;
+
+    CUIControlTextDisplay* pTextLeft = static_cast<CUIControlTextDisplay*>(pPanel->GetControl(2));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
+    // __LINE__: 4119
+    UTIL_ASSERT(pTextLeft != NULL);
+
+    pTextLeft->RemoveAll();
+
+    CUIControlTextDisplay* pTextRight = static_cast<CUIControlTextDisplay*>(pPanel->GetControl(3));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
+    // __LINE__: 4122
+    UTIL_ASSERT(pTextRight != NULL);
+
+    pTextRight->RemoveAll();
+
+    CMultiplayerSettings* pSettings = &(g_pBaldurChitin->GetObjectGame()->m_multiplayerSettings);
+
+    BOOL bNotFirstConnected = !pSettings->m_bFirstConnected;
+
+    LONG nCharacterId = pGame->GetCharacterSlot(m_nCharacterSlot);
+
+    BOOL bSlotFull = pSettings->GetCharacterStatus(m_nCharacterSlot) == CMultiplayerSettings::CHARSTATUS_CHARACTER
+        && nCharacterId != CGameObjectArray::INVALID_INDEX;
+
+    if (bNotFirstConnected && bSlotFull) {
+        const CRuleTables& ruleTables = pGame->GetRuleTables();
+
+        CGameSprite* pSprite;
+
+        BYTE rc;
+        do {
+            rc = pGame->m_cObjectArray.GetShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pSprite->m_baseStats.m_name != 0xFFFFFFFF) {
+                sName = FetchString(pSprite->m_baseStats.m_name);
+            } else {
+                sName = pSprite->GetName();
+            }
+
+            UpdateText(pTextLeft,
+                "%s: %s",
+                (LPCSTR)FetchString(1047),
+                (LPCSTR)sName);
+
+            ruleTables.GetGenderStringMixed(pSprite->m_startTypeAI.m_nGender, sGender);
+            UpdateText(pTextLeft,
+                "%s: %s",
+                (LPCSTR)FetchString(12135),
+                (LPCSTR)sGender);
+
+            ruleTables.GetRaceStringMixed(pSprite->m_startTypeAI.m_nRace, sRace, pSprite->m_startTypeAI.m_nSubRace);
+            UpdateText(pTextLeft,
+                "%s: %s",
+                (LPCSTR)FetchString(1048),
+                (LPCSTR)sRace);
+
+            ruleTables.GetAlignmentStringMixed(pSprite->m_startTypeAI.m_nAlignment, sAlignment);
+            UpdateText(pTextLeft,
+                "%s: %s",
+                (LPCSTR)FetchString(1049),
+                (LPCSTR)sAlignment);
+
+            UpdateText(pTextLeft, "");
+
+            DWORD nSpecialization = pSprite->GetSpecialization();
+
+            CDerivedStats* pDStats = &(pSprite->m_derivedStats);
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
+            // __LINE__: 4039
+            UTIL_ASSERT(pDStats != NULL);
+
+            CCreatureFileHeader* pBStats = &(pSprite->m_baseStats);
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
+            // __LINE__: 4041
+            UTIL_ASSERT(pBStats != NULL);
+
+            UpdateExperienceEntry(pTextLeft,
+                pSprite->m_liveTypeAI,
+                *pDStats,
+                nSpecialization,
+                pDStats->GetBestClass(),
+                pBStats->m_flags);
+
+            UpdateText(pTextLeft, "");
+
+            UpdateTextForceColor(pTextLeft,
+                RGB(200, 200, 0),
+                "%s",
+                (LPCSTR)FetchString(17088));
+
+            UpdateText(pTextLeft,
+                "%s: %d  (%+d)",
+                (LPCSTR)FetchString(1145),
+                pSprite->m_baseStats.m_STRBase,
+                ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_STRBase));
+
+            UpdateText(pTextLeft,
+                "%s: %d  (%+d)",
+                (LPCSTR)FetchString(1151),
+                pSprite->m_baseStats.m_DEXBase,
+                ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_DEXBase));
+
+            UpdateText(pTextLeft,
+                "%s: %d  (%+d)",
+                (LPCSTR)FetchString(1178),
+                pSprite->m_baseStats.m_CONBase,
+                ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_CONBase));
+
+            UpdateText(pTextLeft,
+                "%s: %d  (%+d)",
+                (LPCSTR)FetchString(1179),
+                pSprite->m_baseStats.m_INTBase,
+                ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_INTBase));
+
+            UpdateText(pTextLeft,
+                "%s: %d  (%+d)",
+                (LPCSTR)FetchString(1180),
+                pSprite->m_baseStats.m_WISBase,
+                ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_WISBase));
+
+            UpdateText(pTextLeft,
+                "%s: %d  (%+d)",
+                (LPCSTR)FetchString(1181),
+                pSprite->m_baseStats.m_CHRBase,
+                ruleTables.GetAbilityScoreModifier(pSprite->m_baseStats.m_CHRBase));
+
+            UpdateTextForceColor(pTextRight,
+                RGB(200, 200, 0),
+                "%s",
+                (LPCSTR)FetchString(36361));
+
+            pSprite->DisplayFeats(pTextRight);
+
+            UpdateText(pTextRight, "");
+
+            UpdateTextForceColor(pTextRight,
+                RGB(200, 200, 0),
+                "%s",
+                (LPCSTR)FetchString(11983));
+
+            pSprite->DisplaySkills(pTextRight);
+
+            UpdateText(pTextRight, "");
+
+            UpdateTextForceColor(pTextRight,
+                RGB(200, 200, 0),
+                "%s",
+                (LPCSTR)FetchString(11292));
+
+            for (INT nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+                if (nSlot != CGameSpriteEquipment::SLOT_FIST) {
+                    CItem* pItem = pSprite->m_equipment.m_items[nSlot];
+                    if (pItem != NULL) {
+                        UpdateText(pTextRight,
+                            "%s",
+                            (LPCSTR)FetchString(pItem->GetGenericName()));
+                    }
+                }
+            }
+
+            if (pSprite->GetNumSpells() > 0) {
+                for (UINT nClassIndex = 0; nClassIndex < CSPELLLIST_NUM_CLASSES; nClassIndex++) {
+                    // __FILE__: .\Include\ObjCreature.h
+                    // __LINE__: 1741
+                    UTIL_ASSERT(nClassIndex <= CSPELLLIST_NUM_CLASSES);
+
+                    // NOTE: Uninline.
+                    if (pSprite->m_spells.Get(nClassIndex)->GetNumSpells() > 0) {
+                        STRREF strHeader;
+                        switch (nClassIndex) {
+                        case 0:
+                            strHeader = 39341;
+                            break;
+                        case 1:
+                            strHeader = 11028;
+                            break;
+                        case 2:
+                            strHeader = 39342;
+                            break;
+                        case 3:
+                            strHeader = 39343;
+                            break;
+                        case 4:
+                            strHeader = 39344;
+                            break;
+                        case 5:
+                            strHeader = 39345;
+                            break;
+                        case 6:
+                            strHeader = 11027;
+                            break;
+                        default:
+                            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
+                            // __LINE__: 4245
+                            UTIL_ASSERT(FALSE);
+                        }
+
+                        UpdateText(pTextRight, "");
+
+                        UpdateTextForceColor(pTextRight,
+                            RGB(200, 200, 0),
+                            "%s",
+                            (LPCSTR)FetchString(strHeader));
+
+                        for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+                            // NOTE: Uninline.
+                            for (UINT nIndex = 0; nIndex < pSprite->m_spells.GetSpellsAtLevel(nClassIndex, nLevel)->m_List.size(); nIndex++) {
+                                // NOTE: Uninline.
+                                UINT nSpellId = pSprite->m_spells.GetSpellsAtLevel(nClassIndex, nLevel)->Get(nIndex)->m_nID;
+
+                                // NOTE: Uninline.
+                                CSpell spell(g_pBaldurChitin->GetObjectGame()->m_spells.Get636(nSpellId));
+                                if (spell.pRes != NULL) {
+                                    spell.Demand();
+                                    STRREF strSpellName = spell.GetGenericName();
+                                    spell.Release();
+
+                                    UpdateText(pTextRight,
+                                        "%d: %s",
+                                        nLevel + 1,
+                                        (LPCSTR)FetchString(strSpellName));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            pTextLeft->SetTopString(pTextLeft->m_plstStrings->FindIndex(0));
+            pTextRight->SetTopString(pTextRight->m_plstStrings->FindIndex(0));
+
+            pGame->m_cObjectArray.ReleaseShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
 }
 
 // 0x64F090
