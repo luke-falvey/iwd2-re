@@ -5,9 +5,19 @@
 
 // NOTE: Name is Ghidra's. This is the cheat console command parser. The only
 // known user (0x77BF30) keeps it as a stack local, so its size is unknown
-// (at least 0x41); its constructor and destructor are not translated yet.
+// (at least 0x41). The constructor is inlined in 0x77BF30 (the destructor is
+// the implicit one).
 class CLUAConsole {
 public:
+    CLUAConsole()
+    {
+        // NOTE: The two dwords at +0x38 and +0x3C are zeroed.
+        memset(&m_cheat, 0, sizeof(m_cheat) + sizeof(field_39));
+        m_nCommand = 0;
+        m_nStringArgs = 0;
+        m_nNumberArgs = 0;
+    }
+
     // 0x5838A0
     void Input(LPCSTR pszInput);
 

@@ -2,8 +2,10 @@
 
 #include "CBaldurChitin.h"
 #include "CBaldurEngine.h"
+#include "CGameArea.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
+#include "CLUAConsole.h"
 #include "CScreenChapter.h"
 #include "CScreenCharacter.h"
 #include "CScreenConnection.h"
@@ -4753,9 +4755,9 @@ CUIControlEditLua::CUIControlEditLua(CUIPanel* panel, UI_CONTROL_EDIT* controlIn
 {
     CString sKey("String0");
 
-    m_nHistorySize = 10;
+    field_873 = 10;
 
-    for (BYTE nIndex = 0; nIndex < m_nHistorySize; nIndex++) {
+    for (BYTE nIndex = 0; nIndex < field_873; nIndex++) {
         sKey.SetAt(sKey.GetLength() - 1, nIndex + '0');
         GetPrivateProfileStringA("Lua Edit",
             sKey,
@@ -4777,6 +4779,95 @@ CUIControlEditLua::CUIControlEditLua(CUIPanel* panel, UI_CONTROL_EDIT* controlIn
 // 0x77BE60
 CUIControlEditLua::~CUIControlEditLua()
 {
+}
+
+// 0x77BF30
+void CUIControlEditLua::OnEditReturn(CString sText)
+{
+    CString sKey("String0");
+
+    for (BYTE nIndex = 0; nIndex < field_873; nIndex++) {
+        sKey.SetAt(sKey.GetLength() - 1, nIndex + '0');
+        WritePrivateProfileStringA("Lua Edit",
+            sKey,
+            field_874[nIndex],
+            g_pBaldurChitin->GetIniFileName());
+    }
+
+    if (field_8A6) {
+        if (field_8A2 != CGameObjectArray::INVALID_INDEX) {
+            CGameObject* pObject;
+
+            if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(field_8A2,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pObject,
+                    INFINITE)
+                == CGameObjectArray::SUCCESS) {
+                pObject->DebugDump(sText, TRUE);
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(field_8A2,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            } else {
+                // NOTE: Nothing is reset when the object cannot be shared.
+                return;
+            }
+        } else {
+            g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->DebugDump(sText, TRUE);
+        }
+
+        field_8A6 = 0;
+        field_8A2 = CGameObjectArray::INVALID_INDEX;
+        g_pBaldurChitin->m_pEngineWorld->field_F37 = 0;
+        g_pBaldurChitin->m_pEngineWorld->StopCommand();
+        return;
+    }
+
+    STR_RES strRes;
+    CString sUnused1;
+    CString sUnused2;
+
+    g_pBaldurChitin->GetTlkTable().Fetch(13711, strRes);
+
+    if (strncmp(sText.GetBuffer(1), strRes.szText.GetBuffer(1), strRes.szText.GetLength()) == 0) {
+        if (!g_pBaldurChitin->cNetwork.m_bConnectionEstablished) {
+            // NOTE: Original reads `-1` from a constant at 0x84C960.
+            g_pBaldurChitin->m_pEngineWorld->DisplayText(CString(""),
+                CString("You are not connected to multiplayer."),
+                -1,
+                FALSE);
+        } else {
+            g_pBaldurChitin->m_cBaldurMessage.SendChatMessage(sText.Right(sText.GetLength() - strRes.szText.GetLength()));
+        }
+    } else {
+        int nColon = CUtil::Find(sText, ':', 0);
+        if (nColon != -1) {
+            // NOTE: Loops forever if the condition holds.
+            while (g_pChitin->field_1A0 != 0
+                && (CUtil::IsDBCSTrailByte(sText, nColon) || IsDBCSLeadByte(':'))) {
+            }
+
+            if (g_pBaldurChitin->cNetwork.FindPlayerIDByName(sText.Left(nColon), FALSE)) {
+                if (!g_pBaldurChitin->cNetwork.m_bConnectionEstablished) {
+                    // NOTE: Original reads `-1` from a constant at 0x84C960.
+                    g_pBaldurChitin->m_pEngineWorld->DisplayText(CString(""),
+                        CString("You are not connected to multiplayer."),
+                        -1,
+                        FALSE);
+                } else {
+                    g_pBaldurChitin->m_cBaldurMessage.SendChatMessage(sText);
+                }
+                return;
+            }
+        }
+
+        CLUAConsole console;
+
+        // NOTE: Original reads `-1` from a constant at 0x84C960.
+        g_pBaldurChitin->m_pEngineWorld->DisplayText(CString(""), sText, -1, FALSE);
+
+        console.Input(sText.GetBuffer(1));
+    }
 }
 
 // -----------------------------------------------------------------------------

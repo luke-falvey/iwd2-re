@@ -316,9 +316,8 @@ class CUIControlEditLua : public CUIControlEdit {
 public:
     CUIControlEditLua(CUIPanel* panel, UI_CONTROL_EDIT* controlInfo);
     ~CUIControlEditLua() override;
+    /* 0068 */ void OnEditReturn(CString sText) override;
 
-    /* 0873 */ BYTE m_nHistorySize;
-    /* 0874 */ CString m_sHistory[10];
     /* 08A2 */ LONG field_8A2;
     /* 08A6 */ unsigned char field_8A6;
 };
