@@ -3,12 +3,12 @@
 #include "CBaldurChitin.h"
 #include "CGameAnimation.h"
 #include "CGameArea.h"
+#include "CGameSparkle.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CInfinity.h"
 #include "CParticle.h"
 #include "CPathSearch.h"
-#include "CGameSparkle.h"
 #include "CUtil.h"
 
 // 0x52AD60

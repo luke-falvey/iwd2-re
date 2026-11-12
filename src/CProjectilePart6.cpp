@@ -5,13 +5,13 @@
 #include "CBaldurChitin.h"
 #include "CGameArea.h"
 #include "CGameEffect.h"
+#include "CGameSparkle.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CInfinity.h"
 #include "CMessage.h"
 #include "CParticle.h"
 #include "CPathSearch.h"
-#include "CGameSparkle.h"
 #include "CUtil.h"
 #include "IcewindMisc.h"
 
@@ -51,7 +51,33 @@ CProjectileHelper84EEB0::CProjectileHelper84EEB0()
 // 0x55B010
 void CProjectileHelper84EEB0::sub_55B010(CPoint& a1, CPoint& a2)
 {
-    // TODO: Incomplete.
+    CPoint ptTarget(a2.x, a2.y * 4 / 3);
+    CPoint ptStart(a1.x, a1.y * 4 / 3);
+    INT nDirection = CGameSprite::GetDirection(ptStart, ptTarget);
+
+    CPoint ptDirection = IcewindMisc::sub_584610(nDirection);
+    CPoint ptPerpendicular = IcewindMisc::sub_584610((nDirection + 4) % 16);
+
+    CPoint ptSide1 = IcewindMisc::sub_5847B0(a1, ptPerpendicular.x, ptPerpendicular.y, field_32);
+    CPoint ptSide2 = IcewindMisc::sub_5847B0(a1, -ptPerpendicular.x, -ptPerpendicular.y, field_32);
+
+    CPoint pt = IcewindMisc::sub_5847B0(ptSide1, ptDirection.x, ptDirection.y, field_36);
+    field_3C[0].x = pt.x - a1.x;
+    field_3C[0].y = pt.y - a1.y;
+
+    pt = IcewindMisc::sub_5847B0(ptSide1, -ptDirection.x, -ptDirection.y, field_36);
+    field_3C[1].x = pt.x - a1.x;
+    field_3C[1].y = pt.y - a1.y;
+
+    pt = IcewindMisc::sub_5847B0(ptSide2, -ptDirection.x, -ptDirection.y, field_36);
+    field_3C[2].x = pt.x - a1.x;
+    field_3C[2].y = pt.y - a1.y;
+
+    pt = IcewindMisc::sub_5847B0(ptSide2, ptDirection.x, ptDirection.y, field_36);
+    field_3C[3].x = pt.x - a1.x;
+    field_3C[3].y = pt.y - a1.y;
+
+    field_3A = TRUE;
 }
 
 // 0x55B1B0

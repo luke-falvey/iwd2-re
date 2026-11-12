@@ -3,11 +3,11 @@
 #include "CBaldurChitin.h"
 #include "CGameAIBase.h"
 #include "CGameArea.h"
+#include "CGameSparkle.h"
 #include "CGameSprite.h"
 #include "CGameEffect.h"
 #include "CInfGame.h"
 #include "CParticle.h"
-#include "CGameSparkle.h"
 #include "CUtil.h"
 #include "IcewindMisc.h"
 

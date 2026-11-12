@@ -1231,8 +1231,12 @@ DWORD CDerivedStats::GetBardMonkRogueLevel()
 // 0x4478C0
 BYTE CDerivedStats::SumSorcererWizardLevels()
 {
-    // TODO: Incomplete.
-    return 0;
+    // NOTE: Uninline. `GetClassMaskLevel` is inlined twice.
+    if (GetClassMaskLevel(CLASSMASK_SORCERER | CLASSMASK_WIZARD) < 1) {
+        return 1;
+    }
+
+    return static_cast<BYTE>(GetClassMaskLevel(CLASSMASK_SORCERER | CLASSMASK_WIZARD));
 }
 
 // 0x447430

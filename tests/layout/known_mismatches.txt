@@ -1467,6 +1467,7 @@ CProjectileHelper84EEA8::field_32
 CProjectileHelper84EEB0::field_36
 CProjectileHelper84EEB0::field_3A
 CProjectileHelper84EEB0::field_3B
+CProjectileHelper84EEB0::field_3C
 CProjectileSingleTarget850DDC::field_2AE
 CProjectileSingleTarget850DDC::field_2CE
 CProjectileSingleTarget850DDC::field_2D2

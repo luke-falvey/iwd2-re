@@ -5,10 +5,10 @@
 #include "CBaldurChitin.h"
 #include "CGameArea.h"
 #include "CGameEffect.h"
+#include "CGameSparkle.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CProjectilePart3.h"
-#include "CGameSparkle.h"
 #include "CUtil.h"
 #include "IcewindMisc.h"
 
