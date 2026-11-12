@@ -227,3 +227,30 @@
 0x70F750
 0x70FFE0
 0x711C90
+
+# MSVC 6 std::vector<CPoint>::insert(iterator, size_type, const CPoint&) (library): fill insert
+# used by CProjectileSingleTarget850DDC::Fire (this = vector at +0x2F2, pos = _Last) and by the
+# CProjectileSingleTarget850E84 direction table init (0x57BBC0, vector at 0x8E52D0, size()=0x582210).
+0x57AB70
+
+# MSVC 6 std::set<DWORD> (red-black tree, library). Nodes are 0x14 bytes: _Left +0, _Parent +4,
+# _Right +8, key +0xC (unsigned compare), _Red +0x10; shared nil node at 0x8E28C8 (refcount 0x8E28C4,
+# guarded by the lock at 0x7F9A11/0x7F9AAD). Used by CProjectileSingleTarget850E84::field_2B6 (+0x2B6),
+# CProjectileHelper84EEA8/84EEB0::Virtual4 (returns std::set<DWORD>) and CProjectileSingleTarget850F14.
+# 0x4C5770 allocates a node (operator new, RET 8): _Buynode.
+0x4C5770
+# 0x55B5E0 insert(iterator hint, const value&), 0x55C510 _Insert(_X, _Y, value),
+# 0x55C040 erase(iterator) (rebalancing), 0x55C4D0 _Erase(node) (recursive free),
+# 0x55B830 _Copy / assignment of the tree, 0x55B970 copy constructor body, 0x55BA60 default
+# constructor (creates the head node and the shared nil), 0x55BAF0 / 0x55C7A0 iterator ++ and
+# 0x55CC10 iterator -- (follow _Right/_Left/_Parent with the nil check).
+0x55B5E0
+0x55B830
+0x55B970
+0x55BA60
+0x55BAF0
+0x55C040
+0x55C4D0
+0x55C510
+0x55C7A0
+0x55CC10

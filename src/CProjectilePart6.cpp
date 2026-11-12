@@ -1,5 +1,6 @@
 #include "CProjectilePart6.h"
 
+#include <math.h>
 #include <stdlib.h>
 
 #include "CBaldurChitin.h"
@@ -31,15 +32,113 @@ CProjectileHelper84EEA8::CProjectileHelper84EEA8()
 // 0x55A610
 void CProjectileHelper84EEA8::Virtual0()
 {
+    if (field_30 != TRUE) {
+        if (field_1C <= 0) {
+            std::set<DWORD> targets = Virtual4();
+            std::list<LONG> filtered = sub_55A890(targets);
+            sub_55AB20(filtered);
+
+            field_1C = field_18;
+        }
+
+        field_1C--;
+    }
+}
+
+// 0x55A890
+std::list<LONG> CProjectileHelper84EEA8::sub_55A890(const std::set<DWORD>& targets)
+{
+    // NOTE: Inlined `std::set::find`.
+    for (std::map<LONG, CPoint>::iterator it = field_8.begin(); it != field_8.end(); it++) {
+        if (targets.find(it->first) == targets.end()) {
+            it->second.x = 0;
+        }
+    }
+
+    std::list<LONG> result;
+
+    for (std::set<DWORD>::const_iterator it = targets.begin(); it != targets.end(); it++) {
+        // NOTE: Inlined `std::map::operator[]`. A new entry starts as (0, 0);
+        // `CPoint`'s default constructor would leave it uninitialised.
+        std::map<LONG, CPoint>::iterator itEntry = field_8.find(*it);
+        if (itEntry == field_8.end()) {
+            itEntry = field_8.insert(std::make_pair(static_cast<LONG>(*it), CPoint(0, 0))).first;
+        }
+        CPoint& entry = itEntry->second;
+
+        if (entry.y < field_24) {
+            if (entry.x % field_20 == 0) {
+                // NOTE: Original inserts at the front, so the ids come out in
+                // reverse set order.
+                result.push_front(*it);
+                entry.y++;
+            }
+        }
+
+        entry.x++;
+    }
+
+    return result;
+}
+
+// 0x55AB20
+void CProjectileHelper84EEA8::sub_55AB20(const std::list<LONG>& targets)
+{
+    for (std::list<LONG>::const_iterator it = targets.begin(); it != targets.end(); it++) {
+        if (field_31 == TRUE && *it == m_pProjectile->m_sourceId) {
+            continue;
+        }
+
+        field_2C++;
+        if (field_2C > field_28) {
+            field_30 = TRUE;
+            return;
+        }
+
+        sub_55AB80(*it);
+    }
+}
+
+// 0x55AB80
+void CProjectileHelper84EEA8::sub_55AB80(LONG nTarget)
+{
     // TODO: Incomplete.
 }
 
 // 0x55AD90
-std::list<LONG> CProjectileHelper84EEA8::Virtual4()
+std::set<DWORD> CProjectileHelper84EEA8::Virtual4()
 {
-    // TODO: Incomplete.
+    CTypedPtrList<CPtrList, LONG*> targets(10);
 
-    return std::list<LONG>();
+    m_pProjectile->m_pArea->GetAllInRange(m_pProjectile->GetVertListPos(),
+        m_pProjectile->GetPos(),
+        CAIObjectType::ANYONE,
+        static_cast<WORD>(field_32),
+        m_pProjectile->m_terrainTable,
+        targets,
+        TRUE,
+        FALSE);
+
+    m_pProjectile->m_pArea->GetAllInRangeBack(m_pProjectile->GetPos(),
+        CAIObjectType::ANYONE,
+        static_cast<WORD>(field_32),
+        m_pProjectile->m_terrainTable,
+        targets,
+        TRUE,
+        FALSE,
+        FALSE);
+
+    std::set<DWORD> result;
+
+    POSITION pos = targets.GetHeadPosition();
+    while (pos != NULL) {
+        LONG nTarget = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+        // NOTE: Inlined `std::set::insert` with a begin() hint.
+        result.insert(result.begin(), nTarget);
+    }
+
+    return result;
 }
 
 // 0x55AF40
@@ -81,11 +180,53 @@ void CProjectileHelper84EEB0::sub_55B010(CPoint& a1, CPoint& a2)
 }
 
 // 0x55B1B0
-std::list<LONG> CProjectileHelper84EEB0::Virtual4()
+std::set<DWORD> CProjectileHelper84EEB0::Virtual4()
 {
-    // TODO: Incomplete.
+    CPoint ptPoly[4];
 
-    return std::list<LONG>();
+    CPoint& pos0 = m_pProjectile->GetPos();
+    ptPoly[0].x = pos0.x + field_3C[0].x;
+    ptPoly[0].y = pos0.y + field_3C[0].y;
+
+    CPoint& pos1 = m_pProjectile->GetPos();
+    ptPoly[1].x = pos1.x + field_3C[1].x;
+    ptPoly[1].y = pos1.y + field_3C[1].y;
+
+    CPoint& pos2 = m_pProjectile->GetPos();
+    ptPoly[2].x = pos2.x + field_3C[2].x;
+    ptPoly[2].y = pos2.y + field_3C[2].y;
+
+    CPoint& pos3 = m_pProjectile->GetPos();
+    ptPoly[3].x = pos3.x + field_3C[3].x;
+    ptPoly[3].y = pos3.y + field_3C[3].y;
+
+    CRect rBounding;
+    rBounding.left = min(min(ptPoly[0].x, ptPoly[1].x), min(ptPoly[2].x, ptPoly[3].x));
+    rBounding.top = min(min(ptPoly[0].y, ptPoly[1].y), min(ptPoly[2].y, ptPoly[3].y));
+    rBounding.right = max(max(ptPoly[0].x, ptPoly[1].x), max(ptPoly[2].x, ptPoly[3].x));
+    rBounding.bottom = max(max(ptPoly[0].y, ptPoly[1].y), max(ptPoly[2].y, ptPoly[3].y));
+
+    CTypedPtrList<CPtrList, LONG*> targets(10);
+
+    m_pProjectile->m_pArea->GetAllInPoly(rBounding,
+        ptPoly,
+        4,
+        CAIObjectType::ANYONE,
+        m_pProjectile->m_pArea->m_visibleTerrainTable,
+        targets,
+        FALSE);
+
+    std::set<DWORD> result;
+
+    POSITION pos = targets.GetHeadPosition();
+    while (pos != NULL) {
+        LONG nTarget = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+        // NOTE: Inlined `std::set::insert` with a begin() hint.
+        result.insert(result.begin(), nTarget);
+    }
+
+    return result;
 }
 
 // 0x579B40
@@ -155,7 +296,82 @@ void CProjectileSingleTarget850DDC::AIUpdate()
 // 0x579EF0
 void CProjectileSingleTarget850DDC::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    field_328 = nHeight;
+    field_32C = nType;
+    m_sourceId = source;
+    field_EA = pArea;
+
+    CGameObject* pObject;
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        sub_52A640(m_sourceId, field_318, TRUE);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        field_2D6 = field_2CE / field_302 / 2;
+
+        LONG dx = targetPos.x - field_318.x;
+        LONG dy = targetPos.y - field_318.y;
+
+        double t = sqrt(static_cast<double>(field_2DA * field_2DA) / static_cast<double>(dy * dy + dx * dx));
+        field_2AE[0].x = static_cast<LONG>(static_cast<double>(-dy) * t + static_cast<double>(field_318.x));
+        field_2AE[0].y = static_cast<LONG>(static_cast<double>(dx) * t + static_cast<double>(field_318.y));
+
+        t = sqrt(static_cast<double>(field_2DA * field_2DA) / static_cast<double>(dx * dx + dy * dy));
+        field_2AE[1].x = static_cast<LONG>(static_cast<double>(dy) * t + static_cast<double>(field_318.x));
+        field_2AE[1].y = static_cast<LONG>(static_cast<double>(-dx) * t + static_cast<double>(field_318.y));
+
+        LONG nAhead = field_2DA + field_2D2;
+        t = sqrt(static_cast<double>(nAhead * nAhead) / static_cast<double>(dy * dy + dx * dx));
+        LONG nAheadX = static_cast<LONG>(static_cast<double>(dx) * t + static_cast<double>(field_318.x));
+        LONG nAheadY = static_cast<LONG>(static_cast<double>(dy) * t + static_cast<double>(field_318.y));
+
+        t = sqrt(static_cast<double>(field_2D2 * field_2D2) / static_cast<double>(dy * dy + dx * dx));
+        field_320.x = static_cast<LONG>(static_cast<double>(dx) * t + static_cast<double>(field_318.x));
+        field_320.y = static_cast<LONG>(static_cast<double>(dy) * t + static_cast<double>(field_318.y));
+
+        LONG nHalfWidth = field_2CE / 2;
+        LONG nSide = field_2DA + nHalfWidth;
+        t = sqrt(static_cast<double>(nSide * nSide) / static_cast<double>(dx * dx + dy * dy));
+        field_2AE[2].x = static_cast<LONG>(static_cast<double>(nAheadX) + static_cast<double>(dy) * t);
+        field_2AE[2].y = static_cast<LONG>(static_cast<double>(-dx) * t + static_cast<double>(nAheadY));
+
+        t = sqrt(static_cast<double>(nSide * nSide) / static_cast<double>(dy * dy + dx * dx));
+        field_2AE[3].x = static_cast<LONG>(static_cast<double>(-dy) * t + static_cast<double>(nAheadX));
+        field_2AE[3].y = static_cast<LONG>(static_cast<double>(dx) * t + static_cast<double>(nAheadY));
+
+        for (LONG i = -field_2D6; i < field_2D6; i++) {
+            CPoint pt;
+            if (i < 0) {
+                LONG nStep = -(field_302 * i);
+                t = sqrt(static_cast<double>(nStep * nStep) / static_cast<double>(dx * dx + dy * dy));
+                pt.x = static_cast<LONG>(static_cast<double>(-dy) * t + static_cast<double>(field_320.x));
+                pt.y = static_cast<LONG>(static_cast<double>(dx) * t + static_cast<double>(field_320.y));
+            } else if (i > 0) {
+                LONG nStep = field_302 * i;
+                t = sqrt(static_cast<double>(nStep * nStep) / static_cast<double>(dx * dx + dy * dy));
+                pt.x = static_cast<LONG>(static_cast<double>(dy) * t + static_cast<double>(field_320.x));
+                pt.y = static_cast<LONG>(static_cast<double>(-dx) * t + static_cast<double>(field_320.y));
+            } else {
+                pt = field_320;
+            }
+
+            field_2F2.insert(field_2F2.end(), 1, pt);
+        }
+
+        field_2F2.insert(field_2F2.end(), 1, field_320);
+
+        CProjectileSingleTarget::Fire(pArea, source, target, targetPos, nHeight, nType);
+    }
 }
 
 // 0x57A530
@@ -328,7 +544,127 @@ CProjectileSingleTarget850E84::CProjectileSingleTarget850E84()
 // 0x57B210
 void CProjectileSingleTarget850E84::AIUpdate()
 {
-    // TODO: Incomplete.
+    field_2C6++;
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (pGame->m_nTimeStop == 0 || pGame->m_nTimeStopCaster == m_id) {
+        if (field_2AE == 0) {
+            RemoveFromArea();
+
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+                CGameObjectArray::THREAD_ASYNCH,
+                NULL,
+                INFINITE);
+            if (rc == CGameObjectArray::SUCCESS) {
+                delete this;
+            }
+
+            return;
+        }
+
+        field_2AE--;
+
+        m_pVidCell->FrameAdvance();
+
+        if (m_targetId != CGameObjectArray::INVALID_INDEX) {
+            CGameObject* pTarget;
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pTarget,
+                INFINITE);
+            if (rc != CGameObjectArray::SUCCESS) {
+                RemoveSelf();
+                return;
+            }
+
+            if (field_EA != pTarget->m_pArea) {
+                LONG nTargetId = m_targetId;
+                RemoveSelf();
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+                return;
+            }
+
+            CPoint& ptTarget = pTarget->GetPos();
+            m_posDest.x = ptTarget.x;
+            m_posDest.y = ptTarget.y;
+            field_2B0 = pTarget->m_posZ - m_posZ;
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        } else {
+            field_2B0 = 0;
+        }
+
+        CGameObject* pSource;
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_sourceId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pSource,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            return;
+        }
+
+        if (pSource->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            CGameSprite* pSprite = static_cast<CGameSprite*>(pSource);
+            m_nDirection = pSprite->GetDirection(m_posDest);
+            pSprite->SetDirection(m_nDirection);
+        } else {
+            m_nDirection = GetDirection(m_posDest);
+        }
+
+        sub_579860(NULL);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        sub_52A640(m_sourceId, m_pos, TRUE);
+
+        if (field_2C6 % field_2CE == 1) {
+            // NOTE: Inlined `std::set::clear`.
+            field_2B6.clear();
+        }
+
+        if (field_2C6 % field_2CA == 1) {
+            // NOTE: Inlined `std::set::find`.
+            if (field_2B6.find(field_2D2) == field_2B6.end()) {
+                Virtual8C(CPoint(field_2D2, 1));
+
+                // NOTE: Inlined `std::set::insert`.
+                field_2B6.insert(field_2D2);
+            }
+
+            Virtual88();
+        }
+
+        LONG nDx = m_posDest.x - m_pos.x;
+        LONG nDy = 4 * m_posDest.y / 3 - 4 * m_pos.y / 3;
+
+        m_posExact.x = m_pos.x << CParticle::RESOLUTION_INC;
+        m_posExact.y = 4 * (m_pos.y << CParticle::RESOLUTION_INC) / 3;
+
+        LONG nDistance = static_cast<LONG>(sqrt(static_cast<double>(nDx * nDx + nDy * nDy)) + 0.5);
+        if (nDistance == 0) {
+            field_2AE = 0;
+            field_2AF = 0;
+        } else {
+            LONG nSteps = (m_speed + nDistance - 1) / m_speed;
+            field_2AF = static_cast<BYTE>(nSteps);
+            m_posDelta.x = (nDx << CParticle::RESOLUTION_INC) / (nSteps & 0xFF);
+            m_posDelta.y = (nDy << CParticle::RESOLUTION_INC) / (nSteps & 0xFF);
+        }
+
+        m_sound.SetCoordinates(m_pos.x, m_pos.y, m_posZ);
+    }
 }
 
 // 0x57B780
@@ -417,7 +753,10 @@ void CProjectileSingleTarget850E84::Render(CGameArea* pArea, CVidMode* pVidMode,
 // 0x57B1D0
 void CProjectileSingleTarget850E84::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    CProjectileSingleTarget::Fire(pArea, source, target, targetPos, nHeight, nType);
+
+    field_2D2 = target;
+    DeliverEffects();
 }
 
 // 0x799CA0
@@ -428,13 +767,125 @@ void CProjectileSingleTarget850E84::DeliverEffects()
 // 0x57BE80
 void CProjectileSingleTarget850E84::Virtual88()
 {
-    // TODO: Incomplete.
+    CPoint ptOffset = stru_8E52D0[m_nDirection];
+
+    CPoint ptPoly[4];
+    ptPoly[0].x = ptOffset.x + m_pos.x;
+    ptPoly[0].y = ptOffset.y + m_pos.y;
+    ptPoly[1].x = m_pos.x - ptOffset.x;
+    ptPoly[1].y = m_pos.y - ptOffset.y;
+    ptPoly[2].x = m_posDest.x - ptOffset.x;
+    ptPoly[2].y = m_posDest.y - ptOffset.y;
+    ptPoly[3].x = ptOffset.x + m_posDest.x;
+    ptPoly[3].y = ptOffset.y + m_posDest.y;
+
+    CRect rBounding;
+    rBounding.left = min(min(ptPoly[0].x, ptPoly[1].x), min(ptPoly[2].x, ptPoly[3].x));
+    rBounding.top = min(min(ptPoly[0].y, ptPoly[1].y), min(ptPoly[2].y, ptPoly[3].y));
+    rBounding.right = max(max(ptPoly[0].x, ptPoly[1].x), max(ptPoly[2].x, ptPoly[3].x));
+    rBounding.bottom = max(max(ptPoly[0].y, ptPoly[1].y), max(ptPoly[2].y, ptPoly[3].y));
+
+    CTypedPtrList<CPtrList, LONG*> targets(10);
+
+    field_EA->GetAllInPoly(rBounding,
+        ptPoly,
+        4,
+        CAIObjectType::ANYONE,
+        field_EA->m_visibleTerrainTable,
+        targets,
+        TRUE);
+
+    POSITION pos = targets.GetHeadPosition();
+    while (pos != NULL) {
+        LONG nTarget = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+        // NOTE: Inlined `std::set::find`.
+        if (field_2B6.find(nTarget) == field_2B6.end() && nTarget != m_sourceId) {
+            Virtual8C(CPoint(nTarget, 0));
+
+            // NOTE: Inlined `std::set::insert`.
+            field_2B6.insert(nTarget);
+        }
+    }
 }
 
 // 0x57C1D0
 void CProjectileSingleTarget850E84::Virtual8C(CPoint pt)
 {
-    // TODO: Incomplete.
+    LONG nTarget = pt.x;
+
+    CGameObject* pObject;
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTarget,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pObject,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    if ((CGameObject::TYPE_AIBASE & pObject->GetObjectType()) == 0) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTarget,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return;
+    }
+
+    if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+        CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+        if (sub_536FC0(pSprite) == TRUE) {
+            CGameEffect::FeedBackImmuneToResource(pSprite, field_18A);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTarget,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            return;
+        }
+    }
+
+    CGameObject* pSource;
+    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pSource,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTarget,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return;
+    }
+
+    CPoint ptSource;
+    sub_52A640(m_sourceId, ptSource, TRUE);
+
+    if (field_EA->CheckLOS(ptSource, pObject->GetPos(), m_terrainTable, FALSE)) {
+        if (pt.y == 1) {
+            std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pSource), "EffAS1", 1);
+
+            for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); it++) {
+                (*it)->m_sourceRes = CResRef("SpWi217");
+
+                CMessage* message = new CMessageAddEffect(*it, m_sourceId, nTarget);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        } else {
+            std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(static_cast<CGameAIBase*>(pSource), "EffAS2", 1);
+
+            for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); it++) {
+                (*it)->m_sourceRes = CResRef("SpWi217");
+
+                CMessage* message = new CMessageAddEffect(*it, m_sourceId, nTarget);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTarget,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x57C510
@@ -1823,5 +2274,43 @@ BOOLEAN CProjectileSingleTarget850E84::byte_8E52E8;
 // 0x57BBC0
 void CProjectileSingleTarget850E84::sub_57BBC0()
 {
-    // TODO: Incomplete.
+    if (byte_8E52E8 != TRUE) {
+        // NOTE: Inlined `std::vector::resize`.
+        stru_8E52D0.resize(CGameSprite::NUM_DIR);
+
+        stru_8E52D0[CGameSprite::DIR_E].x = 0;
+        stru_8E52D0[CGameSprite::DIR_E].y = -20;
+        stru_8E52D0[CGameSprite::DIR_NEE].x = -10;
+        stru_8E52D0[CGameSprite::DIR_NEE].y = -18;
+        stru_8E52D0[CGameSprite::DIR_NE].x = -19;
+        stru_8E52D0[CGameSprite::DIR_NE].y = -14;
+        stru_8E52D0[CGameSprite::DIR_NNE].x = -25;
+        stru_8E52D0[CGameSprite::DIR_NNE].y = -8;
+        stru_8E52D0[CGameSprite::DIR_N].x = -27;
+        stru_8E52D0[CGameSprite::DIR_N].y = 0;
+        stru_8E52D0[CGameSprite::DIR_NNW].x = -25;
+        stru_8E52D0[CGameSprite::DIR_NNW].y = 8;
+        stru_8E52D0[CGameSprite::DIR_NW].x = -19;
+        stru_8E52D0[CGameSprite::DIR_NW].y = 14;
+        stru_8E52D0[CGameSprite::DIR_NWW].x = -10;
+        stru_8E52D0[CGameSprite::DIR_NWW].y = 18;
+        stru_8E52D0[CGameSprite::DIR_W].x = 0;
+        stru_8E52D0[CGameSprite::DIR_W].y = 20;
+        stru_8E52D0[CGameSprite::DIR_SWW].x = 10;
+        stru_8E52D0[CGameSprite::DIR_SWW].y = 18;
+        stru_8E52D0[CGameSprite::DIR_SW].x = 19;
+        stru_8E52D0[CGameSprite::DIR_SW].y = 14;
+        stru_8E52D0[CGameSprite::DIR_SSW].x = 25;
+        stru_8E52D0[CGameSprite::DIR_SSW].y = 8;
+        stru_8E52D0[CGameSprite::DIR_S].x = -20;
+        stru_8E52D0[CGameSprite::DIR_S].y = 0;
+        stru_8E52D0[CGameSprite::DIR_SSE].x = -24;
+        stru_8E52D0[CGameSprite::DIR_SSE].y = 8;
+        stru_8E52D0[CGameSprite::DIR_SE].x = -19;
+        stru_8E52D0[CGameSprite::DIR_SE].y = 14;
+        stru_8E52D0[CGameSprite::DIR_SEE].x = -10;
+        stru_8E52D0[CGameSprite::DIR_SEE].y = 18;
+
+        byte_8E52E8 = TRUE;
+    }
 }

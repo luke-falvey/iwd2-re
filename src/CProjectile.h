@@ -27,6 +27,7 @@ public:
     void ClearEffects();
     LONG DetermineHeight(CGameSprite* pSprite);
     SHORT GetDirection(CPoint target);
+    BOOLEAN sub_536FC0(CGameSprite* pSprite);
     void PlaySound(CResRef resRef, BOOL loop, BOOL fireAndForget);
 
     static CProjectile* DecodeProjectile(WORD projectileType, CGameAIBase* pSource, BOOL a3);
