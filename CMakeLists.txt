@@ -163,6 +163,8 @@ target_sources(iwd2-core PRIVATE
     "src/CGameSave.h"
     "src/CGameSound.cpp"
     "src/CGameSound.h"
+    "src/CGameSparkle.cpp"
+    "src/CGameSparkle.h"
     "src/CGameSpawning.cpp"
     "src/CGameSpawning.h"
     "src/CGameSprite.cpp"
