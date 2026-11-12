@@ -17,6 +17,7 @@ public:
     /* 0028 */ BOOLEAN CanSaveGame(STRREF& strError) override;
     /* 0030 */ void DebugDump(const CString& message, BOOLEAN bEchoToScreen) override;
     /* 0034 */ BOOL IsOver(const CPoint& pt) override;
+    /* 0040 */ void OnActionButton(const CPoint& pt) override;
     /* 0048 */ void RemoveFromArea() override;
     /* 0058 */ void SetCursor(LONG nToolTip) override;
 

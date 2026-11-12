@@ -477,6 +477,218 @@ BOOL CGameDoor::IsOver(const CPoint& pt)
     return TRUE;
 }
 
+// 0x487D10
+void CGameDoor::OnActionButton(const CPoint& pt)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CAIGroup* pGroup = pGame->GetGroup();
+
+    if ((m_dwFlags & 0x80) != 0 && (m_dwFlags & 0x100) == 0) {
+        // NOTE: Uninline.
+        pGame->SetLastTarget(CGameObjectArray::INVALID_INDEX);
+
+        CGameObject::OnActionButton(pt);
+        return;
+    }
+
+    switch (pGame->GetState()) {
+    case 0:
+        // NOTE: Uninline.
+        pGame->SetLastTarget(CGameObjectArray::INVALID_INDEX);
+
+        if (pGroup->GetCount() > 0) {
+            // NOTE: Original reads action ID 142 from a constant at 0x847890.
+            CAIAction action(142, m_id, 0, 0);
+            pGroup->GroupAction(action, TRUE, NULL);
+
+            LONG* pList = pGroup->GetGroupList();
+            LONG nRange = RANGE_DOOR;
+
+            if (pList == NULL) {
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameDoor.cpp
+                // __LINE__: 857
+                UTIL_ASSERT(FALSE);
+            } else {
+                CGameObjectArray* pObjectArray = pGame->GetObjectArray();
+                CPoint ptDest;
+                SHORT nIndex;
+                for (nIndex = 0; nIndex < pGroup->GetCount(); nIndex++) {
+                    CGameSprite* pSprite;
+                    BYTE rc = pObjectArray->GetShare(pList[nIndex],
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                    if (rc != CGameObjectArray::SUCCESS) {
+                        // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameDoor.cpp
+                        // __LINE__: 865
+                        UTIL_ASSERT(FALSE);
+                        continue;
+                    }
+
+                    CPoint ptSprite = pSprite->GetPos();
+
+                    // NOTE: Uninline.
+                    ptDest = GetClosestDest(ptSprite);
+
+                    if (strnicmp(reinterpret_cast<char*>(m_pArea->m_header.m_areaName), "ar5004", 7) == 0) {
+                        nRange = RANGE_DOOR / 10;
+                    } else if (strnicmp(reinterpret_cast<char*>(m_pArea->m_header.m_areaName), "ar5202", 7) == 0) {
+                        nRange = RANGE_DOOR / 5;
+                    }
+
+                    LONG dx = ptSprite.x - ptDest.x;
+                    LONG dy = ptSprite.y - ptDest.y;
+
+                    // NOTE: Y distance is scaled by 4/3 (isometric).
+                    if (dx * dx + (dy * dy * 16) / 9 > nRange) {
+                        pObjectArray->ReleaseShare(pList[nIndex],
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                    } else {
+                        pObjectArray->ReleaseShare(pList[nIndex],
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                        break;
+                    }
+                }
+
+                if (nIndex == pGroup->GetCount()) {
+                    // NOTE: If every `GetShare` failed `ptDest` is used
+                    // uninitialized.
+                    CAIAction moveAction(CAIAction::MOVETOPOINT, ptDest, 0, -1);
+                    pGroup->GroupAction(moveAction, FALSE, NULL);
+                }
+
+                delete pList;
+            }
+        }
+        break;
+    case 2:
+        // NOTE: Uninline.
+        pGame->SetLastTarget(CGameObjectArray::INVALID_INDEX);
+
+        switch (pGame->GetIconIndex()) {
+        case 12:
+            if ((m_dwFlags & 0x1) != 0 || (m_dwFlags & 0x2) == 0) {
+                CGameObject::OnActionButton(pt);
+            } else {
+                // NOTE: Original reads action ID 148 from a constant at
+                // 0x84789C.
+                CAIAction action(148, m_typeAI, 0, 0, 0);
+                pGroup->GroupAction(CAIAction::NULL_ACTION, TRUE, &action);
+
+                pGame->SetState(0);
+                pGame->GetButtonArray()->SetSelectedButton(100);
+                pGame->GetButtonArray()->UpdateState();
+            }
+            break;
+        case 18:
+        case 40:
+        case 255:
+            CGameObject::OnActionButton(pt);
+            break;
+        case 20:
+            pGame->UseMagicOnObject(m_id);
+
+            pGame->SetState(0);
+            pGame->GetButtonArray()->SetSelectedButton(100);
+            pGame->GetButtonArray()->UpdateState();
+            break;
+        case 36:
+            if (m_trapActivated != 0 && m_trapDetected != 0) {
+                SHORT nPortrait = g_pBaldurChitin->m_pEngineWorld->GetSelectedCharacter();
+
+                // NOTE: Uninline.
+                LONG nCharacterId = pGame->GetCharacterId(nPortrait);
+
+                CGameSprite* pSprite;
+
+                BYTE rc;
+                do {
+                    rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    BYTE nDisableDevice = pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_DISABLE_DEVICE];
+
+                    pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+
+                    if (nDisableDevice == 0) {
+                        break;
+                    }
+                }
+
+                // NOTE: Original reads action ID 28 from a constant at
+                // 0x8477BA.
+                CAIAction action(28, m_typeAI, 0, 0, 0);
+                pGroup->GroupAction(action, TRUE, NULL);
+            } else {
+                if ((m_dwFlags & 0x2) == 0) {
+                    CGameObject::OnActionButton(pt);
+                    break;
+                }
+
+                SHORT nPortrait = g_pBaldurChitin->m_pEngineWorld->GetSelectedCharacter();
+
+                // NOTE: Uninline.
+                LONG nCharacterId = pGame->GetCharacterId(nPortrait);
+
+                CGameSprite* pSprite;
+
+                BYTE rc;
+                do {
+                    rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    BYTE nOpenLock = pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_OPEN_LOCK];
+
+                    pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+
+                    if (nOpenLock == 0) {
+                        break;
+                    }
+                }
+
+                // NOTE: Original reads action ID 145 from a constant at
+                // 0x847896.
+                CAIAction action(145, m_typeAI, 0, 0, 0);
+                pGroup->GroupAction(action, TRUE, NULL);
+            }
+
+            pGame->SetState(0);
+            pGame->GetButtonArray()->SetSelectedButton(100);
+            pGame->GetButtonArray()->UpdateState();
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameDoor.cpp
+            // __LINE__: 978
+            UTIL_ASSERT(FALSE);
+        }
+        break;
+    case 3:
+        // NOTE: Uninline.
+        pGame->SetLastTarget(CGameObjectArray::INVALID_INDEX);
+
+        CGameObject::OnActionButton(pt);
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameDoor.cpp
+        // __LINE__: 989
+        UTIL_ASSERT(FALSE);
+    }
+}
+
 // 0x4892B0
 void CGameDoor::RemoveFromArea()
 {
