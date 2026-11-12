@@ -93,6 +93,8 @@ public:
     void UpdateHatedRacePanel(CGameSprite* pSprite);
     void UpdateSpecializationPanel(CGameSprite* pSprite);
     void UpdateAbilitiesPanel(CGameSprite* pSprite);
+    void sub_5DAF30();
+    void sub_5DB200(CGameSprite* pSprite);
     void UpdateSpellsPanel(CGameSprite* pSprite);
     void GetPartyInformation(DWORD& nPartyChapterKillsXPValue, DWORD& nPartyChapterKillsNumber, DWORD& nPartyGameKillsXPValue, DWORD& nPartyGameKillsNumber);
     void EnableMainPanel(BOOL bEnable);
