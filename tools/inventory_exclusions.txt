@@ -83,3 +83,12 @@
 # CTypedPtrList<CPtrList, T*> constructor (implicit): CPtrList(nBlockSize) then
 # store of the vtable 0x84EA40; returns this.
 0x5371A0
+
+# CResHelper<CStoreFile, 1014>::SetResRef (the repo template in CRes.h; resource
+# type 0x3F6 passed to CDimm::GetResObject, same body as the CResCell instance).
+0x43E190
+
+# CMessageMoveGlobal scalar deleting destructor (implicit): calls the implicit
+# destructor 0x4670C0 (destroys the CString at +0xC) and deletes this when the
+# flag argument has bit 0 set. Slot 0 of the vtable at 0x848CAC.
+0x4670A0

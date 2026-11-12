@@ -9164,9 +9164,36 @@ BOOLEAN CBaldurMessage::SendDeleteAreaAnnounce(CString sAreaString, BOOLEAN bDel
 // 0x43B680
 BOOLEAN CBaldurMessage::sub_43B680(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    CString sAreaString;
+    INT nMsgPtr;
+    BYTE nLength;
+    BOOLEAN bDelete;
 
-    return FALSE;
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        return FALSE;
+    }
+
+    nMsgPtr = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    nLength = *reinterpret_cast<BYTE*>(pMessage + nMsgPtr);
+    nMsgPtr += sizeof(BYTE);
+
+    sAreaString = CString(reinterpret_cast<char*>(pMessage + nMsgPtr), nLength);
+    nMsgPtr += nLength;
+
+    bDelete = *reinterpret_cast<BOOLEAN*>(pMessage + nMsgPtr);
+
+    CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sAreaString);
+    if (pArea != NULL) {
+        if (bDelete == TRUE) {
+            g_pBaldurChitin->m_pEngineWorld->DeleteArea(pArea);
+        } else {
+            pArea->field_AE6 = TRUE;
+        }
+    }
+
+    return TRUE;
 }
 
 // 0x43B780
@@ -10016,7 +10043,7 @@ BOOLEAN CBaldurMessage::OnSettingsNightmareMode(INT nMsgFrom, BYTE* pByteMessage
         return FALSE;
     }
 
-    if (nMsgFrom != g_pChitin->cNetwork.GetHostPlayerID()) {
+    if (nMsgFrom != g_pChitin->cNetwork.FindPlayerLocationByID(g_pChitin->cNetwork.GetHostPlayerID(), FALSE)) {
         return FALSE;
     }
 
@@ -10028,9 +10055,60 @@ BOOLEAN CBaldurMessage::OnSettingsNightmareMode(INT nMsgFrom, BYTE* pByteMessage
 // 0x43D590
 BOOLEAN CBaldurMessage::DemandSettingsNightmareMode(BOOLEAN wait)
 {
-    // TODO: Incomplete.
+    CString sHostName;
+    DWORD dwSize;
+    BYTE* pData;
+    INT nMsgFrom;
 
-    return FALSE;
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        return FALSE;
+    }
+
+    // NOTE: Uninline.
+    g_pChitin->cNetwork.GetHostPlayerName(sHostName);
+
+    if (strcmp(sHostName, "") == 0) {
+        return FALSE;
+    }
+
+    g_pChitin->cNetwork.SendSpecificMessage(sHostName,
+        CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_MPSETTINGS,
+        MSG_SUBTYPE_MPSETTINGS_DEMAND_NIGHTMAREMODE,
+        NULL,
+        0);
+
+    if (wait == TRUE) {
+        // NOTE: Peeks for `MSG_SUBTYPE_MPSETTINGS_DEMAND_NIGHTMAREMODE` but
+        // fetches `MSG_SUBTYPE_MPSETTINGS_NIGHTMAREMODE`.
+        while (!g_pChitin->cNetwork.PeekSpecificMessage(sHostName, MSG_TYPE_MPSETTINGS, MSG_SUBTYPE_MPSETTINGS_DEMAND_NIGHTMAREMODE)
+            && g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+            g_pBaldurChitin->m_cBaldurMessage.HandleBlockingMessages();
+
+            g_pChitin->m_bDisplayStale = TRUE;
+            Sleep(60);
+        }
+
+        if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+            return FALSE;
+        }
+
+        pData = g_pChitin->cNetwork.FetchSpecificMessage(sHostName,
+            MSG_TYPE_MPSETTINGS,
+            MSG_SUBTYPE_MPSETTINGS_NIGHTMAREMODE,
+            dwSize);
+
+        // NOTE: Uninline.
+        nMsgFrom = g_pChitin->cNetwork.FindPlayerLocationByID(g_pChitin->cNetwork.GetHostPlayerID(), FALSE);
+
+        // NOTE: Uninline.
+        OnSettingsNightmareMode(nMsgFrom, pData, dwSize);
+
+        delete pData;
+    }
+
+    return TRUE;
 }
 
 // 0x43D810
