@@ -186,6 +186,10 @@
 # (0x40A100) and deletes this when the flag argument has bit 0 set.
 0x4B2340
 
+# CGameSparkle scalar deleting destructor (implicit): calls ~CGameSparkle (0x51C330)
+# and deletes this when the flag argument has bit 0 set. Slot 0 of the vtable at 0x84D624.
+0x51C310
+
 # std::bitset<N> range check (library): builds the exception object for
 # "invalid bitset<N> position" and throws it with __CxxThrowException.
 0x4C5790

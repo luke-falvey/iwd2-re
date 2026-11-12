@@ -1,11 +1,17 @@
 #include "CProjectilePart1.h"
 
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "CBaldurChitin.h"
 #include "CGameArea.h"
 #include "CGameEffect.h"
+#include "CGameSparkle.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CInfinity.h"
+#include "CParticle.h"
 #include "CPathSearch.h"
 #include "CVidPalette.h"
 #include "CUtil.h"
@@ -94,10 +100,131 @@ CProjectileBAM84DBDC::CProjectileBAM84DBDC(CResRef resRef)
     field_2F1 = 0xFF;
 }
 
+// 0x7105B0
+CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const CPoint& pos, WORD a5, BYTE a6, BYTE a7, WORD a8)
+{
+    // TODO: Incomplete.
+}
+
+// 0x70FD50
+CGame85BF7C::CGame85BF7C(DWORD a1, const BYTE* pColors, const CString& a3, CGameArea* pArea, const CPoint& pos, LONG nPosZ, const CPoint& a7, LONG a8, LONG a9, BYTE a10)
+{
+    // TODO: Incomplete.
+}
+
 // 0x52DD60
 void CProjectileBAM84DBDC::AIUpdate()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    if (field_2A8 == 0) {
+        m_pVidCell->FrameAdvance();
+
+        LONG nDistance = (m_posDest.y - m_pos.y) * (m_posDest.y - m_pos.y) * 16 / 9
+            + (m_posDest.x - m_pos.x) * (m_posDest.x - m_pos.x);
+        if (nDistance <= (m_speed + 1) * (m_speed + 1)) {
+            OnArrival();
+            return;
+        }
+
+        Virtual84(m_posDest);
+
+        if (field_E2 != 0) {
+            CGameSparkle* pSparkle = new CGameSparkle(field_9A, 1 /* 0x84D600 */, 25 /* 0x84D5F0 */);
+            pSparkle->AddToArea(field_EA, m_pos, m_posZ, CGameObject::LIST_FRONT);
+        }
+
+        m_sound.SetCoordinates(m_pos.x, m_pos.y, m_posZ);
+        return;
+    }
+
+    if (field_2F6 != 0) {
+        // NOTE: Virtual call through the object's vtable in the original.
+        field_2FA.FrameAdvance();
+    }
+
+    if (field_3D4 != 0) {
+        // NOTE: Virtual call through the object's vtable in the original.
+        field_3D8.FrameAdvance();
+    }
+
+    if (field_2AE != 0) {
+        field_2AE--;
+        return;
+    }
+
+    field_2AE = field_2AC;
+
+    if (sub_52D430(FALSE)) {
+        field_2A6--;
+    }
+
+    if (field_2A6 <= 0) {
+        RemoveFromArea();
+
+        BYTE rc = pGame->GetObjectArray()->Delete(m_id,
+            CGameObjectArray::THREAD_ASYNCH,
+            NULL,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            delete this;
+        }
+
+        return;
+    }
+
+    if (field_2F0 == 0) {
+        return;
+    }
+
+    BYTE aColors[7];
+
+    switch (field_2F1) {
+    case 0:
+        memset(aColors, 'C', sizeof(aColors));
+        field_2F0 = 0;
+        break;
+    case 1:
+        memset(aColors, '5', sizeof(aColors));
+        field_2F0 = 0;
+        break;
+    case 2:
+        memset(aColors, '1', sizeof(aColors));
+        field_2F0 = 0;
+        break;
+    case 3:
+        memset(aColors, 'G', sizeof(aColors));
+        field_2F0 = 0;
+        break;
+    case 4:
+        memset(aColors, 'B', sizeof(aColors));
+        field_2F0 = 0;
+        break;
+    case 5:
+        memset(aColors, 'A', sizeof(aColors));
+        field_2F0 = 0;
+        break;
+    case 0xFF:
+        field_2F0 = 0;
+        return;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CProjectile.cpp
+        // __LINE__: 5675
+        UTIL_ASSERT(FALSE);
+    }
+
+    // NOTE: The object is not kept.
+    new CGame85BFE8(field_2F1,
+        aColors,
+        field_EA,
+        m_pos,
+        field_2A0,
+        m_speed,
+        1 /* 0x85BD6D */,
+        field_2AC * field_2A6);
 }
 
 // 0x52CF80
@@ -226,7 +353,71 @@ void CProjectileBAM84DBDC::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
 // 0x52D9F0
 void CProjectileBAM84DBDC::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    CGameObject* pSource;
+    BYTE rc;
+
+    m_sourceId = source;
+    m_targetId = target;
+    field_EA = pArea;
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pSource,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    CPoint pt;
+    sub_52A640(m_sourceId, pt, TRUE);
+    CPoint ptStart = pt;
+
+    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Add(&m_id, this, INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        delete this;
+
+        // NOTE: `m_sourceId` is read after `this` is deleted.
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return;
+    }
+
+    // NOTE: Uninline.
+    LONG nSourceHeight = DetermineHeight(static_cast<CGameSprite*>(pSource));
+
+    CGameObject::AddToArea(pArea, ptStart, nSourceHeight, CGameObject::LIST_FRONT);
+
+    // NOTE: Inlined.
+    PlaySound(m_fireSoundRef, m_loopFireSound, FALSE);
+
+    m_posDest.x = targetPos.x;
+    m_pos.x = ptStart.x;
+    m_posExact.x = ptStart.x << CParticle::RESOLUTION_INC;
+    m_posExact.y = 4 * (ptStart.y << CParticle::RESOLUTION_INC) / 3;
+    m_posDest.y = targetPos.y;
+    m_pos.y = ptStart.y;
+
+    LONG dy = 4 * m_posDest.y / 3 - 4 * m_pos.y / 3;
+    LONG dx = m_posDest.x - m_pos.x;
+
+    LONG nDistance = static_cast<LONG>(sqrt(static_cast<double>(dx * dx + dy * dy)) + 0.5);
+    if (nDistance == 0) {
+        OnArrival();
+    } else {
+        m_posDelta.x = (dx << CParticle::RESOLUTION_INC) * m_speed / nDistance;
+        m_posDelta.y = (dy << CParticle::RESOLUTION_INC) * m_speed / nDistance;
+
+        // NOTE: Uninline.
+        m_nDirection = GetDirection(m_posDest);
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x52D430
@@ -408,7 +599,45 @@ CProjectileBAM84D938::CProjectileBAM84D938(CResRef resRef)
 // 0x52E160
 void CProjectileBAM84D938::Virtual88()
 {
-    // TODO: Incomplete.
+    WORD nProjectileType;
+
+    switch (field_9A) {
+    case 1:
+    case 9:
+    case 10:
+        nProjectileType = 0xC3;
+        break;
+    case 2:
+        nProjectileType = 0xC4;
+        break;
+    case 3:
+    case 11:
+        nProjectileType = 0xC7;
+        break;
+    case 4:
+        nProjectileType = 0xC5;
+        break;
+    case 5:
+        nProjectileType = 0xC6;
+        break;
+    case 6:
+        nProjectileType = 0xC8;
+        break;
+    case 7:
+    case 8:
+        nProjectileType = 0xC9;
+        break;
+    case 12:
+        nProjectileType = 0xCA;
+        break;
+    default:
+        return;
+    }
+
+    CProjectile* pProjectile = CProjectile::DecodeProjectile(nProjectileType + 1, NULL, FALSE);
+    if (pProjectile != NULL) {
+        pProjectile->Fire(field_EA, m_sourceId, m_targetId, m_posDest, 30, field_9A);
+    }
 }
 
 // 0x52E230
@@ -437,13 +666,99 @@ CProjectileBAM84DC68::CProjectileBAM84DC68()
 // 0x52E4D0
 void CProjectileBAM84DC68::AIUpdate()
 {
-    // TODO: Incomplete.
+    CString sEmpty("");
+    CPoint ptZero(0, 0);
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    if (field_2A8 == 0) {
+        m_pVidCell->FrameAdvance();
+
+        LONG nDistance = (m_posDest.y - m_pos.y) * (m_posDest.y - m_pos.y) * 16 / 9
+            + (m_posDest.x - m_pos.x) * (m_posDest.x - m_pos.x);
+        if (nDistance <= (m_speed + 1) * (m_speed + 1)) {
+            OnArrival();
+            return;
+        }
+
+        Virtual84(m_posDest);
+
+        field_4B9++;
+        if (field_4B9 == 1) {
+            field_4B9 = 0;
+
+            // NOTE: The objects are not kept.
+            LONG r1 = rand() % 5;
+            LONG r2 = rand() % 5;
+            CPoint ptPos1(((m_pos.x + r2 - 2) << CGameSprite::EXACT_SCALE) - m_posDelta.x * 4 / 3,
+                ((m_pos.y + r1 - 2) << CGameSprite::EXACT_SCALE) - m_posDelta.y * 4 / 3);
+            new CGame85BF7C(0x300, field_4B2, sEmpty, field_EA, ptPos1, -m_posZ, ptZero, 0, 0, 1 /* 0x85BD6D */);
+
+            r1 = rand() % 5;
+            r2 = rand() % 5;
+            CPoint ptPos2(((m_pos.x + r2 - 2) << CGameSprite::EXACT_SCALE) - m_posDelta.x,
+                ((m_pos.y + r1 - 2) << CGameSprite::EXACT_SCALE) - m_posDelta.y);
+            new CGame85BF7C(0x300, field_4B2, sEmpty, field_EA, ptPos2, -m_posZ, ptZero, 0, 0, 1 /* 0x85BD6D */);
+
+            r1 = rand() % 5;
+            r2 = rand() % 5;
+            CPoint ptPos3(((m_pos.x + r2 - 2) << CGameSprite::EXACT_SCALE) - m_posDelta.x * 2 / 3,
+                ((m_pos.y + r1 - 2) << CGameSprite::EXACT_SCALE) - m_posDelta.y * 2 / 3);
+            new CGame85BF7C(0x300, field_4B2, sEmpty, field_EA, ptPos3, -m_posZ, ptZero, 0, 0, 1 /* 0x85BD6D */);
+        }
+
+        if (field_E2 != 0) {
+            CGameSparkle* pSparkle = new CGameSparkle(field_9A, 1 /* 0x84D600 */, 25 /* 0x84D5F0 */);
+            pSparkle->AddToArea(field_EA, m_pos, m_posZ, CGameObject::LIST_FRONT);
+        }
+
+        m_sound.SetCoordinates(m_pos.x, m_pos.y, m_posZ);
+        return;
+    }
+
+    if (field_2AE == 0) {
+        field_2AE = field_2AC;
+
+        if (sub_52D430(FALSE)) {
+            field_2A6--;
+        }
+
+        if (field_2A6 <= 0) {
+            RemoveFromArea();
+
+            BYTE rc = pGame->GetObjectArray()->Delete(m_id,
+                CGameObjectArray::THREAD_ASYNCH,
+                NULL,
+                INFINITE);
+            if (rc == CGameObjectArray::SUCCESS) {
+                delete this;
+            }
+
+            return;
+        }
+    }
+
+    field_2AE--;
 }
 
 // 0x52E940
 void CProjectileBAM84DC68::Virtual88()
 {
-    // TODO: Incomplete.
+    BYTE aColors[7];
+    memset(aColors, field_4BA, sizeof(aColors));
+
+    // NOTE: The object is not kept.
+    new CGame85BFE8(0 /* 0x85BD70 */,
+        aColors,
+        field_EA,
+        m_pos,
+        field_2A0,
+        static_cast<BYTE>(m_speed) >> 1,
+        1 /* 0x85BD6D */,
+        0);
 }
 
 // 0x52E9F0
