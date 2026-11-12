@@ -59,6 +59,8 @@ public:
     BOOL PolyLine(INT nSurface, CRect& rSurface, LPPOINT lpPoints, int nCount, COLORREF rgbColor, int nThickness);
     BOOL UnLockSurface(UINT nIndex, LPVOID lpSurfaceData);
     static void SetWindowedMode(HWND hWnd);
+    DWORD FUN_0079ad20(DWORD dwPixel, DWORD dwScale);
+    DWORD FUN_0079ad90(DWORD dwPixel);
     BOOL DrawLine3d(INT nXFrom, INT nYFrom, INT nXTo, INT nYTo, const CRect& rSurface, COLORREF rgbColor);
     BOOL DrawRect3d(const CRect& r, const CRect& rClip, COLORREF rgbColor);
     BOOL DrawEllipse3d(const CPoint& ptCenter, const CSize& axis, const CRect& rClip, COLORREF rgbColor);

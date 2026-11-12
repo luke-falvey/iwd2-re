@@ -2534,6 +2534,23 @@ void CVidMode::SetWindowedMode(HWND hWnd)
         SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOSIZE);
 }
 
+// 0x79AD20
+DWORD CVidMode::FUN_0079ad20(DWORD dwPixel, DWORD dwScale)
+{
+    DWORD pixel = dwPixel & 0xFFFF;
+    DWORD r = (((m_dwRBitMask & pixel) >> m_dwRBitShift) * dwScale >> 8) << m_dwRBitShift;
+    DWORD g = (((m_dwGBitMask & pixel) >> m_dwGBitShift) * dwScale >> 8) << m_dwGBitShift;
+    DWORD b = (((m_dwBBitMask & pixel) >> m_dwBBitShift) * dwScale >> 8) << m_dwBBitShift;
+    return r | g | b;
+}
+
+// 0x79AD90
+DWORD CVidMode::FUN_0079ad90(DWORD dwPixel)
+{
+    DWORD pixel = dwPixel & 0xFFFF;
+    return ((((m_dwBBitMask & pixel) >> m_dwBBitShift) << field_CA) + (((m_dwGBitMask & pixel) >> m_dwGBitShift) << field_C6) * 2) + (((m_dwRBitMask & pixel) >> m_dwRBitShift) << field_C2);
+}
+
 // 0x7BC100
 BOOL CVidMode::ActivateVideoMode(CVidMode* pPrevVidMode, HWND hWnd, BOOLEAN bFullscreen)
 {
