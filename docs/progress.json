@@ -4,16 +4,16 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 8238,
-  "functions_done": 7979,
-  "functions_complete": 7977,
+  "functions_total": 8175,
+  "functions_done": 7988,
+  "functions_complete": 7986,
   "incomplete_markers": 3,
   "incomplete_by_file": {
     "src/BalDataTypes.h": 1,
     "src/CScreenChapter.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10610,
+  "annotations_total": 10619,
   "annotations_not_function_start": 2608,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -151,10 +151,6 @@
       "src/CScreenWorldMap.cpp",
       "src/CScreenWorldMap.cpp",
       "src/IcewindCGameEffects.cpp"
-    ],
-    "0x422C60": [
-      "src/CBaldurChitin.cpp",
-      "src/CBaldurChitin.cpp"
     ],
     "0x8CD2E0": [
       "src/CBaldurEngine.cpp",
@@ -970,10 +966,6 @@
       "src/CScreenOptions.cpp",
       "src/CScreenSpellbook.cpp"
     ],
-    "0x619220": [
-      "src/CScreenCharacter.cpp",
-      "src/CScreenCreateChar.cpp"
-    ],
     "0x632C00": [
       "src/CScreenCharacter.cpp",
       "src/CScreenCharacter.cpp",
@@ -997,10 +989,6 @@
       "src/CScreenConnection.cpp",
       "src/CScreenConnection.cpp",
       "src/CUIControlFactory.cpp"
-    ],
-    "0x5ED130": [
-      "src/CScreenCharacter.cpp",
-      "src/CScreenCharacter.cpp"
     ],
     "0x638D70": [
       "src/CScreenConnection.cpp",
@@ -1125,10 +1113,6 @@
       "src/CScreenWorldMap.cpp"
     ],
     "0x661480": [
-      "src/CScreenMultiPlayer.cpp",
-      "src/CScreenSinglePlayer.cpp"
-    ],
-    "0x663810": [
       "src/CScreenMultiPlayer.cpp",
       "src/CScreenSinglePlayer.cpp"
     ],
@@ -3819,9 +3803,9 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3729316,
-  "bytes_done": 3691665,
-  "bytes_complete": 3690836,
+  "bytes_total": 3719530,
+  "bytes_done": 3693180,
+  "bytes_complete": 3692351,
   "largest_stubs": [
     {
       "addr": "0x5D4190",
