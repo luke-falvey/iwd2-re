@@ -4,7 +4,8 @@ instruction pattern, so no model has to read them.
   py -I tools/exclude_thunks.py            # print what would be excluded
   py -I tools/exclude_thunks.py --write    # append them to tools/inventory_exclusions.txt
 
-Two patterns, both exact:
+Four patterns, all exact (the two below, plus guarded static initialisers and
+static initialisers that register a destructor with atexit):
 
   scalar deleting destructor   PUSH ESI / MOV ESI,ECX / CALL dtor /
                                TEST byte ptr [ESP + 0x8],0x1 / JZ / PUSH ESI /
@@ -43,6 +44,30 @@ SCALAR_DELETING = [
     r"RET 0x4",
 ]
 STATIC_THUNK = [r"MOV ECX,0x[0-9a-f]+", r"JMP 0x[0-9a-f]{8}"]
+# Initialiser of a static object defined in a header: test and set a bit in
+# a guard byte, then jump to the constructor.
+GUARDED_STATIC_INIT = [
+    r"MOV CL,byte ptr \[0x[0-9a-f]{8}\]",
+    r"MOV AL,0x[0-9a-f]+",
+    r"TEST AL,CL",
+    r"JNZ 0x[0-9a-f]{8}",
+    r"OR CL,AL",
+    r"MOV byte ptr \[0x[0-9a-f]{8}\],CL",
+    r"MOV ECX,0x[0-9a-f]+",
+    r"JMP 0x[0-9a-f]{8}",
+    r"RET",
+]
+# Dynamic initialiser of a global object that takes one constructor argument
+# and registers its destructor with atexit.
+STATIC_INIT_ATEXIT = [
+    r"PUSH 0x[0-9a-f]+",
+    r"MOV ECX,0x[0-9a-f]+",
+    r"CALL 0x[0-9a-f]{8}",
+    r"PUSH 0x[0-9a-f]+",
+    r"CALL 0x[0-9a-f]{8}",
+    r"POP ECX",
+    r"RET",
+]
 
 
 def instructions(addr: int) -> list[str] | None:
@@ -62,7 +87,12 @@ def matches(ops: list[str], pattern: list[str]) -> bool:
 
 
 def classify() -> dict[str, list[int]]:
-    found: dict[str, list[int]] = {"scalar deleting destructor": [], "static-object thunk": []}
+    found: dict[str, list[int]] = {
+        "scalar deleting destructor": [],
+        "static-object thunk": [],
+        "guarded static initialiser": [],
+        "static initialiser with atexit": [],
+    }
     for batch in worklist.build()["batches"]:
         for item in batch["functions"]:
             if item["kind"] != "missing":
@@ -75,6 +105,10 @@ def classify() -> dict[str, list[int]]:
                 found["scalar deleting destructor"].append(addr)
             elif matches(ops, STATIC_THUNK):
                 found["static-object thunk"].append(addr)
+            elif matches(ops, GUARDED_STATIC_INIT):
+                found["guarded static initialiser"].append(addr)
+            elif matches(ops, STATIC_INIT_ATEXIT):
+                found["static initialiser with atexit"].append(addr)
     return found
 
 

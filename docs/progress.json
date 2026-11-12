@@ -4,7 +4,7 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 8892,
+  "functions_total": 8352,
   "functions_done": 7924,
   "functions_complete": 7919,
   "incomplete_markers": 6,
@@ -3818,7 +3818,7 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3777750,
+  "bytes_total": 3761034,
   "bytes_done": 3650942,
   "bytes_complete": 3648409,
   "largest_stubs": [
