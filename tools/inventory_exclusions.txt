@@ -83,3 +83,19 @@
 # CTypedPtrList<CPtrList, T*> constructor (implicit): CPtrList(nBlockSize) then
 # store of the vtable 0x84EA40; returns this.
 0x5371A0
+
+# CTypedPtrList<CPtrList, LONG*> constructor (implicit), second vtable: CPtrList(nBlockSize)
+# (0x7FB239) then store of the vtable 0x847C0C; returns this. The inlining callers
+# (CProjectileArea850384/850420/8507C8/85099C) store 0x847B78 afterwards.
+0x40A110
+
+# std::string (MSVC 6, refcounted) _Grow(n, trim): capacity = n | 0x1F, operator new(capacity + 2),
+# copies min(length, n) bytes, drops the old reference (byte at ptr - 1) and stores the new pointer.
+0x44BE10
+
+# std::list<LONG> / std::set<DWORD> element copy construct (`if (p) *p = *q`).
+0x517000
+
+# std::set<DWORD> insert(const value&) returning pair<iterator, bool>: red-black tree insert with
+# nil sentinel 0x8E28C8, called from CProjectileArea850384::AIUpdate (field_65E).
+0x55BE00

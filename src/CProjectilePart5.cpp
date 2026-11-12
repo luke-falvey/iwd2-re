@@ -14,9 +14,6 @@
 #include "CUtil.h"
 #include "IcewindMisc.h"
 
-// 0x577380
-static void sub_577380(std::list<LONG>& list);
-
 // 0x574140
 CProjectileArea84FE08::CProjectileArea84FE08()
     : CProjectileArea(256)
@@ -1082,10 +1079,182 @@ CProjectileArea850A38::CProjectileArea850A38()
     field_2AE = 300;
 }
 
+// 0x577380
+static void sub_577380(std::list<LONG>& list)
+{
+    std::list<LONG> result;
+
+    while (list.size() != 0) {
+        // NOTE: The original starts from the address of the list.
+        std::list<LONG>::iterator itBest = list.end();
+
+        for (std::list<LONG>::iterator it = list.begin(); it != list.end(); ++it) {
+            CGameObject* pObject;
+
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+            if (rc == CGameObjectArray::SUCCESS) {
+                if (pObject->GetObjectType() == 0x31) {
+                    // NOTE: The level is compared to a constant `-1` and the
+                    // second call to `GetLevel` is not used.
+                    if (static_cast<CGameSprite*>(pObject)->GetLevel() > -1) {
+                        static_cast<CGameSprite*>(pObject)->GetLevel();
+                        itBest = it;
+                    }
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+
+        result.push_back(*itBest);
+        list.erase(itBest);
+    }
+
+    list = result;
+}
+
 // 0x576DC0
 void CProjectileArea850A38::Virtual94(std::list<LONG>& targets)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CGameObject* pObject;
+
+    BYTE rc = pGame->GetObjectArray()->GetShare(m_sourceId,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pObject,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return;
+    }
+
+    if (pObject->GetObjectType() != 0x31) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return;
+    }
+
+    CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+
+    INT nMaxLevel = g_pBaldurChitin->GetObjectGame()->m_ruleTables.GetAbilityScoreModifier(pSprite->m_derivedStats.m_nCHR)
+        + CUtil::UtilRandInt(20, pSprite->m_derivedStats.m_nLuck)
+        + 1;
+    SHORT nTurnLevel = pSprite->GetTurnUndeadLevel();
+    nMaxLevel -= 10;
+    if (nMaxLevel >= 0) {
+        nMaxLevel = nMaxLevel / 3 + nTurnLevel;
+    } else {
+        nMaxLevel = (nMaxLevel + 1) / 3 + nTurnLevel - 1;
+    }
+
+    INT nMaxHitDice = pGame->m_ruleTables.GetAbilityScoreModifier(pSprite->m_derivedStats.m_nCHR);
+    nMaxHitDice += CUtil::UtilRandInt(6, pSprite->m_derivedStats.m_nLuck);
+    nMaxHitDice += CUtil::UtilRandInt(6, pSprite->m_derivedStats.m_nLuck);
+    nMaxHitDice += 2;
+
+    if (pSprite->sub_763150(0x21) == TRUE) {
+        nMaxHitDice += 2;
+    }
+
+    sub_577380(targets);
+
+    for (std::list<LONG>::iterator it = targets.begin(); it != targets.end(); ++it) {
+        CGameObject* pTargetObject;
+
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pTargetObject,
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            continue;
+        }
+
+        if (pTargetObject->GetObjectType() != 0x31) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            continue;
+        }
+
+        CGameSprite* pTarget = static_cast<CGameSprite*>(pTargetObject);
+
+        if (IcewindMisc::IsUndead(pTarget) != TRUE) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            continue;
+        }
+
+        if (pTarget->m_derivedStats.m_spellStates.test(SPLSTATE_TURNED)) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            continue;
+        }
+
+        LONG nLevel = pTarget->GetLevel();
+        if (nLevel > nMaxLevel) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            continue;
+        }
+
+        if (nLevel > nMaxHitDice) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            continue;
+        }
+
+        nTurnLevel = pSprite->GetTurnUndeadLevel();
+
+        std::string sEffect;
+        if (IcewindMisc::IsEvil(pSprite) == TRUE) {
+            if (nTurnLevel < 2 * nLevel) {
+                sEffect = "EffTU2";
+            } else {
+                sEffect = "EffTU1";
+            }
+        } else {
+            if (nTurnLevel < 2 * nLevel) {
+                sEffect = "EffTU4";
+            } else {
+                sEffect = "EffTU3";
+            }
+        }
+
+        std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(pSprite, sEffect.c_str(), 1);
+
+        for (std::list<CGameEffect*>::iterator itEffect = effects.begin(); itEffect != effects.end(); ++itEffect) {
+            CGameEffect* pEffect = *itEffect;
+
+            pEffect->m_casterLevel = nTurnLevel;
+
+            if (pEffect->m_effectID == 0x118) {
+                pEffect->m_numDice = m_sourceId;
+            }
+
+            CMessage* message = new CMessageAddEffect(pEffect, m_sourceId, *it);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x577590
