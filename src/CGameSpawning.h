@@ -11,6 +11,7 @@ public:
     /* 0028 */ BOOLEAN CanSaveGame(STRREF& strError) override;
     /* 002C */ BOOLEAN CompressTime(DWORD deltaTime) override;
     /* 0048 */ void RemoveFromArea() override;
+    /* 0050 */ BOOLEAN DoAIUpdate(BOOLEAN active, LONG counter) override;
 
     void Spawn(const CPoint& ptFacingTowards, BYTE nTotalCharacterLevels);
     void Marshal(CAreaFileRandomMonsterSpawningPoint** pSpawningObject);

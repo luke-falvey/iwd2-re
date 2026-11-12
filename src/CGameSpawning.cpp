@@ -61,6 +61,111 @@ CGameSpawning::~CGameSpawning()
 {
 }
 
+// 0x4C99E0
+BOOLEAN CGameSpawning::DoAIUpdate(BOOLEAN active, LONG counter)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CVisibilityMap* pVisibility = &m_pArea->m_visibility;
+    BYTE nTotalCharacterLevels = 0;
+    BOOLEAN bInRange = FALSE;
+    CPoint ptPos;
+
+    if (!active) {
+        return FALSE;
+    }
+
+    if ((m_AISpeed & counter) != (m_AISpeed & m_id)) {
+        return FALSE;
+    }
+
+    if (g_pChitin->cNetwork.m_nServiceProvider != 0) {
+        BOOLEAN bLocal = g_pChitin->cNetwork.m_idLocalPlayer == m_remotePlayerID;
+        if (!bLocal) {
+            return FALSE;
+        }
+    }
+
+    if (field_136) {
+        if ((m_spawningObject.m_wFlags & 0x1) != 0) {
+            return FALSE;
+        }
+
+        if (m_pArea->m_nRandomMonster) {
+            return FALSE;
+        }
+
+        field_136 = 0;
+    }
+
+    ULONG nHour = pGame->m_worldTime.m_gameTime % CTimerWorld::TIMESCALE_MSEC_PER_DAY
+        / CTimerWorld::TIMESCALE_MSEC_PER_SEC
+        / CTimerWorld::TIMESCALE_SEC_PER_MIN
+        / CTimerWorld::TIMESCALE_MIN_PER_HOUR;
+    if (((m_spawningObject.m_timeOfDayVisible >> nHour) & 0x1) == 0) {
+        return FALSE;
+    }
+
+    SHORT nRow = static_cast<SHORT>(m_pos.y / CVisibilityMap::SQUARE_SIZEY * pVisibility->m_nWidth);
+    SHORT nTile = static_cast<SHORT>(nRow + m_pos.x / CVisibilityMap::SQUARE_SIZEX);
+    if (pVisibility->IsTileVisible(nTile)) {
+        return FALSE;
+    }
+
+    if (m_spawningObject.m_activated == 0) {
+        return FALSE;
+    }
+
+    INT nRate = m_spawningObject.m_spawningRate * CTimerWorld::TIMESCALE_MSEC_PER_SEC;
+    if (pGame->m_worldTime.m_gameTime % nRate != m_id % nRate) {
+        return FALSE;
+    }
+
+    ULONG nTimeOfDay = pGame->m_worldTime.m_gameTime % CTimerWorld::TIMESCALE_MSEC_PER_DAY;
+    if (nTimeOfDay >= CTimerWorld::TIME_NIGHT || nTimeOfDay < CTimerWorld::TIME_DAWN) {
+        if (rand() % 100 >= m_spawningObject.m_probNight) {
+            return FALSE;
+        }
+    } else {
+        if (rand() % 100 >= m_spawningObject.m_probDay) {
+            return FALSE;
+        }
+    }
+
+    for (SHORT nCharacter = 0; nCharacter < pGame->m_nCharacters; nCharacter++) {
+        LONG nCharacterId = pGame->GetCharacterId(nCharacter);
+
+        CGameSprite* pSprite;
+        BYTE rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            ptPos = pSprite->GetPos();
+            nTotalCharacterLevels += pSprite->GetDerivedStats()->GetLevel();
+
+            LONG dx = ptPos.x - m_pos.x;
+            LONG dy = ptPos.y - m_pos.y;
+            if (dx * dx + dy * dy * 16 / 9 < 640000) {
+                bInRange = TRUE;
+            }
+
+            pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    if (bInRange) {
+        if (m_spawningObject.m_spawningRate < 0x1111) {
+            m_spawningObject.m_spawningRate = static_cast<WORD>(m_spawningObject.m_spawningRate * 15 / 10 + 1);
+        }
+
+        Spawn(ptPos, nTotalCharacterLevels);
+    }
+
+    return FALSE;
+}
+
 // 0x47C830
 BOOLEAN CGameSpawning::CanSaveGame(STRREF& strError)
 {

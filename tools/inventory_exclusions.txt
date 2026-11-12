@@ -2035,3 +2035,21 @@
 0x448980
 0x449910
 0x448AC0
+
+# Not a function start: the second half of CUIControlEditMultiLine::Render (0x4E0A20), which Ghidra
+# split at 0x4E0A4C (uses the caller's ESI/EBX and frame; ends at RET 0x4 at 0x4E1571). The repo
+# body of Render covers it.
+0x4E0A4C
+# Not function starts: the tail of CGameArea::OnActionButtonUp (0x475DC0), which Ghidra split at
+# 0x475F43 and 0x475F4C (uses the caller's ESI/EBX/EDI and frame; ends at RET 0x4 at 0x4765B6).
+# The repo body of OnActionButtonUp covers it (the click/drag-select branches of states 0 and 3).
+0x475F43
+0x475F4C
+# Not a function start: the tail of CGameAnimationTypeMonsterOld::SetColorEffect (0x6AFEF0), which
+# Ghidra split at 0x6B006A (uses the caller's ESI/EDI/EBX/EBP; ends at RET 0x10 at 0x6B00F4). The repo
+# body of SetColorEffect covers it (the AddResPaletteAffect/SuppressTint branch).
+0x6B006A
+# Not a function start: the body of CInfCursor::SetCursor (0x5972E0, size 20), which Ghidra split at
+# 0x5972F4 (uses the caller's EBX/EBP and frame; ends at RET 0x8 at 0x5975E6). The repo body of
+# SetCursor covers it (case 100 was missing the m_bPointerEnabled/m_bPointerUpdated stores; added).
+0x5972F4

@@ -1323,12 +1323,14 @@ public:
     static const DWORD FLAG_TRANSLUCENT;
     static const DWORD FLAG_SPELL_STATES;
     static const DWORD FLAG_SKILLS;
+    static const DWORD FLAG_ALL;
 
     CMessageSpriteUpdate(CGameSprite* pSprite, LONG caller, LONG target);
     ~CMessageSpriteUpdate() override;
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
     BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     BOOL sub_50D660(CString sArea);
     void Run() override;

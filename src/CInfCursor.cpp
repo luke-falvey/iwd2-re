@@ -161,6 +161,8 @@ void CInfCursor::SetCursor(INT nNewCursor, BOOLEAN bForce)
 
                 m_vcArrow.FrameSet(0);
                 pVidMode->SetPointer(&m_vcArrow, TRUE, -1);
+                pVidMode->m_bPointerEnabled = TRUE;
+                g_pBaldurChitin->m_bPointerUpdated = FALSE;
             }
             break;
         case 101:
@@ -176,7 +178,7 @@ void CInfCursor::SetCursor(INT nNewCursor, BOOLEAN bForce)
                 m_vcToolTip.GetFrameSize(2, m_vcToolTip.field_5DC, size2, FALSE);
 
                 // TODO: Check cast.
-                m_vcToolTip.field_5DE = static_cast<short>((size1.cx / 2) + (size2.cx / 2));
+                m_vcToolTip.field_5DE = static_cast<short>((size1.cx >> 1) + (size2.cx >> 1));
                 m_vcToolTip.field_5E2 = 0;
 
                 pVidMode->SetPointer(&m_vcToolTip, TRUE, -1);

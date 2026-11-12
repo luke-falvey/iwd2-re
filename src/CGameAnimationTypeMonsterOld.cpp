@@ -721,6 +721,97 @@ void CGameAnimationTypeMonsterOld::GetAnimationResRef(CString& resRef, BYTE rang
     }
 }
 
+// 0x6AF990
+char* CGameAnimationTypeMonsterOld::GetSndWalk(SHORT tableIndex)
+{
+    char* szTemp;
+    BYTE nVariants;
+    const char* v1;
+
+    switch (m_animationID & 0xF00) {
+    case 0x200:
+    case 0xB00:
+        return NULL;
+    case 0x400:
+        nVariants = 1;
+        v1 = "WAL_31 ";
+        break;
+    case 0x900:
+        nVariants = 5;
+        v1 = "WAL_15 ";
+        break;
+    case 0xA00:
+        nVariants = 5;
+        v1 = "WAL_14 ";
+        break;
+    default:
+        switch (tableIndex) {
+        case 1:
+            v1 = "FS_Dirt ";
+            break;
+        case 2:
+            v1 = "FS_WdSn ";
+            break;
+        case 3:
+        case 9:
+            v1 = "FS_WOOD ";
+            break;
+        case 4:
+            v1 = "FS_Tomb ";
+            break;
+        case 7:
+            v1 = "FS_Ston ";
+            break;
+        case 11:
+            v1 = "FS_Snow ";
+            break;
+        case 15:
+            v1 = "FS_Gras ";
+            break;
+        default:
+            return NULL;
+        }
+
+        szTemp = new char[9];
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+        // __LINE__: 7454
+        UTIL_ASSERT(szTemp != NULL);
+
+        memcpy(szTemp, v1, 9);
+
+        szTemp[7] = rand() % 6 + '1';
+        szTemp[8] = '\0';
+
+        if (strcmp(szTemp, m_walkRef) == 0) {
+            if (szTemp[7] == '6') {
+                szTemp[7] = '1';
+            } else {
+                szTemp[7]++;
+            }
+        }
+
+        memcpy(m_walkRef, szTemp, 9);
+
+        return szTemp;
+    }
+
+    szTemp = new char[8];
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+    // __LINE__: 7389
+    UTIL_ASSERT(szTemp != NULL);
+
+    memcpy(szTemp, v1, 8);
+
+    szTemp[6] = (nVariants != 0 ? rand() % nVariants : 0) + 'a';
+    if (szTemp[6] == nVariants + 'a' - 1) {
+        szTemp[6] = '\0';
+    }
+
+    return szTemp;
+}
+
 // 0x6AFBB0
 void CGameAnimationTypeMonsterOld::ClearColorEffects(BYTE colorRange)
 {
@@ -956,6 +1047,114 @@ void CGameAnimationTypeMonsterOld::SetColorRangeAll(BYTE rangeValue)
         for (BYTE colorRange = 0; colorRange < CVidPalette::NUM_RANGES; colorRange++) {
             SetColorRange(colorRange, rangeValue);
         }
+    }
+}
+
+// 0x6B03E0
+void CGameAnimationTypeMonsterOld::Render(CInfinity* pInfinity, CVidMode* pVidMode, INT nSurface, const CRect& rectFX, const CPoint& ptNewPos, const CPoint& ptReference, DWORD dwRenderFlags, COLORREF rgbTintColor, const CRect& rGCBounds, BOOL bDithered, BOOL bFadeOut, LONG posZ, BYTE transparency)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+    // __LINE__: 7922
+    UTIL_ASSERT(pInfinity != NULL && pVidMode != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+    // __LINE__: 7923
+    UTIL_ASSERT(m_currentVidCell != NULL);
+
+    CPoint ptPos(ptNewPos.x, ptNewPos.y + posZ);
+    CRect rFXRect(rectFX);
+
+    if (MIRROR_BAM) {
+        if (m_currentBamDirection > m_extendDirectionTest) {
+            dwRenderFlags |= CInfinity::MIRROR_FX;
+        }
+
+        if (m_translucent || transparency != 0) {
+            dwRenderFlags |= CInfinity::FXPREP_COPYFROMBACK;
+        } else {
+            dwRenderFlags |= CInfinity::FXPREP_CLEARFILL | 0x1;
+        }
+    } else {
+        dwRenderFlags |= 0x4;
+        dwRenderFlags |= CInfinity::FXPREP_COPYFROMBACK;
+    }
+
+    if (m_translucent || transparency != 0) {
+        dwRenderFlags |= 0x2;
+    }
+
+    pInfinity->FXPrep(rFXRect, dwRenderFlags, nSurface, ptPos, ptReference);
+
+    if (pInfinity->FXLock(rFXRect, dwRenderFlags)) {
+        COLORREF oldTintColor = m_currentVidCell->GetTintColor();
+        m_currentVidCell->SetTintColor(RGB(max(GetRValue(oldTintColor) + GetRValue(rgbTintColor) - 255, 0),
+            max(GetGValue(oldTintColor) + GetGValue(rgbTintColor) - 255, 0),
+            max(GetBValue(oldTintColor) + GetBValue(rgbTintColor) - 255, 0)));
+
+        if (field_7A6) {
+            field_7AA.GetRes()->Demand();
+            m_currentVidCell->SetPalette(field_7AA.GetRes()->GetColorTable(),
+                field_7AA.GetRes()->GetColorCount(),
+                CVidPalette::TYPE_RESOURCE);
+        }
+
+        if (m_translucent) {
+            if (transparency != 0) {
+                pInfinity->FXRender(m_currentVidCell,
+                    ptReference.x,
+                    ptReference.y,
+                    dwRenderFlags,
+                    (transparency * 128) / 255 + 128);
+            } else {
+                pInfinity->FXRender(m_currentVidCell,
+                    ptReference.x,
+                    ptReference.y,
+                    dwRenderFlags,
+                    128);
+            }
+        } else {
+            if (transparency != 0) {
+                pInfinity->FXRender(m_currentVidCell,
+                    ptReference.x,
+                    ptReference.y,
+                    dwRenderFlags,
+                    transparency);
+            } else {
+                pInfinity->FXRender(m_currentVidCell,
+                    ptReference.x,
+                    ptReference.y,
+                    dwRenderFlags,
+                    0);
+            }
+        }
+
+        if (field_7A6) {
+            field_7AA.GetRes()->Release();
+        }
+
+        m_currentVidCell->SetTintColor(oldTintColor);
+
+        pInfinity->FXRenderClippingPolys(ptPos.x,
+            ptPos.y - posZ,
+            posZ,
+            ptReference,
+            CRect(rGCBounds.left, rGCBounds.top - posZ, rGCBounds.right, rGCBounds.bottom - posZ),
+            bDithered,
+            dwRenderFlags);
+
+        if (bFadeOut) {
+            pInfinity->FXUnlock(dwRenderFlags, &rFXRect, ptPos + ptReference);
+        } else {
+            pInfinity->FXUnlock(dwRenderFlags, NULL, CPoint(0, 0));
+        }
+
+        pInfinity->FXBltFrom(nSurface,
+            rFXRect,
+            ptPos.x,
+            ptPos.y,
+            ptReference.x,
+            ptReference.y,
+            dwRenderFlags);
     }
 }
 

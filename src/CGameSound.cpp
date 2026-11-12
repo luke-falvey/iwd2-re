@@ -105,6 +105,104 @@ CGameSound::~CGameSound()
     }
 }
 
+// 0x4C90A0
+BOOLEAN CGameSound::DoAIUpdate(BOOLEAN active, LONG counter)
+{
+    if (!active) {
+        return FALSE;
+    }
+
+    if ((counter & m_AISpeed) != (m_id & m_AISpeed)) {
+        return FALSE;
+    }
+
+    DWORD dwFlags = m_soundObject.m_dwFlags;
+    if ((dwFlags & 0x1) == 0) {
+        return FALSE;
+    }
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if ((dwFlags & 0x2) != 0) {
+        ULONG nHour = pGame->m_worldTime.m_gameTime % CTimerWorld::TIMESCALE_MSEC_PER_DAY
+            / CTimerWorld::TIMESCALE_MSEC_PER_SEC
+            / CTimerWorld::TIMESCALE_SEC_PER_MIN
+            / CTimerWorld::TIMESCALE_MIN_PER_HOUR;
+        if (((m_timeOfDayActive >> nHour) & 0x1) != 0) {
+            if (!m_bLoopPlaying) {
+                if ((dwFlags & 0x10) == 0 || g_pChitin->cDimm.GetMemoryAmount() != 1) {
+                    if ((m_soundObject.m_dwFlags & 0x4) != 0) {
+                        m_looping.Play(FALSE);
+                    } else {
+                        m_looping.Play(m_pos.x, m_pos.y, 0, FALSE);
+                    }
+                    m_bLoopPlaying = TRUE;
+                }
+            }
+        } else {
+            if (m_bLoopPlaying) {
+                m_looping.Stop();
+                m_bLoopPlaying = FALSE;
+            }
+        }
+    } else {
+        ULONG nHour = pGame->m_worldTime.m_gameTime % CTimerWorld::TIMESCALE_MSEC_PER_DAY
+            / CTimerWorld::TIMESCALE_MSEC_PER_SEC
+            / CTimerWorld::TIMESCALE_SEC_PER_MIN
+            / CTimerWorld::TIMESCALE_MIN_PER_HOUR;
+        if (((m_soundObject.m_timeOfDayActive >> nHour) & 0x1) != 0) {
+            if (m_periodCount++ == m_period) {
+                CSound sound;
+
+                if ((m_soundObject.m_dwFlags & 0x8) != 0) {
+                    if ((m_soundObject.m_dwFlags & 0x10) == 0 || g_pChitin->cDimm.GetMemoryAmount() != 1) {
+                        INT nSoundObjectNum = m_soundObject.m_soundObjectNum;
+                        INT nSound = nSoundObjectNum != 0 ? rand() % nSoundObjectNum : 0;
+
+                        // NOTE: Uninline.
+                        sound.SetResRef(CResRef(m_soundObject.m_soundObject[nSound]), TRUE, TRUE);
+                    }
+                } else {
+                    // NOTE: The increment wraps at 8 bits before the modulo.
+                    m_currentSound = static_cast<BYTE>(static_cast<BYTE>(m_currentSound + 1) % m_soundObject.m_soundObjectNum);
+
+                    if ((m_soundObject.m_dwFlags & 0x10) == 0 || g_pChitin->cDimm.GetMemoryAmount() != 1) {
+                        // NOTE: Uninline.
+                        sound.SetResRef(CResRef(m_soundObject.m_soundObject[m_currentSound]), TRUE, TRUE);
+                    }
+                }
+
+                sound.SetFireForget(TRUE);
+                sound.SetChannel(17, reinterpret_cast<DWORD>(m_pArea));
+
+                if ((m_soundObject.m_dwFlags & 0x4) == 0) {
+                    sound.SetRange(m_soundObject.m_range);
+                }
+
+                sound.m_nPitchVariance = m_soundObject.m_pitchVariance;
+                sound.SetVolume(m_soundObject.m_volume);
+                sound.m_nVolumeVariance = m_soundObject.m_volumeVariance;
+
+                if ((m_soundObject.m_dwFlags & 0x10) == 0 || g_pChitin->cDimm.GetMemoryAmount() != 1) {
+                    if ((m_soundObject.m_dwFlags & 0x4) != 0) {
+                        sound.Play(FALSE);
+                    } else {
+                        sound.Play(m_pos.x, m_pos.y, 0, FALSE);
+                    }
+                }
+
+                INT nVariance = 2 * m_soundObject.m_periodVariance + 1;
+                INT v1 = nVariance != 0 ? rand() % nVariance : 0;
+
+                m_periodCount = 0;
+                m_period = (m_soundObject.m_period - m_soundObject.m_periodVariance + v1) * CTimerWorld::TIMESCALE_MSEC_PER_SEC;
+            }
+        }
+    }
+
+    return FALSE;
+}
+
 // 0x47C830
 BOOLEAN CGameSound::CanSaveGame(STRREF& strError)
 {

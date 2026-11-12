@@ -14,12 +14,14 @@ public:
     /* 0020 */ CVidPalette* GetAnimationPalette(BYTE range) override;
     /* 0024 */ void GetAnimationResRef(CString& resRef, BYTE range) override;
     /* 002C */ BOOLEAN DetectedByInfravision() override;
+    /* 006C */ char* GetSndWalk(SHORT tableIndex) override;
     /* 0074 */ BOOL IsFalseColor() override;
     /* 007C */ BOOL IsMirroring() override;
     /* 0080 */ BOOL IsBeginningOfSequence() override;
     /* 0084 */ BOOL IsEndOfSequence() override;
     /* 0088 */ void IncrementFrame() override;
     /* 008C */ void DecrementFrame() override;
+    /* 0090 */ void Render(CInfinity* pInfinity, CVidMode* pVidMode, INT nSurface, const CRect& rectFX, const CPoint& ptNewPos, const CPoint& ptReference, DWORD dwRenderFlags, COLORREF rgbTintColor, const CRect& rGCBounds, BOOL bDithered, BOOL bFadeOut, LONG posZ, BYTE transparency) override;
     /* 0094 */ void ClearColorEffects(BYTE colorRange) override;
     /* 0098 */ void ClearColorEffectsAll() override;
     /* 009C */ void SetColorEffect(BYTE effectType, BYTE colorRange, COLORREF tintColor, BYTE periodLength) override;

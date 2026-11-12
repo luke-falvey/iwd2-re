@@ -209,9 +209,13 @@ public:
     /* 004A */ LONG field_4A;
     /* 004E */ std::bitset<256> field_4E;
     /* 006E */ BYTE field_6E;
-    /* 0070 */ LONG field_70;
+    /* 0070 */ std::bitset<32> field_70;
     /* 0074 */ BYTE field_74;
-    /* 0075 */ unsigned char field_75[131];
+    /* 0075 */ unsigned char field_75;
+    /* 0076 */ BYTE m_baseSkills[64];
+    /* 00B6 */ BYTE m_skills[64];
+    /* 00F6 */ BYTE field_F6;
+    /* 00F7 */ unsigned char field_F7;
     /* 00F8 */ BOOL m_bFullUpdateRequired;
 };
 

@@ -22764,6 +22764,9 @@ const DWORD CMessageSpriteUpdate::FLAG_SPELL_STATES = 0x8000;
 // 0x85BDCC
 const DWORD CMessageSpriteUpdate::FLAG_SKILLS = 0x10000;
 
+// 0x85BDD0
+const DWORD CMessageSpriteUpdate::FLAG_ALL = 0xFFFFFFFF;
+
 // 0x50C260
 CMessageSpriteUpdate::CMessageSpriteUpdate(CGameSprite* pSprite, LONG caller, LONG target)
     : CMessage(caller, target)
@@ -22873,6 +22876,464 @@ BYTE CMessageSpriteUpdate::GetMsgType()
 BYTE CMessageSpriteUpdate::GetMsgSubType()
 {
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SPRITE_UPDATE;
+}
+
+// 0x50C550
+void CMessageSpriteUpdate::MarshalMessage(BYTE** pData, DWORD* dwSize)
+{
+    CResRef cResRef;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 22948
+    UTIL_ASSERT(pData != NULL && dwSize != NULL);
+
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        *dwSize = 0;
+        return;
+    }
+
+    LONG remoteObjectID = pSprite->m_remoteObjectID;
+    PLAYER_ID remotePlayerID = pSprite->m_remotePlayerID;
+
+    if (pSprite->GetArea() != NULL) {
+        cResRef = pSprite->GetArea()->m_resRef;
+        cResRef.CopyToString(m_sAreaString);
+    } else {
+        m_sAreaString = "NO_AREA";
+    }
+
+    BYTE nAreaLength = static_cast<BYTE>(m_sAreaString.GetLength());
+
+    field_74 = 0;
+
+    POSITION pos = pSprite->m_portraitIcons.GetHeadPosition();
+    while (pos != NULL) {
+        pSprite->m_portraitIcons.GetNext(pos);
+        field_74++;
+    }
+
+    if (field_74 > 0) {
+        field_76 = new LONG[field_74];
+
+        INT nIndex = 0;
+        pos = pSprite->m_portraitIcons.GetHeadPosition();
+        while (pos != NULL) {
+            reinterpret_cast<LONG*>(field_76)[nIndex++] = reinterpret_cast<LONG>(pSprite->m_portraitIcons.GetNext(pos));
+        }
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    // NOTE: From here on the sprite is used (and its last update record
+    // changed) after its share has been released.
+
+    field_108 = 0;
+
+    if (pSprite->m_cLastSpriteUpdate.m_bFullUpdateRequired == TRUE) {
+        field_108 = FLAG_ALL;
+        pSprite->m_cLastSpriteUpdate.m_bFullUpdateRequired = FALSE;
+    } else {
+        if (pSprite->m_cLastSpriteUpdate.m_nPath != m_nPath
+            || (m_nPath != 0 && memcmp(m_pPath, pSprite->m_cLastSpriteUpdate.m_pPath, m_nPath * sizeof(LONG)) != 0)
+            || pSprite->m_cLastSpriteUpdate.field_8.x != m_ptDest.x
+            || pSprite->m_cLastSpriteUpdate.field_8.y != m_ptDest.y
+            || pSprite->m_cLastSpriteUpdate.field_10 != m_nMoveScale) {
+            field_108 |= FLAG_PATH;
+            field_108 |= FLAG_POSITION;
+            field_108 |= FLAG_SEQUENCE;
+            field_108 |= FLAG_FACING;
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_12 != m_nSequence) {
+            field_108 |= FLAG_SEQUENCE;
+            if (m_nSequence == CGameSprite::SEQ_WALK) {
+                field_108 |= FLAG_PATH;
+                field_108 |= FLAG_POSITION;
+                field_108 |= FLAG_FACING;
+            }
+        }
+
+        if ((pSprite->m_cLastSpriteUpdate.field_14.x != m_ptPosition.x
+                || pSprite->m_cLastSpriteUpdate.field_14.y != m_ptPosition.y)
+            && m_nSequence != CGameSprite::SEQ_WALK) {
+            field_108 |= FLAG_POSITION;
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_1C != m_nFacing
+            && m_nSequence != CGameSprite::SEQ_WALK) {
+            field_108 |= FLAG_FACING;
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_1E != m_dwState) {
+            field_108 |= FLAG_STATE;
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_22 != m_nHitPoints
+            || pSprite->m_cLastSpriteUpdate.field_24 != m_nMaxHitPoints) {
+            field_108 |= FLAG_HITPOINTS;
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_26 != field_60) {
+            field_108 |= FLAG_FIELD_60;
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_2A != field_64
+            || pSprite->m_cLastSpriteUpdate.field_2C != field_66
+            || pSprite->m_cLastSpriteUpdate.field_2E != field_68
+            || pSprite->m_cLastSpriteUpdate.field_30 != field_6A
+            || pSprite->m_cLastSpriteUpdate.field_32 != m_nACCrushingMod
+            || pSprite->m_cLastSpriteUpdate.field_34 != m_nACMissileMod
+            || pSprite->m_cLastSpriteUpdate.field_36 != m_nACPiercingMod
+            || pSprite->m_cLastSpriteUpdate.field_38 != m_nACSlashingMod) {
+            field_108 |= FLAG_AC_MODS;
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_3A != field_74
+            || (field_74 != 0 && memcmp(field_76, pSprite->m_cLastSpriteUpdate.field_3C, field_74 * sizeof(LONG)) != 0)) {
+            field_108 |= FLAG_FIELD_74;
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_40 != m_nEnemyAlly
+            || pSprite->m_cLastSpriteUpdate.field_41 != m_nEnemyAllyLive
+            || pSprite->m_cLastSpriteUpdate.field_42 != m_nEnemyAllyStart
+            || pSprite->m_cLastSpriteUpdate.field_43 != m_bMoralFailure) {
+            field_108 |= FLAG_ENEMY_ALLY;
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_48 != m_bLevelUp
+            || pSprite->m_cLastSpriteUpdate.field_4A != m_nHPCONBonusTotalOld) {
+            field_108 |= FLAG_LEVEL_UP;
+        }
+
+        if (strcmp(pSprite->m_cLastSpriteUpdate.field_44, m_sAreaString) != 0 || field_108 != 0) {
+            field_108 |= FLAG_AREA;
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_6E != m_nFadeSpeed) {
+            field_108 |= FLAG_FADE_SPEED;
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_74 != m_nTranslucent) {
+            field_108 |= FLAG_TRANSLUCENT;
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_4E != m_spellStates) {
+            field_108 |= FLAG_SPELL_STATES;
+        }
+
+        if (memcmp(m_baseSkills, pSprite->m_cLastSpriteUpdate.m_baseSkills, sizeof(m_baseSkills)) != 0
+            || memcmp(m_skills, pSprite->m_cLastSpriteUpdate.m_skills, sizeof(m_skills)) != 0
+            || pSprite->m_cLastSpriteUpdate.field_F6 != field_106) {
+            field_108 |= FLAG_SKILLS;
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_70 != m_visualEffects) {
+            field_108 |= FLAG_VISUAL_EFFECTS;
+        }
+
+        if (field_108 != 0) {
+            field_85 = pSprite->GetBaseStats()->field_294 != 0;
+        }
+    }
+
+    if (field_108 == 0) {
+        *dwSize = 0;
+        return;
+    }
+
+    *dwSize = 12;
+
+    if (field_108 & FLAG_AREA) {
+        *dwSize += sizeof(BYTE) + nAreaLength;
+    }
+
+    if (field_108 & FLAG_SEQUENCE) {
+        *dwSize += sizeof(SHORT);
+    }
+
+    if (field_108 & FLAG_POSITION) {
+        *dwSize += sizeof(LONG) * 2;
+    }
+
+    if (field_108 & FLAG_FACING) {
+        *dwSize += sizeof(SHORT);
+    }
+
+    if (field_108 & FLAG_STATE) {
+        *dwSize += sizeof(DWORD);
+    }
+
+    if (field_108 & FLAG_SPELL_STATES) {
+        *dwSize += sizeof(m_spellStates);
+    }
+
+    if (field_108 & FLAG_SKILLS) {
+        *dwSize += sizeof(m_baseSkills) + sizeof(m_skills) + sizeof(BYTE);
+    }
+
+    if (field_108 & FLAG_FADE_SPEED) {
+        *dwSize += sizeof(BYTE);
+    }
+
+    if (field_108 & FLAG_TRANSLUCENT) {
+        *dwSize += sizeof(BYTE);
+    }
+
+    if (field_108 & FLAG_VISUAL_EFFECTS) {
+        *dwSize += sizeof(DWORD);
+    }
+
+    if (field_108 & FLAG_HITPOINTS) {
+        *dwSize += sizeof(SHORT) * 2;
+    }
+
+    if (field_108 & FLAG_FIELD_60) {
+        *dwSize += sizeof(DWORD);
+    }
+
+    if (field_108 & FLAG_AC_MODS) {
+        *dwSize += sizeof(SHORT) * 8;
+    }
+
+    if (field_108 & FLAG_ENEMY_ALLY) {
+        *dwSize += sizeof(BYTE) * 4;
+    }
+
+    if (field_108 & FLAG_LEVEL_UP) {
+        *dwSize += sizeof(BYTE) + sizeof(LONG);
+    }
+
+    if (field_108 & FLAG_FIELD_74) {
+        *dwSize += sizeof(SHORT);
+        if (field_74 > 0) {
+            *dwSize += field_74 * sizeof(LONG);
+        }
+    }
+
+    if (field_108 & FLAG_PATH) {
+        if (m_nPath > 0) {
+            *dwSize += m_nPath * sizeof(LONG);
+        }
+        *dwSize += 13;
+    }
+
+    *dwSize += 1;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 23304
+    UTIL_ASSERT(*dwSize <= STATICBUFFERSIZE);
+
+    *reinterpret_cast<PLAYER_ID*>(*pData) = remotePlayerID;
+    *reinterpret_cast<LONG*>(*pData + 4) = remoteObjectID;
+    *reinterpret_cast<DWORD*>(*pData + 8) = field_108;
+
+    DWORD cnt = 12;
+
+    if (field_108 & FLAG_AREA) {
+        *reinterpret_cast<BYTE*>(*pData + 12) = nAreaLength;
+        memcpy(*pData + 13, m_sAreaString.GetBuffer(nAreaLength), nAreaLength);
+        cnt = nAreaLength + 13;
+        pSprite->m_cLastSpriteUpdate.field_44 = m_sAreaString;
+    }
+
+    if (field_108 & FLAG_SEQUENCE) {
+        *reinterpret_cast<SHORT*>(*pData + cnt) = m_nSequence;
+        cnt += sizeof(SHORT);
+        pSprite->m_cLastSpriteUpdate.field_12 = m_nSequence;
+    }
+
+    if (field_108 & FLAG_POSITION) {
+        *reinterpret_cast<LONG*>(*pData + cnt) = m_ptPosition.x;
+        *reinterpret_cast<LONG*>(*pData + cnt + 4) = m_ptPosition.y;
+        pSprite->m_cLastSpriteUpdate.field_14.x = m_ptPosition.x;
+        cnt += sizeof(LONG) * 2;
+        pSprite->m_cLastSpriteUpdate.field_14.y = m_ptPosition.y;
+    }
+
+    if (field_108 & FLAG_FACING) {
+        *reinterpret_cast<SHORT*>(*pData + cnt) = m_nFacing;
+        cnt += sizeof(SHORT);
+        pSprite->m_cLastSpriteUpdate.field_1C = m_nFacing;
+    }
+
+    if (field_108 & FLAG_STATE) {
+        *reinterpret_cast<DWORD*>(*pData + cnt) = m_dwState;
+        cnt += sizeof(DWORD);
+        pSprite->m_cLastSpriteUpdate.field_1E = m_dwState;
+    }
+
+    if (field_108 & FLAG_SPELL_STATES) {
+        memcpy(*pData + cnt, &m_spellStates, sizeof(m_spellStates));
+        cnt += sizeof(m_spellStates);
+        pSprite->m_cLastSpriteUpdate.field_4E = m_spellStates;
+    }
+
+    if (field_108 & FLAG_SKILLS) {
+        memcpy(*pData + cnt, m_baseSkills, sizeof(m_baseSkills));
+        cnt += sizeof(m_baseSkills);
+
+        memcpy(*pData + cnt, m_skills, sizeof(m_skills));
+        *reinterpret_cast<BYTE*>(*pData + cnt + sizeof(m_skills)) = field_106;
+        cnt += sizeof(m_skills);
+
+        memcpy(pSprite->m_cLastSpriteUpdate.m_baseSkills, m_baseSkills, sizeof(m_baseSkills));
+        memcpy(pSprite->m_cLastSpriteUpdate.m_skills, m_skills, sizeof(m_skills));
+        cnt += sizeof(BYTE);
+        pSprite->m_cLastSpriteUpdate.field_F6 = field_106;
+    }
+
+    if (field_108 & FLAG_FADE_SPEED) {
+        *reinterpret_cast<BYTE*>(*pData + cnt) = m_nFadeSpeed;
+        cnt += sizeof(BYTE);
+        pSprite->m_cLastSpriteUpdate.field_6E = m_nFadeSpeed;
+    }
+
+    if (field_108 & FLAG_TRANSLUCENT) {
+        *reinterpret_cast<BYTE*>(*pData + cnt) = m_nTranslucent;
+        cnt += sizeof(BYTE);
+        pSprite->m_cLastSpriteUpdate.field_74 = m_nTranslucent;
+    }
+
+    if (field_108 & FLAG_VISUAL_EFFECTS) {
+        memcpy(*pData + cnt, &m_visualEffects, sizeof(DWORD));
+        cnt += sizeof(DWORD);
+        pSprite->m_cLastSpriteUpdate.field_70 = m_visualEffects;
+    }
+
+    if (field_108 & FLAG_HITPOINTS) {
+        *reinterpret_cast<SHORT*>(*pData + cnt) = m_nHitPoints;
+        *reinterpret_cast<SHORT*>(*pData + cnt + 2) = m_nMaxHitPoints;
+        cnt += sizeof(SHORT);
+        pSprite->m_cLastSpriteUpdate.field_22 = m_nHitPoints;
+        cnt += sizeof(SHORT);
+        pSprite->m_cLastSpriteUpdate.field_24 = m_nMaxHitPoints;
+    }
+
+    if (field_108 & FLAG_FIELD_60) {
+        *reinterpret_cast<DWORD*>(*pData + cnt) = field_60;
+        cnt += sizeof(DWORD);
+        pSprite->m_cLastSpriteUpdate.field_26 = field_60;
+    }
+
+    if (field_108 & FLAG_AC_MODS) {
+        *reinterpret_cast<SHORT*>(*pData + cnt) = field_64;
+        *reinterpret_cast<SHORT*>(*pData + cnt + 2) = field_66;
+        cnt += sizeof(SHORT);
+        *reinterpret_cast<SHORT*>(*pData + cnt + 2) = field_68;
+        cnt += sizeof(SHORT);
+        *reinterpret_cast<SHORT*>(*pData + cnt + 2) = field_6A;
+        cnt += sizeof(SHORT);
+        *reinterpret_cast<SHORT*>(*pData + cnt + 2) = m_nACCrushingMod;
+        cnt += sizeof(SHORT);
+        *reinterpret_cast<SHORT*>(*pData + cnt + 2) = m_nACMissileMod;
+        cnt += sizeof(SHORT);
+        *reinterpret_cast<SHORT*>(*pData + cnt + 2) = m_nACPiercingMod;
+        cnt += sizeof(SHORT);
+        *reinterpret_cast<SHORT*>(*pData + cnt + 2) = m_nACSlashingMod;
+
+        pSprite->m_cLastSpriteUpdate.field_2A = field_64;
+        pSprite->m_cLastSpriteUpdate.field_2C = field_66;
+        pSprite->m_cLastSpriteUpdate.field_2E = field_68;
+        cnt += sizeof(SHORT);
+        pSprite->m_cLastSpriteUpdate.field_30 = field_6A;
+        pSprite->m_cLastSpriteUpdate.field_32 = m_nACCrushingMod;
+        pSprite->m_cLastSpriteUpdate.field_34 = m_nACMissileMod;
+        pSprite->m_cLastSpriteUpdate.field_36 = m_nACPiercingMod;
+        cnt += sizeof(SHORT);
+        pSprite->m_cLastSpriteUpdate.field_38 = m_nACSlashingMod;
+    }
+
+    if (field_108 & FLAG_ENEMY_ALLY) {
+        *reinterpret_cast<BYTE*>(*pData + cnt) = m_nEnemyAlly;
+        *reinterpret_cast<BYTE*>(*pData + cnt + 1) = m_nEnemyAllyLive;
+        cnt += sizeof(BYTE);
+        *reinterpret_cast<BYTE*>(*pData + cnt + 1) = m_nEnemyAllyStart;
+        cnt += sizeof(BYTE);
+        *reinterpret_cast<BYTE*>(*pData + cnt + 1) = m_bMoralFailure;
+
+        pSprite->m_cLastSpriteUpdate.field_40 = m_nEnemyAlly;
+        cnt += sizeof(BYTE);
+        pSprite->m_cLastSpriteUpdate.field_41 = m_nEnemyAllyLive;
+        pSprite->m_cLastSpriteUpdate.field_42 = m_nEnemyAllyStart;
+        cnt += sizeof(BYTE);
+        pSprite->m_cLastSpriteUpdate.field_43 = m_bMoralFailure;
+    }
+
+    if (field_108 & FLAG_LEVEL_UP) {
+        *reinterpret_cast<BYTE*>(*pData + cnt) = m_bLevelUp;
+        *reinterpret_cast<LONG*>(*pData + cnt + 1) = m_nHPCONBonusTotalOld;
+        cnt += sizeof(BYTE);
+        pSprite->m_cLastSpriteUpdate.field_48 = m_bLevelUp;
+        cnt += sizeof(LONG);
+        pSprite->m_cLastSpriteUpdate.field_4A = m_nHPCONBonusTotalOld;
+    }
+
+    if (field_108 & FLAG_FIELD_74) {
+        *reinterpret_cast<SHORT*>(*pData + cnt) = field_74;
+        cnt += sizeof(SHORT);
+
+        if (field_74 > 0) {
+            memcpy(*pData + cnt, field_76, field_74 * sizeof(LONG));
+            cnt += field_74 * sizeof(LONG);
+        }
+
+        if (pSprite->m_cLastSpriteUpdate.field_3C != NULL) {
+            delete[] pSprite->m_cLastSpriteUpdate.field_3C;
+        }
+
+        pSprite->m_cLastSpriteUpdate.field_3A = field_74;
+        pSprite->m_cLastSpriteUpdate.field_3C = new BYTE[field_74 * sizeof(LONG)];
+        memcpy(pSprite->m_cLastSpriteUpdate.field_3C, field_76, field_74 * sizeof(LONG));
+
+        if (field_76 != NULL) {
+            delete field_76;
+            field_76 = NULL;
+        }
+    }
+
+    if (field_108 & FLAG_PATH) {
+        *reinterpret_cast<SHORT*>(*pData + cnt) = m_nPath;
+        cnt += sizeof(SHORT);
+
+        if (m_nPath > 0) {
+            memcpy(*pData + cnt, m_pPath, m_nPath * sizeof(LONG));
+            cnt += m_nPath * sizeof(LONG);
+        }
+
+        *reinterpret_cast<SHORT*>(*pData + cnt) = m_currPath;
+        *reinterpret_cast<LONG*>(*pData + cnt + 2) = m_ptDest.x;
+        cnt += sizeof(SHORT);
+        *reinterpret_cast<LONG*>(*pData + cnt + 4) = m_ptDest.y;
+        cnt += sizeof(LONG) * 2;
+        *reinterpret_cast<BYTE*>(*pData + cnt) = m_nMoveScale;
+        cnt += sizeof(BYTE);
+
+        if (pSprite->m_cLastSpriteUpdate.m_pPath != NULL) {
+            delete[] pSprite->m_cLastSpriteUpdate.m_pPath;
+        }
+
+        pSprite->m_cLastSpriteUpdate.m_pPath = new LONG[m_nPath];
+        memcpy(pSprite->m_cLastSpriteUpdate.m_pPath, m_pPath, m_nPath * sizeof(LONG));
+        pSprite->m_cLastSpriteUpdate.m_nPath = m_nPath;
+        pSprite->m_cLastSpriteUpdate.field_6 = m_currPath;
+        pSprite->m_cLastSpriteUpdate.field_8.x = m_ptDest.x;
+        pSprite->m_cLastSpriteUpdate.field_8.y = m_ptDest.y;
+        pSprite->m_cLastSpriteUpdate.field_10 = m_nMoveScale;
+    }
+
+    *reinterpret_cast<BYTE*>(*pData + cnt) = field_85;
 }
 
 // 0x50D290
