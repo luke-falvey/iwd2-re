@@ -4279,6 +4279,361 @@ BOOLEAN CGameSprite::CompressTime(DWORD deltaTime)
     return TRUE;
 }
 
+// 0x6FD9F0
+void CGameSprite::DebugDump(const CString& message, BOOLEAN bEchoToScreen)
+{
+    CScreenWorld* pWorld = g_pBaldurChitin->m_pEngineWorld;
+
+    CString sTemp;
+    CString sHour;
+
+    // NOTE: Every `-1` marker below is read from a constant at 0x84C960.
+    if (bEchoToScreen) {
+        pWorld->DisplayText(CString(""),
+            CString("DEBUG DUMP: CGameSprite"),
+            -1,
+            FALSE);
+
+        pWorld->DisplayText(CString(""),
+            message,
+            -1,
+            FALSE);
+
+        sTemp.Format("Current Area: %.*s", RESREF_SIZE, m_pArea->m_resRef.GetResRef());
+        pWorld->DisplayText(CString(""),
+            sTemp,
+            -1,
+            FALSE);
+
+        sTemp.Format("Current Position: x=%d y=%d", m_pos.x, m_pos.y);
+        pWorld->DisplayText(CString(""),
+            sTemp,
+            -1,
+            FALSE);
+
+        // NOTE: Uninline.
+        sTemp.Format("Name: %s", (LPCSTR)GetName());
+        pWorld->DisplayText(CString(""),
+            sTemp,
+            -1,
+            FALSE);
+
+        sTemp.Format("ID: %8.8x", m_id);
+        pWorld->DisplayText(CString(""),
+            sTemp,
+            -1,
+            FALSE);
+
+        sTemp.Format("RESREF: %.*s", RESREF_SIZE, (LPCSTR)m_resRef.GetResRefStr());
+        pWorld->DisplayText(CString(""),
+            sTemp,
+            -1,
+            FALSE);
+
+        sTemp.Format("Hitpoints: %d", m_baseStats.m_hitPoints);
+        pWorld->DisplayText(CString(""),
+            sTemp,
+            -1,
+            FALSE);
+
+        sTemp.Format("Script Name: %s\n", m_scriptName);
+        pWorld->DisplayText(CString(""),
+            sTemp,
+            -1,
+            FALSE);
+
+        sTemp.Format("Scripts: %.*s, %.*s, %s, %.*s, %.*s, %.*s, %.*s",
+            RESREF_SIZE,
+            m_baseStats.m_scriptOverRide,
+            RESREF_SIZE,
+            m_baseStats.m_scriptSpecial1,
+            (LPCSTR)field_4FFC.GetResRefStr(),
+            RESREF_SIZE,
+            m_baseStats.m_scriptSpecial2,
+            RESREF_SIZE,
+            m_baseStats.m_scriptCombat,
+            RESREF_SIZE,
+            m_baseStats.m_scriptSpecial3,
+            RESREF_SIZE,
+            m_baseStats.m_scriptMovement);
+        pWorld->DisplayText(CString(""),
+            sTemp,
+            -1,
+            FALSE);
+
+        sTemp.Format("Dialog: %.*s", RESREF_SIZE, m_dialog.GetResRef());
+        pWorld->DisplayText(CString(""),
+            sTemp,
+            -1,
+            FALSE);
+
+        sTemp.Format("Morale: %d", m_baseStats.m_morale);
+        pWorld->DisplayText(CString(""),
+            sTemp,
+            -1,
+            FALSE);
+
+        sTemp.Format("Morale Breaking Point: %d", m_baseStats.m_moraleBreak);
+        pWorld->DisplayText(CString(""),
+            sTemp,
+            -1,
+            FALSE);
+
+        sTemp = "Time Of Day Active: ";
+        for (BYTE nHour = 0; nHour < CTimerWorld::TIMESCALE_HOUR_PER_DAY; nHour++) {
+            if (((m_timeOfDayVisible >> nHour) & 0x1) != 0) {
+                sHour.Format("%d,", nHour);
+                sTemp += sHour;
+            }
+        }
+        sTemp.SetAt(sTemp.GetLength() - 1, ' ');
+        pWorld->DisplayText(CString(""),
+            sTemp,
+            -1,
+            FALSE);
+
+        pWorld->DisplayText(CString(""),
+            CString("Items:"),
+            -1,
+            FALSE);
+
+        // NOTE: Slots 43..50.
+        for (INT nSlot = 1; nSlot <= 8; nSlot++) {
+            CItem* pItem = m_equipment.m_items[nSlot + 42];
+            if (pItem != NULL) {
+                if (m_equipment.m_selectedWeapon == nSlot + 42) {
+                    sTemp.Format("    Weapon%d: %.*s Selected\n", nSlot, RESREF_SIZE, pItem->GetResRef().GetResRef());
+                    pWorld->DisplayText(CString(""),
+                        sTemp,
+                        -1,
+                        FALSE);
+                } else {
+                    sTemp.Format("    Weapon%d: %.*s\n", nSlot, RESREF_SIZE, pItem->GetResRef().GetResRef());
+                    pWorld->DisplayText(CString(""),
+                        sTemp,
+                        -1,
+                        FALSE);
+                }
+            }
+        }
+
+        // NOTE: Slots 11..14.
+        for (INT nSlot = 1; nSlot <= 4; nSlot++) {
+            CItem* pItem = m_equipment.m_items[nSlot + 10];
+            if (pItem != NULL) {
+                if (m_equipment.m_selectedWeapon == nSlot + 10) {
+                    sTemp.Format("    Quiver%d: %.*s Selected\n", nSlot, RESREF_SIZE, pItem->GetResRef().GetResRef());
+                    pWorld->DisplayText(CString(""),
+                        sTemp,
+                        -1,
+                        FALSE);
+                } else {
+                    sTemp.Format("    Quiver%d: %.*s\n", nSlot, RESREF_SIZE, pItem->GetResRef().GetResRef());
+                    pWorld->DisplayText(CString(""),
+                        sTemp,
+                        -1,
+                        FALSE);
+                }
+            }
+        }
+
+        if (m_equipment.m_items[1] != NULL) {
+            sTemp.Format("    Armor: %.*s\n", RESREF_SIZE, m_equipment.m_items[1]->GetResRef().GetResRef());
+            pWorld->DisplayText(CString(""),
+                sTemp,
+                -1,
+                FALSE);
+        }
+
+        if (m_equipment.m_items[6] != NULL) {
+            sTemp.Format("    Helmet: %.*s\n", RESREF_SIZE, m_equipment.m_items[6]->GetResRef().GetResRef());
+            pWorld->DisplayText(CString(""),
+                sTemp,
+                -1,
+                FALSE);
+        }
+
+        if (m_equipment.m_items[0] != NULL) {
+            sTemp.Format("    Necklace: %.*s\n", RESREF_SIZE, m_equipment.m_items[0]->GetResRef().GetResRef());
+            pWorld->DisplayText(CString(""),
+                sTemp,
+                -1,
+                FALSE);
+        }
+
+        if (m_equipment.m_items[2] != NULL) {
+            sTemp.Format("    Belt: %.*s\n", RESREF_SIZE, m_equipment.m_items[2]->GetResRef().GetResRef());
+            pWorld->DisplayText(CString(""),
+                sTemp,
+                -1,
+                FALSE);
+        }
+
+        // NOTE: The slot index is computed in a byte.
+        if (m_equipment.m_items[static_cast<BYTE>((m_nWeaponSet + 22) * 2)] != NULL) {
+            sTemp.Format("    Shield: %.*s\n", RESREF_SIZE, m_equipment.m_items[static_cast<BYTE>((m_nWeaponSet + 22) * 2)]->GetResRef().GetResRef());
+            pWorld->DisplayText(CString(""),
+                sTemp,
+                -1,
+                FALSE);
+        }
+
+        if (m_equipment.m_items[3] != NULL) {
+            sTemp.Format("    Boots: %.*s\n", RESREF_SIZE, m_equipment.m_items[3]->GetResRef().GetResRef());
+            pWorld->DisplayText(CString(""),
+                sTemp,
+                -1,
+                FALSE);
+        }
+
+        if (m_equipment.m_items[7] != NULL) {
+            sTemp.Format("    RingLeft: %.*s\n", RESREF_SIZE, m_equipment.m_items[7]->GetResRef().GetResRef());
+            pWorld->DisplayText(CString(""),
+                sTemp,
+                -1,
+                FALSE);
+        }
+
+        if (m_equipment.m_items[8] != NULL) {
+            sTemp.Format("    RingRight: %.*s\n", RESREF_SIZE, m_equipment.m_items[8]->GetResRef().GetResRef());
+            pWorld->DisplayText(CString(""),
+                sTemp,
+                -1,
+                FALSE);
+        }
+
+        // NOTE: Slots 15..42.
+        for (INT nSlot = 1; nSlot <= 28; nSlot++) {
+            CItem* pItem = m_equipment.m_items[nSlot + 14];
+            if (pItem != NULL) {
+                sTemp.Format("    QuickSlot%d: %.*s\n", nSlot, RESREF_SIZE, pItem->GetResRef().GetResRef());
+                pWorld->DisplayText(CString(""),
+                    sTemp,
+                    -1,
+                    FALSE);
+            }
+        }
+
+        UINT nClassIndex;
+        UINT nLevel;
+        UINT nIndex;
+
+        for (nClassIndex = 0; nClassIndex < CSPELLLIST_NUM_CLASSES; nClassIndex++) {
+            if (m_spells.Get(nClassIndex)->m_nHighestLevel > 0) {
+                CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+                sTemp.Format("%s Spells:", (LPCSTR)pGame->GetRuleTables().GetClassString(pGame->GetSpellcasterClass(nClassIndex), 0));
+                pWorld->DisplayText(CString(""),
+                    sTemp,
+                    -1,
+                    FALSE);
+
+                for (nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+                    if (m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->m_List.size() != 0) {
+                        sTemp.Format("Level: %1d", nLevel);
+                        pWorld->DisplayText(CString(""),
+                            sTemp,
+                            -1,
+                            FALSE);
+
+                        for (nIndex = 0; nIndex < m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+                            // NOTE: Uninline.
+                            CGameSpriteSpellListEntry* pEntry = m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->Get(nIndex);
+
+                            // NOTE: Uninline.
+                            CResRef resRef = g_pBaldurChitin->GetObjectGame()->m_spells.Get(pEntry->m_nID);
+
+                            sTemp.Format("    %.*s (%3d/%3d)", RESREF_SIZE, resRef.GetResRef(), pEntry->field_8, pEntry->field_4);
+                            pWorld->DisplayText(CString(""),
+                                sTemp,
+                                -1,
+                                FALSE);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (m_domainSpells.m_nHighestLevel > 0) {
+            pWorld->DisplayText(CString(""),
+                CString("Domain Spells:"),
+                -1,
+                FALSE);
+
+            for (nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+                if (m_domainSpells.GetSpellsAtLevel(nLevel)->m_List.size() != 0) {
+                    sTemp.Format("Level: %1d", nLevel);
+                    pWorld->DisplayText(CString(""),
+                        sTemp,
+                        -1,
+                        FALSE);
+
+                    for (nIndex = 0; nIndex < m_domainSpells.GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+                        // NOTE: Uninline.
+                        CGameSpriteSpellListEntry* pEntry = m_domainSpells.GetSpellsAtLevel(nLevel)->Get(nIndex);
+
+                        // NOTE: Uninline.
+                        CResRef resRef = g_pBaldurChitin->GetObjectGame()->m_spells.Get(pEntry->m_nID);
+
+                        sTemp.Format("    %.*s (%3d/%3d)", RESREF_SIZE, resRef.GetResRef(), pEntry->field_8, pEntry->field_4);
+                        pWorld->DisplayText(CString(""),
+                            sTemp,
+                            -1,
+                            FALSE);
+                    }
+                }
+            }
+        }
+
+        if (m_innateSpells.m_List.size() != 0) {
+            for (nIndex = 0; nIndex < m_innateSpells.m_List.size(); nIndex++) {
+                // NOTE: Uninline.
+                CGameSpriteSpellListEntry* pEntry = m_innateSpells.Get(nIndex);
+
+                // NOTE: Uninline.
+                CResRef resRef = g_pBaldurChitin->GetObjectGame()->m_innateSpells.Get(pEntry->m_nID);
+
+                sTemp.Format("    %.*s (%3d/%3d)", RESREF_SIZE, resRef.GetResRef(), pEntry->field_8, pEntry->field_4);
+                pWorld->DisplayText(CString(""),
+                    sTemp,
+                    -1,
+                    FALSE);
+            }
+        }
+
+        if (m_songs.m_List.size() != 0) {
+            for (nIndex = 0; nIndex < m_songs.m_List.size(); nIndex++) {
+                // NOTE: Uninline.
+                CGameSpriteSpellListEntry* pEntry = m_songs.Get(nIndex);
+
+                // NOTE: Uninline.
+                CResRef resRef = g_pBaldurChitin->GetObjectGame()->m_songs.Get(pEntry->m_nID);
+
+                sTemp.Format("    %.*s (%3d/%3d)", RESREF_SIZE, resRef.GetResRef(), pEntry->field_8, pEntry->field_4);
+                pWorld->DisplayText(CString(""),
+                    sTemp,
+                    -1,
+                    FALSE);
+            }
+        }
+
+        if (m_shapeshifts.m_List.size() != 0) {
+            for (nIndex = 0; nIndex < m_shapeshifts.m_List.size(); nIndex++) {
+                // NOTE: Uninline.
+                CGameSpriteSpellListEntry* pEntry = m_shapeshifts.Get(nIndex);
+
+                // NOTE: Uninline.
+                CResRef resRef = g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Get(pEntry->m_nID);
+
+                sTemp.Format("    %.*s (%3d/%3d)", RESREF_SIZE, resRef.GetResRef(), pEntry->field_8, pEntry->field_4);
+                pWorld->DisplayText(CString(""),
+                    sTemp,
+                    -1,
+                    FALSE);
+            }
+        }
+    }
+}
+
 // 0x6FF2F0
 void CGameSprite::DropPath()
 {
