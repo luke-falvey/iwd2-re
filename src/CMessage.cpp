@@ -23242,7 +23242,6 @@ void CMessageSpriteUpdate::MarshalMessage(BYTE** pData, DWORD* dwSize)
         *reinterpret_cast<SHORT*>(*pData + cnt + 2) = m_nACPiercingMod;
         cnt += sizeof(SHORT);
         *reinterpret_cast<SHORT*>(*pData + cnt + 2) = m_nACSlashingMod;
-        cnt += sizeof(SHORT);
 
         pSprite->m_cLastSpriteUpdate.field_2A = field_64;
         pSprite->m_cLastSpriteUpdate.field_2C = field_66;
