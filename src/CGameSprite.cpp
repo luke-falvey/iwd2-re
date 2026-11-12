@@ -1250,7 +1250,101 @@ BOOL CGameSprite::GetCanSeeInvisible()
 // 0x6F3B80
 void CGameSprite::sub_6F3B80(CGameArea* pNewArea, CPoint pos, LONG posZ, BYTE listType, POSITION posVertList, BOOLEAN bInfravisionOn)
 {
-    // TODO: Incomplete.
+    m_pos = pos;
+    m_posZ = posZ;
+    m_posVertList = posVertList;
+    m_bInfravisionOn = bInfravisionOn;
+    m_posExact.x = m_pos.x << 10;
+    m_posExact.y = (m_pos.y << 12) / 3;
+    m_posOld = pos;
+    m_pArea = pNewArea;
+    m_listType = listType;
+
+    if (m_active && m_activeAI && m_activeImprisonment) {
+        CheckIfVisible();
+    }
+
+    switch (listType) {
+    case CGAMEOBJECT_LIST_FRONT:
+        if (m_active
+            && m_activeAI
+            && m_activeImprisonment
+            && (m_derivedStats.m_generalState & STATE_DEAD) == 0) {
+            pNewArea->m_pObjectMarker->AddObject(m_id);
+
+            pNewArea->m_search.AddObject(CPoint(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+                                             m_pos.y / CPathSearch::GRID_SQUARE_SIZEY),
+                m_typeAI.GetEnemyAlly(),
+                m_animation.GetPersonalSpace(),
+                field_54A8,
+                field_7430);
+        }
+        break;
+    case CGAMEOBJECT_LIST_BACK:
+        if (m_active && m_activeAI && m_activeImprisonment) {
+            pNewArea->IncrHeightDynamic(m_pos);
+        }
+        break;
+    case CGAMEOBJECT_LIST_FLIGHT:
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+        // __LINE__: 1386
+        UTIL_ASSERT(FALSE);
+    }
+
+    SetFootstepChannel();
+
+    if ((m_derivedStats.m_generalState & STATE_SILENCED) == 0) {
+        if (g_pBaldurChitin->GetObjectGame()->GetOptions()->m_bFootStepsSounds
+            || g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) == -1) {
+            char* pSndReady = m_animation.GetSndReady();
+            if (*pSndReady != '\0') {
+                m_sndReady.SetResRef(CResRef(pSndReady), TRUE, TRUE);
+                delete pSndReady;
+                m_sndReady.SetLoopingFlag(1);
+                m_sndReady.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+            }
+        }
+    }
+
+    if (m_bGlobal) {
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1) {
+            if (!g_pBaldurChitin->GetObjectGame()->GetGameSave()->field_1AC || InControl()) {
+                if (Animate()) {
+                    m_posLastVisMapEntry = pos;
+                    pNewArea->m_visibility.AddCharacter(m_posLastVisMapEntry,
+                        m_id,
+                        m_visibleTerrainTable);
+                }
+
+                if (pNewArea->m_nCharacters != 0xFF) {
+                    pNewArea->m_nCharacters++;
+                } else {
+                    pNewArea->m_nCharacters = 1;
+                }
+            }
+        }
+    } else if (m_type == 1) {
+        pNewArea->m_nRandomMonster++;
+    }
+
+    if (!g_pBaldurChitin->GetObjectGame()->m_bInLoadGame
+        && !g_pBaldurChitin->GetObjectGame()->m_bInLoadArea
+        && !g_pBaldurChitin->GetObjectGame()->m_bInAreaTransition
+        && !g_pBaldurChitin->GetBaldurMessage()->m_bInOnObjectAdd) {
+        BYTE* pData = STATICBUFFER;
+        DWORD dwSize;
+        MarshalMessage(&pData, &dwSize);
+        g_pBaldurChitin->GetBaldurMessage()->ObjectAdd(m_id, GetObjectType(), pData, dwSize);
+
+        if (InControl()
+            && g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
+            m_cLastSpriteUpdate.Initialize(TRUE);
+            CMessage* message = new CMessageSpriteUpdate(this, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    }
 }
 
 // 0x6F40F0

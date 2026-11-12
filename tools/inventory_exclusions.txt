@@ -209,3 +209,9 @@
 # std::list<T>::list(const allocator&) (library): copies the allocator byte, allocates
 # the 0xC byte head node linked to itself and sets the size to 0.
 0x516FD0
+
+
+# CList<LONG>::AddTail (instantiation, 0x727CD0): takes a node from the free list
+# (allocating a block of 0xC byte nodes when empty), links it after the tail and
+# stores the LONG; used inline by CObjectMarker::AddObject.
+0x727CD0
