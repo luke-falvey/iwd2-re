@@ -2,6 +2,7 @@
 
 #include "CBaldurChitin.h"
 #include "CGameArea.h"
+#include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CUtil.h"
@@ -108,10 +109,169 @@ void CProjectileBAM84DBDC::Fire(CGameArea* pArea, LONG source, LONG target, CPoi
     // TODO: Incomplete.
 }
 
+// 0x52D430
+BOOL CProjectileBAM84DBDC::sub_52D430(BOOLEAN a1)
+{
+    CTypedPtrList<CPtrList, LONG*> targets(10);
+    BOOL bResult;
+    BOOLEAN bFire = FALSE;
+
+    if (field_2B0 != 0) {
+        // NOTE: The range arguments are `WORD` in the original (zero-extended).
+        field_EA->GetAllInRange(m_posVertList,
+            m_pos,
+            field_2B4,
+            static_cast<WORD>(field_2A2),
+            m_terrainTable,
+            targets,
+            TRUE,
+            field_2F2);
+        field_EA->GetAllInRangeBack(m_pos,
+            field_2B4,
+            static_cast<WORD>(field_2A2),
+            m_terrainTable,
+            targets,
+            TRUE,
+            FALSE,
+            field_2F2);
+
+        bResult = !targets.IsEmpty();
+        if (!bResult) {
+            return bResult;
+        }
+    } else {
+        bResult = TRUE;
+        bFire = TRUE;
+    }
+
+    targets.RemoveAll();
+
+    field_EA->GetAllInRange(m_posVertList,
+        m_pos,
+        field_2B4,
+        static_cast<WORD>(field_2A0),
+        m_terrainTable,
+        targets,
+        TRUE,
+        field_2F2);
+    field_EA->GetAllInRangeBack(m_pos,
+        field_2B4,
+        static_cast<WORD>(field_2A0),
+        m_terrainTable,
+        targets,
+        TRUE,
+        FALSE,
+        field_2F2);
+
+    POSITION pos = targets.GetHeadPosition();
+    while (pos != NULL) {
+        LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+        CGameObject* pObject;
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            return bResult;
+        }
+
+        if ((CGameObject::TYPE_AIBASE & pObject->GetObjectType()) == 0) {
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            continue;
+        }
+
+        CPoint ptTarget;
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            ptTarget = static_cast<CGameSprite*>(pObject)->m_posOld;
+        } else {
+            ptTarget = pObject->GetPos();
+        }
+
+        BOOL bSkip = FALSE;
+        if (a1 != 0) {
+            LONG dy = ptTarget.y - m_pos.y;
+            LONG dx = ptTarget.x - m_pos.x;
+            if (dy * dy * 16 / 9 + dx * dx >= field_2A0 * field_2A0) {
+                if (!field_EA->CheckLOS(m_pos, ptTarget, m_terrainTable, FALSE)) {
+                    bSkip = TRUE;
+                }
+            }
+        }
+
+        if (!bSkip) {
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                static_cast<CGameSprite*>(pObject)->m_posOld = pObject->GetPos();
+            }
+
+            bFire = TRUE;
+
+            CProjectile* pProjectile = CProjectile::DecodeProjectile(static_cast<WORD>(field_2A4 + 1), NULL, FALSE);
+            pProjectile->field_186 = field_186;
+            pProjectile->field_18A = field_18A;
+            pProjectile->m_fireSoundRef = CResRef("");
+
+            POSITION posEffect = m_effectList.GetHeadPosition();
+            while (posEffect != NULL) {
+                CGameEffect* pEffect = m_effectList.GetNext(posEffect);
+
+                // NOTE: Uninline.
+                pProjectile->AddEffect(pEffect->Copy());
+            }
+
+            pProjectile->Fire(field_EA,
+                m_id,
+                nTargetId,
+                pObject->GetPos(),
+                50,
+                0);
+        }
+
+        // NOTE: Releases `m_callBackProjectile` rather than the target.
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_callBackProjectile,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    if (bFire) {
+        Virtual88();
+    }
+
+    return bResult;
+}
+
 // 0x52D7F0
 void CProjectileBAM84DBDC::OnArrival()
 {
-    // TODO: Incomplete.
+    CProjectile* pProjectile;
+    BYTE rc;
+
+    if (m_callBackProjectile != CGameObjectArray::INVALID_INDEX) {
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_callBackProjectile,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pProjectile),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            return;
+        }
+
+        pProjectile->CallBack();
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_callBackProjectile,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    field_2A8 = 1;
+    field_1DE = 0;
+
+    // NOTE: Inlined.
+    PlaySound(m_arrivalSoundRef, m_loopArrivalSound, TRUE);
 }
 
 // 0x78E730
