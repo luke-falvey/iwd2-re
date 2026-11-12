@@ -3,6 +3,7 @@
 #include "CChitin.h"
 #include "CUtil.h"
 #include "CVidFont.h"
+#include "CVidInf.h"
 #include "CVidMosaic.h"
 #include "CWarp.h"
 
@@ -374,15 +375,125 @@ CString CImm::sub_7C2ED0(HWND hWnd)
 // 0x7C3020
 CRect CImm::sub_7C3020(const CPoint& ptPanel, const CSize& panelSize, const CPoint& ptEdit, const CSize& editSize, SHORT nFontHeight)
 {
-    // TODO: Incomplete.
+    if (field_13C == NULL) {
+        return CRect(0, 0, 0, 0);
+    }
 
-    return CRect();
+    CSize size;
+    field_13C->GetSize(size, FALSE);
+
+    LONG nMaxHeight = 3 * nFontHeight + 2 * PADDING.cy;
+    if (size.cy >= nMaxHeight) {
+        size.cy = nMaxHeight;
+    }
+
+    LONG top;
+    if (size.cy >= panelSize.cy) {
+        top = ptPanel.y;
+    } else if (size.cy + ptEdit.y + editSize.cy <= panelSize.cy) {
+        top = ptPanel.y + editSize.cy + ptEdit.y;
+    } else if (ptEdit.y - size.cy >= 0) {
+        top = ptPanel.y - size.cy + ptEdit.y;
+    } else {
+        top = (panelSize.cy - size.cy) / 2 + ptPanel.y;
+    }
+
+    LONG left;
+    if (size.cx >= panelSize.cx) {
+        left = ptPanel.x;
+    } else if (editSize.cx - size.cx + ptEdit.x >= 0) {
+        left = ptPanel.x - size.cx + editSize.cx + ptEdit.x;
+    } else if (ptEdit.x + size.cx <= panelSize.cx) {
+        left = ptPanel.x + ptEdit.x;
+    } else {
+        left = (panelSize.cx - size.cx) / 2 + ptPanel.x;
+    }
+
+    return CRect(left, top, left + size.cx, top + size.cy);
 }
 
 // 0x7C3140
-void CImm::sub_7C3140(const CRect& a1, const CRect& a2, CVidFont* pVidFont, BOOL bDemanded)
+void CImm::sub_7C3140(const CRect& a1, CRect a2, CVidFont* pVidFont, BOOL bDemanded)
 {
-    // TODO: Incomplete.
+    CVidInf* pVidInf;
+    if (g_pChitin->pActiveEngine != NULL) {
+        pVidInf = static_cast<CVidInf*>(g_pChitin->pActiveEngine->pVidMode);
+    } else {
+        pVidInf = NULL;
+    }
+
+    CRect rMosaic(0, 0, a1.right - a1.left, a1.bottom - a1.top);
+    field_13C->Render(0, a1.left, a1.top, rMosaic, a2, 0, FALSE);
+
+    CString sText = sub_7C2ED0(g_pChitin->GetWnd()->GetSafeHwnd());
+    CString sCandidate = sub_7C34D0();
+    if (sCandidate != "") {
+        if (sText == "") {
+            sText = sCandidate;
+        } else {
+            sText = sText + " :  " + sCandidate;
+        }
+    }
+
+    a2.left += PADDING.cx;
+    a2.right -= PADDING.cx;
+    a2.top += PADDING.cy;
+    a2.bottom -= PADDING.cy;
+
+    if (pVidInf->BKLock(a2)) {
+        a2.OffsetRect(-a2.left, -a2.top);
+
+        if (!bDemanded) {
+            if (!pVidFont->pRes->Demand()) {
+                pVidInf->BKUnlock();
+                return;
+            }
+        }
+
+        COLORREF rgbForegroundColor = pVidFont->m_rgbForegroundColor;
+        COLORREF rgbBackgroundColor = pVidFont->m_rgbBackgroundColor;
+        pVidFont->SetColor(0xFFFFFF, 0, FALSE);
+
+        SHORT nBaseLineHeight = pVidFont->GetBaseLineHeight(TRUE);
+        pVidInf->BKTextOut(pVidFont, sText, 0, nBaseLineHeight, a2, 0, TRUE);
+
+        CString asLines[2];
+        // NOTE: `bCheckRemainderForNewLine` is passed as 0xFFFF.
+        CUtil::SplitString(pVidFont,
+            sub_7C34A0(),
+            a2.right - a2.left,
+            2,
+            asLines,
+            FALSE,
+            TRUE,
+            0xFFFF,
+            0xFFFF);
+
+        BYTE nLine = 0;
+        do {
+            if (asLines[nLine] == "") {
+                break;
+            }
+
+            pVidInf->BKTextOut(pVidFont,
+                asLines[nLine],
+                0,
+                pVidFont->GetFontHeight(TRUE) * (nLine + 1) + nBaseLineHeight,
+                a2,
+                0,
+                TRUE);
+
+            nLine++;
+        } while (nLine < 2);
+
+        pVidFont->SetColor(rgbForegroundColor, rgbBackgroundColor, FALSE);
+
+        if (!bDemanded) {
+            pVidFont->pRes->Release();
+        }
+
+        pVidInf->BKUnlock();
+    }
 }
 
 // 0x7C34A0

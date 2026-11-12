@@ -2,6 +2,7 @@
 
 #include "CBaldurChitin.h"
 #include "CBaldurEngine.h"
+#include "CScreenWorld.h"
 #include "CUIManager.h"
 #include "CUIPanel.h"
 #include "CUtil.h"
@@ -215,8 +216,151 @@ BOOL CUIControlEdit::OnRButtonDown(CPoint pt)
 // 0x4D7130
 void CUIControlEdit::OnKeyDown(SHORT nKey)
 {
+    // 0x8ABA48
+    static BYTE digits[] = {
+        '0',
+        '1',
+        '2',
+        '3',
+        '4',
+        '5',
+        '6',
+        '7',
+        '8',
+        '9',
+    };
+
+    // 0x8ABA54
+    static BYTE shiftedDigits[] = {
+        ')',
+        '!',
+        '@',
+        '#',
+        '$',
+        '%',
+        '^',
+        '&',
+        '*',
+        '(',
+    };
+
+    // 0x8ABA3C
+    static BYTE symbolKeys[] = {
+        VK_OEM_1,
+        VK_OEM_PLUS,
+        VK_OEM_COMMA,
+        VK_OEM_MINUS,
+        VK_OEM_PERIOD,
+        VK_OEM_2,
+        VK_OEM_3,
+        VK_OEM_4,
+        VK_OEM_5,
+        VK_OEM_6,
+        VK_OEM_7,
+        0,
+    };
+
+    // 0x8ABA24
+    static BYTE symbols[] = {
+        ';',
+        '=',
+        ',',
+        '-',
+        '.',
+        '/',
+        '`',
+        '[',
+        '\\',
+        ']',
+        '\'',
+        0,
+    };
+
+    // 0x8ABA30
+    static BYTE shiftedSymbols[] = {
+        ':',
+        '+',
+        '<',
+        '_',
+        '>',
+        '?',
+        '~',
+        '{',
+        '|',
+        '}',
+        '"',
+        0,
+    };
+
     if (g_pBaldurChitin->field_1A0) {
-        // TODO: Incomplete.
+        // FIXME: Unused.
+        g_pChitin->GetWnd();
+
+        if (g_pBaldurChitin->cImm.field_128) {
+            // 0x4D7183 - 0x4D7500 (893 bytes)
+            if (nKey == VK_F3 && (GetSystemDefaultLangID() & 0x3FF) == LANG_JAPANESE) {
+                g_pChitin->cImm.sub_7C2CC0(g_pChitin->GetWnd()->GetSafeHwnd());
+            }
+
+            if (m_sText.GetLength() >= m_nMaxLength) {
+                if (nKey == VK_F4 || (nKey == VK_RETURN && (GetSystemDefaultLangID() & 0x3FF) == LANG_KOREAN)) {
+                    g_pBaldurChitin->cImm.sub_7C2E10(g_pChitin->GetWnd()->GetSafeHwnd());
+                    m_pPanel->InvalidateRect(&(m_pPanel->m_rImeSuggestionsFrame));
+                    m_pPanel->m_rImeSuggestionsFrame.SetRectEmpty();
+                    m_pPanel->m_pImeSuggestionsFont = NULL;
+                }
+
+                m_pPanel->InvalidateRect(NULL);
+                return;
+            }
+
+            CString sIme = g_pBaldurChitin->cImm.sub_4D89E0();
+            if (sIme != "") {
+                m_sText = m_sText.Left(m_nCursorIndex)
+                    + sIme
+                    + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
+            }
+
+            if (m_sText.GetLength() >= m_nMaxLength) {
+                m_sText = m_sText.Left(m_nMaxLength);
+            }
+
+            m_nCursorIndex += sIme.GetLength();
+
+            AdjustVisibleIndex();
+
+            if (nKey == VK_F4 || (nKey == VK_RETURN && (GetSystemDefaultLangID() & 0x3FF) == LANG_KOREAN)) {
+                g_pBaldurChitin->cImm.sub_7C2E10(g_pChitin->GetWnd()->GetSafeHwnd());
+                m_pPanel->InvalidateRect(&(m_pPanel->m_rImeSuggestionsFrame));
+                m_pPanel->m_rImeSuggestionsFrame.SetRectEmpty();
+                m_pPanel->m_pImeSuggestionsFont = NULL;
+                m_pPanel->InvalidateRect(NULL);
+                static_cast<CBaldurEngine*>(g_pBaldurChitin->pActiveEngine)->GetManager()->InvalidateRect(NULL);
+                return;
+            }
+
+            if (nKey == VK_RETURN
+                && g_pBaldurChitin->pActiveEngine == g_pBaldurChitin->m_pEngineWorld) {
+                field_872 = 1;
+                if (m_sText != field_874[0]) {
+                    for (BYTE index = field_873 - 1; index != 0; index--) {
+                        field_874[index] = field_874[index - 1];
+                    }
+
+                    field_874[0] = m_sText;
+                }
+
+                OnEditReturn(m_sText);
+
+                if (field_8A0) {
+                    // NOTE: Uninline.
+                    m_pPanel->m_pManager->KillCapture();
+                }
+            }
+
+            InvalidateRect();
+            return;
+        }
     }
 
     if (m_pPanel->m_pManager->m_pWarp->GetMenuKey()) {
@@ -229,7 +373,7 @@ void CUIControlEdit::OnKeyDown(SHORT nKey)
         }
 
         if (nKey == VK_INSERT || nKey == 'C') {
-            // Ctrl + C
+            // 0x4D767A - 0x4D771D
             if (OpenClipboard(NULL)) {
                 HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, m_sText.GetLength() + 1);
                 if (hMem != NULL) {
@@ -256,15 +400,16 @@ void CUIControlEdit::OnKeyDown(SHORT nKey)
 
             InvalidateRect();
         } else if (nKey == 'V') {
-            // Ctrl + V
+            // 0x4D7562 - 0x4D767A
             if (OpenClipboard(NULL)) {
                 HGLOBAL hMem = GetClipboardData(CF_TEXT);
                 if (hMem != NULL) {
                     LPVOID pMem = GlobalLock(hMem);
                     if (pMem != NULL) {
                         m_sText = m_sText.Left(m_nCursorIndex)
-                            + CString(reinterpret_cast<LPCSTR>(pMem))
+                            + reinterpret_cast<LPCSTR>(pMem)
                             + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
+
                         GlobalUnlock(hMem);
                     }
                 }
@@ -280,25 +425,48 @@ void CUIControlEdit::OnKeyDown(SHORT nKey)
 
     switch (nKey) {
     case VK_BACK:
-        if (m_nCursorIndex != 0) {
-            m_nCursorIndex--;
-            if (m_nCursorIndex < m_nVisibleIndex) {
-                m_nVisibleIndex = m_nCursorIndex;
-            }
-
-            if (g_pChitin->field_1A0) {
-                // TODO: Incomplete.
-            } else {
-                m_sText = m_sText.Left(m_nCursorIndex) + m_sText.Right(m_sText.GetLength() - m_nCursorIndex - 1);
-            }
-
-            InvalidateRect();
+        // 0x4D7C15 - 0x4D7F41 (812 bytes)
+        if (m_nCursorIndex == 0) {
+            return;
         }
+
+        m_nCursorIndex--;
+        if (m_nCursorIndex < m_nVisibleIndex) {
+            m_nVisibleIndex = m_nCursorIndex;
+        }
+
+        if (g_pChitin->field_1A0) {
+            if (CUtil::IsDBCSTrailByte(m_sText, m_nCursorIndex)) {
+                m_nCursorIndex--;
+                if (m_nCursorIndex < m_nVisibleIndex) {
+                    m_nVisibleIndex = m_nCursorIndex;
+                }
+
+                if (g_pChitin->field_1A0 && IsDBCSLeadByte(m_sText[m_nCursorIndex])) {
+                    m_sText = m_sText.Left(m_nCursorIndex)
+                        + m_sText.Right(m_sText.GetLength() - m_nCursorIndex - 2);
+                } else {
+                    m_sText = m_sText.Left(m_nCursorIndex)
+                        + m_sText.Right(m_sText.GetLength() - m_nCursorIndex - 1);
+                }
+            } else {
+                m_sText = m_sText.Left(m_nCursorIndex)
+                    + m_sText.Right(m_sText.GetLength() - m_nCursorIndex - 1);
+            }
+        } else {
+            m_sText = m_sText.Left(m_nCursorIndex)
+                + m_sText.Right(m_sText.GetLength() - m_nCursorIndex - 1);
+        }
+
         break;
     case VK_RETURN:
+        // 0x4D79C8 - 0x4D7A6D (165 bytes)
         field_872 = 1;
         if (m_sText != field_874[0]) {
-            // TODO: Incomplete.
+            for (BYTE index = field_873 - 1; index != 0; index--) {
+                field_874[index] = field_874[index - 1];
+            }
+
             field_874[0] = m_sText;
         }
 
@@ -309,81 +477,111 @@ void CUIControlEdit::OnKeyDown(SHORT nKey)
             m_pPanel->m_pManager->KillCapture();
         }
 
-        InvalidateRect();
+        break;
+    case VK_ESCAPE:
+        // 0x4D79AA - 0x4D79C8 (30 bytes), shares the capture release at 0x4D7A4C
+        m_sText = field_868;
+        field_872 = 1;
+
+        // NOTE: Uninline.
+        m_pPanel->m_pManager->KillCapture();
+
         break;
     case VK_SPACE:
-        if (field_85C != 2) {
-            if (m_sText.GetLength() != m_nMaxLength) {
-                m_sText = m_sText.Left(m_nCursorIndex)
-                    + ' '
-                    + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
-
-                m_nCursorIndex++;
-
-                AdjustVisibleIndex();
-                InvalidateRect();
-            }
+        // 0x4D80D9 - 0x4D81D0 (247 bytes)
+        if (field_85C == 2) {
+            return;
         }
+
+        if (m_sText.GetLength() == m_nMaxLength) {
+            return;
+        }
+
+        m_sText = m_sText.Left(m_nCursorIndex)
+            + ' '
+            + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
+
+        m_nCursorIndex++;
+
+        AdjustVisibleIndex();
         break;
     case VK_END:
+        // 0x4D7B1E - 0x4D7B33 (21 bytes)
         m_nCursorIndex = m_sText.GetLength();
 
         AdjustVisibleIndex();
-        InvalidateRect();
         break;
     case VK_HOME:
+        // 0x4D7B33 - 0x4D7B47 (20 bytes)
         m_nVisibleIndex = 0;
         m_nCursorIndex = 0;
-
-        InvalidateRect();
         break;
     case VK_LEFT:
-        if (m_nCursorIndex != 0) {
+        // 0x4D7B47 - 0x4D7BC5 (126 bytes)
+        if (m_nCursorIndex == 0) {
+            return;
+        }
+
+        m_nCursorIndex--;
+        if (m_nCursorIndex < m_nVisibleIndex) {
+            m_nVisibleIndex = m_nCursorIndex;
+        }
+
+        if (g_pChitin->field_1A0 && CUtil::IsDBCSTrailByte(m_sText, m_nCursorIndex)) {
             m_nCursorIndex--;
             if (m_nCursorIndex < m_nVisibleIndex) {
                 m_nVisibleIndex = m_nCursorIndex;
             }
-
-            if (g_pChitin->field_1A0) {
-                // TODO: Incomplete.
-            }
-
-            InvalidateRect();
         }
+
         break;
     case VK_UP:
-        if (field_872 != field_873 && field_874[field_872].GetLength() != 0) {
-            m_sText = field_874[field_872++];
-            m_nCursorIndex = m_sText.GetLength();
-
-            AdjustVisibleIndex();
-            InvalidateRect();
+        // 0x4D7A6D - 0x4D7ACB (94 bytes)
+        if (field_872 == field_873) {
+            return;
         }
+
+        if (field_874[field_872].GetLength() == 0) {
+            return;
+        }
+
+        m_sText = field_874[field_872++];
+        m_nCursorIndex = m_sText.GetLength();
+
+        AdjustVisibleIndex();
         break;
     case VK_RIGHT:
-        if (m_nCursorIndex != m_sText.GetLength()) {
-            if (g_pChitin->field_1A0) {
-                if (IsDBCSLeadByte(m_sText[(int)m_nCursorIndex])) {
-                    m_nCursorIndex++;
-                }
-            }
-
-            m_nCursorIndex++;
-
-            AdjustVisibleIndex();
-            InvalidateRect();
+        // 0x4D7BC5 - 0x4D7C15 (80 bytes)
+        if (m_nCursorIndex == m_sText.GetLength()) {
+            return;
         }
+
+        if (g_pChitin->field_1A0 && IsDBCSLeadByte(m_sText[m_nCursorIndex])) {
+            m_nCursorIndex++;
+        }
+
+        m_nCursorIndex++;
+
+        AdjustVisibleIndex();
         break;
     case VK_DOWN:
-        if (field_872 > 1 && field_874[field_872].GetLength() != 0) {
-            m_sText = field_874[field_872--];
-            m_nCursorIndex = m_sText.GetLength();
-
-            AdjustVisibleIndex();
-            InvalidateRect();
+        // 0x4D7ACB - 0x4D7B1E (83 bytes)
+        if (field_872 < 2) {
+            return;
         }
+
+        if (field_874[field_872 - 2].GetLength() == 0) {
+            return;
+        }
+
+        m_sText = field_874[field_872 - 2];
+        field_872--;
+        m_nCursorIndex = m_sText.GetLength();
+
+        AdjustVisibleIndex();
         break;
     case VK_INSERT:
+        // 0x4D7873 - 0x4D79AA (311 bytes)
         if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
             if (OpenClipboard(NULL)) {
                 HGLOBAL hMem = GetClipboardData(CF_TEXT);
@@ -391,7 +589,7 @@ void CUIControlEdit::OnKeyDown(SHORT nKey)
                     LPVOID pMem = GlobalLock(hMem);
                     if (pMem != NULL) {
                         m_sText = m_sText.Left(m_nCursorIndex)
-                            + CString(reinterpret_cast<LPCSTR>(pMem))
+                            + reinterpret_cast<LPCSTR>(pMem)
                             + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
 
                         GlobalUnlock(hMem);
@@ -402,23 +600,25 @@ void CUIControlEdit::OnKeyDown(SHORT nKey)
             }
         }
 
-        InvalidateRect();
         break;
     case VK_DELETE:
-        if (m_nCursorIndex != m_sText.GetLength()) {
-            if (g_pChitin->field_1A0 && IsDBCSLeadByte(m_sText[(int)m_nCursorIndex])) {
-                m_sText = m_sText.Left(m_nCursorIndex)
-                    + m_sText.Right(m_sText.GetLength() - m_nCursorIndex - 2);
-            } else {
-                m_sText = m_sText.Left(m_nCursorIndex)
-                    + m_sText.Right(m_sText.GetLength() - m_nCursorIndex - 1);
-            }
-
-            InvalidateRect();
+        // 0x4D7F41 - 0x4D80D9 (408 bytes)
+        if (m_nCursorIndex == m_sText.GetLength()) {
+            return;
         }
+
+        if (g_pChitin->field_1A0 && IsDBCSLeadByte(m_sText[m_nCursorIndex])) {
+            m_sText = m_sText.Left(m_nCursorIndex)
+                + m_sText.Right(m_sText.GetLength() - m_nCursorIndex - 2);
+        } else {
+            m_sText = m_sText.Left(m_nCursorIndex)
+                + m_sText.Right(m_sText.GetLength() - m_nCursorIndex - 1);
+        }
+
         break;
     case VK_F3:
     case VK_PROCESSKEY:
+        // 0x4D7767 - 0x4D7873 (268 bytes)
         if (g_pChitin->field_1A4) {
             g_pChitin->cImm.sub_7C2CC0(g_pChitin->GetWnd()->GetSafeHwnd());
 
@@ -440,99 +640,71 @@ void CUIControlEdit::OnKeyDown(SHORT nKey)
             }
         }
 
-        InvalidateRect();
         break;
     case VK_F4:
+        // 0x4D7744 - 0x4D7767 (35 bytes)
         if (g_pBaldurChitin->field_1A0) {
             m_pPanel->InvalidateRect(NULL);
         }
 
-        InvalidateRect();
         break;
     default:
+        // 0x4D81D0 - 0x4D887D (1709 bytes)
         if (nKey >= 'A' && nKey <= 'Z') {
-            if (m_sText.GetLength() < m_nMaxLength) {
-                if (field_85C != 2) {
-                    switch (m_nTextCapitalization) {
-                    case 0:
-                        if (m_pPanel->m_pManager->m_pWarp->GetCapsLockKey() == m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
-                            nKey += 32;
-                        }
-                        break;
-                    case 1:
-                        break;
-                    case 2:
-                        nKey += 'a' - 'A';
-                        break;
-                    }
-
-                    m_sText = m_sText.Left(m_nCursorIndex)
-                        + static_cast<char>(nKey)
-                        + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
-
-                    m_nCursorIndex++;
-
-                    AdjustVisibleIndex();
-                    InvalidateRect();
-                } else {
-                    InvalidateRect();
-                }
+            if (m_sText.GetLength() >= m_nMaxLength) {
+                return;
             }
+
+            if (field_85C == 2) {
+                break;
+            }
+
+            switch (m_nTextCapitalization) {
+            case 0:
+                if (m_pPanel->m_pManager->m_pWarp->GetCapsLockKey() == m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                    nKey += 0x20;
+                }
+                break;
+            case 2:
+                nKey += 0x20;
+                break;
+            }
+
+            m_sText = m_sText.Left(m_nCursorIndex)
+                + static_cast<char>(nKey)
+                + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
+
+            m_nCursorIndex++;
+
+            AdjustVisibleIndex();
         } else if ((nKey >= '0' && nKey <= '9') || (nKey >= VK_NUMPAD0 && nKey <= VK_NUMPAD9)) {
             if (nKey >= VK_NUMPAD0 && nKey <= VK_NUMPAD9) {
                 nKey -= '0';
             }
 
-            if (m_sText.GetLength() != m_nMaxLength) {
-                if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
-                    // 0x8ABA54
-                    static char symbols[] = {
-                        ')',
-                        '!',
-                        '@',
-                        '#',
-                        '$',
-                        '%',
-                        '^',
-                        '&',
-                        '*',
-                        '(',
-                    };
-
-                    m_sText = m_sText.Left(m_nCursorIndex)
-                        + symbols[nKey - '0']
-                        + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
-                } else {
-                    // 0x8ABA48
-                    static char symbols[] = {
-                        '0',
-                        '1',
-                        '2',
-                        '3',
-                        '4',
-                        '5',
-                        '6',
-                        '7',
-                        '8',
-                        '9',
-                    };
-
-                    m_sText = m_sText.Left(m_nCursorIndex)
-                        + symbols[nKey - '0']
-                        + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
-                }
-
-                m_nCursorIndex++;
-
-                AdjustVisibleIndex();
-                InvalidateRect();
+            if (m_sText.GetLength() == m_nMaxLength) {
+                return;
             }
+
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                m_sText = m_sText.Left(m_nCursorIndex)
+                    + static_cast<char>(shiftedDigits[nKey - '0'])
+                    + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
+            } else {
+                m_sText = m_sText.Left(m_nCursorIndex)
+                    + static_cast<char>(digits[nKey - '0'])
+                    + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
+            }
+
+            m_nCursorIndex++;
+
+            AdjustVisibleIndex();
         } else if (nKey == VK_MULTIPLY
             || nKey == VK_DIVIDE
             || nKey == VK_ADD
             || nKey == VK_SUBTRACT
             || nKey == VK_DECIMAL) {
-            char ch;
+            int ch;
             switch (nKey) {
             case VK_MULTIPLY:
                 ch = '*';
@@ -550,23 +722,61 @@ void CUIControlEdit::OnKeyDown(SHORT nKey)
                 ch = '/';
                 break;
             default:
+                // NOTE: Unreachable, `nKey` is one of the keys above.
                 ch = 'X';
                 break;
             }
 
-            if (m_sText.GetLength() != m_nMaxLength) {
-                m_sText = m_sText.Left(m_nCursorIndex)
-                    + ch
-                    + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
-
-                m_nCursorIndex++;
-
-                AdjustVisibleIndex();
-                InvalidateRect();
+            if (m_sText.GetLength() == m_nMaxLength) {
+                return;
             }
+
+            m_sText = m_sText.Left(m_nCursorIndex)
+                + static_cast<char>(ch)
+                + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
+
+            m_nCursorIndex++;
+
+            AdjustVisibleIndex();
+        } else {
+            BYTE index = 0;
+            do {
+                if (symbolKeys[index] == static_cast<BYTE>(nKey)) {
+                    break;
+                }
+
+                index++;
+            } while (index < 12);
+
+            if (index == 12) {
+                break;
+            }
+
+            if (m_sText.GetLength() == m_nMaxLength) {
+                return;
+            }
+
+            // NOTE: Entry 11 of the key table is 0, and entry 11 of the
+            // symbol tables is the terminator.
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                m_sText = m_sText.Left(m_nCursorIndex)
+                    + static_cast<char>(shiftedSymbols[index])
+                    + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
+            } else {
+                m_sText = m_sText.Left(m_nCursorIndex)
+                    + static_cast<char>(symbols[index])
+                    + m_sText.Right(m_sText.GetLength() - m_nCursorIndex);
+            }
+
+            m_nCursorIndex++;
+
+            AdjustVisibleIndex();
         }
+
         break;
     }
+
+    InvalidateRect();
 }
 
 // 0x4D8A60
