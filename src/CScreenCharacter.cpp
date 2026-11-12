@@ -4519,7 +4519,7 @@ BOOL CScreenCharacter::OnCancelButtonClick()
 
         pSprite->m_secondarySounds = m_cResSoundSet;
 
-        DWORD nLength = field_856.GetLength();
+        DWORD nLength = field_856.GetAllocLength();
         memcpy(pSprite->field_725A, field_856.GetBuffer(nLength), min(nLength, 32));
         if (nLength < 32) {
             pSprite->field_725A[nLength] = '\0';
@@ -4564,7 +4564,7 @@ BOOL CScreenCharacter::OnCancelButtonClick()
 
         pSprite->m_secondarySounds = m_cResSoundSet;
 
-        DWORD nLength = field_856.GetLength();
+        DWORD nLength = field_856.GetAllocLength();
         memcpy(pSprite->field_725A, field_856.GetBuffer(nLength), min(nLength, 32));
         if (nLength < 32) {
             pSprite->field_725A[nLength] = '\0';
