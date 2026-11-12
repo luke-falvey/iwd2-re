@@ -4,19 +4,18 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 8903,
-  "functions_done": 7922,
-  "functions_complete": 7912,
-  "incomplete_markers": 11,
+  "functions_total": 8892,
+  "functions_done": 7924,
+  "functions_complete": 7919,
+  "incomplete_markers": 6,
   "incomplete_by_file": {
-    "src/CVidBlitter.cpp": 5,
     "src/CGameDoor.cpp": 2,
     "src/BalDataTypes.h": 1,
     "src/CGameTrigger.cpp": 1,
     "src/CScreenChapter.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10545,
+  "annotations_total": 10547,
   "annotations_not_function_start": 2601,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -3819,9 +3818,9 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3794822,
-  "bytes_done": 3640085,
-  "bytes_complete": 3635696,
+  "bytes_total": 3777750,
+  "bytes_done": 3650942,
+  "bytes_complete": 3648409,
   "largest_stubs": [
     {
       "addr": "0x48B3C0",
@@ -3839,58 +3838,33 @@
       "size": 568
     },
     {
-      "addr": "0x7B7070",
-      "name": "FUN_007b7070",
-      "size": 515
-    },
-    {
       "addr": "0x5D4190",
       "name": "FUN_005d4190",
       "size": 486
     },
     {
-      "addr": "0x7B6B20",
-      "name": "FUN_007b6b20",
-      "size": 403
-    },
-    {
-      "addr": "0x7B6DC0",
-      "name": "FUN_007b6dc0",
-      "size": 352
-    },
-    {
       "addr": "0x586DC0",
       "name": "CSummonLimitStruct_Unsummon",
       "size": 343
-    },
-    {
-      "addr": "0x7B6F20",
-      "name": "FUN_007b6f20",
-      "size": 333
-    },
-    {
-      "addr": "0x7B6CC0",
-      "name": "FUN_007b6cc0",
-      "size": 253
     }
   ],
   "next": [
     {
       "addr": "0x40F940",
       "name": "CResRef_operator_equ-equ",
-      "translated_callers": 73,
+      "translated_callers": 74,
       "size": 31
     },
     {
       "addr": "0x442990",
       "name": "CResHelper_CResUnknown_SetResRef",
-      "translated_callers": 67,
+      "translated_callers": 68,
       "size": 228
     },
     {
       "addr": "0x77F190",
       "name": "FUN_0077f190",
-      "translated_callers": 14,
+      "translated_callers": 15,
       "size": 40
     },
     {
