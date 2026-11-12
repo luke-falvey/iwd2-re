@@ -6777,11 +6777,12 @@ BOOLEAN CBaldurMessage::SendRestRequestToServer(INT nHP, BOOLEAN bRenting, BOOLE
     }
 
     static DWORD dwLastRequestTime = GetTickCount() - 2500;
-    if (GetTickCount() < dwLastRequestTime + 2500) {
+    DWORD dwNow = GetTickCount();
+    if (dwNow < dwLastRequestTime + 2500) {
         return FALSE;
     }
 
-    dwLastRequestTime = GetTickCount();
+    dwLastRequestTime = dwNow;
 
     DWORD dwSize = sizeof(INT) + sizeof(BYTE) + sizeof(BYTE);
     BYTE* pMessage = CreateBuffer(dwSize);
