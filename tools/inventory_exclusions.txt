@@ -254,3 +254,47 @@
 0x55C510
 0x55C7A0
 0x55CC10
+
+# CGameEffect scalar deleting destructor (implicit): calls ~CGameEffect (0x499B10) and
+# deletes this when the flag argument has bit 0 set.
+0x499BE0
+
+# std::bitset<N> range check (library), same body as 0x4C5790: builds the exception
+# object for "invalid bitset<N> position" (0x8A80C8) and throws it.
+0x45E3D0
+
+# std::string (MSVC 6) assign(const string& str, pos, n) / erase tail: pos > str._Len -> _Xran
+# (0x7F9C0E), clamps n, handles self-assignment via 0x44BD40 (_Split) and memmove, otherwise
+# _Grow (0x44BC20) + _Eos (0x44BC00).
+0x45E870
+
+# std::set<LONG> (MSVC 6 red-black tree, library): nil sentinel 0x8D48B4 (count 0x8D48B0), nodes
+# 0x14 bytes (_Left +0, _Parent +4, _Right +8, key +0xC signed, _Red +0x10). 0x4C45A0 insert(value)
+# returning pair<iterator, bool>, 0x4C48D0 erase(first, last), 0x4C49A0 _Copy / copy constructor
+# body (key copy via 0x517000), 0x4C4A90 default constructor (head node + shared nil),
+# 0x4C4B20 iterator::operator++ (right-descend then left walk), 0x4C4B70 pair<iterator, bool>
+# constructor (stores node at +0, bool at +4).
+0x4C45A0
+0x4C48D0
+0x4C49A0
+0x4C4A90
+0x4C4B20
+0x4C4B70
+
+# std::set<std::string> (library, nil sentinel 0x8D13E8, key std::string at node+0xC): 0x4C4C90
+# insert(value) returning pair<iterator, bool> (string compares via 0x4C5E80 / 0x4C5ED0),
+# 0x4C4EF0 find(value) (lower-bound walk then string compare with the key).
+0x4C4C90
+0x4C4EF0
+
+# std::set<DWORD> (library, nil sentinel 0x8D13F0, key unsigned at node+0xC): 0x4C4FA0 find(value)
+# and 0x4C5AE0 lower_bound(value) (unsigned compare, JNC).
+0x4C4FA0
+0x4C5AE0
+
+# std::list iterator post-increment (library): returns the old node, advances to node->next (+0).
+0x4C5B20
+
+# CResHelper<CResEffect, 1016>::SetResRef (the repo template in CRes.h; resource type 0x3F8
+# passed to CDimm::GetResObject, same body as the other CResHelper instances).
+0x4C5D90

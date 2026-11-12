@@ -102,7 +102,37 @@ void CProjectileHelper84EEA8::sub_55AB20(const std::list<LONG>& targets)
 // 0x55AB80
 void CProjectileHelper84EEA8::sub_55AB80(LONG nTarget)
 {
-    // TODO: Incomplete.
+    CGameObject* pObject;
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTarget,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pObject,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+        CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+        pSprite->m_posOld = pSprite->GetPos();
+
+        if (m_pProjectile->sub_536FC0(pSprite) == TRUE) {
+            CGameEffect::FeedBackImmuneToResource(pSprite, m_pProjectile->field_18A);
+        } else {
+            POSITION pos = m_pProjectile->m_effectList.GetHeadPosition();
+            while (pos != NULL) {
+                CGameEffect* pEffect = m_pProjectile->m_effectList.GetNext(pos);
+
+                CMessage* message = new CMessageAddEffect(pEffect->Copy(),
+                    m_pProjectile->m_id,
+                    pSprite->m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTarget,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x55AD90
