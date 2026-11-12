@@ -12522,6 +12522,313 @@ void CInfGame::sub_5C4AD0(LONG nCharacterId, LONG nTriggerId, CString sArea)
         ptEnter.x *= CPathSearch::GRID_SQUARE_SIZEX;
         ptEnter.y *= CPathSearch::GRID_SQUARE_SIZEY;
 
+        if (g_pBaldurChitin->cNetwork.m_bIsHost == TRUE) {
+            g_pChitin->cProgressBar.m_bTimeoutVisible = TRUE;
+            g_pChitin->cProgressBar.m_nSecondsToTimeout = g_pBaldurChitin->m_cBaldurMessage.m_dwSignalSecondsToTimeout;
+
+            DWORD dwStartTime = GetTickCount();
+
+            // NOTE: 0x84CFBF is the unnamed signal '3'.
+            if (!pMessage->NonBlockingWaitForSignal(CBaldurMessage::SIGNAL_SERVER, 51)) {
+                do {
+                    DWORD nSecondsToTimeout;
+                    DWORD dwElapsed = GetTickCount() - dwStartTime;
+                    if (dwElapsed >= g_pBaldurChitin->m_cBaldurMessage.m_dwSignalSecondsToTimeout * 1000) {
+                        pMessage->KickOutWaitingForSignal(CBaldurMessage::SIGNAL_SERVER, 51);
+                        nSecondsToTimeout = 0;
+                    } else {
+                        nSecondsToTimeout = g_pBaldurChitin->m_cBaldurMessage.m_dwSignalSecondsToTimeout - dwElapsed / 1000;
+                    }
+
+                    if (nSecondsToTimeout <= 10) {
+                        if (g_pChitin->cProgressBar.m_nSecondsToTimeout > 10) {
+                            for (BYTE nSlot = 0; nSlot < CMultiplayerSettings::MAX_CHARACTERS; nSlot++) {
+                                LONG nId;
+                                if (nSlot < 6) {
+                                    nId = pGame->m_characters[nSlot];
+                                } else {
+                                    nId = CGameObjectArray::INVALID_INDEX;
+                                }
+
+                                INT nPlayerSlot = pGame->m_multiplayerSettings.GetCharacterControlledByPlayer(nSlot);
+
+                                CGameSprite* pSprite;
+                                do {
+                                    rc = pGame->GetObjectArray()->GetShare(nId,
+                                        CGameObjectArray::THREAD_ASYNCH,
+                                        reinterpret_cast<CGameObject**>(&pSprite),
+                                        INFINITE);
+                                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                                if (rc == CGameObjectArray::SUCCESS) {
+                                    // NOTE: `Animate` is the function at 0x728560 which tests
+                                    // the "not dead" state bit.
+                                    if (pSprite->Animate()
+                                        && pSprite->m_pArea != NULL
+                                        && pSprite->m_pArea != pArea
+                                        // NOTE: The local player is compared as a byte.
+                                        && nPlayerSlot != static_cast<BYTE>(g_pChitin->cNetwork.m_nLocalPlayer)) {
+                                        // NOTE: Unused.
+                                        CString sPlayerName;
+
+                                        if (nPlayerSlot != -1) {
+                                            PLAYER_ID idPlayer = g_pChitin->cNetwork.GetPlayerID(nPlayerSlot);
+                                            if (idPlayer != 0) {
+                                                g_pChitin->cNetwork.KickPlayer(idPlayer, TRUE);
+                                            }
+                                        }
+                                    }
+
+                                    pGame->GetObjectArray()->ReleaseShare(nId,
+                                        CGameObjectArray::THREAD_ASYNCH,
+                                        INFINITE);
+                                }
+                            }
+                        }
+                    }
+
+                    if (g_pChitin->cProgressBar.m_nSecondsToTimeout != nSecondsToTimeout) {
+                        g_pChitin->cProgressBar.m_nSecondsToTimeout = nSecondsToTimeout;
+
+                        g_pBaldurChitin->GetBaldurMessage()->SendProgressBarStatus(g_pChitin->cProgressBar.m_nActionProgress,
+                            g_pChitin->cProgressBar.m_nActionTarget,
+                            g_pChitin->cProgressBar.m_bWaiting,
+                            g_pChitin->cProgressBar.m_nWaitingReason,
+                            g_pChitin->cProgressBar.m_bTimeoutVisible,
+                            g_pChitin->cProgressBar.m_nSecondsToTimeout);
+                    }
+
+                    while ((pData = pMessage->PollSpecificMessageType(CBaldurMessage::MSG_TYPE_RESOURCE,
+                                CBaldurMessage::MSG_SUBTYPE_RESOURCE_DEMAND,
+                                nMsgFrom,
+                                dwSize))
+                        != NULL) {
+                        pMessage->OnResourceDemanded(nMsgFrom, pData, dwSize);
+                        delete pData;
+                    }
+
+                    while ((pData = pMessage->PollSpecificMessageType(CBaldurMessage::MSG_TYPE_PROGRESSBAR,
+                                CBaldurMessage::MSG_SUBTYPE_PROGRESSBAR_STATUS,
+                                nMsgFrom,
+                                dwSize))
+                        != NULL) {
+                        pMessage->OnProgressBarStatus(nMsgFrom, pData, dwSize);
+                        delete pData;
+                    }
+
+                    while ((pData = pMessage->PollSpecificMessageType(CBaldurMessage::MSG_TYPE_CMESSAGE,
+                                CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SPRITE_UPDATE,
+                                nMsgFrom,
+                                dwSize))
+                        != NULL) {
+                        CMessageSpriteUpdate* pUpdate = new CMessageSpriteUpdate(NULL, 0, 0);
+                        if (pUpdate != NULL && pUpdate->UnmarshalMessage(pData, dwSize) == TRUE) {
+                            if (pUpdate->sub_50D660(sTriggerArea) == TRUE) {
+                                pUpdate->Run();
+                            }
+                        }
+
+                        delete pData;
+                        delete pUpdate;
+                    }
+
+                    for (BYTE nSlot = 0; nSlot < CMultiplayerSettings::MAX_CHARACTERS; nSlot++) {
+                        LONG nId;
+                        if (nSlot < 6) {
+                            nId = pGame->m_characters[nSlot];
+                        } else {
+                            nId = CGameObjectArray::INVALID_INDEX;
+                        }
+
+                        BOOLEAN bMoved = FALSE;
+                        BOOLEAN bInControl = TRUE;
+
+                        CGameSprite* pSprite;
+                        do {
+                            rc = pGame->GetObjectArray()->GetShare(nId,
+                                CGameObjectArray::THREAD_ASYNCH,
+                                reinterpret_cast<CGameObject**>(&pSprite),
+                                INFINITE);
+                        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                        if (rc == CGameObjectArray::SUCCESS) {
+                            // NOTE: `Animate` is the function at 0x728560 which tests
+                            // the "not dead" state bit.
+                            if (pSprite->Animate()
+                                && pSprite->m_pArea != NULL
+                                && pSprite->m_pArea != pArea
+                                // NOTE: The local player is compared as a byte.
+                                && pGame->m_multiplayerSettings.GetCharacterControlledByPlayer(nSlot) == static_cast<BYTE>(g_pChitin->cNetwork.m_nLocalPlayer)) {
+                                bMoved = TRUE;
+
+                                // NOTE: Uninline.
+                                bInControl = pSprite->InControl();
+                            }
+
+                            pGame->GetObjectArray()->ReleaseShare(nId,
+                                CGameObjectArray::THREAD_ASYNCH,
+                                INFINITE);
+                        }
+
+                        if (bMoved == TRUE) {
+                            if (!bInControl) {
+                                g_pBaldurChitin->GetObjectGame()->m_multiplayerSettings.SetCharacterControlledByPlayer(nSlot,
+                                    static_cast<BYTE>(g_pChitin->cNetwork.m_nLocalPlayer),
+                                    TRUE,
+                                    TRUE);
+                            }
+
+                            do {
+                                rc = pGame->GetObjectArray()->GetDeny(nId,
+                                    CGameObjectArray::THREAD_ASYNCH,
+                                    reinterpret_cast<CGameObject**>(&pSprite),
+                                    INFINITE);
+                            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                            if (rc == CGameObjectArray::SUCCESS) {
+                                pSprite->m_cLastSpriteUpdate.Initialize(TRUE);
+
+                                CAIAction action(CAIAction::LEAVEAREALUA, sTriggerArea, ptEnter, 0, 1);
+
+                                pSprite->ClearActions(FALSE);
+                                pSprite->m_targetPoint.x = -1;
+                                pSprite->m_targetPoint.y = -1;
+                                pSprite->m_interrupt = TRUE;
+                                pSprite->SetCurrAction(action);
+                                pSprite->ExecuteAction();
+
+                                if (g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_nCharacters == 0) {
+                                    g_pBaldurChitin->GetObjectGame()->UnselectAll();
+                                    g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_bPicked = FALSE;
+                                    g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_iPicked = -1;
+                                    g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_nToolTip = 0;
+                                    g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnDeactivation();
+                                    g_pBaldurChitin->GetObjectGame()->m_visibleArea = pSprite->m_pArea->m_id;
+                                    g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnActivation();
+                                }
+
+                                pGame->GetObjectArray()->ReleaseDeny(nId,
+                                    CGameObjectArray::THREAD_ASYNCH,
+                                    INFINITE);
+                            }
+                        }
+                    }
+
+                    g_pChitin->m_bDisplayStale = TRUE;
+                    SleepEx(60, FALSE);
+                } while (!pMessage->NonBlockingWaitForSignal(CBaldurMessage::SIGNAL_SERVER, 51));
+            }
+
+            while ((pData = pMessage->PollSpecificMessageType(CBaldurMessage::MSG_TYPE_CMESSAGE,
+                        CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SPRITE_UPDATE,
+                        nMsgFrom,
+                        dwSize))
+                != NULL) {
+                CMessageSpriteUpdate* pUpdate = new CMessageSpriteUpdate(NULL, 0, 0);
+                if (pUpdate != NULL && pUpdate->UnmarshalMessage(pData, dwSize) == TRUE) {
+                    if (pUpdate->sub_50D660(sTriggerArea) == TRUE) {
+                        pUpdate->Run();
+                    }
+                }
+
+                delete pData;
+                delete pUpdate;
+            }
+
+            // NOTE: 0x84CFC0 is the unnamed signal '4'.
+            pMessage->SendSignal(CBaldurMessage::SIGNAL_ALL_CLIENTS, 52);
+
+            pGame->m_multiplayerSettings.SetListenToJoinOption(bListenToJoin, FALSE);
+        } else if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+            while (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+                while ((pData = pMessage->PollSpecificMessageType(CBaldurMessage::MSG_TYPE_PROGRESSBAR,
+                            CBaldurMessage::MSG_SUBTYPE_PROGRESSBAR_STATUS,
+                            nMsgFrom,
+                            dwSize))
+                    != NULL) {
+                    pMessage->OnProgressBarStatus(nMsgFrom, pData, dwSize);
+                    delete pData;
+                }
+
+                while ((pData = pMessage->PollSpecificMessageType(CBaldurMessage::MSG_TYPE_CMESSAGE,
+                            CBaldurMessage::MSG_SUBTYPE_CMESSAGE_SPRITE_UPDATE,
+                            nMsgFrom,
+                            dwSize))
+                    != NULL) {
+                    CMessageSpriteUpdate* pUpdate = new CMessageSpriteUpdate(NULL, 0, 0);
+                    if (pUpdate != NULL && pUpdate->UnmarshalMessage(pData, dwSize) == TRUE) {
+                        if (pUpdate->sub_50D660(sTriggerArea) == TRUE) {
+                            pUpdate->Run();
+                        }
+                    }
+
+                    delete pData;
+                    delete pUpdate;
+                }
+
+                g_pChitin->m_bDisplayStale = TRUE;
+                SleepEx(60, FALSE);
+
+                BOOLEAN bPending = FALSE;
+                for (BYTE nSlot = 0; nSlot < CMultiplayerSettings::MAX_CHARACTERS; nSlot++) {
+                    LONG nId;
+                    if (nSlot < 6) {
+                        nId = pGame->m_characters[nSlot];
+                    } else {
+                        nId = CGameObjectArray::INVALID_INDEX;
+                    }
+
+                    CGameSprite* pSprite;
+                    do {
+                        rc = pGame->GetObjectArray()->GetShare(nId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            reinterpret_cast<CGameObject**>(&pSprite),
+                            INFINITE);
+                    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                    if (rc == CGameObjectArray::SUCCESS) {
+                        // NOTE: `Animate` is the function at 0x728560 which tests
+                        // the "not dead" state bit.
+                        if (pSprite->Animate()
+                            && pSprite->m_pArea != NULL
+                            && pSprite->m_pArea != pArea) {
+                            bPending = TRUE;
+                        }
+
+                        pGame->GetObjectArray()->ReleaseShare(nId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                    }
+                }
+
+                if (bPending) {
+                    continue;
+                }
+
+                if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+                    pMessage->SendSignal(CBaldurMessage::SIGNAL_SERVER, 51);
+
+                    if (!pMessage->NonBlockingWaitForSignal(CBaldurMessage::SIGNAL_ALL_CLIENTS, 52)) {
+                        do {
+                            while ((pData = pMessage->PollSpecificMessageType(CBaldurMessage::MSG_TYPE_PROGRESSBAR,
+                                        CBaldurMessage::MSG_SUBTYPE_PROGRESSBAR_STATUS,
+                                        nMsgFrom,
+                                        dwSize))
+                                != NULL) {
+                                pMessage->OnProgressBarStatus(nMsgFrom, pData, dwSize);
+                                delete pData;
+                            }
+
+                            g_pChitin->m_bDisplayStale = TRUE;
+                            SleepEx(60, FALSE);
+                        } while (!pMessage->NonBlockingWaitForSignal(CBaldurMessage::SIGNAL_ALL_CLIENTS, 52));
+                    }
+                }
+
+                break;
+            }
+        }
+
         // TODO: Incomplete.
     }
 }
