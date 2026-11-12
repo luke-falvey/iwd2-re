@@ -351,7 +351,7 @@ BOOLEAN CGameSpriteGroupedSpellList::Remove(const UINT& nID, const UINT& nLevel,
 }
 
 // 0x726060
-BOOLEAN CGameSpriteGroupedSpellList::sub_726060(const UINT& nID, const UINT& nLevel, const unsigned int& a3, const unsigned int& a4)
+BOOLEAN CGameSpriteGroupedSpellList::sub_726060(const UINT& nID, const UINT& nLevel, const unsigned int& a3, const BOOLEAN& a4)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
     // __LINE__: 26822

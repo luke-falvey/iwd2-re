@@ -1,5 +1,6 @@
 #include "CScreenCreateChar.h"
 
+#include "CAIScript.h"
 #include "CBaldurChitin.h"
 #include "CCharacterFile.h"
 #include "CCreatureFile.h"
@@ -4593,7 +4594,99 @@ void CScreenCreateChar::CompleteCharacterSkills(CGameSprite* pSprite)
 // 0x613310
 void CScreenCreateChar::CompleteCharacterWrapup(CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CAIObjectType typeAI(pSprite->m_startTypeAI);
+
+    // NOTE: Level is read from an unnamed `const WORD` at 0x8485DE (value 6).
+    pSprite->SetScript(6, new CAIScript(CResRef("DPLAYER3")));
+
+    pSprite->m_baseStats.m_reputation = pGame->GetRuleTables().GetStartingReputation(pSprite->m_startTypeAI.m_nAlignment)
+        * CInfGame::REPUTATION_MULTIPLIER;
+
+    pSprite->sub_722820();
+
+    UINT nClassIndex;
+    UINT nLevel;
+    UINT nIndex;
+
+    for (nClassIndex = 0; nClassIndex < CSPELLLIST_NUM_CLASSES; nClassIndex++) {
+        for (nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+            if (nClassIndex != 0 && nClassIndex != 5) {
+                // NOTE: Uninline.
+                for (nIndex = 0; nIndex < pSprite->m_spells.GetSpellsAtLevel(nClassIndex, nLevel)->m_List.size(); nIndex++) {
+                    // NOTE: Uninline.
+                    UINT nID = pSprite->m_spells.GetSpellsAtLevel(nClassIndex, nLevel)->Get(nIndex)->m_nID;
+
+                    // __FILE__: .\Include\ObjCreature.h
+                    // __LINE__: 1741
+                    UTIL_ASSERT(nClassIndex <= CSPELLLIST_NUM_CLASSES);
+
+                    pSprite->m_spells.Get(nClassIndex)->sub_726060(nID, nLevel, 0, TRUE);
+                }
+            } else {
+                BYTE nClass = pGame->GetSpellcasterClass(nClassIndex);
+                INT nBonus = 0;
+                INT nMaxSpells = pGame->GetRuleTables().GetMaxKnownSpells(nClass,
+                    typeAI,
+                    pSprite->m_derivedStats,
+                    pSprite->m_baseStats.m_specialization,
+                    nLevel + 1,
+                    nBonus);
+                nMaxSpells += nBonus;
+
+                // __FILE__: .\Include\ObjCreature.h
+                // __LINE__: 1741
+                UTIL_ASSERT(nClassIndex <= CSPELLLIST_NUM_CLASSES);
+
+                // NOTE: Uninline.
+                pSprite->m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->field_14 = nMaxSpells;
+
+                // __FILE__: .\Include\ObjCreature.h
+                // __LINE__: 1741
+                UTIL_ASSERT(nClassIndex <= CSPELLLIST_NUM_CLASSES);
+
+                pSprite->m_spells.Get(nClassIndex)->sub_726150(nLevel, 0, TRUE);
+            }
+        }
+    }
+
+    for (nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+        // __FILE__: .\Include\ObjCreature.h
+        // __LINE__: 1763
+        UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+        // NOTE: Uninline.
+        for (nIndex = 0; nIndex < pSprite->m_domainSpells.GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+            // __FILE__: .\Include\ObjCreature.h
+            // __LINE__: 1763
+            UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+            // NOTE: Uninline.
+            UINT nID = pSprite->m_domainSpells.GetSpellsAtLevel(nLevel)->Get(nIndex)->m_nID;
+
+            pSprite->m_domainSpells.sub_726060(nID, nLevel, 0, TRUE);
+        }
+    }
+
+    for (nIndex = 0; nIndex < pSprite->m_innateSpells.m_List.size(); nIndex++) {
+        // NOTE: Uninline.
+        UINT nID = pSprite->m_innateSpells.Get(nIndex)->m_nID;
+
+        pSprite->m_innateSpells.sub_725C50(nID, 0, TRUE);
+    }
+
+    for (nIndex = 0; nIndex < pSprite->m_songs.m_List.size(); nIndex++) {
+        // NOTE: Uninline.
+        UINT nID = pSprite->m_songs.Get(nIndex)->m_nID;
+
+        pSprite->m_songs.sub_725C50(nID, 0, TRUE);
+    }
+
+    pSprite->m_shapeshifts.sub_725D30(0, TRUE);
+
+    if (pSprite->m_baseStats.m_gold == 0) {
+        pSprite->m_baseStats.m_gold = pGame->GetRuleTables().GetStartingGold(pSprite);
+    }
 }
 
 // 0x6139C0

@@ -14526,6 +14526,12 @@ void CGameSprite::sub_71E760(CDerivedStats& DStats, int a2)
     }
 }
 
+// 0x722820
+void CGameSprite::sub_722820()
+{
+    // TODO: Incomplete.
+}
+
 // 0x722D50
 void CGameSprite::sub_722D50(BYTE nClass, SHORT nLevels, int a3)
 {
