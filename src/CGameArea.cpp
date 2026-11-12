@@ -6075,7 +6075,7 @@ void CGameArea::SortLists()
 
         BOOLEAN bSort;
         if (nFrontAdd != 0
-            || (m_firstRender != 0
+            || (m_firstRender == 0
                 && m_pGame->GetWorldTimer()->m_gameTime % 5 == 0
                 && g_pBaldurChitin->GetObjectGame()->GetVisibleArea() == this)) {
             bSort = TRUE;
@@ -6240,7 +6240,7 @@ void CGameArea::SortLists()
                 for (cnt = 0; cnt < nFront - 1; cnt++) {
                     BOOL bDone = TRUE;
 
-                    for (cnt2 = 1; cnt < nFront - cnt; cnt++) {
+                    for (cnt2 = 1; cnt2 < nFront - cnt; cnt2++) {
                         if (pObjects[nFrontAdd + cnt2 - 1]->GetPos().y > pObjects[nFrontAdd + cnt2]->GetPos().y) {
                             pObject = pObjects[nFrontAdd + cnt2 - 1];
                             pObjects[nFrontAdd + cnt2 - 1] = pObjects[nFrontAdd + cnt2];
@@ -6259,10 +6259,10 @@ void CGameArea::SortLists()
             cnt2 = 0;
             while (cnt < nFrontAdd || cnt2 < nFront) {
                 if (cnt2 != nFront
-                    && (cnt == nFrontAdd || pObjects[cnt]->GetPos().y > pObjects[cnt2]->GetPos().y)) {
-                    pos = m_lVertSort.AddTail(reinterpret_cast<int*>(pObjects[cnt2]->GetId()));
-                    pObjects[cnt2]->SetVertListPos(pos);
-                    m_pGame->GetObjectArray()->ReleaseShare(pObjects[cnt2]->GetId(),
+                    && (cnt == nFrontAdd || pObjects[cnt]->GetPos().y > pObjects[nFrontAdd + cnt2]->GetPos().y)) {
+                    pos = m_lVertSort.AddTail(reinterpret_cast<int*>(pObjects[nFrontAdd + cnt2]->GetId()));
+                    pObjects[nFrontAdd + cnt2]->SetVertListPos(pos);
+                    m_pGame->GetObjectArray()->ReleaseShare(pObjects[nFrontAdd + cnt2]->GetId(),
                         CGameObjectArray::THREAD_ASYNCH,
                         INFINITE);
                     cnt2++;
