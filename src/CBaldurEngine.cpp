@@ -850,9 +850,29 @@ void CBaldurEngine::OnMouseWheel(BOOL bForward, LONG nTicks, DWORD nLines, WORD 
                 nTicks--;
             }
         }
+    } else {
+        if (field_FE != NULL && field_102 != NULL) {
+            if (bForward) {
+                if (field_FE->m_pPanel->m_bActive
+                    && field_FE->m_bActive) {
+                    while (nTicks > 0) {
+                        field_FE->func_78();
+                        field_FE->func_78();
+                        nTicks--;
+                    }
+                }
+            } else {
+                if (field_102->m_pPanel->m_bActive
+                    && field_102->m_bActive) {
+                    while (nTicks > 0) {
+                        field_102->func_78();
+                        field_102->func_78();
+                        nTicks--;
+                    }
+                }
+            }
+        }
     }
-
-    // TODO: Incomplete.
 }
 
 // 0x799E60

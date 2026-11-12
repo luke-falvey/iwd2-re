@@ -1,6 +1,7 @@
 #ifndef CBALDURENGINE_H_
 #define CBALDURENGINE_H_
 
+#include "CUIControlBase.h"
 #include "CUIManager.h"
 #include "CWarp.h"
 
@@ -8,6 +9,17 @@ class CUIControlLabel;
 class CUIControlScrollBar;
 class CUIControlTextDisplay;
 class CUIPanel;
+
+// NOTE: Control type is unknown. Only the virtual function at offset 0x78
+// (called from `CBaldurEngine::OnMouseWheel`) is known.
+class CUIControlUnknownScroll : public CUIControlBase {
+public:
+    /* 0068 */ virtual void func_68();
+    /* 006C */ virtual void func_6C();
+    /* 0070 */ virtual void func_70();
+    /* 0074 */ virtual void func_74();
+    /* 0078 */ virtual void func_78() = 0;
+};
 
 class CBaldurEngine : public CWarp {
 public:
@@ -195,8 +207,8 @@ public:
     /* 002C */ int m_nPickedCharacter;
     /* 0030 */ CUIManager m_cUIManager;
     /* 00FA */ CUIControlScrollBar* m_pCurrentScrollBar;
-    /* 00FE */ int field_FE;
-    /* 0102 */ int field_102;
+    /* 00FE */ CUIControlUnknownScroll* field_FE;
+    /* 0102 */ CUIControlUnknownScroll* field_102;
 };
 
 #endif /* CBALDURENGINE_H_ */
