@@ -493,6 +493,7 @@ public:
     BOOLEAN sub_4371B0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN OnTimeChangeToServer(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN OnLeaveAreaLuaReplyFromServer(BYTE* pByteMessage, DWORD dwSize);
+    BOOLEAN sub_437D70(LONG nCharacterId, CPoint ptStart, LONG nFace, CString sArea, CString sParchment);
     BOOLEAN sub_437FD0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_438560(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BYTE LeaveAreaNameRequestToServer(LONG nCharacterId, LONG nTriggerId, CString sArea);

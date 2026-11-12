@@ -7870,6 +7870,13 @@ BOOLEAN CBaldurMessage::OnLeaveAreaLuaReplyFromServer(BYTE* pByteMessage, DWORD 
     return TRUE;
 }
 
+// 0x437D70
+BOOLEAN CBaldurMessage::sub_437D70(LONG nCharacterId, CPoint ptStart, LONG nFace, CString sArea, CString sParchment)
+{
+    // TODO: Incomplete.
+    return FALSE;
+}
+
 // 0x437FD0
 BOOLEAN CBaldurMessage::sub_437FD0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
