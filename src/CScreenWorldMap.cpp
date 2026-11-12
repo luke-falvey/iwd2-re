@@ -1,12 +1,15 @@
 #include "CScreenWorldMap.h"
 
+#include "CAIGroup.h"
 #include "CBaldurChitin.h"
 #include "CGameArea.h"
 #include "CGameSprite.h"
 #include "CInfCursor.h"
 #include "CInfGame.h"
+#include "CPathSearch.h"
 #include "CScreenMap.h"
 #include "CScreenWorld.h"
+#include "CSearchBitmap.h"
 #include "CTimerWorld.h"
 #include "CUIControlEdit.h"
 #include "CUIControlScrollBar.h"
@@ -1223,8 +1226,231 @@ void CScreenWorldMap::InvalidateArea(DWORD nArea)
 }
 
 // 0x69D0F0
-void CScreenWorldMap::sub_69D0F0(CResRef& cResArea, CString sText, WORD wArg3, BYTE nArg4, DWORD dwArg5)
+void CScreenWorldMap::sub_69D0F0(CResRef& cResArea, CString sText, SHORT nFacing, BYTE nArg4, DWORD dwArg5)
 {
+    CGameSprite* pSprite;
+    BYTE rc;
+    INT nMsgFrom;
+    DWORD dwSize;
+    BYTE* pData;
+    BOOLEAN bListenToJoin;
+    BOOLEAN bMarshaled;
+    BOOLEAN bFound;
+    CPoint ptEnter;
+    CPoint ptPrev;
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CBaldurMessage* pMessage = g_pBaldurChitin->GetBaldurMessage();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenWorldMap.cpp
+    // __LINE__: 2933
+    UTIL_ASSERT(pGame != NULL && pMessage != NULL);
+
+    CString sArea;
+    cResArea.CopyToString(sArea);
+
+    if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        g_pBaldurChitin->GetBaldurMessage()->sub_435C30(sArea,
+            pGame->GetGameSave()->m_nCurrentWorldLink,
+            sText,
+            nFacing,
+            nArg4,
+            dwArg5);
+    }
+
+    DWORD nProgressTarget = CInfGame::PROGRESSBAR_AREA_ADDITIONAL + CInfGame::PROGRESSBAR_CACHING_ADDITIONAL;
+
+    bMarshaled = FALSE;
+
+    g_pBaldurChitin->GetObjectGame()->sub_59FA00(TRUE);
+
+    g_pBaldurChitin->GetObjectGame()->m_nTravelScreenImageToUse = rand() % 5;
+
+    g_pChitin->SetProgressBar(TRUE, 0x26A3, 0, 0, TRUE, 0x269D, FALSE, 0, FALSE, FALSE, 0xFF);
+
+    g_pChitin->cProgressBar.m_nActionProgress = 0;
+    g_pChitin->cProgressBar.m_nActionTarget = nProgressTarget;
+    g_pChitin->cProgressBar.m_bDisableMinibars = FALSE;
+
+    if (g_pBaldurChitin->cNetwork.m_bIsHost == TRUE) {
+        bListenToJoin = pGame->m_multiplayerSettings.m_bJoinRequests;
+        pGame->m_multiplayerSettings.SetListenToJoinOption(FALSE, FALSE);
+    }
+
+    if (g_pBaldurChitin->cNetwork.m_bIsHost == TRUE) {
+        SHORT nPlayers = 0;
+        for (INT nPlayer = 0; nPlayer < CNETWORK_MAX_PLAYERS; nPlayer++) {
+            if (g_pChitin->cNetwork.GetPlayerID(nPlayer) != 0) {
+                nPlayers++;
+            }
+        }
+
+        if (g_pChitin->cNetwork.m_nServiceProvider != CNetwork::SERV_PROV_NULL) {
+            g_pChitin->cProgressBar.m_nWaitingReason = 0x4D03;
+            g_pChitin->cProgressBar.m_bWaiting = TRUE;
+        }
+
+        SHORT nTimeout = 40;
+        SHORT nResponses = 0;
+        while (nResponses < nPlayers - 1) {
+            pData = pMessage->PollSpecificMessageType(CBaldurMessage::MSG_TYPE_RESOURCE,
+                CBaldurMessage::MSG_SUBTYPE_RESOURCE_DEMAND,
+                nMsgFrom,
+                dwSize);
+            if (pData != NULL) {
+                pMessage->OnResourceDemanded(nMsgFrom, pData, dwSize);
+                delete pData;
+                nResponses++;
+            }
+
+            g_pChitin->m_bDisplayStale = TRUE;
+            Sleep(60);
+
+            nTimeout--;
+
+            nPlayers = 0;
+            for (INT nPlayer = 0; nPlayer < CNETWORK_MAX_PLAYERS; nPlayer++) {
+                if (g_pChitin->cNetwork.GetPlayerID(nPlayer) != 0) {
+                    nPlayers++;
+                }
+            }
+
+            if (nTimeout <= 0) {
+                break;
+            }
+        }
+
+        if (nPlayers > 1 && nTimeout > 0) {
+            for (INT nRemaining = nTimeout; nRemaining > 0; nRemaining--) {
+                g_pChitin->m_bDisplayStale = TRUE;
+                Sleep(60);
+            }
+        }
+
+        g_pChitin->cProgressBar.m_bWaiting = FALSE;
+
+        g_pBaldurChitin->m_cCachingStatus.InvalidateScreen();
+    }
+
+    CGameArea* pArea = pGame->LoadArea(sArea, 0xFF, FALSE, TRUE);
+
+    bFound = FALSE;
+
+    for (LONG nTries = 10; nTries > 0 && !bFound; nTries--) {
+        for (SHORT nSlot = 0; nSlot < 6 && !bFound; nSlot++) {
+            // NOTE: Uninline.
+            field_FF6 = pGame->GetFixedOrderCharacterId(nSlot);
+
+            if (field_FF6 != CGameObjectArray::INVALID_INDEX) {
+                do {
+                    rc = pGame->GetObjectArray()->GetDeny(field_FF6,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED);
+
+                if (g_pChitin->cNetwork.m_nServiceProvider != CNetwork::SERV_PROV_NULL
+                    && g_pChitin->cNetwork.m_idLocalPlayer != pSprite->m_remotePlayerID) {
+                    pGame->GetObjectArray()->ReleaseDeny(field_FF6,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                } else {
+                    bFound = TRUE;
+                }
+            }
+        }
+    }
+
+    if (bFound == TRUE && rc != CGameObjectArray::SUCCESS) {
+        if (g_pChitin->cNetwork.m_bConnectionEstablished) {
+            g_pChitin->cNetwork.CloseSession(TRUE);
+        }
+
+        g_pChitin->SetProgressBar(FALSE, 0, 0, 0, FALSE, 0, FALSE, 0, FALSE, FALSE, 0xFF);
+        return;
+    }
+
+    if (pArea == NULL) {
+        if (g_pChitin->cNetwork.m_bConnectionEstablished) {
+            g_pChitin->cNetwork.CloseSession(TRUE);
+        }
+
+        g_pChitin->SetProgressBar(FALSE, 0, 0, 0, FALSE, 0, FALSE, 0, FALSE, FALSE, 0xFF);
+
+        if (bFound == TRUE) {
+            pGame->GetObjectArray()->ReleaseDeny(field_FF6,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        return;
+    }
+
+    if (nArg4) {
+        ptEnter.x = pArea->m_cInfinity.nAreaX >> 1;
+        ptEnter.y = pArea->m_cInfinity.nAreaY >> 1;
+    } else if (strcmp(sText, "") != 0) {
+        pArea->GetEntryPoint(sText, ptEnter, nFacing);
+    } else {
+        switch (nFacing) {
+        case 0:
+            ptEnter.x = pArea->m_cInfinity.nAreaX >> 1;
+            ptEnter.y = CPathSearch::GRID_SQUARE_SIZEY * CSearchBitmap::TRAVEL_WIDTH * 5;
+            break;
+        case 4:
+            ptEnter.x = pArea->m_cInfinity.nAreaX - CPathSearch::GRID_SQUARE_SIZEX * CSearchBitmap::TRAVEL_WIDTH * 5 - 1;
+            ptEnter.y = pArea->m_cInfinity.nAreaY >> 1;
+            break;
+        case 8:
+            ptEnter.x = pArea->m_cInfinity.nAreaX >> 1;
+            ptEnter.y = pArea->m_cInfinity.nAreaY - CPathSearch::GRID_SQUARE_SIZEY * CSearchBitmap::TRAVEL_WIDTH * 5 - 1;
+            break;
+        case 12:
+            ptEnter.x = CPathSearch::GRID_SQUARE_SIZEX * CSearchBitmap::TRAVEL_WIDTH * 5;
+            ptEnter.y = pArea->m_cInfinity.nAreaY >> 1;
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenWorldMap.cpp
+            // __LINE__: 3186
+            UTIL_ASSERT(FALSE);
+            break;
+        }
+    }
+
+    ptEnter.x = ptEnter.x / CPathSearch::GRID_SQUARE_SIZEX;
+    ptEnter.y = ptEnter.y / CPathSearch::GRID_SQUARE_SIZEY;
+
+    if (bFound == TRUE) {
+        ptPrev.x = -1;
+        ptPrev.y = -1;
+
+        SHORT nFormation;
+        if (g_pChitin->cNetwork.m_bConnectionEstablished) {
+            nFormation = CAIGroup::FORMATION_2BY3;
+        } else {
+            nFormation = pGame->m_gameSave.m_curFormation;
+        }
+
+        SHORT nDirection = static_cast<SHORT>((nFacing + 8) * 360 / 16 % 360);
+
+        CPoint* pOffsets = pGame->m_group.GetOffsets(nFormation, nDirection, TRUE);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenWorldMap.cpp
+        // __LINE__: 3206
+        UTIL_ASSERT(pOffsets != NULL);
+
+        LONG nOffsetIndex = 0;
+
+        SHORT nCount;
+        if (g_pChitin->cNetwork.m_bConnectionEstablished) {
+            nCount = 6;
+        } else {
+            nCount = pGame->m_nCharacters;
+        }
+
+        // TODO: Incomplete.
+    }
+
     // TODO: Incomplete.
 }
 
