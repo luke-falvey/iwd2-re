@@ -42,6 +42,17 @@ only when the packet leaves a name unresolved:
   `[0x851871]` is DENIED. Many loops test DENIED alone; some calls have no loop at all.
 - `operator new(size)` followed by stores of a vtable and fields is an inlined constructor.
   Write `new ClassName(args)` with the class from the packet's VTABLES section.
+- A `CGameEffect` has its vtable at offset 0 and the file structure (`CGameEffectBase`) after
+  it, so an asm offset on an effect pointer is the header's `/* OFFS */` comment plus 4:
+  `[effect+0xC]` is `m_effectID`, `+0x18` `m_effectAmount`, `+0x1C` `m_dwFlags`,
+  `+0x20` `m_durationType`, `+0x24` `m_duration`, `+0x58` `m_flags`.
+- A `CMessage` stores its target id at +4 and its source id at +8; the constructors take the
+  caller first, then the target.
+- MFC `CString`: `[data-8]` is `GetLength()`, `[data-4]` is `GetAllocLength()`.
+- Read the asm of a function the tools attribute to a file before translating it. STL, MFC
+  template and compiler-generated code (tree or list internals, scalar deleting thunks, catch
+  funclets, emitted copies of inline accessors) goes in `tools/inventory_exclusions.txt`.
+- Run every command from your worktree, including `tools\check.ps1`.
 
 ## Rules
 
