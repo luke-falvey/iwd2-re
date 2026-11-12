@@ -3763,8 +3763,217 @@ void CScreenCharacter::SummonPopup(DWORD dwPopupId, CGameSprite* pSprite, int a3
 // 0x5E0FD0
 BOOL CScreenCharacter::sub_5E0FD0(DWORD dwPopupId, CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
-    return FALSE;
+    switch (dwPopupId) {
+    case 6:
+        if (m_nClass == CAIOBJECTTYPE_C_WIZARD
+            || m_nClass == CAIOBJECTTYPE_C_MONK
+            || m_nClass == CAIOBJECTTYPE_C_PALADIN
+            || m_nClass == CAIOBJECTTYPE_C_CLERIC) {
+            if (m_pBeforeLevelUpDerivedStats->GetClassLevel(m_nClass) == 0) {
+                return TRUE;
+            }
+        }
+        return FALSE;
+    case 7:
+        return (pSprite->m_derivedStats.m_nLevel >> 2) - (m_pTempDerivedStats->m_nLevel >> 2) > 0;
+    case 8:
+        if (m_nClass != CAIOBJECTTYPE_C_BARD && m_nClass != CAIOBJECTTYPE_C_SORCERER) {
+            return FALSE;
+        }
+
+        // NOTE: The original increments a single byte.
+        field_1776 = static_cast<BYTE>(static_cast<BYTE>(field_1776) + 1);
+        if (static_cast<BYTE>(field_1776) > 9) {
+            return FALSE;
+        }
+
+        while (1) {
+            CInfGame* pGame;
+
+            if (m_nClass == CAIOBJECTTYPE_C_BARD) {
+                pGame = g_pBaldurChitin->GetObjectGame();
+
+                INT nTempSpells = atoi(pGame->GetRuleTables().m_tKnownSpellsBard.GetAt(CPoint(static_cast<BYTE>(field_1776) - 1,
+                    m_pTempDerivedStats->GetClassLevel(CAIObjectType::C_BARD) - 1)));
+
+                pGame = g_pBaldurChitin->GetObjectGame();
+
+                INT nSpells = atoi(pGame->GetRuleTables().m_tKnownSpellsBard.GetAt(CPoint(static_cast<BYTE>(field_1776) - 1,
+                    pSprite->m_derivedStats.GetClassLevel(CAIObjectType::C_BARD) - 1)));
+
+                m_nExtraMageSpells = nSpells - nTempSpells;
+            } else if (m_nClass == CAIOBJECTTYPE_C_SORCERER) {
+                pGame = g_pBaldurChitin->GetObjectGame();
+
+                INT nTempSpells = atoi(pGame->GetRuleTables().m_tKnownSpellsSorcerer.GetAt(CPoint(static_cast<BYTE>(field_1776) - 1,
+                    m_pTempDerivedStats->GetClassLevel(CAIObjectType::C_SORCERER) - 1)));
+
+                pGame = g_pBaldurChitin->GetObjectGame();
+
+                INT nSpells = atoi(pGame->GetRuleTables().m_tKnownSpellsSorcerer.GetAt(CPoint(static_cast<BYTE>(field_1776) - 1,
+                    pSprite->m_derivedStats.GetClassLevel(CAIObjectType::C_SORCERER) - 1)));
+
+                m_nExtraMageSpells = nSpells - nTempSpells;
+            }
+
+            if (m_nExtraMageSpells > 0) {
+                pGame = g_pBaldurChitin->GetObjectGame();
+
+                UINT nLevel = static_cast<BYTE>(field_1776) - 1;
+                UINT nClassIndex = pGame->GetSpellcasterIndex(m_nClass);
+
+                // __FILE__: .\Include\InfGame.h
+                // __LINE__: 772
+                UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+                UINT nSpellsAtLevel = pGame->m_spellsByClass[nClassIndex].m_lists[nLevel].m_nCount;
+                INT nEnabled = 0;
+                UINT nIndex = 0;
+                CResRef resRef;
+
+                for (UINT nCounter = 0; nCounter <= 29; nCounter++) {
+                    while (nIndex < nSpellsAtLevel) {
+                        pGame = g_pBaldurChitin->GetObjectGame();
+                        nLevel = static_cast<BYTE>(field_1776) - 1;
+                        nClassIndex = pGame->GetSpellcasterIndex(m_nClass);
+
+                        // __FILE__: .\Include\InfGame.h
+                        // __LINE__: 772
+                        UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+                        // NOTE: Inlined.
+                        UINT nID = pGame->m_spellsByClass[nClassIndex].m_lists[nLevel].Get(nIndex);
+
+                        pGame = g_pBaldurChitin->GetObjectGame();
+
+                        // NOTE: Inlined.
+                        resRef = pGame->m_spells.Get(nID);
+
+                        CSpell cSpell;
+                        cSpell.SetResRef(resRef, TRUE, TRUE);
+
+                        if (cSpell.pRes != NULL) {
+                            break;
+                        }
+
+                        nIndex++;
+                    }
+
+                    if (nIndex < nSpellsAtLevel) {
+                        CSpell cSpell;
+                        cSpell.SetResRef(resRef, TRUE, TRUE);
+
+                        // NOTE: Result unused.
+                        cSpell.Demand();
+
+                        BYTE nClass = m_nClass;
+                        DWORD dwClassMask = g_pBaldurChitin->GetObjectGame()->GetClassMask(nClass);
+
+                        if (cSpell.pRes != NULL
+                            && cSpell.CheckUsableBy(pSprite) == TRUE
+                            && !pSprite->sub_725330(resRef, dwClassMask, static_cast<BYTE>(field_1776) - 1, FALSE)) {
+                            nEnabled++;
+                        }
+
+                        cSpell.Release();
+
+                        nIndex++;
+                    } else {
+                        break;
+                    }
+                }
+
+                m_nExtraMageSpells = min(m_nExtraMageSpells, nEnabled);
+            }
+
+            if (m_nExtraMageSpells > 0) {
+                return TRUE;
+            }
+
+            // NOTE: The original increments a single byte.
+            field_1776 = static_cast<BYTE>(static_cast<BYTE>(field_1776) + 1);
+            if (static_cast<BYTE>(field_1776) > 9) {
+                return FALSE;
+            }
+        }
+    case 16:
+        if (m_nClass == CAIOBJECTTYPE_C_RANGER) {
+            // NOTE: The divisor is a global at 0x84EA54 (value 5).
+            INT nSlots = pSprite->m_derivedStats.GetClassLevel(CAIObjectType::C_RANGER) / 5 + 1;
+            nSlots -= pSprite->GetNextHatedRacesSlot();
+            if (nSlots > 0 && pSprite->GetNextHatedRacesSlot() < 8) {
+                return TRUE;
+            }
+        }
+        return FALSE;
+    case 0x36:
+        return TRUE;
+    case 0x37:
+        return field_2BC > 0;
+    case 0x38: {
+        CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+        if (m_nClass == CAIOBJECTTYPE_C_CLERIC
+            && m_pBeforeLevelUpDerivedStats->GetClassLevel(CAIOBJECTTYPE_C_CLERIC) == 0) {
+            INT nDomain;
+            switch (pSprite->GetSpecialization() & 0xFF8000) {
+            case 0x8000:
+                nDomain = 0;
+                break;
+            case 0x10000:
+                nDomain = 1;
+                break;
+            case 0x20000:
+                nDomain = 2;
+                break;
+            case 0x40000:
+                nDomain = 3;
+                break;
+            case 0x80000:
+                nDomain = 4;
+                break;
+            case 0x100000:
+                nDomain = 5;
+                break;
+            case 0x200000:
+                nDomain = 6;
+                break;
+            case 0x400000:
+                nDomain = 7;
+                break;
+            case 0x800000:
+                nDomain = 8;
+                break;
+            default:
+                // NOTE: The original reloads the `pSprite` argument here.
+                nDomain = reinterpret_cast<INT>(pSprite);
+                break;
+            }
+
+            for (INT nFeat = 0; nFeat < pGame->GetRuleTables().m_tFeats.GetHeight(); nFeat++) {
+                INT nValue = atol(pGame->GetRuleTables().m_tFeats.GetAt(CPoint(nDomain + 14, nFeat)));
+                INT nCurrent = pSprite->GetFeatValue(nFeat);
+                if (nValue > 0) {
+                    if (nValue > nCurrent) {
+                        nCurrent = nValue;
+                    }
+                    pSprite->SetFeatValue(nFeat, nCurrent);
+                }
+            }
+        }
+
+        for (INT nFeat = 0; nFeat < 75; nFeat++) {
+            INT nValue = atol(pGame->GetRuleTables().m_tFeats.GetAt(CPoint(m_nClass + 2, nFeat)));
+            if (nValue > pSprite->GetFeatValue(nFeat)) {
+                pSprite->SetFeatValue(nFeat, nValue);
+            }
+        }
+
+        return field_64C > 0;
+    }
+    default:
+        return FALSE;
+    }
 }
 
 // 0x5E1910
