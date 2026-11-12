@@ -1,6 +1,7 @@
 #include "CMessage.h"
 
 #include "CAIScript.h"
+#include "CAIUtil.h"
 #include "CBaldurChitin.h"
 #include "CCreatureFile.h"
 #include "CGameAIBase.h"
@@ -8118,8 +8119,96 @@ BOOLEAN CBaldurMessage::OnLeaveAreaNameReplyFromServer(BYTE* pByteMessage, DWORD
 // 0x438F90
 BOOLEAN CBaldurMessage::sub_438F90(LONG nCharacterId, LONG nTriggerId, CString sArea)
 {
-    // TODO: Incomplete.
-    return FALSE;
+    CGameObject* pObject;
+    CGameObject* pTrigger;
+    DWORD dwSize;
+    DWORD cnt;
+    BYTE* pData;
+    BYTE rc;
+    BYTE nLength;
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return FALSE;
+    }
+
+    PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+    LONG remoteObjectID = pObject->m_remoteObjectID;
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTriggerId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pTrigger,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        m_bLeaveAreaNameRequestPending = FALSE;
+        return FALSE;
+    }
+
+    PLAYER_ID triggerRemotePlayerID = pTrigger->m_remotePlayerID;
+    LONG triggerRemoteObjectID = pTrigger->m_remoteObjectID;
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTriggerId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    dwSize = sizeof(PLAYER_ID) + sizeof(LONG) + sizeof(PLAYER_ID) + sizeof(LONG);
+    dwSize += sArea.GetLength() + 1;
+
+    pData = CreateBuffer(dwSize);
+    if (pData == NULL) {
+        m_bLeaveAreaNameRequestPending = FALSE;
+        return FALSE;
+    }
+
+    cnt = 0;
+
+    *reinterpret_cast<PLAYER_ID*>(pData + cnt) = remotePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(pData + cnt) = remoteObjectID;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<PLAYER_ID*>(pData + cnt) = triggerRemotePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(pData + cnt) = triggerRemoteObjectID;
+    cnt += sizeof(LONG);
+
+    nLength = static_cast<BYTE>(sArea.GetLength());
+    *reinterpret_cast<BYTE*>(pData + cnt) = nLength;
+    cnt += sizeof(BYTE);
+
+    memcpy(pData + cnt, sArea.GetBuffer(nLength), nLength);
+    cnt += nLength;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CBaldurMessage.cpp
+    // __LINE__: 13447
+    UTIL_ASSERT(cnt == dwSize);
+
+    // NOTE: 0x84CFDE is the unnamed subtype 'A'.
+    g_pChitin->cNetwork.SendSpecificMessage(CString(""),
+        CNetwork::SEND_ALL_PLAYERS | CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_LEAVEAREANAME,
+        'A',
+        pData,
+        cnt);
+
+    DestroyBuffer(pData);
+
+    return TRUE;
 }
 
 // 0x439250
@@ -21119,14 +21208,595 @@ BOOL CMessageSpriteUpdate::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 // 0x50D660
 BOOL CMessageSpriteUpdate::sub_50D660(CString sArea)
 {
-    // TODO: Incomplete.
-    return FALSE;
+    if (strcmp(m_sAreaString, "NO_AREA") != 0 && sArea != m_sAreaString) {
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 // 0x50D6F0
 void CMessageSpriteUpdate::Run()
 {
-    // TODO: Incomplete.
+    CGameSprite* pSprite;
+    CGameObject* pObject;
+    CGameArea* pTargetArea;
+    BYTE rc;
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    if (pSprite->GetObjectType() == CGameObject::TYPE_SPRITE) {
+        if ((g_pChitin->cNetwork.m_nServiceProvider != 0 && !(g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID))
+            || (g_pBaldurChitin->GetObjectGame()->m_gameSave.m_cutScene == 1 && !g_pChitin->cNetwork.m_bIsHost)) {
+            if (!(field_108 & FLAG_AREA)) {
+                if (pSprite->m_pArea != NULL) {
+                    CResRef resRef;
+                    resRef = pSprite->m_pArea->m_resRef;
+                    resRef.CopyToString(m_sAreaString);
+                } else {
+                    m_sAreaString = "NO_AREA";
+                }
+            }
+
+            if (!(field_108 & FLAG_POSITION)) {
+                m_ptPosition = pSprite->GetPos();
+            }
+
+            if (!(field_108 & FLAG_SEQUENCE)) {
+                m_nSequence = pSprite->m_nSequence;
+            }
+
+            if (!(field_108 & FLAG_FACING)) {
+                m_nFacing = pSprite->m_nDirection;
+            }
+
+            if (!(field_108 & FLAG_STATE)) {
+                m_dwState = pSprite->m_derivedStats.m_generalState;
+            }
+
+            if (!(field_108 & FLAG_PATH)) {
+                m_nMoveScale = pSprite->m_animation.GetMoveScale();
+                m_ptDest = pSprite->m_curDest;
+
+                if (pSprite->m_pArea != NULL) {
+                    m_nPath = pSprite->m_nPath;
+                    m_currPath = pSprite->m_currPath;
+
+                    if (pSprite->m_pPath == NULL) {
+                        m_nPath = 0;
+                        m_currPath = 0;
+                    }
+
+                    if (m_nPath > 0) {
+                        m_pPath = new LONG[m_nPath];
+                        memcpy(m_pPath, pSprite->m_pPath, sizeof(LONG) * m_nPath);
+                    }
+                } else {
+                    m_nPath = 0;
+                    m_pPath = NULL;
+                    m_currPath = 0;
+                }
+            }
+
+            if (!(field_108 & FLAG_HITPOINTS)) {
+                m_nHitPoints = pSprite->m_baseStats.m_hitPoints;
+                m_nMaxHitPoints = pSprite->m_derivedStats.m_nMaxHitPoints;
+            } else if (m_nHitPoints > 0 && pSprite->m_baseStats.m_hitPoints <= 0) {
+                if (pSprite->GetVertListType() == CGameObject::LIST_BACK) {
+                    pSprite->MoveToFront();
+                }
+            }
+
+            if (!(field_108 & FLAG_FIELD_60)) {
+                field_60 = pSprite->m_baseStats.m_flags;
+            }
+
+            if (strcmp(m_sAreaString, "NO_AREA") == 0) {
+                g_pBaldurChitin->GetObjectGame()->m_bInAreaTransition = TRUE;
+                pSprite->RemoveFromArea();
+                g_pBaldurChitin->GetObjectGame()->m_bInAreaTransition = FALSE;
+
+                if (g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_nCharacters == 0) {
+                    g_pBaldurChitin->GetObjectGame()->UnselectAll();
+                    g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_bPicked = FALSE;
+
+                    CGameArea* pVisibleArea = g_pBaldurChitin->GetObjectGame()->GetVisibleArea();
+                    pVisibleArea->m_iPicked = CGameObjectArray::INVALID_INDEX;
+                    pVisibleArea->m_nToolTip = 0;
+
+                    g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnDeactivation();
+
+                    if (g_pChitin->cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL) {
+                        for (SHORT nCharacterSlot = 0; nCharacterSlot < 6; nCharacterSlot++) {
+                            LONG nCharacterId;
+                            if (nCharacterSlot < 6) {
+                                nCharacterId = g_pBaldurChitin->GetObjectGame()->m_characters[nCharacterSlot];
+                            } else {
+                                nCharacterId = CGameObjectArray::INVALID_INDEX;
+                            }
+
+                            if (nCharacterId != CGameObjectArray::INVALID_INDEX) {
+                                do {
+                                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                                        CGameObjectArray::THREAD_ASYNCH,
+                                        &pObject,
+                                        INFINITE);
+                                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                                if (rc == CGameObjectArray::SUCCESS) {
+                                    if (pObject->m_pArea == NULL) {
+                                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                                            CGameObjectArray::THREAD_ASYNCH,
+                                            INFINITE);
+                                    } else {
+                                        g_pBaldurChitin->GetObjectGame()->m_visibleArea = pObject->m_pArea->m_id;
+                                        g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnActivation();
+
+                                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                                            CGameObjectArray::THREAD_ASYNCH,
+                                            INFINITE);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // NOTE: The loop bound is read from 0x85187E (12).
+                        for (SHORT nArea = 0; nArea < CINFGAME_MAX_AREAS; nArea++) {
+                            // NOTE: Uninline.
+                            if (g_pBaldurChitin->GetObjectGame()->GetArea(nArea) != NULL) {
+                                g_pBaldurChitin->GetObjectGame()->m_visibleArea = static_cast<BYTE>(nArea);
+                                g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnActivation();
+                            }
+                        }
+                    }
+                }
+            } else {
+                pTargetArea = g_pBaldurChitin->GetObjectGame()->GetArea(m_sAreaString);
+
+                pSprite->m_derivedStats.m_generalState = m_dwState;
+
+                if ((pSprite->m_baseStats.m_generalState & STATE_DEAD) != 0
+                    && (pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
+                    pSprite->m_baseStats.m_generalState &= ~STATE_DEAD;
+                }
+
+                if (field_108 & FLAG_SPELL_STATES) {
+                    if ((pSprite->m_derivedStats.m_spellStates.test(SPLSTATE_REFLECTED_IMAGE) && !m_spellStates.test(SPLSTATE_REFLECTED_IMAGE))
+                        || (pSprite->m_derivedStats.m_spellStates.test(SPLSTATE_MIRROR_IMAGE) && !m_spellStates.test(SPLSTATE_MIRROR_IMAGE))) {
+                        pSprite->m_derivedStats.m_nMirrorImages = 0;
+                    }
+
+                    if ((pSprite->m_derivedStats.m_spellStates.test(SPLSTATE_STONESKIN) && !m_spellStates.test(SPLSTATE_STONESKIN))
+                        || (pSprite->m_derivedStats.m_spellStates.test(SPLSTATE_IRON_SKINS) && !m_spellStates.test(SPLSTATE_IRON_SKINS))) {
+                        pSprite->m_derivedStats.m_nStoneSkins = 0;
+
+                        // NOTE: `m_colors` has 7 entries, the eighth read is `m_effectVersion`.
+                        for (INT nColorRange = 0; nColorRange < 8; nColorRange++) {
+                            BYTE nRangeValue = pSprite->m_baseStats.m_colors[nColorRange];
+                            pSprite->m_animation.SetColorRange(static_cast<BYTE>(nColorRange), nRangeValue);
+                        }
+
+                        pSprite->m_animation.ClearColorEffectsAll();
+                    }
+
+                    pSprite->m_derivedStats.m_spellStates = m_spellStates;
+                }
+
+                if (field_108 & FLAG_SKILLS) {
+                    memcpy(pSprite->m_baseStats.m_skills, m_baseSkills, sizeof(m_baseSkills));
+                    memcpy(pSprite->m_derivedStats.m_nSkills, m_skills, sizeof(m_skills));
+                    pSprite->m_baseStats.field_2FF = field_106;
+                }
+
+                if (field_108 & FLAG_FADE_SPEED) {
+                    pSprite->m_baseStats.m_fadeSpeed = m_nFadeSpeed;
+                }
+
+                if (field_108 & FLAG_TRANSLUCENT) {
+                    pSprite->m_derivedStats.m_nTranslucent = m_nTranslucent;
+                }
+
+                if (field_108 & FLAG_FIELD_60) {
+                    pSprite->m_baseStats.m_flags = field_60;
+                }
+
+                if (field_108 & FLAG_VISUAL_EFFECTS) {
+                    for (size_t nEffect = 0; nEffect < 32; nEffect++) {
+                        if (!pSprite->m_derivedStats.m_visualEffects.test(nEffect)
+                            && m_visualEffects.test(nEffect)) {
+                            if (nEffect == 0x18) {
+                                pSprite->InitBlur();
+                            } else if (nEffect != 0x19) {
+                                pSprite->field_7548[nEffect].SequenceSet(0);
+                                pSprite->field_7548[nEffect].FrameSet(0);
+                            }
+                        } else if (pSprite->m_derivedStats.m_visualEffects.test(nEffect)
+                            && !m_visualEffects.test(nEffect)) {
+                            pSprite->field_9088[nEffect].Stop();
+                        }
+                    }
+
+                    pSprite->m_derivedStats.m_visualEffects = m_visualEffects;
+                }
+
+                if (pTargetArea == NULL || pSprite->m_pArea != pTargetArea) {
+                    CResRef areaResRef(m_sAreaString);
+                    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(areaResRef, 1010, TRUE) != NULL) {
+                        if (pSprite->m_pArea == NULL) {
+                            DWORD nSexBits = 0;
+                            DWORD nRaceBits = 0;
+                            DWORD nClassBits = 0;
+                            BOOL bAnimationValid = FALSE;
+
+                            switch (pSprite->GetAIType().m_nGender) {
+                            case CAIOBJECTTYPE_SEX_MALE:
+                                nSexBits = 0;
+                                bAnimationValid = TRUE;
+                                break;
+                            case CAIOBJECTTYPE_SEX_FEMALE:
+                                nSexBits = 0x10;
+                                bAnimationValid = TRUE;
+                                break;
+                            }
+
+                            if (bAnimationValid) {
+                                bAnimationValid = FALSE;
+
+                                switch (pSprite->GetAIType().m_nRace) {
+                                case CAIOBJECTTYPE_R_HUMAN:
+                                    nRaceBits = 0;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_R_ELF:
+                                case CAIOBJECTTYPE_R_HALF_ELF:
+                                    nRaceBits = 1;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_R_DWARF:
+                                case CAIOBJECTTYPE_R_GNOME:
+                                    nRaceBits = 2;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_R_HALFLING:
+                                    nRaceBits = 3;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_R_HALF_ORC:
+                                    nRaceBits = 5;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                }
+                            }
+
+                            if (bAnimationValid) {
+                                bAnimationValid = FALSE;
+
+                                switch (pSprite->GetAIType().m_nClass) {
+                                case CAIOBJECTTYPE_C_CLERIC:
+                                case CAIOBJECTTYPE_C_DRUID:
+                                    nClassBits = 0;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_C_BARBARIAN:
+                                case CAIOBJECTTYPE_C_FIGHTER:
+                                case CAIOBJECTTYPE_C_MONK:
+                                case CAIOBJECTTYPE_C_PALADIN:
+                                case CAIOBJECTTYPE_C_RANGER:
+                                    nClassBits = 0x100;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_C_SORCERER:
+                                case CAIOBJECTTYPE_C_WIZARD:
+                                    nClassBits = 0x200;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_C_BARD:
+                                case CAIOBJECTTYPE_C_ROGUE:
+                                    nClassBits = 0x300;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                }
+                            }
+
+                            if (bAnimationValid) {
+                                DWORD nAnimation = nClassBits | nRaceBits | nSexBits | 0x6000;
+
+                                // NOTE: The original stores a DWORD (`nAnimation & 0xFFFF`) over
+                                // `m_animationType` and `field_22`.
+                                pSprite->m_baseStats.m_animationType = static_cast<short>(nAnimation);
+                                pSprite->m_baseStats.field_22 = 0;
+
+                                pSprite->m_animation.SetAnimationType(static_cast<USHORT>(nAnimation),
+                                    pSprite->m_baseStats.m_colors,
+                                    0);
+                            }
+
+                            if (pTargetArea == NULL) {
+                                pTargetArea = g_pBaldurChitin->GetObjectGame()->LoadArea(m_sAreaString,
+                                    0xFF,
+                                    FALSE,
+                                    FALSE);
+                            }
+
+                            if (pTargetArea != NULL) {
+                                BYTE nPersonalSpace = pSprite->m_animation.GetPersonalSpace();
+
+                                CPoint ptGrid;
+                                ptGrid.y = m_ptPosition.y / CPathSearch::GRID_SQUARE_SIZEY;
+                                ptGrid.x = m_ptPosition.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+                                CPoint ptOpen = pTargetArea->m_search.GetNearestOpenSquare(ptGrid,
+                                    pSprite->GetTerrainTable(),
+                                    nPersonalSpace,
+                                    m_nFacing);
+
+                                CPoint ptPosition;
+                                ptPosition.x = ptOpen.x * CPathSearch::GRID_SQUARE_SIZEX + CPathSearch::GRID_SQUARE_SIZEX / 2;
+                                ptPosition.y = ptOpen.y * CPathSearch::GRID_SQUARE_SIZEY + CPathSearch::GRID_SQUARE_SIZEY / 2;
+
+                                g_pBaldurChitin->GetObjectGame()->m_bInAreaTransition = TRUE;
+                                pSprite->AddToArea(pTargetArea, ptPosition, 0, CGameObject::LIST_FRONT);
+                                g_pBaldurChitin->GetObjectGame()->m_bInAreaTransition = FALSE;
+                            }
+                        } else {
+                            // NOTE: Unused. The original copies the area resref as `LPCSTR`.
+                            CString sAreaName;
+                            sAreaName = pSprite->m_pArea->m_header.m_areaName;
+
+                            CAIAction action(CAIAction::LEAVEAREALUA, m_sAreaString, m_ptPosition, 0, 1);
+
+                            pSprite->ClearActions(FALSE);
+                            pSprite->m_interrupt = TRUE;
+                            pSprite->SetCurrAction(action);
+                            pSprite->ExecuteAction();
+
+                            if (g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_nCharacters == 0) {
+                                g_pBaldurChitin->GetObjectGame()->UnselectAll();
+                                g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_bPicked = FALSE;
+
+                                CGameArea* pVisibleArea = g_pBaldurChitin->GetObjectGame()->GetVisibleArea();
+                                pVisibleArea->m_iPicked = CGameObjectArray::INVALID_INDEX;
+                                pVisibleArea->m_nToolTip = 0;
+
+                                g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnDeactivation();
+
+                                g_pBaldurChitin->GetObjectGame()->m_visibleArea = pSprite->m_pArea->m_id;
+                                g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnActivation();
+                            }
+                        }
+                    }
+                }
+
+                if (pSprite->m_pArea != NULL) {
+                    if (pSprite->GetArea()->GetNamedCreatures()->FindKey(pSprite->GetScriptName()) == NULL) {
+                        CVariable variable;
+                        variable.SetName(pSprite->GetScriptName());
+                        variable.m_intValue = pSprite->m_id;
+                        pSprite->m_pArea->m_namedCreatures.AddKey(variable);
+                    }
+
+                    if (m_nSequence != CGameSprite::SEQ_WALK && pSprite->m_nSequence != CGameSprite::SEQ_WALK) {
+                        BYTE nSequence = static_cast<BYTE>(m_nSequence);
+                        pSprite->CheckSequence(nSequence);
+                        pSprite->SetSequence(nSequence);
+
+                        if (m_nHitPoints > 0) {
+                            CPoint ptMessage;
+                            ptMessage.y = m_ptPosition.y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptMessage.x = m_ptPosition.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+                            CPoint ptSprite;
+                            ptSprite.y = pSprite->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptSprite.x = pSprite->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX;
+
+                            if (CAIUtil::CountSquares(ptSprite, ptMessage) >= 2) {
+                                pSprite->JumpToPoint(m_ptPosition, FALSE);
+                            }
+                        }
+
+                        pSprite->SetDirection(m_nFacing);
+                    } else if (m_nSequence != CGameSprite::SEQ_WALK && pSprite->m_nSequence == CGameSprite::SEQ_WALK) {
+                        CPoint ptPathEnd;
+                        if (pSprite->m_nPath > 0 && pSprite->m_pPath != NULL) {
+                            LONG nLast = pSprite->m_pPath[pSprite->m_nPath - 1];
+                            ptPathEnd.y = CPathSearch::GRID_ACTUALY - nLast / CPathSearch::GRID_ACTUALX - 1;
+                            ptPathEnd.x = nLast % CPathSearch::GRID_ACTUALX;
+                        } else {
+                            ptPathEnd.y = pSprite->m_curDest.y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptPathEnd.x = pSprite->m_curDest.x / CPathSearch::GRID_SQUARE_SIZEX;
+                        }
+
+                        if (m_nHitPoints > 0) {
+                            CPoint ptMessage;
+                            ptMessage.y = m_ptPosition.y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptMessage.x = m_ptPosition.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+                            if (CAIUtil::CountSquares(ptPathEnd, ptMessage) >= 2) {
+                                BYTE nSequence = static_cast<BYTE>(m_nSequence);
+                                pSprite->CheckSequence(nSequence);
+                                pSprite->SetSequence(nSequence);
+
+                                pSprite->JumpToPoint(m_ptPosition, FALSE);
+                                pSprite->SetDirection(m_nFacing);
+                            }
+                        }
+                    } else if (m_nSequence == CGameSprite::SEQ_WALK && pSprite->m_nSequence != CGameSprite::SEQ_WALK) {
+                        CPoint ptPathEnd;
+                        if (m_nPath > 0 && m_pPath != NULL) {
+                            LONG nLast = m_pPath[m_nPath - 1];
+                            ptPathEnd.y = CPathSearch::GRID_ACTUALY - nLast / CPathSearch::GRID_ACTUALX - 1;
+                            ptPathEnd.x = nLast % CPathSearch::GRID_ACTUALX;
+                        } else {
+                            ptPathEnd.y = m_ptDest.y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptPathEnd.x = m_ptDest.x / CPathSearch::GRID_SQUARE_SIZEX;
+                        }
+
+                        CPoint ptSprite;
+                        ptSprite.y = pSprite->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY;
+                        ptSprite.x = pSprite->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX;
+
+                        if (CAIUtil::CountSquares(ptSprite, ptPathEnd) >= 2
+                            && m_nHitPoints > 0
+                            && m_pPath != NULL
+                            && m_nPath > 0) {
+                            pSprite->JumpToPoint(m_ptPosition, FALSE);
+
+                            BYTE nSequence = static_cast<BYTE>(m_nSequence);
+                            pSprite->CheckSequence(nSequence);
+                            pSprite->SetSequence(nSequence);
+
+                            pSprite->SetPath(m_pPath, m_nPath);
+                            pSprite->m_currPath = m_currPath;
+                            pSprite->InitializeWalkingSound();
+                            m_pPath = NULL;
+                        }
+                    } else if (m_nSequence == CGameSprite::SEQ_WALK && pSprite->m_nSequence == CGameSprite::SEQ_WALK) {
+                        CPoint ptSpritePathEnd;
+                        if (pSprite->m_nPath > 0 && pSprite->m_pPath != NULL) {
+                            LONG nLast = pSprite->m_pPath[pSprite->m_nPath - 1];
+                            ptSpritePathEnd.y = CPathSearch::GRID_ACTUALY - nLast / CPathSearch::GRID_ACTUALX - 1;
+                            ptSpritePathEnd.x = nLast % CPathSearch::GRID_ACTUALX;
+                        } else {
+                            ptSpritePathEnd.y = pSprite->m_curDest.y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptSpritePathEnd.x = pSprite->m_curDest.x / CPathSearch::GRID_SQUARE_SIZEX;
+                        }
+
+                        CPoint ptPathEnd;
+                        if (m_nPath > 0 && m_pPath != NULL) {
+                            LONG nLast = m_pPath[m_nPath - 1];
+                            ptPathEnd.y = CPathSearch::GRID_ACTUALY - nLast / CPathSearch::GRID_ACTUALX - 1;
+                            ptPathEnd.x = nLast % CPathSearch::GRID_ACTUALX;
+                        } else {
+                            ptPathEnd.y = m_ptDest.y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptPathEnd.x = m_ptDest.x / CPathSearch::GRID_SQUARE_SIZEX;
+                        }
+
+                        if (CAIUtil::CountSquares(ptSpritePathEnd, ptPathEnd) >= 2
+                            && m_nHitPoints > 0
+                            && m_pPath != NULL
+                            && m_nPath > 0) {
+                            pSprite->JumpToPoint(m_ptPosition, FALSE);
+
+                            BYTE nSequence = static_cast<BYTE>(m_nSequence);
+                            pSprite->CheckSequence(nSequence);
+                            pSprite->SetSequence(nSequence);
+
+                            pSprite->SetPath(m_pPath, m_nPath);
+                            pSprite->m_currPath = m_currPath;
+                            pSprite->InitializeWalkingSound();
+                            m_pPath = NULL;
+                        }
+                    }
+
+                    LONG nDestX = pSprite->m_posDest.x;
+                    LONG nDestY = pSprite->m_posDest.y;
+                    CPoint ptCurrent = pSprite->GetPos();
+
+                    if (m_nMoveScale != pSprite->m_animation.GetMoveScale() && pSprite->m_pPath != NULL) {
+                        pSprite->m_animation.SetMoveScale(m_nMoveScale);
+
+                        LONG dy = nDestY - ptCurrent.y;
+                        LONG dx = nDestX - ptCurrent.x;
+                        LONG nDistance = static_cast<LONG>(sqrt(static_cast<double>(dx * dx + (dy * dy * 16) / 9)) + 0.5);
+                        if (nDistance == 0) {
+                            pSprite->m_posDelta.x = 0;
+                            pSprite->m_posDelta.y = 0;
+                        } else {
+                            pSprite->m_posDelta.x = ((dx << CGameSprite::EXACT_SCALE) * m_nMoveScale) / nDistance;
+                            pSprite->m_posDelta.y = ((((dy * 4) / 3) << CGameSprite::EXACT_SCALE) * m_nMoveScale) / nDistance;
+                        }
+                    }
+                }
+
+                pSprite->m_baseStats.m_hitPoints = m_nHitPoints;
+                pSprite->m_derivedStats.m_nMaxHitPoints = m_nMaxHitPoints;
+                pSprite->m_baseStats.m_flags = field_60;
+
+                if (field_108 & FLAG_AC_MODS) {
+                    pSprite->m_derivedStats.field_6 = field_64;
+                    pSprite->m_derivedStats.field_8 = field_66;
+                    pSprite->m_derivedStats.field_A = field_68;
+                    pSprite->m_derivedStats.field_C = field_6A;
+                    pSprite->m_derivedStats.m_nACCrushingMod = m_nACCrushingMod;
+                    pSprite->m_derivedStats.m_nACMissileMod = m_nACMissileMod;
+                    pSprite->m_derivedStats.m_nACPiercingMod = m_nACPiercingMod;
+                    pSprite->m_derivedStats.m_nACSlashingMod = m_nACSlashingMod;
+                }
+
+                if (field_108 & FLAG_LEVEL_UP) {
+                    pSprite->m_nHPCONBonusTotalOld = m_nHPCONBonusTotalOld;
+                    pSprite->m_bLevelUp = m_bLevelUp;
+                }
+
+                if (field_108 & FLAG_ENEMY_ALLY) {
+                    CAIObjectType typeAI;
+
+                    typeAI.Set(pSprite->GetAIType());
+                    typeAI.m_nEnemyAlly = m_nEnemyAlly;
+                    pSprite->SetAIType(typeAI, FALSE, FALSE);
+
+                    typeAI.Set(pSprite->m_liveTypeAI);
+                    typeAI.m_nEnemyAlly = m_nEnemyAllyLive;
+                    pSprite->m_liveTypeAI.Set(typeAI);
+
+                    typeAI.Set(pSprite->m_startTypeAI);
+                    typeAI.m_nEnemyAlly = m_nEnemyAllyStart;
+                    pSprite->m_startTypeAI.Set(typeAI);
+
+                    pSprite->m_moraleFailure = m_bMoralFailure;
+                }
+
+                if (field_108 & FLAG_FIELD_74) {
+                    SHORT nIcons = field_74;
+                    BOOL bMatches = FALSE;
+
+                    if (pSprite->m_portraitIcons.GetCount() == nIcons) {
+                        bMatches = TRUE;
+
+                        POSITION pos = pSprite->m_portraitIcons.GetHeadPosition();
+                        SHORT nIndex = 0;
+                        while (nIndex < nIcons && pos != NULL) {
+                            if (reinterpret_cast<INT>(pSprite->m_portraitIcons.GetNext(pos)) != reinterpret_cast<LONG*>(field_76)[nIndex]) {
+                                bMatches = FALSE;
+                                break;
+                            }
+                            nIndex++;
+                        }
+                    }
+
+                    if (!bMatches) {
+                        pSprite->m_portraitIcons.RemoveAll();
+
+                        for (SHORT nIndex = 0; nIndex < field_74; nIndex++) {
+                            pSprite->m_portraitIcons.AddTail(reinterpret_cast<int*>(reinterpret_cast<LONG*>(field_76)[nIndex]));
+                        }
+                    }
+                }
+
+                g_pBaldurChitin->GetActiveEngine()->UpdateCharacterStatus(m_targetId);
+            }
+
+            g_pBaldurChitin->GetActiveEngine()->UpdatePersonalItemStatus(m_targetId);
+        }
+    }
+
+    if (pSprite->GetObjectType() == CGameObject::TYPE_SPRITE) {
+        pSprite->sub_75F3D0((field_85 & 1) ? 1 : 0);
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // -----------------------------------------------------------------------------
