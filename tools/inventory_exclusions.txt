@@ -367,3 +367,15 @@
 # and deletes this when the flag argument has bit 0 set; returns this. Called as
 # `delete p` from CInfGame::~CInfGame (0x59EF08).
 0x59F4E0
+
+# std::copy / _Copy_opt for 16-byte elements (MSVC 6 STL instantiation, cdecl): copies
+# [first, last) to dest in 16-byte steps (four dword moves) and returns dest's end;
+# returns dest unchanged when first == last. Used by vector<16-byte element>::erase
+# inlined into the stack destructors in CInfGame::sub_5A69B0 (0x5A69B0).
+0x5CAE90
+
+# CString::CString(const CString&) instance (compiler-emitted copy of a by-value CString
+# argument, RET 4, returns this): stores the empty-string pointer ([0x8C1758]) into
+# this->m_pchData, then calls CString::operator= (0x7FCD57) with the source. Called to
+# build by-value CString arguments in 0x5A7E40 and 0x60BA30.
+0x5A9660

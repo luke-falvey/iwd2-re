@@ -4168,8 +4168,265 @@ static void sub_5A5060(BYTE** ppCreature, LONG* pCreatureSize, BYTE* pOldCreatur
 // 0x5A69B0
 INT CInfGame::sub_5A69B0(BYTE* pCreature)
 {
-    // TODO: Incomplete.
-    return 0;
+    // NOTE: Not original. Layouts of the "CRE V2.1" tables read below.
+    struct OldKnownSpell {
+        RESREF m_spellId;
+        WORD m_spellLevel;
+        WORD m_spellType;
+    };
+
+    struct OldMemorizationInfo {
+        WORD m_spellLevel;
+        WORD field_2;
+        WORD field_4;
+        WORD m_spellType;
+        DWORD m_index;
+        DWORD m_count;
+    };
+
+    struct OldMemorizedSpell {
+        RESREF m_spellId;
+        DWORD m_flags;
+    };
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 6440
+    UTIL_ASSERT(pCreature != NULL);
+
+    if (memcmp(pCreature, "CRE V2.0", 8) != 0
+        && memcmp(pCreature, "CRE V2.1", 8) != 0) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 6446
+        UTIL_ASSERT(FALSE);
+        return 0;
+    }
+
+    BYTE& nClass = pCreature[0x387];
+    if (nClass == 0 || nClass == 0xFF) {
+        nClass = CAIOBJECTTYPE_C_FIGHTER;
+    }
+
+    UINT nClassIndex = 0;
+    if (nClass == CAIOBJECTTYPE_C_BARD
+        || nClass == CAIOBJECTTYPE_C_CLERIC
+        || nClass == CAIOBJECTTYPE_C_DRUID
+        || nClass == CAIOBJECTTYPE_C_PALADIN
+        || nClass == CAIOBJECTTYPE_C_RANGER
+        || nClass == CAIOBJECTTYPE_C_SORCERER
+        || nClass == CAIOBJECTTYPE_C_WIZARD) {
+        nClassIndex = g_pBaldurChitin->GetObjectGame()->GetSpellcasterIndex(nClass);
+    }
+
+    CGameSpriteSpells spells;
+    CGameSpriteGroupedSpellList domainSpells;
+    CGameSpriteSpellList innateSpells;
+    CGameSpriteSpellList songs;
+    CGameSpriteSpellList shapeshifts;
+
+    // NOTE: Original reads spell type from a constant at 0x85BB63 (2).
+    const WORD SPELLTYPE_INNATE = 2;
+
+    DWORD nOffset = 0;
+    for (DWORD nSpell = 0; nSpell < *reinterpret_cast<DWORD*>(pCreature + 0x3BE); nSpell++) {
+        OldKnownSpell* tempOldSpell = reinterpret_cast<OldKnownSpell*>(pCreature + *reinterpret_cast<DWORD*>(pCreature + 0x3BA) + nOffset);
+
+        // FIXME: `m_spellLevel >= 0` is always true.
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 6486
+        UTIL_ASSERT(tempOldSpell->m_spellLevel >= 0 && tempOldSpell->m_spellLevel < CSPELLLIST_MAX_LEVELS);
+
+        if (tempOldSpell->m_spellType == SPELLTYPE_INNATE) {
+            UINT nID = 0;
+            CResRef resRef(tempOldSpell->m_spellId);
+
+            // NOTE: Uninline.
+            if (g_pBaldurChitin->GetObjectGame()->m_songs.Find(resRef, nID)) {
+                songs.Add(nID, 1, 1, 0);
+            } else {
+                nID = 0;
+                CResRef resRef2(tempOldSpell->m_spellId);
+
+                // NOTE: Uninline.
+                if (g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Find(resRef2, nID)) {
+                    shapeshifts.Add(nID, 1, 1, 0);
+                } else {
+                    nID = 0;
+                    CResRef resRef3(tempOldSpell->m_spellId);
+
+                    // NOTE: Uninline.
+                    if (g_pBaldurChitin->GetObjectGame()->m_innateSpells.Find(resRef3, nID)) {
+                        innateSpells.Add(nID, 1, 1, 0);
+                    } else {
+                        // NOTE: Uninline.
+                        char szResRef[RESREF_SIZE + 1];
+                        memcpy(szResRef, tempOldSpell->m_spellId, RESREF_SIZE);
+                        szResRef[RESREF_SIZE] = '\0';
+
+                        CString sError("");
+                        sError.Format("*** OBSOLETE SPELL FILE: %s", szResRef);
+                    }
+                }
+            }
+        } else {
+            UINT nID = 0;
+            CResRef resRef(tempOldSpell->m_spellId);
+
+            // NOTE: Uninline.
+            if (g_pBaldurChitin->GetObjectGame()->m_spells.Find(resRef, nID)) {
+                UINT nLevel = tempOldSpell->m_spellLevel;
+
+                // NOTE: Uninline.
+                spells.Get(nClassIndex)->Add(nID, nLevel, 1, 1, 0);
+            } else {
+                // NOTE: Uninline.
+                char szResRef[RESREF_SIZE + 1];
+                memcpy(szResRef, tempOldSpell->m_spellId, RESREF_SIZE);
+                szResRef[RESREF_SIZE] = '\0';
+
+                CString sError("");
+                sError.Format("*** OBSOLETE SPELL FILE: %s", szResRef);
+            }
+        }
+
+        nOffset += sizeof(OldKnownSpell);
+    }
+
+    DWORD nOldSize = *reinterpret_cast<DWORD*>(pCreature + 0x3BE) * sizeof(OldKnownSpell);
+
+    DWORD nInfoOffset = 0;
+    for (DWORD nInfo = 0; nInfo < *reinterpret_cast<DWORD*>(pCreature + 0x3C6); nInfo++) {
+        OldMemorizationInfo* pInfo = reinterpret_cast<OldMemorizationInfo*>(pCreature + *reinterpret_cast<DWORD*>(pCreature + 0x3C2) + nInfoOffset);
+
+        for (DWORD nMemorized = 0; nMemorized < pInfo->m_count; nMemorized++) {
+            OldMemorizedSpell* pSpell = reinterpret_cast<OldMemorizedSpell*>(pCreature + (pInfo->m_index + nMemorized) * sizeof(OldMemorizedSpell) + *reinterpret_cast<DWORD*>(pCreature + 0x3CA));
+
+            if (pInfo->m_spellType == SPELLTYPE_INNATE) {
+                UINT nID = 0;
+                CResRef resRef(pSpell->m_spellId);
+
+                // NOTE: Uninline.
+                if (g_pBaldurChitin->GetObjectGame()->m_songs.Find(resRef, nID)) {
+                    UINT nIndex = 0;
+                    if (songs.Find(nID, nIndex) == TRUE) {
+                        UINT nCount = 0;
+                        if ((static_cast<BYTE>(pSpell->m_flags) & 1) != 0) {
+                            nCount = 1;
+                        }
+
+                        songs.Add(nID, 1, nCount, 0);
+                    }
+                } else {
+                    nID = 0;
+                    CResRef resRef2(pSpell->m_spellId);
+
+                    // NOTE: Uninline.
+                    if (g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Find(resRef2, nID)) {
+                        UINT nIndex = 0;
+                        if (shapeshifts.Find(nID, nIndex) == TRUE) {
+                            UINT nCount = 0;
+                            if ((static_cast<BYTE>(pSpell->m_flags) & 1) != 0) {
+                                nCount = 1;
+                            }
+
+                            shapeshifts.Add(nID, 1, nCount, 0);
+                        }
+                    } else {
+                        nID = 0;
+                        CResRef resRef3(pSpell->m_spellId);
+
+                        // NOTE: Uninline.
+                        if (g_pBaldurChitin->GetObjectGame()->m_innateSpells.Find(resRef3, nID)) {
+                            UINT nIndex = 0;
+                            if (innateSpells.Find(nID, nIndex) == TRUE) {
+                                UINT nCount = 0;
+                                if ((static_cast<BYTE>(pSpell->m_flags) & 1) != 0) {
+                                    nCount = 1;
+                                }
+
+                                innateSpells.Add(nID, 1, nCount, 0);
+                            }
+                        } else {
+                            // NOTE: Uninline.
+                            char szResRef[RESREF_SIZE + 1];
+                            memcpy(szResRef, pSpell->m_spellId, RESREF_SIZE);
+                            szResRef[RESREF_SIZE] = '\0';
+
+                            CString sError("");
+                            sError.Format("*** OBSOLETE SPELL FILE: %s", szResRef);
+                        }
+                    }
+                }
+            } else {
+                UINT nID = 0;
+                CResRef resRef(pSpell->m_spellId);
+
+                // NOTE: Uninline.
+                if (g_pBaldurChitin->GetObjectGame()->m_spells.Find(resRef, nID)) {
+                    UINT nLevel = pInfo->m_spellLevel;
+                    UINT nIndex = 0;
+
+                    // NOTE: Uninline.
+                    if (spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->Find(nID, nIndex) == TRUE) {
+                        UINT nCount = 0;
+                        if ((static_cast<BYTE>(pSpell->m_flags) & 1) != 0) {
+                            nCount = 1;
+                        }
+
+                        UINT nLevelAdd = pInfo->m_spellLevel;
+
+                        // NOTE: Uninline.
+                        spells.Get(nClassIndex)->Add(nID, nLevelAdd, 1, nCount, 0);
+                    }
+
+                    UINT nDomainLevel = pInfo->m_spellLevel;
+
+                    // NOTE: Uninline.
+                    if (domainSpells.GetSpellsAtLevel(nDomainLevel)->Find(nID, nIndex) == TRUE) {
+                        UINT nCount = 0;
+                        if ((static_cast<BYTE>(pSpell->m_flags) & 1) != 0) {
+                            nCount = 1;
+                        }
+
+                        UINT nLevelAdd = pInfo->m_spellLevel;
+                        domainSpells.Add(nID, nLevelAdd, 1, nCount, 0);
+                    }
+                } else {
+                    // NOTE: Uninline.
+                    char szResRef[RESREF_SIZE + 1];
+                    memcpy(szResRef, pSpell->m_spellId, RESREF_SIZE);
+                    szResRef[RESREF_SIZE] = '\0';
+
+                    CString sError("");
+                    sError.Format("*** OBSOLETE SPELL FILE: %s", szResRef);
+                }
+            }
+        }
+
+        nOldSize += pInfo->m_count * sizeof(OldMemorizedSpell);
+        nInfoOffset += sizeof(OldMemorizationInfo);
+    }
+
+    nOldSize += *reinterpret_cast<DWORD*>(pCreature + 0x3C6) * sizeof(OldMemorizationInfo);
+
+    DWORD nNewSize = 0;
+
+    for (UINT nClassLoop = 0; nClassLoop < CSPELLLIST_NUM_CLASSES; nClassLoop++) {
+        for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+            // NOTE: Uninline.
+            nNewSize += spells.Get(nClassLoop)->GetSpellsAtLevel(nLevel)->m_List.size() * sizeof(CGameSpriteSpellListEntry) + 8;
+        }
+    }
+
+    for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+        // NOTE: Uninline.
+        nNewSize += domainSpells.GetSpellsAtLevel(nLevel)->m_List.size() * sizeof(CGameSpriteSpellListEntry) + 8;
+    }
+
+    nNewSize += innateSpells.m_List.size() * sizeof(CGameSpriteSpellListEntry) + 8;
+    nNewSize += songs.m_List.size() * sizeof(CGameSpriteSpellListEntry) + 8;
+    nNewSize += shapeshifts.m_List.size() * sizeof(CGameSpriteSpellListEntry) + 8;
+
+    return nNewSize - nOldSize;
 }
 
 // 0x5A7740
@@ -10629,7 +10886,17 @@ DWORD CInfGame::GetScrollSpeed()
 // 0x5BDBA0
 void CInfGame::sub_5BDBA0(int a1, BOOL a2)
 {
-    // TODO: Incomplete.
+    m_nReputation = a1 * 10;
+
+    if (a2) {
+        if (m_nReputation > 200) {
+            m_nReputation = 200;
+        }
+
+        if (m_nReputation < 10) {
+            m_nReputation = 10;
+        }
+    }
 }
 
 // 0x5BDC00
@@ -11986,9 +12253,62 @@ BYTE CInfGame::GetCharactersControlled()
 }
 
 // 0x5C1160
-BOOLEAN CInfGame::RestParty(int a2, unsigned char a3)
+BOOLEAN CInfGame::RestParty(INT nHP, BOOLEAN bRenting)
 {
-    // TODO: Incomplete.
+    if (bRenting) {
+        for (SHORT nPortrait = 0; nPortrait < m_nCharacters; nPortrait++) {
+            // NOTE: Uninline.
+            LONG nCharacterId = GetCharacterId(nPortrait);
+
+            CMessage101* pMessage = new CMessage101(FALSE,
+                nCharacterId,
+                nCharacterId,
+                TRUE);
+
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+        }
+    }
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return RestPartyPrivate(nHP, bRenting);
+    }
+
+    if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+        if (!g_pChitin->cNetwork.m_bIsHost) {
+            if (g_pBaldurChitin->m_cBaldurMessage.m_bInOnRestAnnounce) {
+                return RestPartyPrivate(nHP, bRenting);
+            }
+
+            g_pBaldurChitin->m_cBaldurMessage.SendRestRequestToServer(nHP,
+                bRenting,
+                static_cast<BYTE>(m_bHealPartyOnRest));
+
+            return TRUE;
+        }
+
+        if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+            BOOLEAN bCanStart = TRUE;
+
+            if (g_pBaldurChitin->GetObjectGame()->m_gameSave.m_mode == 386
+                || g_pBaldurChitin->GetObjectGame()->m_gameSave.m_mode == 1282) {
+                bCanStart = FALSE;
+            }
+
+            if (g_pBaldurChitin->GetObjectGame()->m_multiplayerSettings.m_bHostPermittedDialog == TRUE) {
+                bCanStart = FALSE;
+            }
+
+            if (g_pBaldurChitin->m_pEngineWorld->m_bHardPaused == TRUE || !bCanStart) {
+                g_pBaldurChitin->m_pEngineWorld->SetPendingRest(nHP, bRenting, FALSE);
+            } else {
+                g_pBaldurChitin->m_pEngineWorld->StartRestMultiplayerHost(nHP,
+                    bRenting,
+                    static_cast<BYTE>(m_bHealPartyOnRest));
+            }
+
+            return TRUE;
+        }
+    }
 
     return FALSE;
 }
@@ -11996,17 +12316,287 @@ BOOLEAN CInfGame::RestParty(int a2, unsigned char a3)
 // 0x5C1350
 BOOLEAN CInfGame::RestPartyPrivate(INT nHP, BOOLEAN bRenting)
 {
-    // TODO: Incomplete.
+    // NOTE: Original reads action ID from a constant at 0x847834.
+    CAIAction action;
+    action.m_actionID = 96;
 
-    return FALSE;
+    // NOTE: Original reads trigger ID from a constant.
+    CAITrigger trigger(147, 0);
+
+    g_pBaldurChitin->GetObjectGame()->sub_5CADF0();
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(CHAPTER_GLOBAL);
+
+        g_pBaldurChitin->m_cBaldurMessage.SendRestAnnounce(nHP, bRenting, FALSE);
+
+        BOOLEAN bFlag = TRUE;
+        INT nTotal = 0;
+        INT nRate = nHP;
+
+        if (bRenting || !GetVisibleArea()->CheckRestEncounter()) {
+            SHORT nCharacters = m_nCharacters;
+
+            if (m_bHealPartyOnRest) {
+                CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+                for (SHORT nPortrait = 0; nPortrait < nCharacters; nPortrait++) {
+                    // NOTE: Uninline.
+                    LONG nCharacterId = pGame->GetCharacterId(nPortrait);
+
+                    CGameSprite* pSprite;
+
+                    BYTE rc;
+                    do {
+                        rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            reinterpret_cast<CGameObject**>(&pSprite),
+                            INFINITE);
+                    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                    if (rc == CGameObjectArray::SUCCESS) {
+                        if ((pSprite->m_baseStats.m_generalState & STATE_DEAD) == 0) {
+                            INT nDiff = pSprite->m_baseStats.m_maxHitPointsBase - pSprite->m_baseStats.m_hitPoints;
+                            if (nDiff > 1) {
+                                bFlag = FALSE;
+                            }
+
+                            nTotal += nDiff;
+
+                            INT nLevel = pSprite->m_derivedStats.GetClassMaskLevel(0xC);
+                            if (nLevel > 0) {
+                                nRate += nLevel * 19 + 5;
+                            }
+
+                            nLevel = pSprite->m_derivedStats.GetClassMaskLevel(0xC0);
+                            if (nLevel > 9) {
+                                nRate += nLevel * 19 - 147;
+                            }
+                        }
+
+                        pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                    }
+                }
+            } else {
+                nTotal = nHP;
+            }
+
+            if (nRate > 0) {
+                INT nCount = nTotal / nRate;
+                if (nTotal % nRate != 0) {
+                    nCount++;
+                }
+                nTotal = nCount * nRate;
+            }
+
+            if (m_bHealPartyOnRest) {
+                if (nTotal > nRate) {
+                    m_worldTime.AddCurrentTime(CRuleTables::TIME_RESTING * nTotal * 100 / (nRate * 100) + CRuleTables::TIME_RESTING);
+                    FeedBack(FEEDBACK_TIMEPASSEDREST,
+                        CRuleTables::TIME_RESTING * nTotal * 100 / (nRate * 100) + CRuleTables::TIME_RESTING,
+                        TRUE);
+                } else if (bFlag == TRUE) {
+                    m_worldTime.AddCurrentTime(CRuleTables::TIME_RESTING);
+                    FeedBack(FEEDBACK_TIMEPASSEDREST, CRuleTables::TIME_RESTING, TRUE);
+                } else {
+                    m_worldTime.AddCurrentTime(CRuleTables::TIME_RESTING * 2);
+                    FeedBack(FEEDBACK_TIMEPASSEDREST, CRuleTables::TIME_RESTING * 2, TRUE);
+                }
+            } else {
+                m_worldTime.AddCurrentTime(CRuleTables::TIME_RESTING);
+                FeedBack(FEEDBACK_TIMEPASSEDREST, CRuleTables::TIME_RESTING, TRUE);
+            }
+
+            for (SHORT nPortrait = 0; nPortrait < nCharacters; nPortrait++) {
+                // NOTE: Uninline.
+                LONG nCharacterId = GetCharacterId(nPortrait);
+
+                CGameEffectHeal* pEffect = new CGameEffectHeal();
+                if (m_bHealPartyOnRest) {
+                    pEffect->m_effectAmount = 1000;
+                } else {
+                    pEffect->m_effectAmount = nTotal;
+                }
+
+                CMessageAddEffect* pAddEffect = new CMessageAddEffect(pEffect,
+                    nCharacterId,
+                    nCharacterId);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pAddEffect, FALSE);
+
+                CMessageAddAction* pAddAction = new CMessageAddAction(action,
+                    nCharacterId,
+                    nCharacterId);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pAddAction, FALSE);
+
+                CMessageSetTrigger* pSetTrigger = new CMessageSetTrigger(trigger,
+                    nCharacterId,
+                    nCharacterId);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pSetTrigger, FALSE);
+            }
+
+            // NOTE: Original reads action ID from a constant at 0x847908
+            // and duration from a constant at 0x847F84.
+            CAIAction leaderAction;
+            leaderAction = CAIAction(203, CPoint(35, 0), 0, -1);
+            g_pBaldurChitin->GetObjectGame()->GetGroup()->GroupAction(CAIAction(CAIAction::NO_ACTION, CPoint(-1, -1), 0, -1),
+                TRUE,
+                &leaderAction);
+        }
+    }
+
+    BOOLEAN bResult = FALSE;
+
+    if (!bRenting) {
+        CScreenWorld* pWorld = g_pBaldurChitin->m_pEngineWorld;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 18368
+        UTIL_ASSERT(pWorld != NULL);
+
+        if (g_pBaldurChitin->GetActiveEngine() != pWorld) {
+            g_pBaldurChitin->GetActiveEngine()->SelectEngine(pWorld);
+        }
+    } else {
+        bResult = TRUE;
+    }
+
+    if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE && !bRenting) {
+        g_pBaldurChitin->m_cBaldurMessage.SendSignal(CBaldurMessage::SIGNAL_SERVER,
+            CBaldurMessage::SIGNAL_END_MAJOR_EVENT);
+    }
+
+    CScreenWorld* pWorld = g_pBaldurChitin->m_pEngineWorld;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 18481
+    UTIL_ASSERT(pWorld != NULL);
+
+    if (g_pBaldurChitin->GetActiveEngine() != pWorld) {
+        CCacheStatus::dword_8D0BA8 = TRUE;
+
+        g_pBaldurChitin->GetActiveEngine()->SelectEngine(pWorld);
+
+        if (bRenting
+            && !g_pChitin->cNetwork.m_bIsHost
+            && g_pChitin->cNetwork.m_nServiceProvider != CNetwork::SERV_PROV_NULL) {
+            g_pBaldurChitin->m_cBaldurMessage.sub_436C00();
+        }
+    }
+
+    g_pBaldurChitin->GetObjectGame()->m_cButtonArray.ResetState();
+
+    return bResult;
 }
 
 // 0x5C1E30
 BOOL CInfGame::CanRestParty(STRREF& strError, unsigned char a2, unsigned char a3, unsigned char a4)
 {
-    // TODO: Incomplete.
+    BOOL bResult = FALSE;
+    BOOL bNoLivingCharacter = TRUE;
+    BOOL bFlag28 = TRUE;
+    BOOL bCannotRest = FALSE;
+    BOOL bAreaRestricted = FALSE;
+    CResRef areaResRef("");
+    CPoint ptFirst;
 
-    return FALSE;
+    strError = 10309;
+
+    for (SHORT nPortrait = 0; nPortrait < m_nCharacters && !bCannotRest; nPortrait++) {
+        // NOTE: Uninline.
+        LONG nCharacterId = GetCharacterId(nPortrait);
+
+        CGameSprite* pSprite;
+
+        BYTE rc;
+        do {
+            rc = m_cObjectArray.GetDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pSprite->m_pArea != NULL
+                && (static_cast<BYTE>(pSprite->m_pArea->m_header.m_flags) & 0x2) != 0
+                && !a2
+                && !a4) {
+                bAreaRestricted = TRUE;
+            }
+
+            if (pSprite->Animate()) {
+                bNoLivingCharacter = FALSE;
+
+                if (bFlag28) {
+                    bFlag28 = (static_cast<BYTE>(pSprite->m_pArea->m_header.m_areaType) & 0x20) != 0;
+                } else {
+                    bFlag28 = FALSE;
+                }
+
+                CPoint pt = pSprite->GetPos();
+
+                if (areaResRef == "") {
+                    areaResRef = pSprite->m_pArea->m_resRef;
+                    ptFirst = pt;
+                } else {
+                    if ((pSprite->m_baseStats.m_generalState & STATE_DEAD) != 0
+                        || !(areaResRef != pSprite->m_pArea->m_resRef)) {
+                        // NOTE: Original reads range from a constant at
+                        // 0x85512C.
+                        if ((ptFirst.x - pt.x) * (ptFirst.x - pt.x) + (ptFirst.y - pt.y) * (ptFirst.y - pt.y) * 16 / 9 > CScreenInventory::RANGE_SWAPITEM) {
+                            bCannotRest = TRUE;
+                        }
+                    } else {
+                        bCannotRest = TRUE;
+                    }
+                }
+            }
+
+            m_cObjectArray.ReleaseDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        } else {
+            bCannotRest = TRUE;
+        }
+    }
+
+    if (bAreaRestricted == TRUE) {
+        strError = 10309;
+        return FALSE;
+    }
+
+    if (a3 == TRUE && !bCannotRest) {
+        return TRUE;
+    }
+
+    if (!bNoLivingCharacter) {
+        if (!CanSaveGame(strError, TRUE, FALSE)) {
+            if (strError == 16501) {
+                strError = 16500;
+                bResult = FALSE;
+            } else {
+                strError = 10309;
+                bResult = FALSE;
+            }
+        } else if (bCannotRest) {
+            strError = 16457;
+            bResult = FALSE;
+        } else if (g_pBaldurChitin->GetObjectGame()->m_singlePlayerPermissions.m_bPermissions[CGamePermission::LEADER]) {
+            strError = 15358;
+            bResult = TRUE;
+        } else {
+            strError = 17198;
+            bResult = FALSE;
+        }
+    }
+
+    if (!m_cObjectArray.AnySpriteIsDiseased()) {
+        bResult = FALSE;
+        strError = 10309;
+    }
+
+    return bResult;
 }
 
 // 0x5C3010
