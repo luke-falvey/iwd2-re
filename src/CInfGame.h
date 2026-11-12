@@ -244,7 +244,7 @@ public:
     BOOL SetCharacterSlot(INT nCharacterSlot, LONG nCharacterId);
     BOOL ClearCharacterSlot(INT nCharacterSlot);
     LONG GetCharacterSlot(INT nCharacterSlot);
-    void sub_5AE020(LONG* pCharacterIds, SHORT nOverflowCount, LONG* pOverflowIds);
+    BOOLEAN sub_5AE020(LONG* pCharacterIds, SHORT nOverflowCount, LONG* pOverflowIds);
     INT GetCharacterSlotFromId(LONG nCharacterId);
     void UpdateCharacterSlots();
     BOOL AddCharacterToAllies(LONG nCharacterId);
