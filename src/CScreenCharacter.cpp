@@ -3,6 +3,7 @@
 #include "CAIObjectType.h"
 #include "CAIScript.h"
 #include "CBaldurChitin.h"
+#include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CIcon.h"
 #include "CInfCursor.h"
@@ -1167,6 +1168,103 @@ void CScreenCharacter::sub_5D8B50(CGameSprite* pSprite)
         TRUE);
 }
 
+// 0x5D8EA0
+void CScreenCharacter::sub_5D8EA0(CGameSprite* pSprite)
+{
+    CDerivedStats DStatsOld;
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    const CRuleTables& ruleTables = pGame->GetRuleTables();
+
+    // NOTE: Unused.
+    CResRef resRef;
+
+    DStatsOld = pSprite->m_derivedStats;
+
+    ruleTables.GetNextLevel(m_nClass, pSprite->m_derivedStats, pSprite);
+
+    INT nFortitude = ruleTables.GetSavingThrow(pSprite->m_startTypeAI,
+        pSprite->m_derivedStats,
+        pSprite->m_baseStats.m_CONBase,
+        CRuleTables::FORTITUDE);
+    INT nReflex = ruleTables.GetSavingThrow(pSprite->m_startTypeAI,
+        pSprite->m_derivedStats,
+        pSprite->m_baseStats.m_DEXBase,
+        CRuleTables::REFLEX);
+    INT nWill = ruleTables.GetSavingThrow(pSprite->m_startTypeAI,
+        pSprite->m_derivedStats,
+        pSprite->m_baseStats.m_WISBase,
+        CRuleTables::WILL);
+
+    INT nFortitudeNew = ruleTables.GetSavingThrow(m_typeAI,
+        DStatsOld,
+        m_pTempBaseStats->m_CONBase,
+        CRuleTables::FORTITUDE);
+    INT nReflexNew = ruleTables.GetSavingThrow(m_typeAI,
+        DStatsOld,
+        m_pTempBaseStats->m_DEXBase,
+        CRuleTables::REFLEX);
+    INT nWillNew = ruleTables.GetSavingThrow(m_typeAI,
+        DStatsOld,
+        m_pTempBaseStats->m_WISBase,
+        CRuleTables::WILL);
+
+    pSprite->m_baseStats.m_saveVSFortitudeBase += max(nFortitude - nFortitudeNew, 0);
+    pSprite->m_baseStats.m_saveVSReflexBase += max(nReflex - nReflexNew, 0);
+    pSprite->m_baseStats.m_saveVSWillBase += max(nWill - nWillNew, 0);
+
+    // NOTE: `nHitPoints` is uninitialized when the class levels are unchanged.
+    INT nHitPoints;
+
+    // NOTE: Compares 11 bytes starting at `field_7282`.
+    if (memcmp(&pSprite->field_7282, pSprite->m_derivedStats.m_nClassLevels, 11) != 0) {
+        nHitPoints = ruleTables.GetStartingHitPoints(pSprite->m_startTypeAI,
+            DStatsOld,
+            pSprite->m_derivedStats,
+            pSprite->m_baseStats.m_CONBase);
+
+        // NOTE: Copies 11 bytes starting at `field_7282`.
+        memcpy(&pSprite->field_7282, pSprite->m_baseStats.m_classLevels, 11);
+        pSprite->field_728E = nHitPoints;
+    }
+
+    field_86A = pSprite->field_728E;
+
+    pSprite->m_baseStats.m_maxHitPointsBase += static_cast<SHORT>(nHitPoints);
+    pSprite->m_baseStats.m_hitPoints += static_cast<SHORT>(nHitPoints);
+
+    int nBaseAttackBonus;
+    int nNumberOfAttacks;
+    int nAttackStep;
+    ruleTables.sub_546B60(pSprite, nBaseAttackBonus, nNumberOfAttacks, nAttackStep, FALSE);
+
+    pSprite->m_baseStats.m_attackBase = static_cast<BYTE>(nBaseAttackBonus);
+
+    pSprite->m_derivedStats.m_nLayOnHandsAmount = ruleTables.GetLayOnHandsAmount(pSprite->m_startTypeAI,
+        pSprite->m_derivedStats);
+
+    // NOTE: The header declares only the first member of each of these
+    // saved arrays (24, 64 and 64 bytes).
+    memcpy(&field_1800, pSprite->m_baseStats.m_skills, 64);
+    memcpy(&field_17C0, &pSprite->m_baseStats.m_featBow, 64);
+    memcpy(&field_17A8, pSprite->m_baseStats.m_feats, 24);
+
+    pSprite->m_baseStats.m_characterLevel = pSprite->m_derivedStats.m_nLevel;
+    memcpy(pSprite->m_baseStats.m_classLevels, pSprite->m_derivedStats.m_nClassLevels, 11);
+
+    WORD nMaxHitPointsBase = pSprite->m_baseStats.m_maxHitPointsBase;
+    LONG nHPCONBonusTotalOld = pSprite->m_nHPCONBonusTotalOld;
+    SHORT nHitPointsBase = pSprite->m_baseStats.m_hitPoints;
+    SHORT nMaxHitPoints = pSprite->m_derivedStats.m_nMaxHitPoints;
+
+    pSprite->field_562C = 1;
+    pSprite->ProcessEffectList();
+
+    pSprite->m_baseStats.m_hitPoints = nHitPointsBase;
+    pSprite->m_derivedStats.m_nMaxHitPoints = nMaxHitPoints;
+    pSprite->m_baseStats.m_maxHitPointsBase = nMaxHitPointsBase;
+    pSprite->m_nHPCONBonusTotalOld = nHPCONBonusTotalOld;
+}
+
 // 0x5D9610
 BOOL CScreenCharacter::ResetAbility(CGameSprite* pSprite, const CString& sMin, const CString& sMax, const CString& sMod, BYTE& nAbility, BYTE& nMin, BYTE& nMax, INT& nMod)
 {
@@ -1259,7 +1357,155 @@ void CScreenCharacter::ResetAbilitiesPanel(CGameSprite* pSprite, int a2)
 // 0x5D9970
 void CScreenCharacter::ResetSpellsPanel(CGameSprite* pSprite, int a2)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    const CRuleTables& ruleTables = pGame->GetRuleTables();
+
+    CUIPanel* pPanel = m_cUIManager.GetPanel(8);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 3095
+    UTIL_ASSERT(pPanel != NULL);
+
+    if (m_nClass == CAIOBJECTTYPE_C_BARD) {
+        UINT nSpellLevel = static_cast<BYTE>(field_1776) - 1;
+        INT nClassLevel = pSprite->GetDerivedStats()->GetClassLevel(CAIObjectType::C_BARD);
+
+        m_nExtraMageSpells = atol(ruleTables.m_tKnownSpellsBard.GetAt(CPoint(static_cast<BYTE>(field_1776) - 1, nClassLevel - 1)))
+            - pSprite->GetSpellsAtLevel(m_nClass, nSpellLevel)->m_List.size();
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 3101
+        UTIL_ASSERT(m_nExtraMageSpells > 0);
+    } else if (m_nClass == CAIOBJECTTYPE_C_SORCERER) {
+        UINT nSpellLevel = static_cast<BYTE>(field_1776) - 1;
+        INT nClassLevel = pSprite->GetDerivedStats()->GetClassLevel(CAIObjectType::C_SORCERER);
+
+        m_nExtraMageSpells = atol(ruleTables.m_tKnownSpellsSorcerer.GetAt(CPoint(static_cast<BYTE>(field_1776) - 1, nClassLevel - 1)))
+            - pSprite->GetSpellsAtLevel(m_nClass, nSpellLevel)->m_List.size();
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 3107
+        UTIL_ASSERT(m_nExtraMageSpells > 0);
+    } else {
+        if ((m_nSpecialization & SPECMASK_WIZARD_UNIVERSAL) != 0) {
+            m_nExtraMageSpells = 2;
+        } else {
+            m_nExtraMageSpells = 3;
+        }
+    }
+
+    pGame = g_pBaldurChitin->GetObjectGame();
+
+    UINT nLevel = static_cast<BYTE>(field_1776) - 1;
+    UINT nClassIndex = pGame->GetSpellcasterIndex(m_nClass);
+
+    // __FILE__: .\Include\InfGame.h
+    // __LINE__: 772
+    UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+    UINT nSpells = pGame->m_spellsByClass[nClassIndex].m_lists[nLevel].m_nCount;
+    UINT nEnabled = 0;
+    UINT nIndex = 0;
+    CResRef resRef;
+
+    for (UINT nButtonID = 0; nButtonID <= 29; nButtonID++) {
+        CUIControlButtonCharacter5EBC60* pButton = static_cast<CUIControlButtonCharacter5EBC60*>(pPanel->GetControl(nButtonID));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 3130
+        UTIL_ASSERT(pButton != NULL);
+
+        while (nIndex < nSpells) {
+            pGame = g_pBaldurChitin->GetObjectGame();
+            nLevel = static_cast<BYTE>(field_1776) - 1;
+            nClassIndex = pGame->GetSpellcasterIndex(m_nClass);
+
+            // __FILE__: .\Include\InfGame.h
+            // __LINE__: 772
+            UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+            // NOTE: Inlined.
+            UINT nID = pGame->m_spellsByClass[nClassIndex].m_lists[nLevel].Get(nIndex);
+
+            pGame = g_pBaldurChitin->GetObjectGame();
+
+            // NOTE: Inlined.
+            resRef = pGame->m_spells.Get(nID);
+
+            CSpell cSpell;
+            cSpell.SetResRef(resRef, TRUE, TRUE);
+
+            if (cSpell.pRes != NULL) {
+                break;
+            }
+
+            nIndex++;
+        }
+
+        if (nIndex < nSpells) {
+            pButton->sub_5EBDD0(resRef);
+
+            CSpell cSpell;
+            cSpell.SetResRef(resRef, TRUE, TRUE);
+
+            // NOTE: Result unused.
+            cSpell.Demand();
+
+            BYTE nClass = m_nClass;
+            DWORD dwClassMask = g_pBaldurChitin->GetObjectGame()->GetClassMask(nClass);
+
+            BOOL bEnable;
+            if (cSpell.pRes != NULL
+                && cSpell.CheckUsableBy(pSprite) == TRUE
+                && !pSprite->sub_725330(resRef, dwClassMask, static_cast<BYTE>(field_1776) - 1, FALSE)) {
+                bEnable = TRUE;
+            } else {
+                bEnable = FALSE;
+            }
+
+            pButton->SetEnabled(bEnable);
+
+            cSpell.Release();
+
+            nIndex++;
+
+            if (bEnable) {
+                nEnabled++;
+            }
+        } else {
+            pButton->sub_5EBDD0(CResRef(""));
+            pButton->SetEnabled(FALSE);
+        }
+    }
+
+    m_nExtraMageSpells = min(m_nExtraMageSpells, static_cast<INT>(nEnabled));
+
+    for (DWORD nButtonID = 0; nButtonID <= 29; nButtonID++) {
+        CUIControlButton3State* pButton = static_cast<CUIControlButton3State*>(pPanel->GetControl(nButtonID));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 3179
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetSelected(FALSE);
+    }
+
+    UpdateLabel(pPanel,
+        0x10000021,
+        "%s: %s %d",
+        (LPCSTR)FetchString(31614), // "Arcane Spell Selection"
+        (LPCSTR)FetchString(7192), // "Level"
+        static_cast<BYTE>(field_1776));
+
+    CString sNumber;
+    sNumber.Format("%d", m_nExtraMageSpells);
+    g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_NUMBER, sNumber);
+
+    if (m_nClass == CAIOBJECTTYPE_C_SORCERER || m_nClass == CAIOBJECTTYPE_C_BARD) {
+        UpdateHelp(pPanel->m_nID, 30, 119);
+    } else {
+        UpdateHelp(pPanel->m_nID, 30, 17250);
+    }
 }
 
 // 0x5DA120
@@ -1821,6 +2067,187 @@ void CScreenCharacter::TimerSynchronousUpdate()
 
     m_cUIManager.Render();
     pVidMode->Flip(TRUE);
+}
+
+// 0x5DAF30
+void CScreenCharacter::sub_5DAF30()
+{
+    CUIPanel* pPanel = m_cUIManager.GetPanel(57);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 3747
+    UTIL_ASSERT(pPanel != NULL);
+
+    UpdateLabel(pPanel, 0x10000004, "%s", (LPCSTR)FetchString(17088));
+    UpdateLabel(pPanel, 0x10000005, "%s", (LPCSTR)FetchString(23998));
+    UpdateLabel(pPanel, 0x10000006, "%s", (LPCSTR)FetchString(36361));
+    UpdateLabel(pPanel, 0x10000007, "%s", (LPCSTR)FetchString(41403));
+    UpdateLabel(pPanel, 0x10000008, "%s", (LPCSTR)FetchString(41393));
+    UpdateLabel(pPanel, 0x10000009, "%s", (LPCSTR)FetchString(11983));
+    UpdateLabel(pPanel, 0x1000000A, "");
+    UpdateLabel(pPanel, 0x1000000B, "");
+    UpdateLabel(pPanel, 0x1000000C, "");
+    UpdateLabel(pPanel, 0x1000000D, "");
+    UpdateLabel(pPanel, 0x1000000E, "");
+
+    for (DWORD nButtonID = 33; nButtonID <= 37; nButtonID++) {
+        CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButtonID));
+        pButton->SetEnabled(FALSE);
+    }
+
+    sub_5F8C90(field_1846);
+    sub_5F91F0(field_184A);
+
+    CUIControlScrollBar* pScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(4));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 3775
+    UTIL_ASSERT(pScrollBar != NULL);
+
+    CScreenCharacter* pCharacter = g_pBaldurChitin->m_pEngineCharacter;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 19222
+    UTIL_ASSERT(pCharacter != NULL);
+
+    pScrollBar->AdjustScrollBar(pCharacter->field_1852, pCharacter->field_184E, 11);
+}
+
+// 0x5DB200
+void CScreenCharacter::sub_5DB200(CGameSprite* pSprite)
+{
+    CResRef resRef;
+    CString sText;
+    CString sFavouriteWeaponName;
+
+    DWORD nPartyChapterKillsXPValue;
+    DWORD nPartyChapterKillsNumber;
+    DWORD nPartyGameKillsXPValue;
+    DWORD nPartyGameKillsNumber;
+    GetPartyInformation(nPartyChapterKillsXPValue,
+        nPartyChapterKillsNumber,
+        nPartyGameKillsXPValue,
+        nPartyGameKillsNumber);
+
+    ULONG nCurrentTimeWithParty;
+    pSprite->m_cGameStats.GetTimeWithParty(nCurrentTimeWithParty);
+
+    STRREF strName;
+    pSprite->m_cGameStats.GetStrongestKill(strName);
+
+    CUIPanel* pPanel = m_cUIManager.GetPanel(4);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 3857
+    UTIL_ASSERT(pPanel != NULL);
+
+    if (pSprite->m_baseStats.m_name == 0xFFFFFFFF) {
+        UpdateLabel(pPanel, 0x10000000, "%s", (LPCSTR)pSprite->GetName());
+    } else {
+        UpdateLabel(pPanel, 0x10000000, "%s", (LPCSTR)FetchString(pSprite->m_baseStats.m_name));
+    }
+
+    CString sClassName;
+    g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetClassStringLower(pSprite->m_startTypeAI.m_nClass,
+        pSprite->m_baseStats.m_specialization,
+        pSprite->m_baseStats.m_flags,
+        sClassName,
+        1);
+    UpdateLabel(pPanel, 0x10000018, "%s", (LPCSTR)sClassName);
+
+    UpdateLabel(pPanel, 0x10000005, "%s", (LPCSTR)FetchString(strName));
+
+    CTimerWorld::GetCurrentTimeString(nCurrentTimeWithParty, 16043, sText);
+    UpdateLabel(pPanel, 0x10000006, "%s", (LPCSTR)sText);
+
+    pSprite->m_cGameStats.GetFavouriteSpell(resRef);
+    if (resRef != "") {
+        CSpell cSpell;
+        cSpell.SetResRef(resRef, TRUE, TRUE);
+
+        cSpell.Demand();
+        if (cSpell.GetRes() != NULL) {
+            sText = FetchString(cSpell.GetGenericName());
+        } else {
+            sText = "Bad spell resref";
+        }
+
+        cSpell.Release();
+    } else {
+        sText = "";
+    }
+
+    UpdateLabel(pPanel, 0x10000007, "%s", (LPCSTR)sText);
+
+    sFavouriteWeaponName = "";
+
+    pSprite->m_cGameStats.GetFavouriteWeapon(resRef);
+    if (resRef != "") {
+        CItem cWeapon(resRef, 0, 0, 0, 0, 0);
+
+        if (cWeapon.GetRes() != NULL) {
+            STRREF strType;
+            switch (cWeapon.GetItemType()) {
+            case 5:
+                strType = 10476; // "Bow and <WEAPONNAME>"
+                break;
+            case 14:
+                strType = 10478; // "Sling and <WEAPONNAME>"
+                break;
+            case 31:
+                strType = 10477; // "Crossbow and <WEAPONNAME>"
+                break;
+            default:
+                strType = 10479; // "<WEAPONNAME>"
+                break;
+            }
+
+            g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_WEAPONNAME,
+                FetchString(cWeapon.GetGenericName()));
+
+            sFavouriteWeaponName = FetchString(strType);
+        }
+    }
+
+    UpdateLabel(pPanel, 0x10000008, "%s", (LPCSTR)sFavouriteWeaponName);
+
+    UpdateLabel(pPanel, 0x10000011, "%d", pSprite->m_cGameStats.m_nChapterKillsXPValue);
+    UpdateLabel(pPanel, 0x10000012, "%d", pSprite->m_cGameStats.m_nChapterKillsNumber);
+    UpdateLabel(pPanel, 0x10000015, "%d", pSprite->m_cGameStats.m_nGameKillsXPValue);
+    UpdateLabel(pPanel, 0x10000016, "%d", pSprite->m_cGameStats.m_nGameKillsNumber);
+
+    UpdateLabel(pPanel,
+        0x1000000F,
+        "%d%%",
+        nPartyChapterKillsXPValue > 0
+            ? 100 * pSprite->m_cGameStats.m_nChapterKillsXPValue / nPartyChapterKillsXPValue
+            : 0);
+    UpdateLabel(pPanel,
+        0x10000010,
+        "%d%%",
+        nPartyChapterKillsNumber > 0
+            ? 100 * pSprite->m_cGameStats.m_nChapterKillsNumber / nPartyChapterKillsNumber
+            : 0);
+    UpdateLabel(pPanel,
+        0x10000013,
+        "%d%%",
+        nPartyGameKillsXPValue > 0
+            ? 100 * pSprite->m_cGameStats.m_nGameKillsXPValue / nPartyGameKillsXPValue
+            : 0);
+    UpdateLabel(pPanel,
+        0x10000014,
+        "%d%%",
+        nPartyGameKillsNumber > 0
+            ? 100 * pSprite->m_cGameStats.m_nGameKillsNumber / nPartyGameKillsNumber
+            : 0);
+
+    CUIControlButton* pDone = static_cast<CUIControlButton*>(pPanel->GetControl(24));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 3975
+    UTIL_ASSERT(pDone != NULL);
+
+    pDone->SetEnabled(IsDoneButtonClickable(pSprite));
 }
 
 // 0x5DB840
@@ -2749,6 +3176,307 @@ void CScreenCharacter::UpdateGeneralInformation(CUIControlTextDisplay* pText, CG
 void CScreenCharacter::UpdateEquipmentInformation(CUIControlTextDisplay* pText, CGameSprite* pSprite)
 {
     // TODO: Incomplete.
+}
+
+// 0x5DF910
+void CScreenCharacter::sub_5DF910(CUIControlTextDisplay* pText, CGameSprite* pSprite, CItem* pItem, const ITEM_ABILITY* pAbility, BOOL bRight)
+{
+    CString sLine;
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (pItem == NULL) {
+        return;
+    }
+
+    STRREF strHand;
+    if (bRight) {
+        // NOTE: Only the low byte of `type` is compared.
+        if (static_cast<BYTE>(pAbility->type) == 2) {
+            strHand = 41123;
+        } else {
+            strHand = 734;
+        }
+    } else {
+        strHand = 733;
+    }
+
+    UpdateText(pText,
+        "%s - %s",
+        (LPCSTR)FetchString(strHand),
+        (LPCSTR)FetchString(pItem->GetGenericName()));
+
+    if ((pItem->m_flags & 0x1) != 0) {
+        INT nLauncherBonus = 0;
+
+        SHORT launcherSlot;
+        CItem* pLauncher = pSprite->GetLauncher(pAbility, launcherSlot);
+        if (pLauncher != NULL) {
+            pLauncher->Demand();
+
+            ITEM_ABILITY* pLauncherAbility = pLauncher->GetAbility(0);
+            if (pLauncherAbility != NULL) {
+                // NOTE: Zero-extended.
+                nLauncherBonus = static_cast<WORD>(pLauncherAbility->damageDiceBonus);
+            }
+
+            pLauncher->Release();
+        }
+
+        SHORT nDamageBonus = pAbility->damageDiceBonus;
+        if (pAbility->damageDiceCount != 0) {
+            if (nDamageBonus != 0) {
+                UpdateTextNoTrim(pText,
+                    "  %s: %dd%d%+d",
+                    (LPCSTR)FetchString(39518), // "Damage"
+                    pAbility->damageDiceCount,
+                    pAbility->damageDice,
+                    nDamageBonus);
+            } else {
+                UpdateTextNoTrim(pText,
+                    "  %s: %dd%d",
+                    (LPCSTR)FetchString(39518), // "Damage"
+                    pAbility->damageDiceCount,
+                    pAbility->damageDice);
+            }
+        } else {
+            UpdateTextNoTrim(pText,
+                "  %s: %s",
+                (LPCSTR)FetchString(39518), // "Damage"
+                (LPCSTR)FetchString(41409));
+        }
+
+        INT nMinDamage = pAbility->damageDiceCount + nDamageBonus;
+        INT nMaxDamage = pAbility->damageDice * pAbility->damageDiceCount + nDamageBonus;
+
+        LONG nEffect = 0;
+        WORD nSelectedWeaponAbility = pSprite->m_equipment.m_selectedWeaponAbility;
+
+        CGameEffect* pEffect = pItem->GetAbilityEffect(nSelectedWeaponAbility, nEffect, NULL);
+        while (pEffect != NULL) {
+            // NOTE: Only the high word of the flags is used.
+            BOOL bDisplay = TRUE;
+            STRREF strDamageType;
+
+            if (pEffect->m_effectID == CGAMEEFFECT_DAMAGE) {
+                switch (pEffect->m_dwFlags & 0xFFFF0000) {
+                case 0x00000000:
+                    strDamageType = 11770;
+                    break;
+                case 0x00010000:
+                    strDamageType = 15578;
+                    break;
+                case 0x00020000:
+                    strDamageType = 15546;
+                    break;
+                case 0x00040000:
+                    strDamageType = 15577;
+                    break;
+                case 0x00080000:
+                    strDamageType = 15545;
+                    break;
+                case 0x00100000:
+                    strDamageType = 11769;
+                    break;
+                case 0x00200000:
+                    strDamageType = 38135;
+                    break;
+                case 0x00400000:
+                    strDamageType = 40319;
+                    break;
+                case 0x01000000:
+                    strDamageType = 11768;
+                    break;
+                case 0x02000000:
+                    strDamageType = 11769;
+                    break;
+                case 0x04000000:
+                    strDamageType = 11770;
+                    break;
+                case 0x08000000:
+                    strDamageType = 14043;
+                    break;
+                case 0x20000000:
+                    strDamageType = 39609;
+                    break;
+                case 0x40000000:
+                    strDamageType = 39575;
+                    break;
+                default:
+                    bDisplay = FALSE;
+                    break;
+                }
+            } else if (pEffect->m_effectID == 241) {
+                strDamageType = 41410;
+            } else {
+                bDisplay = FALSE;
+            }
+
+            // NOTE: `pEffect` is never freed.
+            if (bDisplay) {
+                CString sExtra;
+
+                // NOTE: Unsigned.
+                DWORD nRange = static_cast<WORD>(pEffect->m_probabilityUpper) - static_cast<WORD>(pEffect->m_probabilityLower) + 1;
+                DWORD nChance = nRange > 100 ? 100 : nRange;
+                if (pEffect->m_probabilityLower == 0 && pEffect->m_probabilityUpper != 100) {
+                    nChance--;
+                }
+
+                sLine.Format("  %s: ", (LPCSTR)FetchString(strDamageType));
+
+                if (pEffect->m_numDice != 0 && pEffect->m_diceSize != 0) {
+                    if (pEffect->m_effectAmount != 0) {
+                        if (pAbility->damageDiceCount != 0) {
+                            sExtra.Format("%+dd%d%+d", pEffect->m_numDice, pEffect->m_diceSize, pEffect->m_effectAmount);
+                        } else {
+                            sExtra.Format("%dd%d%+d", pEffect->m_numDice, pEffect->m_diceSize, pEffect->m_effectAmount);
+                        }
+                    } else {
+                        if (pAbility->damageDiceCount != 0) {
+                            sExtra.Format("%+dd%d", pEffect->m_numDice, pEffect->m_diceSize);
+                        } else {
+                            sExtra.Format("%dd%d", pEffect->m_numDice, pEffect->m_diceSize);
+                        }
+                    }
+                    sLine += sExtra;
+                } else if (pEffect->m_effectAmount != 0) {
+                    sExtra.Format("%+d", pEffect->m_effectAmount);
+                    sLine += sExtra;
+                }
+
+                if (nChance == 100) {
+                    nMinDamage += pEffect->m_effectAmount + pEffect->m_numDice;
+                }
+
+                nMaxDamage += pEffect->m_diceSize * pEffect->m_numDice + pEffect->m_effectAmount;
+
+                if (nChance != 100) {
+                    sExtra.Format(" (%d%%)", nChance);
+                    sLine += sExtra;
+                }
+
+                UpdateTextNoTrim(pText, "%s", (LPCSTR)sLine);
+            }
+
+            nEffect++;
+            pEffect = pItem->GetAbilityEffect(nSelectedWeaponAbility, nEffect, NULL);
+        }
+
+        if (nLauncherBonus != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(41408),
+                nLauncherBonus);
+            nMinDamage += nLauncherBonus;
+            nMaxDamage += nLauncherBonus;
+        }
+
+        INT nStrengthBonus = pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_derivedStats.m_nSTR);
+        if ((pAbility->abilityFlags & 0x1) != 0 && nStrengthBonus != 0) {
+            if (!bRight) {
+                if (nStrengthBonus > 1) {
+                    nStrengthBonus = nStrengthBonus / 2;
+                }
+            } else {
+                if ((pItem->GetFlagsFile() & 0x2) != 0) {
+                    if (pItem->GetItemIcon() != CResRef("FIST")) {
+                        if (nStrengthBonus > 0) {
+                            // NOTE: The multiplier is at 0x851DD4.
+                            nStrengthBonus = static_cast<INT>(static_cast<float>(nStrengthBonus) * 1.5f);
+                        }
+                    }
+                }
+            }
+
+            nMinDamage += nStrengthBonus;
+            nMaxDamage += nStrengthBonus;
+
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(1145), // "Strength"
+                nStrengthBonus);
+        }
+
+        LONG nDamageBonusStat;
+        if (bRight) {
+            nDamageBonusStat = pSprite->m_derivedStats.m_DamageBonusRight;
+        } else {
+            nDamageBonusStat = pSprite->m_derivedStats.m_DamageBonusLeft;
+        }
+
+        if (nDamageBonusStat != 0) {
+            nMinDamage += nDamageBonusStat;
+            nMaxDamage += nDamageBonusStat;
+
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(32561),
+                nDamageBonusStat);
+        }
+
+        INT nFeat = pSprite->sub_726270(47);
+
+        // NOTE: Only the low byte of `type` is tested.
+        if (nFeat > 0
+            && (pAbility->type & 0x1) != 0
+            && pSprite->sub_763150(47)) {
+            nMinDamage += nFeat;
+            nMaxDamage += nFeat;
+
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(pGame->GetRuleTables().GetFeatName(47)),
+                nFeat);
+        }
+
+        if (nMaxDamage != 0) {
+            if (nMinDamage < 1) {
+                nMinDamage = 1;
+            }
+
+            if (nMaxDamage < 1) {
+                nMaxDamage = 1;
+            }
+
+            if (nMinDamage != nMaxDamage) {
+                UpdateTextNoTrim(pText,
+                    "  %s: %d-%d",
+                    (LPCSTR)FetchString(41120),
+                    nMinDamage,
+                    nMaxDamage);
+            } else {
+                UpdateTextNoTrim(pText,
+                    "  %s: %d",
+                    (LPCSTR)FetchString(41120),
+                    nMaxDamage);
+            }
+        }
+
+        SHORT nCriticalRange = static_cast<SHORT>(pItem->sub_4E9840(pAbility) + pSprite->GetCriticalHitBonus());
+        DWORD nCriticalMultiplier = pItem->GetCriticalHitMultiplier();
+
+        if (nCriticalRange != 0) {
+            INT nCriticalMin = 20 - nCriticalRange;
+            if (nCriticalMin < 1) {
+                nCriticalMin = 1;
+            }
+
+            UpdateTextNoTrim(pText,
+                "  %s: %d-20 / x%d",
+                (LPCSTR)FetchString(41122),
+                nCriticalMin,
+                static_cast<WORD>(nCriticalMultiplier));
+        } else {
+            UpdateTextNoTrim(pText,
+                "  %s: 20 / x%d",
+                (LPCSTR)FetchString(41122),
+                static_cast<WORD>(nCriticalMultiplier));
+        }
+    } else {
+        UpdateTextNoTrim(pText,
+            "  %s",
+            (LPCSTR)FetchString(41121));
+    }
 }
 
 // 0x5E0200
@@ -6482,6 +7210,12 @@ CUIControlButtonCharacter5EBC60::CUIControlButtonCharacter5EBC60(CUIPanel* panel
 // 0x5EBD30
 CUIControlButtonCharacter5EBC60::~CUIControlButtonCharacter5EBC60()
 {
+}
+
+// 0x5EBDD0
+void CUIControlButtonCharacter5EBC60::sub_5EBDD0(CResRef cResRef)
+{
+    // TODO: Incomplete.
 }
 
 // 0x5EBFA0

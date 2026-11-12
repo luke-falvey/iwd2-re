@@ -1505,12 +1505,86 @@ LONG CDamageReduction::Absorb(LONG nDamage)
     return nRemaining;
 }
 
+// 0x447CD0
+BOOLEAN CDamageReduction::sub_447CD0()
+{
+    // TODO: Incomplete.
+    return FALSE;
+}
+
+// 0x447E30
+LONG CDamageReduction::sub_447E30()
+{
+    if (m_pAmountLeft == NULL) {
+        return m_nAmount;
+    }
+
+    return min(*m_pAmountLeft, m_nAmount);
+}
+
 // 0x447F10
 void CDamageReduction::SetSource(LONG* pAmountLeft, CGameSprite* pSourceCreature, CGameEffect* pSourceEffect)
 {
     m_pAmountLeft = pAmountLeft;
     m_sourceCreaturePtr = pSourceCreature;
     m_sourceEffectPtr = pSourceEffect;
+}
+
+// 0x448130
+CDamageReduction* CDamageReductionList::sub_448130(LONG a1)
+{
+    CDamageReduction* pBest = NULL;
+
+    for (iterator it = begin(); it != end(); it++) {
+        if (it->sub_447CD0() == 1) {
+            if (pBest == NULL) {
+                pBest = &(*it);
+            } else {
+                LONG nAmount = it->m_pAmountLeft != NULL
+                    ? min(*it->m_pAmountLeft, it->m_nAmount)
+                    : it->m_nAmount;
+                LONG nBestAmount = pBest->m_pAmountLeft != NULL
+                    ? min(*pBest->m_pAmountLeft, pBest->m_nAmount)
+                    : pBest->m_nAmount;
+                if (nAmount > nBestAmount) {
+                    pBest = &(*it);
+                }
+            }
+        }
+    }
+
+    return pBest;
+}
+
+// 0x4481A0
+CDamageReduction* CDamageReductionList::sub_4481A0(LONG nEnchantment, DWORD nDamageType)
+{
+    CDamageReduction* pBest = NULL;
+
+    for (iterator it = begin(); it != end(); it++) {
+        if (nEnchantment < static_cast<LONG>(it->m_nEnchantment)) {
+            if (it->m_damageTypes.size() == 0
+                || it->m_damageTypes.find(nDamageType) != it->m_damageTypes.end()) {
+                if (!it->sub_447CD0()) {
+                    if (pBest == NULL) {
+                        pBest = &(*it);
+                    } else {
+                        LONG nAmount = it->m_pAmountLeft != NULL
+                            ? min(*it->m_pAmountLeft, it->m_nAmount)
+                            : it->m_nAmount;
+                        LONG nBestAmount = pBest->m_pAmountLeft != NULL
+                            ? min(*pBest->m_pAmountLeft, pBest->m_nAmount)
+                            : pBest->m_nAmount;
+                        if (nAmount > nBestAmount) {
+                            pBest = &(*it);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return pBest;
 }
 
 // 0x448250

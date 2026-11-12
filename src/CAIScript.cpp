@@ -45,6 +45,12 @@ CAIScript::CAIScript(CResRef cNewResRef)
     Read(cNewResRef, FALSE);
 }
 
+// 0x514220
+void CAIScript::sub_514220(CResRef cResRef)
+{
+    m_cResRef = cResRef;
+}
+
 // 0x40EFC0
 CAIScript::~CAIScript()
 {

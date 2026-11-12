@@ -21,6 +21,8 @@
 class CCreatureFileHeader;
 class CDerivedStats;
 class CGameSprite;
+class CItem;
+typedef struct Item_ability_st ITEM_ABILITY;
 class CUIPanel;
 
 class CScreenCharacter : public CBaldurEngine {
@@ -84,6 +86,7 @@ public:
     void ResetBiographyPanel(CGameSprite* pSprite);
     void ResetClassDescriptionPanel(CGameSprite* pSprite);
     void sub_5D8B50(CGameSprite* pSprite);
+    void sub_5D8EA0(CGameSprite* pSprite);
     BOOL ResetAbility(CGameSprite* pSprite, const CString& sMin, const CString& sMax, const CString& sMod, BYTE& nAbility, BYTE& nMin, BYTE& nMax, INT& nMod);
     void ResetAbilitiesPanel(CGameSprite* pSprite, int a2);
     void ResetSpellsPanel(CGameSprite* pSprite, int a2);
@@ -92,6 +95,8 @@ public:
     void UpdateHatedRacePanel(CGameSprite* pSprite);
     void UpdateSpecializationPanel(CGameSprite* pSprite);
     void UpdateAbilitiesPanel(CGameSprite* pSprite);
+    void sub_5DAF30();
+    void sub_5DB200(CGameSprite* pSprite);
     void UpdateSpellsPanel(CGameSprite* pSprite);
     void GetPartyInformation(DWORD& nPartyChapterKillsXPValue, DWORD& nPartyChapterKillsNumber, DWORD& nPartyGameKillsXPValue, DWORD& nPartyGameKillsNumber);
     void EnableMainPanel(BOOL bEnable);
@@ -99,6 +104,7 @@ public:
     void UpdateMainPanel(BOOL bCharacterChanged);
     void UpdateGeneralInformation(CUIControlTextDisplay* pText, CGameSprite* pSprite);
     void UpdateEquipmentInformation(CUIControlTextDisplay* pText, CGameSprite* pSprite);
+    void sub_5DF910(CUIControlTextDisplay* pText, CGameSprite* pSprite, CItem* pItem, const ITEM_ABILITY* pAbility, BOOL bRight);
     void UpdateMiscInformation(CUIControlTextDisplay* pText, CGameSprite* pSprite);
     void ResetPopupPanel(DWORD dwPanelId, CGameSprite* pSprite, int a3);
     void UpdatePopupPanel(DWORD dwPanelId, CGameSprite* pSprite);
@@ -368,6 +374,7 @@ class CUIControlButtonCharacter5EBC60 : public CUIControlButton3State {
 public:
     CUIControlButtonCharacter5EBC60(CUIPanel* panel, UI_CONTROL_BUTTON* controlInfo);
     ~CUIControlButtonCharacter5EBC60() override;
+    void sub_5EBDD0(CResRef cResRef);
     BOOL Render(BOOL bForce) override;
     void OnLButtonClick(CPoint pt) override;
 
