@@ -613,6 +613,7 @@ public:
     void sub_723BF0(BOOLEAN a1, BOOLEAN a2);
     INT GetAC();
     INT sub_723DB0();
+    INT sub_723EA0();
     INT sub_723F60();
     void sub_71E760(CDerivedStats& DStats, int a2);
     void sub_722820();
