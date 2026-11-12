@@ -4817,12 +4817,185 @@ void CUIControlEncumbrance::SetVolume(int a1, int a2)
     }
 }
 
+// 0x84CEBC
+static const int dword_84CEBC = 5;
+
 // 0x77C670
 BOOL CUIControlEncumbrance::Render(BOOL bForce)
 {
-    // TODO: Incomplete.
+    CString sCurrent;
+    CString sMaximum;
 
-    return FALSE;
+    if (!m_bActive && !m_bInactiveRender) {
+        return FALSE;
+    }
+
+    if (m_nRenderCount == 0 && !bForce) {
+        return FALSE;
+    }
+
+    if (m_nRenderCount > 0) {
+        CSingleLock renderLock(&(m_pPanel->m_pManager->field_56), FALSE);
+        renderLock.Lock(INFINITE);
+        m_nRenderCount--;
+        renderLock.Unlock();
+    }
+
+    CVidMode* pVidMode = g_pBaldurChitin->pActiveEngine != NULL ? g_pBaldurChitin->pActiveEngine->pVidMode : NULL;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\UIControlButtons.cpp
+    // __LINE__: 7938
+    UTIL_ASSERT(pVidMode != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\UIControlButtons.cpp
+    // __LINE__: 7939
+    UTIL_ASSERT(m_cVidCell.GetRes() != NULL);
+
+    CPoint pt = m_pPanel->m_ptOrigin + m_ptOrigin;
+
+    CRect rControlFrame(pt, m_size);
+
+    CRect rDirty;
+    rDirty.IntersectRect(rControlFrame, m_rDirty);
+    CRect rClip = rDirty;
+
+    // NOTE: Unsigned compares.
+    if (static_cast<DWORD>(field_B72) > 0 && static_cast<DWORD>(field_B6E) >= static_cast<DWORD>(field_B72)) {
+        m_cVidCell.FrameSet(1);
+    } else {
+        m_cVidCell.FrameSet(0);
+    }
+
+    CSize frameSize;
+    m_cVidCell.GetCurrentFrameSize(frameSize, FALSE);
+
+    int x = pt.x;
+    if (m_size.cx > frameSize.cx) {
+        x += (m_size.cx - frameSize.cx) >> 1;
+    }
+
+    int y = pt.y;
+    if (m_size.cy > frameSize.cy) {
+        y += (m_size.cy - frameSize.cy) >> 1;
+    }
+
+    BOOL bResult = m_cVidCell.Render(0, x, y, rClip, NULL, 0, 0, -1);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\UIControlButtons.cpp
+    // __LINE__: 7969
+    UTIL_ASSERT(bResult);
+
+    // NOTE: Unsigned compares.
+    if (static_cast<DWORD>(field_B6A) > 0) {
+        if (static_cast<DWORD>(field_B66) > static_cast<DWORD>(field_B6A) * 80 / 100) {
+            if (static_cast<DWORD>(field_B66) > static_cast<DWORD>(field_B6A)) {
+                field_666.SetResRef(CResRef("NUMBER3"), m_pPanel->m_pManager->m_bDoubleSize, TRUE);
+            } else {
+                field_666.SetResRef(CResRef("NUMBER2"), m_pPanel->m_pManager->m_bDoubleSize, TRUE);
+            }
+        } else {
+            field_666.SetResRef(CResRef("NUMBER"), m_pPanel->m_pManager->m_bDoubleSize, TRUE);
+        }
+    } else {
+        field_666.SetResRef(CResRef("NUMBER"), m_pPanel->m_pManager->m_bDoubleSize, TRUE);
+    }
+
+    field_666.pRes->Demand();
+
+    field_666.GetFrameSize(0, 10, frameSize, TRUE);
+    SHORT nSeparatorWidth = static_cast<SHORT>(frameSize.cx);
+
+    sCurrent.Format("%d", field_B66);
+
+    SHORT nCurrentWidth = static_cast<SHORT>((m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1) * sCurrent.GetLength() * 5);
+
+    x = pt.x
+        + nCurrentWidth
+        + (m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1) * dword_8AB9B4
+        - (m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1) * 5;
+    y = pt.y + (m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1) * dword_8AB9B4;
+
+    int nValue = field_B66;
+    BOOL bFirst = TRUE;
+    while (nValue > 0 || bFirst) {
+        SHORT nDigit = nValue % 10;
+        nValue /= 10;
+
+        if (nDigit > 0 || nValue > 0 || bFirst) {
+            field_666.FrameSet(nDigit);
+            bResult = field_666.Render(0, x, y, rClip, NULL, 0, 0, -1);
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\UIControlButtons.cpp
+            // __LINE__: 8008
+            UTIL_ASSERT(bResult);
+        }
+
+        x -= (m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1) * dword_84CEBC;
+        bFirst = FALSE;
+    }
+
+    field_666.FrameSet(10);
+    bResult = field_666.Render(0,
+        pt.x + nCurrentWidth + (m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1) * dword_8AB9B4,
+        y,
+        rClip,
+        NULL,
+        0,
+        0,
+        -1);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\UIControlButtons.cpp
+    // __LINE__: 8017
+    UTIL_ASSERT(bResult);
+
+    field_666.pRes->Release();
+
+    field_666.SetResRef(CResRef("NUMBER"), m_pPanel->m_pManager->m_bDoubleSize, TRUE);
+    field_666.pRes->Demand();
+
+    sMaximum.Format("%d", field_B6A);
+
+    int nDigitsOffset = (m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1) * (dword_8AB9B4 + 5);
+
+    x = m_size.cx - nDigitsOffset - nSeparatorWidth + pt.x;
+    y = m_size.cy + pt.y - nDigitsOffset;
+
+    nValue = field_B6A;
+    bFirst = TRUE;
+    while (nValue > 0 || bFirst) {
+        SHORT nDigit = nValue % 10;
+        nValue /= 10;
+
+        if (nDigit > 0 || nValue > 0 || bFirst) {
+            field_666.FrameSet(nDigit);
+            bResult = field_666.Render(0, x, y, rClip, NULL, 0, 0, -1);
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\UIControlButtons.cpp
+            // __LINE__: 8038
+            UTIL_ASSERT(bResult);
+        }
+
+        x -= (m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1) * dword_84CEBC;
+        bFirst = FALSE;
+    }
+
+    field_666.FrameSet(10);
+    bResult = field_666.Render(0,
+        m_size.cx - (m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1) * dword_8AB9B4 - nSeparatorWidth + pt.x,
+        y,
+        rClip,
+        NULL,
+        0,
+        0,
+        -1);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\UIControlButtons.cpp
+    // __LINE__: 8047
+    UTIL_ASSERT(bResult);
+
+    field_666.pRes->Release();
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
