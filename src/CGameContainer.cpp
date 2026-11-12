@@ -1,8 +1,11 @@
 #include "CGameContainer.h"
 
 #include "CAIScript.h"
+#include "CAITrigger.h"
 #include "CBaldurChitin.h"
+#include "CCreatureFile.h"
 #include "CGameArea.h"
+#include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CInfCursor.h"
 #include "CInfGame.h"
@@ -12,7 +15,9 @@
 #include "CProjectile.h"
 #include "CResRef.h"
 #include "CScreenWorld.h"
+#include "CStore.h"
 #include "CUtil.h"
+#include "CVidInf.h"
 #include "CVidPoly.h"
 
 // 0x8D3988
@@ -281,6 +286,193 @@ CGameContainer::~CGameContainer()
     field_8D6.SetSize(0);
 }
 
+// 0x47CBE0
+void CGameContainer::AddEffect(CGameEffect* pEffect, BYTE list, BOOL noSave, BOOL immediateApply)
+{
+    BOOLEAN bSendStatus = FALSE;
+
+    if (pEffect->m_effectID == CGAMEEFFECT_KNOCK) {
+        if (m_lockDifficulty != 100) {
+            m_dwFlags &= ~0x1;
+
+            CMessage* message = new CMessageContainerStatus(m_dwFlags,
+                m_trapActivated,
+                m_trapDetected,
+                m_id,
+                m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        } else {
+            // NOTE: Original reads marker `-1` from a constant at 0x84C960.
+            g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(-1,
+                23169,
+                RGB(0, 0, 0),
+                RGB(160, 200, 215),
+                -1,
+                m_id,
+                m_id);
+        }
+    } else if (pEffect->m_effectID == CGAMEEFFECT_DETECTTRAPS) {
+        if (m_trapActivated != 0) {
+            if (m_trapDetected == 0
+                && m_trapDetectionDifficulty < 100
+                && (m_dwFlags & 0x8) != 0) {
+                // NOTE: Original reads trigger ID from a constant at
+                // 0x847E40.
+                CAITrigger trigger(CAITRIGGER_DETECTED, m_typeAI, 0);
+
+                CMessage* message = new CMessageSetTrigger(trigger, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                m_trapDetected = TRUE;
+
+                message = new CMessageTriggerStatus(m_dwFlags,
+                    m_trapActivated,
+                    m_trapDetected,
+                    m_id,
+                    m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                bSendStatus = TRUE;
+
+                // NOTE: Original passes `m_id` where the callee expects a
+                // `CGameAIBase*` caller.
+                CGameObject* pObject = m_typeAI.sub_40CCA0(reinterpret_cast<CGameAIBase*>(m_id), FALSE);
+                if (pObject != NULL) {
+                    // NOTE: Uninline.
+                    if (pObject->GetAIType().Equal(CAIObjectType(CGameObject::TYPE_SPRITE))) {
+                        static_cast<CGameAIBase*>(pObject)->AutoPause(0x80);
+                    }
+                }
+            }
+
+            if (m_trapDetected != 0) {
+                // NOTE: Uninline.
+                SetDrawPoly(400);
+            }
+
+            if (bSendStatus == TRUE) {
+                CMessage* message = new CMessageContainerStatus(m_dwFlags,
+                    m_trapActivated,
+                    m_trapDetected,
+                    m_id,
+                    m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    } else if (pEffect->m_effectID == CGAMEEFFECT_CASTSPELL) {
+        CAIObjectType type(GetAIType());
+        CAIAction action(CAIAction::FORCESPELL, type, 0, 0, 0);
+
+        CString sResRef;
+        pEffect->m_res.CopyToString(sResRef);
+        action.SetString1(sResRef);
+        action.m_specificID = pEffect->m_effectAmount;
+
+        CMessage* message = new CMessageInsertAction(action, m_id, pEffect->m_sourceID);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    } else if (pEffect->m_effectID == CGAMEEFFECT_SUMMON) {
+        ITEM_EFFECT* effect = new ITEM_EFFECT;
+        CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_SKILLUNSUMMON);
+
+        // NOTE: Original reads duration type 4 from a constant at 0x8491B0.
+        effect->durationType = 4;
+        effect->duration = (pEffect->m_duration - g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime) / 15;
+        effect->effectAmount = 1;
+
+        CGameEffect* pNewEffect = CGameEffect::DecodeEffect(effect,
+            CPoint(-1, -1),
+            -1,
+            CPoint(-1, -1));
+
+        delete effect;
+
+        CPoint ptGrid(pEffect->m_target.x / CPathSearch::GRID_SQUARE_SIZEX,
+            pEffect->m_target.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+        CCreatureFile creatureData;
+
+        // NOTE: Uninline.
+        creatureData.SetResRef(pEffect->m_res, TRUE, TRUE);
+
+        CGameSprite* pSprite = new CGameSprite(creatureData.GetData(),
+            creatureData.GetDataSize(),
+            0,
+            0,
+            -1,
+            0,
+            0,
+            0x7FFFFFFF,
+            CPoint(-1, -1),
+            0);
+
+        pSprite->SetResRef(creatureData.GetResRef().GetResRefStr());
+        creatureData.ReleaseData();
+
+        if (pSprite != NULL) {
+            LONG nSpriteId = pSprite->GetId();
+
+            CString sResRef;
+            pEffect->m_res.CopyToString(sResRef);
+            pSprite->SetResRef(sResRef);
+
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nSpriteId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+            if (rc == CGameObjectArray::SUCCESS) {
+                CPoint ptOpen = m_pArea->m_search.GetNearestOpenSquare(ptGrid,
+                    GetTerrainTable(),
+                    pSprite->m_animation.GetPersonalSpace(),
+                    -1);
+
+                pSprite->AddToArea(m_pArea,
+                    CPoint(ptOpen.x * CPathSearch::GRID_SQUARE_SIZEX, ptOpen.y * CPathSearch::GRID_SQUARE_SIZEY),
+                    0,
+                    pSprite->m_animation.GetListType());
+
+                nSpriteId = pSprite->GetId();
+
+                CProjectile* pProjectile = CProjectile::DecodeProjectile(144, pSprite, FALSE);
+
+                CMessage* message = new CMessageFireProjectile(pProjectile->m_projectileType,
+                    nSpriteId,
+                    CPoint(0, 0),
+                    30,
+                    nSpriteId,
+                    nSpriteId,
+                    0);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                pProjectile->Fire(m_pArea, nSpriteId, nSpriteId, CPoint(0, 0), 0, 0);
+
+                // NOTE: Unused.
+                CAIObjectType typeAI(pSprite->GetAIType());
+                CAIObjectType liveTypeAI(pSprite->m_liveTypeAI);
+                CAIObjectType liveTypeAI2(pSprite->m_liveTypeAI);
+
+                // NOTE: Original reads the permanent duration type from a
+                // constant at 0x8491AA.
+                if (pEffect->m_durationType != 1) {
+                    pNewEffect->m_casterLevel = pEffect->m_casterLevel;
+                    pSprite->AddEffect(pNewEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+                }
+                // NOTE: Otherwise `pNewEffect` leaks.
+
+                pSprite->SetSequence(CGameSprite::SEQ_AWAKE);
+                pSprite->SetFacing(rand() % 16);
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nSpriteId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+    }
+
+    if (pEffect != NULL) {
+        delete pEffect;
+    }
+}
+
 // 0x47C830
 BOOLEAN CGameContainer::CanSaveGame(STRREF& strError)
 {
@@ -307,6 +499,158 @@ void CGameContainer::AIUpdate()
     }
 
     ProcessAI();
+}
+
+// 0x47D850
+BOOLEAN CGameContainer::CompressTime(DWORD deltaTime)
+{
+    BOOLEAN bEmpty = TRUE;
+
+    // NOTE: Unsigned compare.
+    if (deltaTime > static_cast<DWORD>(m_drawPoly)) {
+        m_drawPoly = 0;
+    } else {
+        m_drawPoly = static_cast<SHORT>(m_drawPoly - deltaTime);
+    }
+
+    if (deltaTime > CTimerWorld::TIMESCALE_MSEC_PER_DAY && m_containerType == 4) {
+        POSITION posCurrent = m_lstItems.GetHeadPosition();
+        POSITION pos = posCurrent;
+        while (pos != NULL) {
+            CItem* pItem = m_lstItems.GetNext(pos);
+            if (pItem == NULL) {
+                m_lstItems.RemoveAt(posCurrent);
+            } else {
+                if (pItem->GetItemType() == 58) {
+                    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+                    CItem tempItem;
+
+                    if (g_pChitin->cNetwork.GetSessionOpen()) {
+                        BOOL bStoreDemanded = FALSE;
+                        CStore cStore;
+
+                        if (g_pChitin->cNetwork.GetSessionHosting()) {
+                            pGame->DemandServerStore(pItem->GetResRef(), TRUE);
+                            cStore.SetResRef(pItem->GetResRef());
+                        } else {
+                            cStore.SetResRef(pItem->GetResRef());
+                            if (!cStore.m_bLocalCopy || memcmp(cStore.m_pVersion, "STORV9.0", 8) != 0) {
+                                if (!g_pBaldurChitin->GetBaldurMessage()->DemandResourceFromServer(pItem->GetResRef().GetResRefStr(), 1014, TRUE, TRUE, TRUE)) {
+                                    g_pChitin->cNetwork.CloseSession(TRUE);
+
+                                    // NOTE: Skips the `posCurrent = pos`
+                                    // update at the end of the loop, so the
+                                    // next iteration removes from a stale
+                                    // position.
+                                    continue;
+                                }
+
+                                cStore.SetResRef(pItem->GetResRef());
+                                bStoreDemanded = TRUE;
+                            }
+                        }
+
+                        if (cStore.GetType() == 4) {
+                            if (!g_pChitin->cNetwork.GetSessionHosting() && !bStoreDemanded) {
+                                bStoreDemanded = TRUE;
+
+                                CMessage* message = new CMessageStoreDemand(pItem->GetResRef(),
+                                    CGameObjectArray::INVALID_INDEX,
+                                    CGameObjectArray::INVALID_INDEX);
+                                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                            }
+
+                            for (INT nIndex = 0; nIndex < cStore.m_lInventory.GetCount(); nIndex++) {
+                                cStore.GetItem(nIndex, tempItem);
+
+                                if ((tempItem.GetFlagsFile() & 0x1) != 0) {
+                                    CMessage* message = new CMessageContainerAddItem(tempItem,
+                                        0x7FFF,
+                                        FALSE,
+                                        m_id,
+                                        m_id);
+                                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                                    bEmpty = FALSE;
+                                }
+
+                                // NOTE: Original passes the bag's resref as
+                                // both the store and the item, and the bag's
+                                // flags.
+                                CMessage* message = new CMessageStoreRemoveItem(pItem->GetResRef(),
+                                    pItem->GetResRef(),
+                                    nIndex,
+                                    1,
+                                    pItem->m_flags,
+                                    m_id,
+                                    m_id);
+                                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                            }
+
+                            if (!g_pChitin->cNetwork.GetSessionHosting()
+                                && g_pChitin->cNetwork.GetSessionOpen()) {
+                                CStore::InvalidateStore(pItem->GetResRef());
+                            }
+                        }
+
+                        if (g_pChitin->cNetwork.GetSessionHosting()) {
+                            g_pBaldurChitin->GetObjectGame()->ReleaseServerStore(cStore.m_resRef);
+                        } else {
+                            if (bStoreDemanded) {
+                                CMessage* message = new CMessageStoreRelease(cStore.m_resRef,
+                                    CGameObjectArray::INVALID_INDEX,
+                                    CGameObjectArray::INVALID_INDEX);
+                                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                            }
+                        }
+                    } else {
+                        CStore cStore(pItem->GetResRef());
+
+                        if (cStore.GetType() == 4) {
+                            for (INT nIndex = 0; nIndex < cStore.m_lInventory.GetCount(); nIndex++) {
+                                cStore.GetItem(nIndex, tempItem);
+
+                                if ((tempItem.GetFlagsFile() & 0x1) != 0) {
+                                    // NOTE: `CItem::operator=` is inlined
+                                    // into this copy of the constructor.
+                                    CMessage* message = new CMessageContainerAddItem(tempItem,
+                                        0x7FFF,
+                                        FALSE,
+                                        m_id,
+                                        m_id);
+                                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                                    bEmpty = FALSE;
+                                }
+
+                                cStore.RemoveItemExt(tempItem.GetResRef(), tempItem.m_flags, -1, 1, NULL);
+                            }
+
+                            cStore.Marshal(pGame->m_sTempDir);
+                        }
+                    }
+                }
+
+                if ((pItem->GetFlagsFile() & 0x1) == 0) {
+                    m_lstItems.RemoveAt(posCurrent);
+                    delete pItem;
+                } else {
+                    bEmpty = FALSE;
+                }
+            }
+
+            posCurrent = pos;
+        }
+
+        RefreshRenderPile();
+
+        if (bEmpty) {
+            m_bDeleteMe = TRUE;
+            return FALSE;
+        }
+    }
+
+    return TRUE;
 }
 
 // 0x47E040
@@ -521,6 +865,405 @@ BOOL CGameContainer::IsOver(const CPoint& pt)
     }
 
     return TRUE;
+}
+
+// 0x47E970
+void CGameContainer::OnActionButton(const CPoint& pt)
+{
+    if (g_pBaldurChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+        CMessage* message = new CMessageContainerAddItem(CItem(), 0x7FFF, FALSE, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CAIGroup* pGroup = pGame->GetGroup();
+
+    if (m_containerType == 4 && m_lstItems.GetCount() == 0) {
+        // NOTE: Uninline.
+        pGame->SetLastTarget(CGameObjectArray::INVALID_INDEX);
+
+        CGameObject::OnActionButton(pt);
+        return;
+    }
+
+    switch (pGame->GetState()) {
+    case 0:
+        // NOTE: Uninline.
+        pGame->SetLastTarget(CGameObjectArray::INVALID_INDEX);
+
+        if (pGroup->GetCount() > 0) {
+            // NOTE: Original reads action ID 112 from a constant at 0x847854.
+            CAIAction action(112, m_id, 0, 0);
+            pGroup->GroupAction(CAIAction(), TRUE, &action);
+
+            CAIAction moveAction(CAIAction::MOVETOPOINT, m_ptWalkToUse, 0, -1);
+            pGroup->GroupAction(CAIAction(), FALSE, &moveAction);
+        }
+        break;
+    case 2:
+        // NOTE: Uninline.
+        pGame->SetLastTarget(CGameObjectArray::INVALID_INDEX);
+
+        switch (pGame->GetIconIndex()) {
+        case 12:
+            if ((m_dwFlags & 0x1) == 0) {
+                CGameObject::OnActionButton(pt);
+            } else {
+                // NOTE: Original reads action ID 148 from a constant at
+                // 0x84789C.
+                CAIAction action(148, m_typeAI, 0, 0, 0);
+                pGroup->GroupAction(CAIAction::NULL_ACTION, TRUE, &action);
+
+                pGame->SetState(0);
+                pGame->GetButtonArray()->SetSelectedButton(100);
+                pGame->GetButtonArray()->UpdateState();
+            }
+            break;
+        case 18:
+        case 40:
+        case 255:
+            CGameObject::OnActionButton(pt);
+            break;
+        case 20:
+            pGame->UseMagicOnObject(m_id);
+
+            pGame->SetState(0);
+            pGame->GetButtonArray()->SetSelectedButton(100);
+            pGame->GetButtonArray()->UpdateState();
+            break;
+        case 36:
+            if (m_trapActivated != 0 && m_trapDetected != 0) {
+                SHORT nPortrait = g_pBaldurChitin->m_pEngineWorld->GetSelectedCharacter();
+
+                // NOTE: Uninline.
+                LONG nCharacterId = pGame->GetCharacterId(nPortrait);
+
+                CGameSprite* pSprite;
+
+                BYTE rc;
+                do {
+                    rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    BYTE nDisableDevice = pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_DISABLE_DEVICE];
+
+                    pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+
+                    if (nDisableDevice == 0) {
+                        break;
+                    }
+                }
+
+                // NOTE: Original reads action ID 28 from a constant at
+                // 0x8477BA.
+                CAIAction action(28, m_typeAI, 0, 0, 0);
+                pGroup->GroupAction(action, TRUE, NULL);
+            } else {
+                if ((m_dwFlags & 0x1) == 0) {
+                    CGameObject::OnActionButton(pt);
+                    break;
+                }
+
+                SHORT nPortrait = g_pBaldurChitin->m_pEngineWorld->GetSelectedCharacter();
+
+                // NOTE: Uninline.
+                LONG nCharacterId = pGame->GetCharacterId(nPortrait);
+
+                CGameSprite* pSprite;
+
+                BYTE rc;
+                do {
+                    rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    BYTE nOpenLock = pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_OPEN_LOCK];
+
+                    pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+
+                    if (nOpenLock == 0) {
+                        break;
+                    }
+                }
+
+                // NOTE: Original reads action ID 145 from a constant at
+                // 0x847896.
+                CAIAction action(145, m_typeAI, 0, 0, 0);
+                pGroup->GroupAction(action, TRUE, NULL);
+            }
+
+            pGame->SetState(0);
+            pGame->GetButtonArray()->SetSelectedButton(100);
+            pGame->GetButtonArray()->UpdateState();
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameContainer.cpp
+            // __LINE__: 1215
+            UTIL_ASSERT(FALSE);
+        }
+        break;
+    case 3:
+        // NOTE: Uninline.
+        pGame->SetLastTarget(CGameObjectArray::INVALID_INDEX);
+
+        CGameObject::OnActionButton(pt);
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameContainer.cpp
+        // __LINE__: 1226
+        UTIL_ASSERT(FALSE);
+    }
+}
+
+// 0x47F580
+void CGameContainer::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
+{
+    // NOTE: Original reads the outline colors from globals at 0x8A85F8
+    // (RGB(32, 64, 160)), 0x8A85FC (RGB(0, 250, 0)) and 0x8A8608
+    // (RGB(255, 0, 0)).
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    SHORT nState = pGame->GetState();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameContainer.cpp
+    // __LINE__: 1267
+    UTIL_ASSERT(pVidMode != NULL);
+
+    BOOL bRendered = FALSE;
+    BOOLEAN bMenuKey = FALSE;
+
+    if (m_containerType == 4) {
+        // NOTE: Uninline.
+        if (m_nPileVidCell > 0
+            && m_pArea->m_visibility.IsTileExplored(m_pArea->m_visibility.PointToTile(m_pos))) {
+            DWORD dwFlags = CInfinity::FXPREP_CLEARFILL | 0x30001;
+            CInfinity* pInfinity = m_pArea->GetInfinity();
+            CRect rFX(0, 0, 0, 0);
+            CPoint ptReference(0, 0);
+            BOOLEAN bFogged = FALSE;
+            INT nIndex;
+
+            for (nIndex = m_nPileVidCell; nIndex > 0; nIndex--) {
+                CPoint ptCenter;
+                m_pileVidCell[nIndex - 1].GetCurrentCenterPoint(ptCenter, FALSE);
+
+                CSize frameSize;
+                m_pileVidCell[nIndex - 1].GetCurrentFrameSize(frameSize, FALSE);
+
+                CRect rFrame;
+                rFrame.SetRect(0, 0, frameSize.cx, frameSize.cy);
+
+                if (ptCenter.x > ptReference.x) {
+                    rFX.right += ptCenter.x - ptReference.x;
+                    ptReference.x = ptCenter.x;
+                }
+
+                if (rFrame.right > rFX.right) {
+                    rFX.right = rFrame.right;
+                }
+
+                if (ptCenter.y > ptReference.y) {
+                    rFX.bottom += ptCenter.y - ptReference.y;
+                    ptReference.y = ptCenter.y;
+                }
+
+                if (rFrame.bottom > rFX.bottom) {
+                    rFX.bottom = rFrame.bottom;
+                }
+            }
+
+            CPoint ptPos;
+            ptPos.x = m_pos.x;
+            ptPos.y = m_pArea->GetHeightOffset(m_pos, m_listType) + m_pos.y;
+
+            CRect rGCBounds;
+            rGCBounds.left = ptPos.x - ptReference.x;
+            rGCBounds.top = m_posZ - ptReference.y + ptPos.y;
+            rGCBounds.right = rFX.right - rFX.left + rGCBounds.left;
+            rGCBounds.bottom = rFX.bottom - rFX.top + rGCBounds.top;
+
+            CRect rViewPort;
+            rViewPort.left = pInfinity->nCurrentX;
+            rViewPort.top = pInfinity->nCurrentY;
+            rViewPort.right = pInfinity->rViewPort.right - pInfinity->rViewPort.left + rViewPort.left;
+            rViewPort.bottom = pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + rViewPort.top;
+
+            if (rViewPort.IntersectRect(rGCBounds, rViewPort)) {
+                COLORREF rgbTint = m_pArea->GetTintColor(CPoint(ptPos.x, m_posZ + ptPos.y), m_listType);
+                BOOLEAN bDithered = m_id == m_pArea->m_iPicked;
+
+                // NOTE: Uninline.
+                if (!m_pArea->m_visibility.IsTileVisible(m_pArea->m_visibility.PointToTile(m_pos))) {
+                    if (g_pChitin->cVideo.m_bIs3dAccelerated) {
+                        // NOTE: Halves each channel.
+                        rgbTint = RGB(GetRValue(rgbTint) >> 1,
+                            GetGValue(rgbTint) >> 1,
+                            GetBValue(rgbTint) >> 1);
+                    } else {
+                        bFogged = TRUE;
+                    }
+                }
+
+                pInfinity->FXPrep(rFX, dwFlags, a3, ptPos, ptReference);
+
+                if (pInfinity->FXLock(rFX, dwFlags)) {
+                    for (nIndex = m_nPileVidCell; nIndex > 0; nIndex--) {
+                        if (m_id == m_pArea->m_iPicked
+                            && pGame->GetGroup()->GetCount() > 0
+                            && nState == 0) {
+                            m_pileVidCell[nIndex - 1].m_bShadowOn = TRUE;
+                        } else {
+                            m_pileVidCell[nIndex - 1].m_bShadowOn = FALSE;
+                        }
+
+                        if (g_pBaldurChitin->pActiveEngine == g_pBaldurChitin->m_pEngineWorld
+                            && g_pBaldurChitin->m_pEngineWorld->GetMenuKey() == TRUE) {
+                            m_pileVidCell[nIndex - 1].m_bShadowOn = TRUE;
+                            bMenuKey = TRUE;
+                        }
+
+                        m_pileVidCell[nIndex - 1].SetTintColor(rgbTint);
+                        pInfinity->FXRender(&(m_pileVidCell[nIndex - 1]),
+                            ptReference.x,
+                            ptReference.y,
+                            dwFlags,
+                            0);
+                    }
+
+                    CRect rClip;
+                    rClip.left = rGCBounds.left;
+                    rClip.top = rGCBounds.top - m_posZ;
+                    rClip.right = rGCBounds.right;
+                    rClip.bottom = rGCBounds.bottom - m_posZ;
+
+                    if (!bMenuKey) {
+                        pInfinity->FXRenderClippingPolys(ptPos.x,
+                            ptPos.y - m_posZ,
+                            m_posZ,
+                            ptReference,
+                            rClip,
+                            bDithered,
+                            dwFlags);
+                    }
+
+                    if (bFogged) {
+                        pInfinity->FXUnlock(dwFlags,
+                            &rFX,
+                            CPoint(ptPos.x + ptReference.x, ptPos.y + ptReference.y));
+                    } else {
+                        pInfinity->FXUnlock(dwFlags, NULL, CPoint(0, 0));
+                    }
+
+                    pInfinity->FXBltFrom(a3,
+                        rFX,
+                        ptPos.x,
+                        ptPos.y,
+                        ptReference.x,
+                        ptReference.y,
+                        dwFlags);
+                }
+            }
+        }
+    } else {
+        if (m_id == m_pArea->m_iPicked) {
+            // NOTE: Uninline.
+            if (m_pArea->m_visibility.IsTileExplored(m_pArea->m_visibility.PointToTile(m_pos))) {
+                if (pGame->GetGroup()->GetCount() > 0 && nState == 0) {
+                    if (CInfinity::TRANSLUCENT_BLTS_ON && !g_pChitin->cVideo.m_bIs3dAccelerated) {
+                        sub_481A10(pArea,
+                            pVidMode,
+                            a3,
+                            g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(32, 64, 160)));
+                        bRendered = TRUE;
+                    }
+
+                    m_pArea->m_cInfinity.OutlinePoly(m_pPolygon,
+                        m_nPolygon,
+                        m_rBounding,
+                        RGB(32, 64, 160));
+                }
+
+                if (pGame->GetState() == 2) {
+                    if (pGame->GetIconIndex() == 36) {
+                        if ((m_trapActivated != 0 && m_trapDetected != 0)
+                            || (m_dwFlags & 0x1) != 0) {
+                            if (CInfinity::TRANSLUCENT_BLTS_ON && !g_pChitin->cVideo.m_bIs3dAccelerated) {
+                                sub_481A10(pArea,
+                                    pVidMode,
+                                    a3,
+                                    g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(0, 250, 0)));
+                                bRendered = TRUE;
+                            }
+
+                            m_pArea->m_cInfinity.OutlinePoly(m_pPolygon,
+                                m_nPolygon,
+                                m_rBounding,
+                                RGB(0, 250, 0));
+                        }
+                    } else if (pGame->GetIconIndex() == 12) {
+                        if ((m_dwFlags & 0x1) != 0) {
+                            if (CInfinity::TRANSLUCENT_BLTS_ON && !g_pChitin->cVideo.m_bIs3dAccelerated) {
+                                sub_481A10(pArea,
+                                    pVidMode,
+                                    a3,
+                                    g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(0, 250, 0)));
+                                bRendered = TRUE;
+                            }
+
+                            m_pArea->m_cInfinity.OutlinePoly(m_pPolygon,
+                                m_nPolygon,
+                                m_rBounding,
+                                RGB(0, 250, 0));
+                        }
+                    }
+                }
+            }
+        } else {
+            // NOTE: Uninline.
+            if (m_pArea->m_visibility.IsTileExplored(m_pArea->m_visibility.PointToTile(m_pos))
+                && g_pBaldurChitin->pActiveEngine == g_pBaldurChitin->m_pEngineWorld
+                && g_pBaldurChitin->m_pEngineWorld->GetMenuKey() == TRUE) {
+                if (CInfinity::TRANSLUCENT_BLTS_ON && !g_pChitin->cVideo.m_bIs3dAccelerated) {
+                    sub_481A10(pArea,
+                        pVidMode,
+                        a3,
+                        g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(0, 250, 0)));
+                    bRendered = TRUE;
+                }
+
+                m_pArea->m_cInfinity.OutlinePoly(m_pPolygon,
+                    m_nPolygon,
+                    m_rBounding,
+                    RGB(0, 250, 0));
+            }
+        }
+    }
+
+    if (m_drawPoly > 0) {
+        if (CInfinity::TRANSLUCENT_BLTS_ON
+            && !g_pChitin->cVideo.m_bIs3dAccelerated
+            && !bRendered) {
+            sub_481A10(pArea,
+                pVidMode,
+                a3,
+                g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(255, 0, 0)));
+        }
+
+        m_pArea->m_cInfinity.OutlinePoly(m_pPolygon,
+            m_nPolygon,
+            m_rBounding,
+            RGB(255, 0, 0));
+    }
 }
 
 // 0x47FE10
@@ -1196,6 +1939,50 @@ SHORT CGameContainer::CountItem(const CResRef& res)
     }
 
     return nCount;
+}
+
+// 0x481A10
+void CGameContainer::sub_481A10(CGameArea* pArea, CVidMode* pVidMode, int a3, DWORD rgbColor)
+{
+    CInfinity* pInfinity = pArea->GetInfinity();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameContainer.cpp
+    // __LINE__: 2691
+    UTIL_ASSERT(pInfinity != NULL && pVidMode != NULL);
+
+    CRect rViewPort;
+    rViewPort.left = m_pArea->GetInfinity()->nCurrentX;
+    rViewPort.top = m_pArea->GetInfinity()->nCurrentY;
+    rViewPort.right = m_pArea->GetInfinity()->rViewPort.right - m_pArea->GetInfinity()->rViewPort.left + rViewPort.left;
+    rViewPort.bottom = m_pArea->GetInfinity()->rViewPort.bottom - m_pArea->GetInfinity()->rViewPort.top + rViewPort.top;
+
+    INT nRects = field_8D6.GetSize();
+    CPoint ptRef(0, 0);
+
+    CVidPoly vidPoly;
+    vidPoly.SetPoly(reinterpret_cast<WORD*>(field_8EA), m_nPolygon);
+
+    for (INT nIndex = 0; nIndex < nRects; nIndex++) {
+        CRect* pRect = field_8D6[nIndex];
+        if (pRect != NULL) {
+            CRect rClip = rViewPort & *pRect;
+            if (!rClip.IsRectNull()) {
+                CPoint ptPos(rClip.left, rClip.top);
+                CRect rFX(rClip);
+                rFX.OffsetRect(-rClip.left, -rClip.top);
+
+                if (pInfinity->FXPrep(rFX, CInfinity::FXPREP_COPYFROMBACK, a3, ptPos, ptRef)) {
+                    if (pInfinity->FXLock(rFX, 0)) {
+                        static_cast<CVidInf*>(pVidMode)->FXRender(&vidPoly, rClip, rgbColor, 0x10, ptPos, FALSE);
+
+                        if (pInfinity->FXUnlock(0, NULL, CPoint(0, 0))) {
+                            pInfinity->FXBltFrom(a3, rFX, ptPos.x, ptPos.y, ptRef.x, ptRef.y, 0);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 // 0x481C50
