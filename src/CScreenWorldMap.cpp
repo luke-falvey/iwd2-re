@@ -755,6 +755,70 @@ void CScreenWorldMap::OnAreaMouseClick(DWORD nArea, const CPoint& ptMousePos)
     // TODO: Incomplete.
 }
 
+// 0x69B7F0
+DWORD CScreenWorldMap::sub_69B7F0(DWORD nArea)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    DWORD nLinkIndex = -1;
+    DWORD nTravelTime = 0;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenWorldMap.cpp
+    // __LINE__: 2133
+    UTIL_ASSERT(pGame != NULL);
+
+    CString sResArea;
+
+    pGame->GetVisibleArea()->m_resRef.CopyToString(sResArea);
+
+    CWorldMap* pWorldMap = pGame->GetWorldMap(sResArea);
+
+    pWorldMap->GetArea(pWorldMap->sub_55A3A0(), nArea);
+
+    DWORD nSrcArea;
+    if (m_nCurrentLink != -1) {
+        nSrcArea = pWorldMap->FindSourceAreaIndex(pWorldMap->sub_55A3A0(), m_nCurrentLink);
+        CWorldMapLinks* pLink = pWorldMap->GetLink(pWorldMap->sub_55A3A0(), m_nCurrentLink);
+
+        if (nSrcArea == nArea) {
+            nSrcArea = pLink->m_nArea;
+            nLinkIndex = pWorldMap->GetLinkIndex(pWorldMap->sub_55A3A0(), nSrcArea, nArea);
+        }
+
+        nTravelTime = pLink->m_nDistanceScale * CRuleTables::TIME_TRAVELLING / 2;
+    } else {
+        BOOL bResult = pWorldMap->GetAreaIndex(pWorldMap->sub_55A3A0(), m_cResCurrentArea, nSrcArea);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenWorldMap.cpp
+        // __LINE__: 2164
+        UTIL_ASSERT(bResult);
+    }
+
+    pWorldMap->GetArea(pWorldMap->sub_55A3A0(), nSrcArea);
+
+    if (nSrcArea != nArea) {
+        m_pPath = pWorldMap->sub_559B40(pWorldMap->sub_55A3A0(), nSrcArea, nArea);
+
+        if (m_pPath != NULL) {
+            while (m_pPath->GetCount() > 0) {
+                DWORD nLink = m_pPath->GetHead();
+
+                CWorldMapLinks* pLink = pWorldMap->GetLink(pWorldMap->sub_55A3A0(), nLink);
+
+                if (m_nCurrentLink != nLink && nLinkIndex != nLink) {
+                    nTravelTime += pLink->m_nDistanceScale * CRuleTables::TIME_TRAVELLING;
+                }
+
+                m_pPath->RemoveHead();
+            }
+
+            delete m_pPath;
+            m_pPath = NULL;
+        }
+    }
+
+    return nTravelTime;
+}
+
 // 0x69BA70
 BOOL CScreenWorldMap::DrawMap(const CRect& r)
 {

@@ -64,6 +64,7 @@ public:
     BOOL DrawMap(const CRect& r);
     void StartWorldMap(INT nEngineState, LONG nLeavingEdge, BOOLEAN bInControl);
     void StopWorldMap(BOOLEAN bAreaClicked);
+    DWORD sub_69B7F0(DWORD nArea);
     void sub_69D0F0(CResRef& cResArea, CString sText, SHORT nFacing, BYTE nArg4, DWORD dwArg5);
     COLORREF sub_69CB40(COLORREF rgb);
     CRect GetAreaRect(DWORD nMap, DWORD nArea);

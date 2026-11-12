@@ -8,6 +8,8 @@
 
 typedef CList<DWORD, DWORD> CWorldMapList;
 
+#define CWORLDMAPAREA_FLAGS_VISIBLE 0x1
+
 class CWorldMap {
 public:
     CWorldMap();
@@ -25,6 +27,7 @@ public:
     BOOL GetAreaIndex(DWORD nMap, const CResRef& cResArea, DWORD& nArea);
     CWorldMapList* GetAllLinks(DWORD nMap, DWORD nArea);
     DWORD GetLinkIndex(DWORD nMap, DWORD nSrcArea, DWORD nDstArea);
+    CWorldMapList* sub_559B40(DWORD nMap, DWORD nSrcArea, DWORD nDstArea);
     DWORD FindSourceAreaIndex(DWORD nMap, DWORD nLink);
     void SetExplorable(DWORD nMap, const CResRef& cResArea, BOOL bExplorable);
     void EnableArea(DWORD nMap, const CResRef& cResArea, BOOL bEnable);
