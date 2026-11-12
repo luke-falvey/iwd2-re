@@ -1032,7 +1032,7 @@ void CScreenCreateChar::UpdateMainPanel(CGameSprite* pSprite)
                                 UINT nSpellId = pSprite->m_spells.GetSpellsAtLevel(nClassIndex, nLevel)->Get(nIndex)->m_nID;
 
                                 // NOTE: Uninline.
-                                CSpell spell(g_pBaldurChitin->GetObjectGame()->m_spells.Get(nSpellId));
+                                CSpell spell(g_pBaldurChitin->GetObjectGame()->m_spells.Get636(nSpellId));
                                 if (spell.pRes != NULL) {
                                     spell.Demand();
                                     STRREF strSpellName = spell.GetGenericName();
@@ -4486,7 +4486,10 @@ void CScreenCreateChar::UpdateCharacterStats(CGameSprite* pSprite)
     pSprite->m_animation.m_animation = CGameAnimationType::SetAnimationType(animationID,
         pSprite->GetBaseStats()->m_colors,
         0);
+    // NOTE: The original writes a DWORD here (0x611D67), which also clears the
+    // following word.
     pSprite->GetBaseStats()->m_animationType = animationID;
+    pSprite->GetBaseStats()->field_22 = 0;
 
     CString sRace = ruleTables.GetRaceString(typeAI.m_nRace, typeAI.m_nSubRace);
     pSprite->GetBaseStats()->m_resistFireBase = static_cast<BYTE>(atol(ruleTables.m_tRaceRsMd.GetAt(CRuleTables::FIRE, sRace)));
