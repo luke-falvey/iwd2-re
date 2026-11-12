@@ -10,6 +10,25 @@
 #include "CVideo.h"
 
 class CKeyInfo;
+class CWarp;
+
+// NOTE: Element of `CWarp::lTimers`. Only the members used by
+// `CWarp::TimerUpdate` are known.
+class CTimer : public CObject {
+public:
+    /* 0000 */ /* GetRuntimeClass */
+    /* 0004 */ /* ~CTimer */
+    /* 0008 */ /* Serialize */
+    /* 000C */ virtual void OnTimer() = 0;
+
+    /* 0004 */ int field_4;
+    /* 0008 */ int field_8;
+    /* 000C */ int field_C;
+    /* 0010 */ CWarp* field_10;
+    /* 0014 */ POSITION field_14;
+    /* 0018 */ int field_18;
+    /* 001C */ int field_1C;
+};
 
 class CWarp : public CObject {
 public:

@@ -232,19 +232,174 @@ BOOLEAN CGameSpy::sub_4D0DA0(const char* pBuf, DWORD nLen, CString sKey, char** 
 // 0x4D0F40
 BOOLEAN CGameSpy::sub_4D0F40(DWORD nAddr, DWORD nPort, char* pSecure)
 {
-    // TODO: Incomplete.
+    CString sGameSpyCode;
 
-    return FALSE;
+    if (pSecure != NULL) {
+        g_pChitin->GetGameSpyCode(sGameSpyCode);
+
+        BYTE secure[6];
+        char key[7];
+        for (int i = 0; i < 6; i++) {
+            secure[i] = pSecure[i];
+            key[i] = sGameSpyCode[i];
+        }
+        key[6] = '\0';
+
+        BYTE state[0x102];
+        int nKeyLength = strlen(key);
+        g_pChitin->field_1900.sub_4D0520(reinterpret_cast<BYTE*>(key), nKeyLength, state);
+        g_pChitin->field_1900.sub_4D05A0(secure, 6, state);
+
+        char szEncoded[9];
+        const BYTE* pSource = secure;
+        char* pEncoded = szEncoded;
+        int nConsumed = 0;
+        do {
+            BYTE group[3];
+            for (int j = 0; j < 3; j++) {
+                if (nConsumed < 6) {
+                    group[j] = *pSource++;
+                } else {
+                    group[j] = 0;
+                }
+                nConsumed++;
+            }
+
+            BYTE indices[4];
+            // NOTE: Uninline.
+            g_pChitin->field_1900.sub_4D0680(group, indices);
+
+            for (int k = 0; k < 4; k++) {
+                *pEncoded++ = g_pChitin->field_1900.sub_4D06D0(indices[k]);
+            }
+        } while (nConsumed < 6);
+        *pEncoded = '\0';
+
+        CString sValidate("\\validate\\");
+        int nLength = sValidate.GetLength() + 8;
+        char* pBuf = new char[nLength];
+        if (pBuf == NULL) {
+            // NOTE: Original code frees the response buffer here without
+            // clearing the pointer.
+            delete[] field_22;
+            return FALSE;
+        }
+
+        memcpy(pBuf, sValidate.GetBuffer(sValidate.GetLength()), sValidate.GetLength());
+        memcpy(pBuf + sValidate.GetLength(), szEncoded, 8);
+
+        if (field_22 != NULL) {
+            if (field_16 + nLength >= 0x546) {
+                sub_4D0C70(nAddr, nPort);
+            }
+
+            memcpy(field_22 + field_16, pBuf, nLength);
+            field_16 += nLength;
+        }
+
+        delete[] pBuf;
+    }
+
+    sub_4D0C70(nAddr, nPort);
+    return TRUE;
 }
 
 // 0x4D1220
 BOOLEAN CGameSpy::sub_4D1220(DWORD nAddr, DWORD nPort, char* pSecure)
 {
-    // TODO: Incomplete.
+    CString sGameSpyCode;
 
-    return FALSE;
+    if (pSecure != NULL) {
+        g_pChitin->GetGameSpyCode(sGameSpyCode);
+
+        BYTE secure[6];
+        char key[7];
+        for (int i = 0; i < 6; i++) {
+            secure[i] = pSecure[i];
+            key[i] = sGameSpyCode[i];
+        }
+        key[6] = '\0';
+
+        BYTE state[0x102];
+        int nKeyLength = strlen(key);
+        g_pChitin->field_1900.sub_4D0520(reinterpret_cast<BYTE*>(key), nKeyLength, state);
+        g_pChitin->field_1900.sub_4D05A0(secure, 6, state);
+
+        char szEncoded[9];
+        const BYTE* pSource = secure;
+        char* pEncoded = szEncoded;
+        int nConsumed = 0;
+        do {
+            BYTE group[3];
+            for (int j = 0; j < 3; j++) {
+                if (nConsumed < 6) {
+                    group[j] = *pSource++;
+                } else {
+                    group[j] = 0;
+                }
+                nConsumed++;
+            }
+
+            BYTE indices[4];
+            g_pChitin->field_1900.sub_4D0680(group, indices);
+
+            for (int k = 0; k < 4; k++) {
+                *pEncoded++ = g_pChitin->field_1900.sub_4D06D0(indices[k]);
+            }
+        } while (nConsumed < 6);
+        *pEncoded = '\0';
+
+        CString sValidate("\\validate\\");
+        int nLength = sValidate.GetLength() + 8;
+        char* pBuf = new char[nLength];
+        if (pBuf == NULL) {
+            // NOTE: Original code frees the response buffer here without
+            // clearing the pointer.
+            delete[] field_22;
+            return FALSE;
+        }
+
+        memcpy(pBuf, sValidate.GetBuffer(sValidate.GetLength()), sValidate.GetLength());
+        memcpy(pBuf + sValidate.GetLength(), szEncoded, 8);
+
+        if (field_22 != NULL) {
+            if (field_16 + nLength >= 0x546) {
+                sub_4D0C70(nAddr, nPort);
+            }
+
+            memcpy(field_22 + field_16, pBuf, nLength);
+            field_16 += nLength;
+        }
+
+        delete[] pBuf;
+    }
+
+    CString sFinal("\\final\\");
+    int nFinalLength = sFinal.GetLength();
+    char* pFinalBuf = new char[nFinalLength];
+    if (pFinalBuf == NULL) {
+        // NOTE: Original code frees the response buffer here without
+        // clearing the pointer.
+        delete[] field_22;
+        return FALSE;
+    }
+
+    memcpy(pFinalBuf, sFinal.GetBuffer(nFinalLength), nFinalLength);
+
+    if (field_22 != NULL) {
+        if (field_16 + nFinalLength >= 0x546) {
+            sub_4D0C70(nAddr, nPort);
+        }
+
+        memcpy(field_22 + field_16, pFinalBuf, nFinalLength);
+        field_16 += nFinalLength;
+    }
+
+    delete[] pFinalBuf;
+
+    sub_4D0C70(nAddr, nPort);
+    return TRUE;
 }
-
 // 0x4D15D0
 BOOLEAN CGameSpy::sub_4D15D0(DWORD nAddr, DWORD nPort, char* pBuf, DWORD nLen)
 {

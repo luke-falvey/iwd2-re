@@ -306,5 +306,42 @@ void CWarp::TimerSynchronousUpdate()
 // 0x7B5550
 void CWarp::TimerUpdate()
 {
-    // TODO: Incomplete.
+    POSITION pos = lTimers.GetHeadPosition();
+    while (pos != NULL) {
+        CTimer* pTimer = static_cast<CTimer*>(lTimers.GetNext(pos));
+        if (pTimer != NULL) {
+            if (pTimer->field_4 != 0) {
+                pTimer->OnTimer();
+
+                if (pTimer->field_8 == 0
+                    || pTimer->field_10 == NULL
+                    || pTimer->field_C == 0
+                    || pTimer->field_14 == NULL) {
+                    continue;
+                }
+
+                pTimer->field_C = 0;
+                pTimer->field_10->lTimers.RemoveAt(pTimer->field_14);
+                pTimer->field_14 = NULL;
+            } else {
+                pTimer->field_1C += 10000 / CChitin::TIMER_UPDATES_PER_SECOND;
+                if (pTimer->field_1C >= pTimer->field_18) {
+                    pTimer->OnTimer();
+
+                    pTimer->field_1C = pTimer->field_1C % pTimer->field_18;
+
+                    if (pTimer->field_8 == 0
+                        || pTimer->field_10 == NULL
+                        || pTimer->field_C == 0
+                        || pTimer->field_14 == NULL) {
+                        continue;
+                    }
+
+                    pTimer->field_C = 0;
+                    pTimer->field_10->lTimers.RemoveAt(pTimer->field_14);
+                    pTimer->field_14 = NULL;
+                }
+            }
+        }
+    }
 }
