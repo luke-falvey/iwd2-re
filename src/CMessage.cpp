@@ -8648,15 +8648,125 @@ BOOLEAN CBaldurMessage::OnAnnounceJournalEntryChange(INT nMsgFrom, BYTE* pByteMe
 }
 
 // 0x43A210
-void CBaldurMessage::sub_43A210(CString sArea, WORD startX, WORD startY, CString szNote, DWORD dwFlags, STRREF strRef)
+BOOLEAN CBaldurMessage::sub_43A210(CString sArea, WORD startX, WORD startY, CString szNote, DWORD dwFlags, STRREF strRef)
 {
-    // TODO: Incomplete.
+    CString sHostName;
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        return FALSE;
+    }
+
+    if (g_pChitin->cNetwork.m_nHostPlayer == -1) {
+        sHostName = "";
+    } else {
+        sHostName = g_pChitin->cNetwork.m_psPlayerName[g_pChitin->cNetwork.m_nHostPlayer];
+    }
+
+    if (strcmp(sHostName, "") == 0) {
+        return FALSE;
+    }
+
+    DWORD nNoteLength = szNote.GetLength();
+    DWORD nAreaLength = sArea.GetLength() & 0xFF;
+    DWORD nSize = nNoteLength + nAreaLength + sizeof(BYTE) + sizeof(WORD) + sizeof(WORD) + sizeof(DWORD) + sizeof(DWORD) + sizeof(STRREF);
+
+    BYTE* pData = CreateBuffer(nSize);
+    if (pData == NULL) {
+        return FALSE;
+    }
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<BYTE*>(pData + cnt) = static_cast<BYTE>(sArea.GetLength());
+    cnt += sizeof(BYTE);
+
+    memcpy(pData + cnt, sArea.GetBuffer(nAreaLength), nAreaLength);
+    cnt += nAreaLength;
+
+    *reinterpret_cast<WORD*>(pData + cnt) = startX;
+    cnt += sizeof(WORD);
+
+    *reinterpret_cast<WORD*>(pData + cnt) = startY;
+    cnt += sizeof(WORD);
+
+    *reinterpret_cast<DWORD*>(pData + cnt) = nNoteLength;
+    cnt += sizeof(DWORD);
+
+    memcpy(pData + cnt, szNote.GetBuffer(nNoteLength), nNoteLength);
+    cnt += nNoteLength;
+
+    *reinterpret_cast<DWORD*>(pData + cnt) = dwFlags;
+    cnt += sizeof(DWORD);
+
+    *reinterpret_cast<STRREF*>(pData + cnt) = strRef;
+    cnt += sizeof(STRREF);
+
+    g_pChitin->cNetwork.SendSpecificMessage(sHostName,
+        CNetwork::SEND_GUARANTEED,
+        'A',
+        'n',
+        pData,
+        cnt);
+
+    DestroyBuffer(pData);
+
+    return TRUE;
 }
 
 // 0x43A5C0
-void CBaldurMessage::sub_43A5C0(CString sArea, WORD startX, WORD startY, CString szNote, DWORD dwFlags, STRREF strRef)
+BOOLEAN CBaldurMessage::sub_43A5C0(CString sArea, WORD startX, WORD startY, CString szNote, DWORD dwFlags, STRREF strRef)
 {
-    // TODO: Incomplete.
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || !g_pChitin->cNetwork.m_bIsHost) {
+        return FALSE;
+    }
+
+    DWORD nNoteLength = szNote.GetLength();
+    DWORD nAreaLength = sArea.GetLength() & 0xFF;
+    DWORD nSize = nNoteLength + nAreaLength + sizeof(BYTE) + sizeof(WORD) + sizeof(WORD) + sizeof(DWORD) + sizeof(DWORD) + sizeof(STRREF);
+
+    BYTE* pData = CreateBuffer(nSize);
+    if (pData == NULL) {
+        return FALSE;
+    }
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<BYTE*>(pData + cnt) = static_cast<BYTE>(sArea.GetLength());
+    cnt += sizeof(BYTE);
+
+    memcpy(pData + cnt, sArea.GetBuffer(nAreaLength), nAreaLength);
+    cnt += nAreaLength;
+
+    *reinterpret_cast<WORD*>(pData + cnt) = startX;
+    cnt += sizeof(WORD);
+
+    *reinterpret_cast<WORD*>(pData + cnt) = startY;
+    cnt += sizeof(WORD);
+
+    *reinterpret_cast<DWORD*>(pData + cnt) = nNoteLength;
+    cnt += sizeof(DWORD);
+
+    memcpy(pData + cnt, szNote.GetBuffer(nNoteLength), nNoteLength);
+    cnt += nNoteLength;
+
+    *reinterpret_cast<DWORD*>(pData + cnt) = dwFlags;
+    cnt += sizeof(DWORD);
+
+    *reinterpret_cast<STRREF*>(pData + cnt) = strRef;
+    cnt += sizeof(STRREF);
+
+    g_pChitin->cNetwork.SendSpecificMessage(CString(""),
+        CNetwork::SEND_ALL_PLAYERS | CNetwork::SEND_GUARANTEED,
+        'A',
+        'a',
+        pData,
+        cnt);
+
+    DestroyBuffer(pData);
+
+    return TRUE;
 }
 
 // 0x43A470
@@ -28698,9 +28808,177 @@ void CMessage51::MarshalMessage(BYTE** pData, DWORD* dwSize)
 // 0x509730
 BOOL CMessage51::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CMessage.cpp
+    // __LINE__: 20403
+    UTIL_ASSERT(pData != NULL);
 
-    return FALSE;
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    PLAYER_ID remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    LONG remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_frontList = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    BYTE bSearchRequest = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    LONG localObjectID;
+    if (g_pBaldurChitin->GetObjectGame()->m_cRemoteObjectArray.Find(remotePlayerID, remoteObjectID, localObjectID) != TRUE) {
+        return FALSE;
+    }
+
+    m_targetId = localObjectID;
+
+    if (!bSearchRequest) {
+        m_ptTarget.x = *reinterpret_cast<LONG*>(pData + cnt);
+        m_ptTarget.y = *reinterpret_cast<LONG*>(pData + cnt + sizeof(LONG));
+        return TRUE;
+    }
+
+    m_pSearchRequest = new CSearchRequest();
+
+    m_pSearchRequest->m_sourceSide = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_pSearchRequest->m_nPartyIds = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_pSearchRequest->m_nTargetIds = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_pSearchRequest->m_nTargetPoints = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_pSearchRequest->m_removeSelf = *reinterpret_cast<BOOL*>(pData + cnt);
+    cnt += sizeof(BOOL);
+
+    m_pSearchRequest->m_frontList = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    BYTE nAreaNameLength = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    // NOTE: The original copies `nAreaNameLength` bytes into a 9 byte buffer.
+    char szAreaName[9] = { 0 };
+    memcpy(szAreaName, pData + cnt, nAreaNameLength);
+    cnt += nAreaNameLength;
+
+    m_pSearchRequest->m_searchBitmap = &g_pBaldurChitin->GetObjectGame()->GetArea(CString(szAreaName))->m_search;
+
+    memcpy(m_pSearchRequest->m_terrainTable, pData + cnt, sizeof(m_pSearchRequest->m_terrainTable));
+    cnt += sizeof(m_pSearchRequest->m_terrainTable);
+
+    m_pSearchRequest->m_pathSmooth = *reinterpret_cast<BOOL*>(pData + cnt);
+    cnt += sizeof(BOOL);
+
+    m_pSearchRequest->m_collisionSearch = *reinterpret_cast<BOOL*>(pData + cnt);
+    cnt += sizeof(BOOL);
+
+    m_pSearchRequest->m_collisionDelay = *reinterpret_cast<BYTE*>(pData + cnt);
+    cnt += sizeof(BYTE);
+
+    m_pSearchRequest->m_exclusiveTargetPoints = *reinterpret_cast<BOOL*>(pData + cnt);
+    cnt += sizeof(BOOL);
+
+    remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+    cnt += sizeof(PLAYER_ID);
+
+    remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    if (g_pBaldurChitin->GetObjectGame()->m_cRemoteObjectArray.Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+        m_pSearchRequest->m_sourceId = localObjectID;
+    } else {
+        m_pSearchRequest->m_sourceId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    m_pSearchRequest->m_sourcePt.x = *reinterpret_cast<LONG*>(pData + cnt);
+    m_pSearchRequest->m_sourcePt.y = *reinterpret_cast<LONG*>(pData + cnt + sizeof(LONG));
+    cnt += sizeof(POINT);
+
+    if (m_pSearchRequest->m_nPartyIds > 0) {
+        m_pSearchRequest->m_partyIds = new LONG[m_pSearchRequest->m_nPartyIds];
+
+        BYTE nPartyIds = m_pSearchRequest->m_nPartyIds;
+        if (nPartyIds > 0) {
+            INT nIndex = 0;
+            do {
+                remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+                cnt += sizeof(PLAYER_ID);
+
+                remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+                cnt += sizeof(LONG);
+
+                if (g_pBaldurChitin->GetObjectGame()->m_cRemoteObjectArray.Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+                    m_pSearchRequest->m_partyIds[nIndex] = localObjectID;
+                } else {
+                    m_pSearchRequest->m_nPartyIds--;
+                }
+
+                nIndex++;
+            } while (--nPartyIds != 0);
+        }
+    }
+
+    if (m_pSearchRequest->m_nTargetIds > 0) {
+        m_pSearchRequest->m_targetIds = new LONG[m_pSearchRequest->m_nTargetIds];
+
+        BYTE nTargetIds = m_pSearchRequest->m_nTargetIds;
+        if (nTargetIds > 0) {
+            INT nIndex = 0;
+            do {
+                remotePlayerID = *reinterpret_cast<PLAYER_ID*>(pData + cnt);
+                cnt += sizeof(PLAYER_ID);
+
+                remoteObjectID = *reinterpret_cast<LONG*>(pData + cnt);
+                cnt += sizeof(LONG);
+
+                if (g_pBaldurChitin->GetObjectGame()->m_cRemoteObjectArray.Find(remotePlayerID, remoteObjectID, localObjectID) == TRUE) {
+                    m_pSearchRequest->m_targetIds[nIndex] = localObjectID;
+                } else {
+                    m_pSearchRequest->m_nTargetIds--;
+                }
+
+                nIndex++;
+            } while (--nTargetIds != 0);
+        }
+    }
+
+    if (m_pSearchRequest->m_nTargetPoints > 0) {
+        m_pSearchRequest->m_targetPoints = new POINT[m_pSearchRequest->m_nTargetPoints];
+
+        BYTE nTargetPoint = 0;
+        if (m_pSearchRequest->m_nTargetPoints > 0) {
+            do {
+                m_pSearchRequest->m_targetPoints[nTargetPoint].x = *reinterpret_cast<LONG*>(pData + cnt);
+                m_pSearchRequest->m_targetPoints[nTargetPoint].y = *reinterpret_cast<LONG*>(pData + cnt + sizeof(LONG));
+                cnt += sizeof(POINT);
+
+                nTargetPoint++;
+            } while (nTargetPoint < m_pSearchRequest->m_nTargetPoints);
+        }
+    }
+
+    m_pSearchRequest->m_minNodes = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_pSearchRequest->m_maxNodes = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_pSearchRequest->m_minNodesBack = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_pSearchRequest->m_maxNodesBack = *reinterpret_cast<LONG*>(pData + cnt);
+    cnt += sizeof(LONG);
+
+    m_pSearchRequest->m_bBump = *reinterpret_cast<BOOL*>(pData + cnt);
+    cnt += sizeof(BOOL);
+
+    return TRUE;
 }
 
 // 0x509B80
