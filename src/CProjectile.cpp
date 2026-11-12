@@ -101,6 +101,12 @@ void CProjectile::AddEffect(CGameEffect* pEffect)
     m_effectList.AddTail(pEffect);
 }
 
+// 0x51EAB0
+void CProjectile::AddEffect2(CGameEffect* pEffect)
+{
+    // TODO: Incomplete.
+}
+
 // 0x51EAF0
 CProjectile* CProjectile::DecodeProjectile(WORD projectileType, CGameAIBase* pSource, BOOL a3)
 {
