@@ -35211,6 +35211,12 @@ void CGameSprite::SetResRef(const CResRef& resRef)
     m_resRef = resRef;
 }
 
+// NOTE: The function at 0x42FDC0 takes a `CString` by value.
+void CGameSprite::SetResRef(CString sResRef)
+{
+    m_resRef = sResRef;
+}
+
 // 0x453160
 void CGameSprite::sub_453160(int a1)
 {

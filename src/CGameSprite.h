@@ -783,6 +783,7 @@ public:
     void MoveOntoArea(CGameArea* pArea, const CPoint& dest, SHORT facingDirection);
 
     void SetResRef(const CResRef& resRef);
+    void SetResRef(CString sResRef);
     void sub_453160(int a1);
     int sub_453170();
     SHORT GetSequence();

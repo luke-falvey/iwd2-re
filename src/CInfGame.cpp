@@ -14690,3 +14690,290 @@ void CGameFile::ReleaseData()
         pRes->Release();
     }
 }
+
+// NOTE: This is a `CGameArea` method; it lives here only to keep clear of
+// concurrent edits to `CGameArea.cpp`. It should move there.
+//
+// 0x46FEA0
+BOOLEAN CGameArea::CheckRestEncounter()
+{
+    if (m_headerRestEncounter.m_activated == 0) {
+        return FALSE;
+    }
+
+    BYTE nTry = 0;
+    ULONG nOffset = 0;
+
+    do {
+        ULONG nTimeOfDay = (m_pGame->m_worldTime.m_gameTime + nOffset) % CTimerWorld::TIMESCALE_MSEC_PER_DAY;
+        if (nTimeOfDay >= CTimerWorld::TIME_NIGHT || nTimeOfDay < CTimerWorld::TIME_DAWN) {
+            if (rand() % 100 <= m_headerRestEncounter.m_probNight) {
+                break;
+            }
+        } else {
+            if (rand() % 100 <= m_headerRestEncounter.m_probDay) {
+                break;
+            }
+        }
+
+        nOffset += CTimerWorld::TIMESCALE_MSEC_PER_HOUR;
+        nTry++;
+    } while (nTry < 1);
+
+    if (nTry == 1) {
+        return FALSE;
+    }
+
+    if (m_headerRestEncounter.m_randomCreatureNum == 0) {
+        return FALSE;
+    }
+
+    if (m_headerRestEncounter.m_maxTypeNum == 0) {
+        return FALSE;
+    }
+
+    // NOTE: The original tests the divisor against zero.
+    LONG nHour = CTimerWorld::TIMESCALE_MSEC_PER_HOUR;
+    nOffset += (nHour != 0) ? rand() % nHour : 0;
+
+    m_pGame->m_worldTime.AddCurrentTime(nOffset);
+    m_pGame->FeedBack(CInfGame::FEEDBACK_TIMEPASSEDREST, nOffset, TRUE);
+
+    CCreatureFile creatureData;
+    SHORT nBestStep = 0;
+    BYTE nTotalLevel = 0;
+    CPoint ptProtagonist;
+    LONG nCharacterId;
+
+    LONG nProtagonist = g_pBaldurChitin->GetObjectGame()->GetProtagonist();
+
+    for (SHORT nPortrait = 0; nPortrait < m_pGame->m_nCharacters; nPortrait++) {
+        CGameSprite* pSprite;
+
+        nCharacterId = m_pGame->GetCharacterId(nPortrait);
+
+        BYTE rc = m_pGame->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pSprite->GetId() == nProtagonist) {
+                ptProtagonist = pSprite->GetPos();
+            }
+
+            nTotalLevel += pSprite->GetDerivedStats()->m_nLevel;
+
+            m_pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    LONG nDropped = 0;
+    SHORT nRange = (m_visibility.field_E * CVisibilityMap::SQUARE_SIZEX / CPathSearch::GRID_SQUARE_SIZEX) / 2;
+
+    CPoint ptGrid;
+    ptGrid.x = ptProtagonist.x / CPathSearch::GRID_SQUARE_SIZEX;
+    ptGrid.y = ptProtagonist.y / CPathSearch::GRID_SQUARE_SIZEY;
+
+    CPoint ptBest = ptGrid;
+    BYTE nBestDir = 0;
+
+    // Look for the direction with the longest visible walkable line.
+    for (BYTE nDir = 0; nDir < 9; nDir++) {
+        if (nDir == 4) {
+            continue;
+        }
+
+        CPoint pt = ptGrid;
+        SHORT nStep = 0;
+
+        if (nRange > 0) {
+            for (;;) {
+                pt.x += nDir % 3 - 1;
+                pt.y += nDir / 3 - 1;
+
+                if (pt.x >= 0
+                    && pt.x < m_search.m_GridSquareDimensions.cx
+                    && pt.y >= 0
+                    && pt.y < m_search.m_GridSquareDimensions.cy) {
+                    SHORT nTableIndex;
+                    if (m_search.GetLOSCost(pt,
+                            CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE,
+                            nTableIndex,
+                            FALSE)
+                        != CPathSearch::COST_IMPASSABLE) {
+                        // NOTE: Inlined tile lookup (like
+                        // `CVisibilityMap::PointToTile` but with a 16-bit
+                        // row multiply).
+                        SHORT nRow = static_cast<SHORT>((pt.y * CPathSearch::GRID_SQUARE_SIZEY + CPathSearch::GRID_SQUARE_SIZEY / 2) / CVisibilityMap::SQUARE_SIZEY * m_visibility.m_nWidth);
+                        SHORT nTile = static_cast<SHORT>(nRow + (pt.x * CPathSearch::GRID_SQUARE_SIZEX + CPathSearch::GRID_SQUARE_SIZEX / 2) / CVisibilityMap::SQUARE_SIZEX);
+
+                        if (m_visibility.IsTileVisible(nTile)) {
+                            nStep++;
+                            if (nStep < nRange) {
+                                continue;
+                            }
+                            break;
+                        }
+                    }
+
+                    if (nStep > nBestStep
+                        || (nStep == nBestStep && rand() % 7 == 0)) {
+                        nBestStep = nStep;
+                        ptBest = pt;
+                        nBestDir = nDir;
+                    }
+                } else {
+                    pt.x += 1 - nDir % 3;
+                    pt.y += 1 - nDir / 3;
+                    nStep--;
+
+                    if (nStep > nBestStep
+                        || (nStep == nBestStep && rand() % 7 == 0)) {
+                        nBestStep = nStep;
+                        ptBest = pt;
+                        nBestDir = nDir;
+                    }
+                }
+                break;
+            }
+        }
+
+        if (nStep == nRange) {
+            if (nStep > nBestStep || rand() % 7 == 0) {
+                nBestStep = nStep;
+                ptBest = pt;
+                nBestDir = nDir;
+            }
+        }
+    }
+
+    BYTE nRoll = rand() % 10;
+
+    INT nCreatureIndex;
+    if (m_headerRestEncounter.m_randomCreatureNum == 0) {
+        nCreatureIndex = 0;
+    } else {
+        nCreatureIndex = rand() % m_headerRestEncounter.m_randomCreatureNum;
+    }
+
+    CPoint* pOffsets = NULL;
+
+    INT nCount = m_headerRestEncounter.m_maxTypeNum + (rand() % 5 - 2);
+    if (nCount < 1) {
+        nCount = 1;
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->m_cOptions.m_nNightmareMode == 1) {
+        nCount++;
+    }
+
+    if (nCount > 0) {
+        BYTE nIndex = 0;
+        do {
+            RESREF* pResRef = &m_headerRestEncounter.m_randomCreature[nCreatureIndex];
+
+            // NOTE: Inlined `CResHelper::SetResRef`.
+            creatureData.SetResRef(CResRef(reinterpret_cast<BYTE*>(pResRef)), TRUE, TRUE);
+
+            CGameSprite* pSprite = new CGameSprite(creatureData.GetData(),
+                creatureData.GetDataSize(),
+                0,
+                1,
+                m_headerRestEncounter.m_lifeSpan * CTimerWorld::TIMESCALE_MSEC_PER_SEC + m_pGame->m_worldTime.m_gameTime,
+                m_headerRestEncounter.m_huntingRange,
+                m_headerRestEncounter.m_followRange,
+                0x7FFFFFFF,
+                ptProtagonist,
+                0);
+
+            pSprite->SetResRef(creatureData.GetResRef().GetResRefStr());
+
+            creatureData.ReleaseData();
+
+            if (pSprite != NULL) {
+                CString sResRef;
+                sResRef = reinterpret_cast<char*>(pResRef);
+                pSprite->SetResRef(sResRef);
+
+                INT nAttempt;
+                for (nAttempt = 0; nAttempt < 5; nAttempt++) {
+                    CPoint ptTarget;
+
+                    if (nRoll != 0) {
+                        if (nIndex == 0) {
+                            SHORT nFormation = rand() % 9 + 1;
+                            pOffsets = m_pGame->m_group.GetOffsets(nFormation,
+                                (pSprite->GetDirection(ptProtagonist) * 360 / 16) % 360,
+                                TRUE);
+                        }
+
+                        CPoint* pOffset = &pOffsets[nIndex % CAIGroup::FORMATION_MAX_SIZE];
+                        ptTarget.x = pOffset->x / CAIGroup::OFFSET_MULTIPLIER + ptBest.x;
+                        ptTarget.y = pOffset->y / CAIGroup::OFFSET_MULTIPLIER + ptBest.y;
+
+                        ptTarget = m_search.GetNearestOpenSquare(ptTarget,
+                            pSprite->GetTerrainTable(),
+                            pSprite->m_animation.GetPersonalSpace(),
+                            -1);
+                    } else {
+                        ptTarget = m_search.GetNearestOpenSquare(ptBest,
+                            pSprite->GetTerrainTable(),
+                            pSprite->m_animation.GetPersonalSpace(),
+                            -1);
+
+                        if (rand() % 2 == 0) {
+                            ptBest.x += 1 - nBestDir % 3;
+                            ptBest.y += 1 - nBestDir / 3;
+                        }
+                    }
+
+                    ptTarget.x = ptTarget.x * CPathSearch::GRID_SQUARE_SIZEX + CPathSearch::GRID_SQUARE_SIZEX / 2;
+                    ptTarget.y = ptTarget.y * CPathSearch::GRID_SQUARE_SIZEY + CPathSearch::GRID_SQUARE_SIZEY / 2;
+
+                    SHORT nRow = static_cast<SHORT>(ptTarget.y / CVisibilityMap::SQUARE_SIZEY * m_visibility.m_nWidth);
+                    SHORT nTile = static_cast<SHORT>(nRow + ptTarget.x / CVisibilityMap::SQUARE_SIZEX);
+
+                    if (nTile < m_visibility.m_nWidth * m_visibility.m_nHeight) {
+                        pSprite->AddToArea(this, ptTarget, 0, pSprite->m_animation.GetListType());
+                        pSprite->SetFacing(pSprite->GetDirection(ptProtagonist));
+                        break;
+                    }
+                }
+
+                if (nAttempt >= 5) {
+                    nDropped++;
+                }
+            } else {
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
+                // __LINE__: 3611
+                UTIL_ASSERT(FALSE);
+            }
+
+            nIndex++;
+        } while (nIndex < nCount);
+
+        if (nDropped > 0) {
+            char* szMessage = new char[200];
+            if (szMessage != NULL) {
+                sprintf(szMessage, "Spawned creatures dropped due to invalid positions: %d of %d\n", nDropped, nCount);
+                delete[] szMessage;
+            }
+        }
+
+        if (pOffsets != NULL) {
+            delete[] pOffsets;
+        }
+    }
+
+    g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(-1,
+        m_headerRestEncounter.m_randomCreatureString[nCreatureIndex],
+        RGB(0, 0, 0),
+        RGB(165, 144, 5),
+        -1,
+        nCharacterId,
+        nCharacterId);
+
+    return TRUE;
+}

@@ -180,6 +180,7 @@ public:
     LONG sub_46DAE0(INT x, INT y, const CAIObjectType& type, int range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BOOL farthest, BOOL summonedOnly);
     LONG sub_46DDC0(INT x, INT y, const CAIObjectType& type, SHORT range, const BYTE* terrainTable, BOOL checkLOS, BOOL seeInvisible, BYTE nNth, BOOL a9);
     BOOLEAN CanSaveGame(STRREF& strError);
+    BOOLEAN CheckRestEncounter();
     void sub_46E130(CGameEffect* pEffect, BOOL a2, BOOL bCheckSpecifics, BYTE nSpecifics, CGameObject* pExclude);
     void AIUpdate();
     void CompressTime(DWORD deltaTime);
