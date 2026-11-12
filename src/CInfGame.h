@@ -288,6 +288,7 @@ public:
     CStringList* GetSounds();
     STRREF sub_5C3770(CString a1);
     void ChangeBiography(BYTE nFixedPartyId, CString szBiography);
+    void sub_5C3B20(LONG nCharacterId, CPoint ptStart, LONG nFace, CString sArea, CString sParchment);
     BOOLEAN GetGameSpyCharacterInformation(INT nCharacterSlot, CString& sName, CString& sRace, CString& sClass, CString& sLevel);
     void MultiplayerSetCharacterCreationLocation();
     BOOL IsItemExclusive(CGameSprite* pSprite, INT slotNum, CItem* pItem, STRREF& strError);

@@ -11303,6 +11303,12 @@ void CInfGame::ChangeBiography(BYTE nFixedPartyId, CString szBiography)
     }
 }
 
+// 0x5C3B20
+void CInfGame::sub_5C3B20(LONG nCharacterId, CPoint ptStart, LONG nFace, CString sArea, CString sParchment)
+{
+    // TODO: Incomplete.
+}
+
 // 0x5C72D0
 BOOLEAN CInfGame::GetGameSpyCharacterInformation(INT nCharacterSlot, CString& sName, CString& sRace, CString& sClass, CString& sLevel)
 {
