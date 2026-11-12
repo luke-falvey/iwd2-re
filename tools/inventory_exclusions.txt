@@ -413,3 +413,6 @@
 # args): throws out_of_range when pos > length, unshares the buffer, memmoves the tail down.
 0x56DA10
 
+# CProjectileArea84F14C scalar deleting destructor (compiler generated): calls
+# ~CProjectileArea84F14C (0x56E580), then operator delete when the flag is set.
+0x56E260
