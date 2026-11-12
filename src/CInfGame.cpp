@@ -9460,9 +9460,326 @@ LONG CInfGame::GetCharacterSlot(INT nCharacterSlot)
 }
 
 // 0x5AE020
-void CInfGame::sub_5AE020(LONG* pCharacterIds, SHORT nOverflowCount, LONG* pOverflowIds)
+BOOLEAN CInfGame::sub_5AE020(LONG* pCharacterIds, SHORT nOverflowCount, LONG* pOverflowIds)
 {
-    // TODO: Incomplete.
+    CGameSprite* pSprite;
+    BYTE rc;
+    BOOL bOverflow;
+
+    for (INT nIndex = 0; nIndex < m_characterOverflow.GetCount(); nIndex++) {
+        LONG nCharacterId = reinterpret_cast<int>(m_characterOverflow.GetAt(nIndex));
+
+        BOOLEAN bFound = FALSE;
+        for (SHORT nOverflow = 0; nOverflow < nOverflowCount; nOverflow++) {
+            if (pOverflowIds[nOverflow] == nCharacterId) {
+                bFound = TRUE;
+            }
+        }
+
+        if (bFound) {
+            continue;
+        }
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            return FALSE;
+        }
+
+        if (!RemoveCharacterFromParty(nCharacterId, bOverflow)) {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+            // __LINE__: 10163
+            UTIL_ASSERT_MSG(FALSE, "Failed to remove character from party");
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            return FALSE;
+        }
+
+        CAIObjectType typeAI(pSprite->GetAIType());
+        CAIObjectType typeLive(pSprite->m_liveTypeAI);
+        CAIObjectType typeStart(pSprite->m_liveTypeAI);
+        typeAI.m_nEnemyAlly = CAIObjectType::EA_NEUTRAL;
+        typeLive.m_nEnemyAlly = CAIObjectType::EA_NEUTRAL;
+        typeStart.m_nEnemyAlly = CAIObjectType::EA_NEUTRAL;
+        pSprite->SetAIType(typeAI, FALSE, FALSE);
+        pSprite->m_liveTypeAI.Set(typeLive);
+        pSprite->m_startTypeAI.Set(typeStart);
+
+        if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+            || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+            CAITrigger trigger(CAITrigger::LEAVES, typeAI, 0);
+
+            for (SHORT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->m_nCharacters; nPortrait++) {
+                // NOTE: Uninline.
+                LONG nTargetId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+                CMessage* message = new CMessageSetTrigger(trigger, pSprite->GetId(), nTargetId);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            // NOTE: Animate() tests the dead bit of the derived general state.
+            if (!pSprite->Animate()) {
+                pSprite->DropInventory(FALSE, CString(""));
+
+                if ((pSprite->GetBaseStats()->m_flags & 0x2) != 0) {
+                    pSprite->m_expirationTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+                }
+            }
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    for (SHORT nOverflow = 0; nOverflow < nOverflowCount; nOverflow++) {
+        LONG nCharacterId = pOverflowIds[nOverflow];
+
+        BOOLEAN bFound = FALSE;
+        for (INT nIndex = 0; nIndex < m_characterOverflow.GetCount(); nIndex++) {
+            if (reinterpret_cast<int>(m_characterOverflow.GetAt(nIndex)) == nCharacterId) {
+                bFound = TRUE;
+            }
+        }
+
+        if (bFound) {
+            continue;
+        }
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            return FALSE;
+        }
+
+        m_characterOverflow.Add(reinterpret_cast<int*>(nCharacterId));
+        m_nCharacterOverflowCount++;
+
+        CAIObjectType typeAI(pSprite->GetAIType());
+        CAIObjectType typeLive(pSprite->m_liveTypeAI);
+        CAIObjectType typeStart(pSprite->m_liveTypeAI);
+        typeAI.m_nEnemyAlly = CAIObjectType::EA_PC;
+        typeLive.m_nEnemyAlly = CAIObjectType::EA_PC;
+        typeStart.m_nEnemyAlly = CAIObjectType::EA_PC;
+        pSprite->SetAIType(typeAI, FALSE, FALSE);
+        pSprite->m_liveTypeAI.Set(typeLive);
+        pSprite->m_startTypeAI.Set(typeStart);
+
+        pSprite->m_dialog = "";
+
+        if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+            || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+            CAITrigger trigger(CAITrigger::JOINS, typeAI, 0);
+
+            for (SHORT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->m_nCharacters; nPortrait++) {
+                // NOTE: Uninline.
+                LONG nTargetId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+                CMessage* message = new CMessageSetTrigger(trigger, pSprite->GetId(), nTargetId);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    for (INT nSlot = 0; nSlot < CINFGAME_MAXCHARACTERS; nSlot++) {
+        if (m_characters[nSlot] != pCharacterIds[nSlot]) {
+            if (m_characters[nSlot] != -1) {
+                LONG nOldId = m_characters[nSlot];
+
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nOldId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    return FALSE;
+                }
+
+                if (!RemoveCharacterFromParty(nOldId, bOverflow)) {
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+                    // __LINE__: 10357
+                    UTIL_ASSERT_MSG(FALSE, "Failed to remove character from party");
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nOldId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+
+                    return FALSE;
+                }
+
+                POSITION pos = m_lstGlobalCreatures.GetHeadPosition();
+                while (pos != NULL) {
+                    POSITION posOld = pos;
+                    if (reinterpret_cast<LONG>(m_lstGlobalCreatures.GetNext(pos)) == nOldId) {
+                        m_lstGlobalCreatures.RemoveAt(posOld);
+                        break;
+                    }
+                }
+
+                if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+                    || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+                    if (!bOverflow) {
+                        CMessage* message = new CMessageVisibilityMapMove(FALSE, nOldId, nOldId);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                    }
+                }
+
+                if (!bOverflow) {
+                    if (pSprite->GetArea() != NULL) {
+                        if (pSprite->GetArea()->m_nCharacters != 0xFF) {
+                            pSprite->GetArea()->m_nCharacters--;
+                        }
+                    }
+                }
+
+                CAIObjectType typeAI(pSprite->GetAIType());
+                CAIObjectType typeLive(pSprite->m_liveTypeAI);
+                CAIObjectType typeStart(pSprite->m_liveTypeAI);
+                typeAI.m_nEnemyAlly = CAIObjectType::EA_NEUTRAL;
+                typeLive.m_nEnemyAlly = CAIObjectType::EA_NEUTRAL;
+                typeStart.m_nEnemyAlly = CAIObjectType::EA_NEUTRAL;
+                pSprite->SetAIType(typeAI, FALSE, FALSE);
+                pSprite->m_liveTypeAI.Set(typeLive);
+                pSprite->m_startTypeAI.Set(typeStart);
+
+                if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+                    || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+                    CAITrigger trigger(CAITrigger::LEAVES, typeAI, 0);
+
+                    for (SHORT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->m_nCharacters; nPortrait++) {
+                        // NOTE: Uninline.
+                        LONG nTargetId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+                        CMessage* message = new CMessageSetTrigger(trigger, pSprite->GetId(), nTargetId);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                    }
+
+                    // NOTE: Animate() tests the dead bit of the derived general state.
+                    if (!pSprite->Animate()) {
+                        pSprite->DropInventory(FALSE, CString(""));
+
+                        if ((pSprite->GetBaseStats()->m_flags & 0x2) != 0) {
+                            pSprite->m_expirationTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+                        }
+                    }
+                }
+
+                if (g_pBaldurChitin->cNetwork.m_bIsHost == TRUE) {
+                    m_multiplayerSettings.SetCharacterControlledByPlayer(nSlot, 0, FALSE, FALSE);
+                    m_multiplayerSettings.SignalCharacterStatus(nSlot,
+                        CMultiplayerSettings::CHARSTATUS_SIGNAL_DELETED,
+                        TRUE,
+                        FALSE);
+                    m_multiplayerSettings.SetCharacterReady(nSlot, FALSE, FALSE);
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nOldId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+
+            if (pCharacterIds[nSlot] != -1) {
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(pCharacterIds[nSlot],
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    return FALSE;
+                }
+
+                if (!AddCharacterToParty(pCharacterIds[nSlot], -1)) {
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+                    // __LINE__: 10455
+                    UTIL_ASSERT_MSG(FALSE, "Failed to add character to party");
+
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(pCharacterIds[nSlot],
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+
+                    return FALSE;
+                }
+
+                if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+                    || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+                    CMessage* message = new CMessageVisibilityMapMove(TRUE, pSprite->GetId(), pSprite->GetId());
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                }
+
+                if (pSprite->GetArea() != NULL) {
+                    if (pSprite->GetArea()->m_nCharacters == 0xFF) {
+                        pSprite->GetArea()->m_nCharacters = 1;
+                    } else {
+                        pSprite->GetArea()->m_nCharacters++;
+                    }
+                }
+
+                CAIObjectType typeAI(pSprite->GetAIType());
+                CAIObjectType typeLive(pSprite->m_liveTypeAI);
+                CAIObjectType typeStart(pSprite->m_liveTypeAI);
+                typeAI.m_nEnemyAlly = CAIObjectType::EA_PC;
+                typeLive.m_nEnemyAlly = CAIObjectType::EA_PC;
+                typeStart.m_nEnemyAlly = CAIObjectType::EA_PC;
+                pSprite->SetAIType(typeAI, FALSE, FALSE);
+                pSprite->m_liveTypeAI.Set(typeLive);
+                pSprite->m_startTypeAI.Set(typeStart);
+
+                pSprite->m_dialog = "";
+
+                if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+                    || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID) {
+                    CAITrigger trigger(CAITrigger::JOINS, typeAI, 0);
+
+                    for (SHORT nPortrait = 0; nPortrait < g_pBaldurChitin->GetObjectGame()->m_nCharacters; nPortrait++) {
+                        // NOTE: Uninline.
+                        LONG nTargetId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait);
+                        CMessage* message = new CMessageSetTrigger(trigger, pSprite->GetId(), nTargetId);
+                        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                    }
+                }
+
+                if (g_pBaldurChitin->cNetwork.m_bIsHost == TRUE) {
+                    m_multiplayerSettings.SetCharacterControlledByPlayer(nSlot, 0, FALSE, FALSE);
+                    m_multiplayerSettings.SignalCharacterStatus(nSlot,
+                        CMultiplayerSettings::CHARSTATUS_SIGNAL_IMPORTED,
+                        TRUE,
+                        FALSE);
+                    m_multiplayerSettings.SetCharacterReady(nSlot, TRUE, FALSE);
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(pCharacterIds[nSlot],
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+
+            m_characters[nSlot] = pCharacterIds[nSlot];
+        }
+    }
+
+    if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        g_pBaldurChitin->GetBaldurMessage()->sub_432610();
+        g_pBaldurChitin->GetBaldurMessage()->SendFullSettingsToClients(CString(""));
+    }
+
+    return TRUE;
 }
 
 // 0x5BD690
