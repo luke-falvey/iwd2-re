@@ -118,6 +118,13 @@ public:
     /* 0009 */ BYTE field_9[15];
 };
 
+// NOTE: Type of `CInfGame::field_4BDC` (vtable 0x8518F8): a `CString*` list
+// that deletes its elements when destroyed.
+class CInfGameUnknownEntryList : public CTypedPtrList<CPtrList, CString*> {
+public:
+    ~CInfGameUnknownEntryList() override;
+};
+
 class CInfGame {
 public:
     static const SHORT KILL_INNOCENT;
@@ -527,7 +534,7 @@ public:
     /* 4BD5 */ BOOLEAN m_bExpansion; // NOTE: Can also be BYTE indicating number of expansion pack.
     /* 4BD6 */ BOOLEAN field_4BD6;
     /* 4BD8 */ DWORD m_nDifficultyLevel;
-    /* 4BDC */ CTypedPtrList<CPtrList, CString*> field_4BDC;
+    /* 4BDC */ CInfGameUnknownEntryList field_4BDC;
     /* 4BF8 */ CSpellResRefList m_spells;
     /* 4C00 */ CSpellResRefList m_innateSpells;
     /* 4C08 */ CSpellResRefList m_songs;

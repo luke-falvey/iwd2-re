@@ -2292,7 +2292,7 @@ void CScreenMultiPlayer::OnModifyButtonClick()
     }
 }
 
-// 0x663810
+// 0x64D950
 void CScreenMultiPlayer::CancelEngine()
 {
     while (GetTopPopup() != NULL) {

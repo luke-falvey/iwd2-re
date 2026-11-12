@@ -1988,7 +1988,7 @@ void CBaldurChitin::OnMultiplayerSessionOpen(CString& sJoinedGame, CString& sDro
     }
 }
 
-// 0x422C60
+// 0x422C50
 BOOL CBaldurChitin::FontRectOutline()
 {
     return m_bFontRectOutline;

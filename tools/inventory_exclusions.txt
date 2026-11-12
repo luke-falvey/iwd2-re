@@ -2053,3 +2053,104 @@
 # 0x5972F4 (uses the caller's EBX/EBP and frame; ends at RET 0x8 at 0x5975E6). The repo body of
 # SetCursor covers it (case 100 was missing the m_bPointerEnabled/m_bPointerUpdated stores; added).
 0x5972F4
+
+# std::set/std::map red-black tree internals (MSVC 6, library), nil sentinel 0x8E28C8 / 0x8E28C0:
+# 0x55C440 _Copy, 0x55C780 _Max, 0x55C800 _Insert, 0x55CA70/0x55CB50 _Lrotate, 0x55CAD0/0x55CBB0 _Rrotate,
+# 0x55CB30 _Buynode, 0x55CC70 iterator::_Dec, 0x55CCD0 placement copy of the value.
+0x55C440
+0x55C780
+0x55C800
+0x55CA70
+0x55CAD0
+0x55CB30
+0x55CB50
+0x55CBB0
+0x55CC70
+0x55CCD0
+
+# std::map<LONG, LONG> internals (library), nil sentinel 0x8E3E38: 0x56F090 destructor, 0x570B80 erase(first, last),
+# 0x570D10 _Erase, 0x570DE0 _Max, 0x570E00 _Insert, 0x571070 iterator::_Dec, 0x5710D0 placement copy of the pair.
+0x56F090
+0x570B80
+0x570D10
+0x570DE0
+0x570E00
+0x571070
+0x5710D0
+
+# std::map/std::set destructors and std::vector<CDamageReduction> destructor (library), nil sentinels 0x8D13F0 / 0x8D13F4;
+# 0x445240 is the compiler-generated destructor of a struct holding such a map at +8.
+0x443970
+0x443A60
+0x445240
+
+# std::deque<INT> internals (library): 0x5961A0 destructor, 0x596580 pop_front tail, 0x5968C0 pop_back,
+# 0x596B10 iterator::operator++, 0x596B50 iterator::operator--.
+0x5961A0
+0x596580
+0x5968C0
+0x596B10
+0x596B50
+
+# Compiler-generated destructor of a struct with two MSVC 6 std::string members (+0x0, +0x10).
+0x56F180
+
+# Compiler-generated (member-only) destructors of CProjectile subclasses: inlined CProjectile/CProjectileBAM/
+# CProjectileArea base destructors and member destruction only (CVidCell, CVidPalette, CVidBitmap, CString, std::set).
+# 0x56F1F0 is the implicit CProjectileArea destructor, 0x5776D0 the CProjectileArea850AD4 one (vtable store + JMP 0x56F1F0).
+0x529800
+0x529E50
+0x530900
+0x534B30
+0x5356C0
+0x5362A0
+0x56F1F0
+0x5751B0
+0x5776D0
+0x57CE80
+0x57EAD0
+
+# Other compiler-generated member-only destructors: 0x40F120 (vtable 0x85FAA4, CString at +0x10),
+# 0x4063D0 (destroys a CObList member at +6).
+0x40F120
+0x4063D0
+
+# MFC template instances (CTypedPtrList / CList, library): 0x727BB0, 0x727BD0, 0x7A1E20, 0x59EC90 CTypedPtrList
+# constructors; 0x727DF0 CList::AddTail, 0x727ED0 CList destructor, 0x727F50 / 0x767130 / 0x547670 CList::Serialize,
+# 0x767260 CList destructor.
+0x727BB0
+0x727BD0
+0x727DF0
+0x727ED0
+0x727F50
+0x767130
+0x767260
+0x547670
+0x7A1E20
+0x59EC90
+
+# zlib 1.1.2 (library): 0x7DA0D0 zcalloc, 0x7DA0F0 zcfree, 0x7DA100 _tr_init, 0x7DA1C0 _tr_stored_block.
+0x7DA0D0
+0x7DA0F0
+0x7DA100
+0x7DA1C0
+
+# Static-object initialiser: CAIObjectType::OBJECT_MYSELF.
+0x40AC60
+
+# Scalar deleting destructor of CSpawnPoint (inlines the empty destructor 0x769670).
+0x769650
+
+# Fragments of functions already translated (Ghidra split them; the repo bodies cover this code):
+# 0x535057 and 0x535157 CProjectile84E8C0::Render (0x534DD0) / Fire (0x535100) tails, 0x74F63F CGameSprite::LeaveAreaName
+# (0x74CDB0) area-missing path, 0x65ABCB CScreenSave::OnKeyDown (0x65ABC0) body, 0x5CCB62 CInfinity::AttachWED (0x5CC7F0)
+# tile set loop, 0x5AF0ED CInfGame 0x5AE020 ReleaseDeny/return FALSE path, 0x564157 IcewindCGameEffectUmberHulkGaze::ApplyEffect
+# (0x563F70) tail, 0x650064 CUIControlButtonMultiPlayerCharacter::OnLButtonClick (0x64FFE0) tail.
+0x535057
+0x535157
+0x74F63F
+0x65ABCB
+0x5CCB62
+0x5AF0ED
+0x564157
+0x650064

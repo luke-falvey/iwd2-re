@@ -39,6 +39,7 @@ public:
     static CGameButtonList* m_pButtonList;
 
     CInfButtonArray();
+    ~CInfButtonArray();
 
     static void ClearList();
     static CGameButtonList* GetData(INT nButton, INT nType, BYTE& nClass, DWORD a4, BOOLEAN a5);

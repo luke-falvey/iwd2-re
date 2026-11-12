@@ -10,7 +10,7 @@ CGameAnimation::CGameAnimation()
     m_nSequence = 0;
 }
 
-// NOTE: Inlined.
+// 0x56E1F0
 CGameAnimation::~CGameAnimation()
 {
     if (m_animation != NULL) {
