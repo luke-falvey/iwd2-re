@@ -206,9 +206,237 @@ int CUIControlEditMultiLine::ReConstitute()
 }
 
 // 0x4D9D00
-void CUIControlEditMultiLine::CalculateNewLines(BYTE a1)
+int CUIControlEditMultiLine::CalculateNewLines(BYTE a1)
 {
-    // TODO: Incomplete.
+    CString sLine;
+
+    if (field_877) {
+        m_cVidFont.Load(FALSE);
+        SHORT nFontHeight = m_cVidFont.GetFontHeight(FALSE);
+        field_877 = 0;
+        field_878 = static_cast<SHORT>((m_size.cy - m_ptText.y) / nFontHeight);
+    }
+
+    m_cVidFont.pRes->Demand();
+
+    int nWidth = m_size.cx - 10;
+
+    if (g_pChitin->field_1A0) {
+        a1 = 3;
+    }
+
+    switch (a1) {
+    case 1: {
+        if (field_86A == m_sText.GetLength()) {
+            sLine = m_sText;
+            CUtil::MakeReverse(sLine);
+
+            int nLength = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+            if (nLength == -1) {
+                nLength = sLine.GetLength();
+            }
+
+            if (m_cVidFont.GetStringLength(m_sText.Right(nLength), TRUE) < nWidth) {
+                m_cVidFont.pRes->Release();
+                return field_87A;
+            }
+
+            m_cVidFont.pRes->Release();
+            return ReConstitute();
+        }
+
+        sLine = m_sText.Right(m_sText.GetLength() - field_86A);
+
+        int nToEnd = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+        if (nToEnd == -1) {
+            nToEnd = sLine.GetLength();
+        }
+
+        sLine = m_sText.Left(field_86A);
+        CUtil::MakeReverse(sLine);
+
+        int nBack = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+        int nBackCopy = nBack;
+        if (nBack == -1) {
+            nBackCopy = sLine.GetLength();
+            nBack = nBackCopy;
+        }
+
+        sLine = m_sText.Left(field_86A + nToEnd);
+        sLine = sLine.Right(sLine.GetLength() - field_86A + nBack);
+
+        if (m_cVidFont.GetStringLength(sLine, TRUE) < nWidth) {
+            m_cVidFont.pRes->Release();
+            return field_87A;
+        }
+
+        int nLineStart = field_86A - nBackCopy;
+        int nEnd = nToEnd + field_86A;
+        int nSpaceDist;
+
+        for (;;) {
+            sLine = m_sText.Left(nEnd - 1);
+            CUtil::MakeReverse(sLine);
+
+            int nSpace = CUtil::Find(sLine, ' ', 0);
+            nSpaceDist = nSpace;
+            if (nSpace == -1) {
+                nSpaceDist = 1;
+                nSpace = nSpaceDist;
+            }
+
+            if (nEnd - nSpace <= nLineStart) {
+                nSpaceDist = 1;
+                nSpace = nSpaceDist;
+            }
+
+            int nRightCount = m_sText.GetLength() - nEnd - 1;
+            nEnd -= nSpace;
+            nSpace = nEnd - 1;
+
+            m_sText = m_sText.Left(nLineStart)
+                + m_sText.Mid(nLineStart, nEnd - nLineStart - 1)
+                + '\r'
+                + m_sText.Mid(nSpace, nSpaceDist + 1)
+                + m_sText.Right(nRightCount);
+
+            nEnd = nSpace;
+
+            sLine = m_sText.Mid(nLineStart, nEnd - nLineStart);
+
+            if (field_86A > nEnd && field_86A <= nSpaceDist + nEnd + 1) {
+                field_86A++;
+            }
+
+            if (m_cVidFont.GetStringLength(sLine, TRUE) > nWidth) {
+                continue;
+            }
+
+            nLineStart = nEnd + 1;
+
+            sLine = m_sText.Right(m_sText.GetLength() - nLineStart);
+
+            int nNext = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+            BOOL bNotFound = nNext == -1;
+            if (bNotFound) {
+                nNext = sLine.GetLength();
+            }
+
+            nEnd = nNext + nLineStart;
+
+            sLine = m_sText.Mid(nLineStart, nEnd - nLineStart);
+
+            if (m_cVidFont.GetStringLength(sLine, TRUE) > nWidth) {
+                continue;
+            }
+
+            break;
+        }
+
+        m_cVidFont.pRes->Release();
+        AdjustVisibleIndex();
+        return field_87A;
+    }
+    case 2: {
+        sLine = m_sText.Left(field_86A);
+        CUtil::MakeReverse(sLine);
+
+        int nBack = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+        int nPrevStart;
+        int nLineStart;
+
+        if (nBack == -1) {
+            nPrevStart = 0;
+            nLineStart = CUtil::FindOneOf(m_sText, CString("\n\r"), 0);
+            if (nLineStart == -1) {
+                nLineStart = m_sText.GetLength();
+            }
+        } else {
+            sLine = sLine.Right(sLine.GetLength() - nBack - 1);
+
+            nPrevStart = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+            if (nPrevStart == -1) {
+                nPrevStart = sLine.GetLength();
+            }
+
+            nLineStart = field_86A - nBack;
+            nPrevStart = nLineStart - nPrevStart - 1;
+        }
+
+        int nWordEnd;
+        for (;;) {
+            sLine = m_sText.Right(m_sText.GetLength() - nLineStart);
+
+            nWordEnd = CUtil::FindOneOf(sLine, CString(" \n\r"), 0);
+            if (nWordEnd == -1) {
+                nWordEnd = sLine.GetLength();
+            }
+
+            if (nWordEnd == 0) {
+                m_cVidFont.pRes->Release();
+                return ReConstitute();
+            }
+
+            if (m_sText[nLineStart - 1] == '\r') {
+                sLine = m_sText.Mid(nPrevStart, nWordEnd - nPrevStart + nLineStart + 1);
+
+                if (m_cVidFont.GetStringLength(sLine, TRUE) > nWidth) {
+                    nWordEnd = 0;
+                } else {
+                    m_sText = m_sText.Left(nLineStart - 1)
+                        + m_sText.Mid(nLineStart, nWordEnd + 1)
+                        + '\r'
+                        + m_sText.Right(m_sText.GetLength() - nWordEnd - nLineStart - 1);
+
+                    nLineStart = nLineStart + nWordEnd + 1;
+
+                    if (m_cVidFont.GetStringLength(sLine, TRUE) <= nWidth) {
+                        continue;
+                    }
+                }
+            } else {
+                nWordEnd = 0;
+            }
+
+            nWordEnd += nLineStart;
+            nPrevStart = nWordEnd;
+
+            sLine = m_sText.Right(m_sText.GetLength() - nWordEnd);
+
+            nLineStart = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+            if (nLineStart == -1 || sLine[nLineStart] == '\n') {
+                break;
+            }
+
+            nLineStart = nLineStart + nWordEnd + 1;
+
+            sLine = m_sText.Right(m_sText.GetLength() - nLineStart);
+
+            nWordEnd = CUtil::FindOneOf(sLine, CString(" \n\r"), 0);
+            if (nWordEnd == -1) {
+                nWordEnd = sLine.GetLength();
+            }
+
+            nWordEnd -= nPrevStart;
+
+            sLine = m_sText.Mid(nPrevStart, nLineStart + nWordEnd + 1);
+
+            if (m_cVidFont.GetStringLength(sLine, TRUE) > nWidth) {
+                break;
+            }
+        }
+
+        m_cVidFont.pRes->Release();
+        AdjustVisibleIndex();
+        return field_87A;
+    }
+    case 3:
+        m_cVidFont.pRes->Release();
+        return ReConstitute();
+    default:
+        m_cVidFont.pRes->Release();
+        return field_87A;
+    }
 }
 
 // 0x4DAA10

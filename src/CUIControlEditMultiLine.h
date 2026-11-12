@@ -28,7 +28,7 @@ public:
 
     void Remove();
     int ReConstitute();
-    void CalculateNewLines(BYTE a1);
+    int CalculateNewLines(BYTE a1);
 
     /* 0052 */ CVidMosaic m_mosBackground;
     /* 0106 */ CVidMosaic m_mosTextFocusedBackground;
