@@ -374,9 +374,41 @@ CString CImm::sub_7C2ED0(HWND hWnd)
 // 0x7C3020
 CRect CImm::sub_7C3020(const CPoint& ptPanel, const CSize& panelSize, const CPoint& ptEdit, const CSize& editSize, SHORT nFontHeight)
 {
-    // TODO: Incomplete.
+    if (field_13C == NULL) {
+        return CRect(0, 0, 0, 0);
+    }
 
-    return CRect();
+    CSize size;
+    field_13C->GetSize(size, FALSE);
+
+    LONG nMaxHeight = 3 * nFontHeight + 2 * PADDING.cy;
+    if (size.cy >= nMaxHeight) {
+        size.cy = nMaxHeight;
+    }
+
+    LONG top;
+    if (size.cy >= panelSize.cy) {
+        top = ptPanel.y;
+    } else if (size.cy + ptEdit.y + editSize.cy <= panelSize.cy) {
+        top = ptPanel.y + editSize.cy + ptEdit.y;
+    } else if (ptEdit.y - size.cy >= 0) {
+        top = ptPanel.y - size.cy + ptEdit.y;
+    } else {
+        top = (panelSize.cy - size.cy) / 2 + ptPanel.y;
+    }
+
+    LONG left;
+    if (size.cx >= panelSize.cx) {
+        left = ptPanel.x;
+    } else if (editSize.cx - size.cx + ptEdit.x >= 0) {
+        left = ptPanel.x - size.cx + editSize.cx + ptEdit.x;
+    } else if (ptEdit.x + size.cx <= panelSize.cx) {
+        left = ptPanel.x + ptEdit.x;
+    } else {
+        left = (panelSize.cx - size.cx) / 2 + ptPanel.x;
+    }
+
+    return CRect(left, top, left + size.cx, top + size.cy);
 }
 
 // 0x7C3140
