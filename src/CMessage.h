@@ -498,6 +498,7 @@ public:
     BOOLEAN sub_438560(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BYTE LeaveAreaNameRequestToServer(LONG nCharacterId, LONG nTriggerId, CString sArea);
     BOOLEAN OnLeaveAreaNameReplyFromServer(BYTE* pByteMessage, DWORD dwSize);
+    BOOLEAN sub_438F90(LONG nCharacterId, LONG nTriggerId, CString sArea);
     BOOLEAN sub_439250(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_43A470(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_43A7C0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
@@ -1307,6 +1308,7 @@ public:
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
     BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
+    BOOL sub_50D660(CString sArea);
     void Run() override;
 
     /* 000C */ LONG* m_pPath;

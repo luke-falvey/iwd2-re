@@ -7873,8 +7873,87 @@ BOOLEAN CBaldurMessage::OnLeaveAreaLuaReplyFromServer(BYTE* pByteMessage, DWORD 
 // 0x437D70
 BOOLEAN CBaldurMessage::sub_437D70(LONG nCharacterId, CPoint ptStart, LONG nFace, CString sArea, CString sParchment)
 {
-    // TODO: Incomplete.
-    return FALSE;
+    CGameObject* pObject;
+    DWORD dwSize;
+    DWORD cnt;
+    BYTE* pData;
+    BYTE rc;
+    BYTE nLength;
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return FALSE;
+    }
+
+    PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+    LONG remoteObjectID = pObject->m_remoteObjectID;
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    dwSize = sizeof(PLAYER_ID) + sizeof(LONG) + sizeof(LONG) + sizeof(LONG) + sizeof(SHORT);
+    dwSize += sArea.GetLength() + 1;
+    dwSize += sParchment.GetLength() + 1;
+
+    pData = CreateBuffer(dwSize);
+    if (pData == NULL) {
+        m_bLeaveAreaLuaRequestPending = FALSE;
+        return FALSE;
+    }
+
+    cnt = 0;
+
+    *reinterpret_cast<PLAYER_ID*>(pData + cnt) = remotePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(pData + cnt) = remoteObjectID;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<LONG*>(pData + cnt) = ptStart.x;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<LONG*>(pData + cnt) = ptStart.y;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<SHORT*>(pData + cnt) = static_cast<SHORT>(nFace);
+    cnt += sizeof(SHORT);
+
+    nLength = static_cast<BYTE>(sParchment.GetLength());
+    *reinterpret_cast<BYTE*>(pData + cnt) = nLength;
+    cnt += sizeof(BYTE);
+
+    memcpy(pData + cnt, sParchment.GetBuffer(nLength), nLength);
+    cnt += nLength;
+
+    nLength = static_cast<BYTE>(sArea.GetLength());
+    *reinterpret_cast<BYTE*>(pData + cnt) = nLength;
+    cnt += sizeof(BYTE);
+
+    memcpy(pData + cnt, sArea.GetBuffer(nLength), nLength);
+    cnt += nLength;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CBaldurMessage.cpp
+    // __LINE__: 12602
+    UTIL_ASSERT(cnt == dwSize);
+
+    // NOTE: 0x84CFD7 is the unnamed subtype 'A'.
+    g_pChitin->cNetwork.SendSpecificMessage(CString(""),
+        CNetwork::SEND_ALL_PLAYERS | CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_LEAVEAREALUA,
+        'A',
+        pData,
+        cnt);
+
+    DestroyBuffer(pData);
+
+    return TRUE;
 }
 
 // 0x437FD0
@@ -8034,6 +8113,13 @@ BOOLEAN CBaldurMessage::OnLeaveAreaNameReplyFromServer(BYTE* pByteMessage, DWORD
     m_bLeaveAreaNameReplyReturned = TRUE;
 
     return TRUE;
+}
+
+// 0x438F90
+BOOLEAN CBaldurMessage::sub_438F90(LONG nCharacterId, LONG nTriggerId, CString sArea)
+{
+    // TODO: Incomplete.
+    return FALSE;
 }
 
 // 0x439250
@@ -21028,6 +21114,13 @@ BOOL CMessageSpriteUpdate::UnmarshalMessage(BYTE* pData, DWORD dwSize)
     field_85 = *reinterpret_cast<BYTE*>(pData + cnt);
 
     return TRUE;
+}
+
+// 0x50D660
+BOOL CMessageSpriteUpdate::sub_50D660(CString sArea)
+{
+    // TODO: Incomplete.
+    return FALSE;
 }
 
 // 0x50D6F0
