@@ -389,6 +389,7 @@ public:
     INT GetIntModMaxAllowedSpellLevel(CDerivedStats* pDStats) const;
     INT sub_542B40(const C2DArray* pTable, BYTE nLevelFrom, BYTE nLevelTo, INT a4, INT a5, INT a6, INT a7) const;
     INT sub_542CB0(INT nClass, CDerivedStats& DStatsOld, CDerivedStats& DStats, INT a4, INT a5) const;
+    void sub_542EC0(INT a1, BYTE nScore, INT* pResult, INT* pFlag) const;
     INT GetStartingHitPoints(const CAIObjectType& typeAI, CDerivedStats& DStatsOld, CDerivedStats& DStats, BYTE nCON) const;
     INT GetStartingGold(CGameSprite* pSprite) const;
     INT GetStartingExperiencePoints(CGameSprite* pSprite) const;
