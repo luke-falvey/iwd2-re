@@ -1743,7 +1743,185 @@ void CScreenStore::UpdateBuySellPanel()
         }
     }
 
-    // TODO: Incomplete.
+    CUIControlScrollBarStoreStore* pStoreBar = static_cast<CUIControlScrollBarStoreStore*>(m_pMainPanel->GetControl(11));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
+    // __LINE__: 2503
+    UTIL_ASSERT(pStoreBar != NULL);
+
+    // NOTE: Uninline.
+    pStoreBar->UpdateScrollBar();
+
+    CUIControlButton* pButton = static_cast<CUIControlButton*>(m_pMainPanel->GetControl(2));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
+    // __LINE__: 2508
+    UTIL_ASSERT(pButton != NULL);
+
+    pButton->SetEnabled(IsBuyItemButtonClickable() && bCanBuy);
+
+    if (m_pStore->GetType() != 4) {
+        g_pBaldurChitin->GetTlkTable().Fetch(13703, strRes);
+        pButton->SetText(strRes.szText);
+
+        UpdateLabel(m_pMainPanel,
+            0x1000002F,
+            "%s",
+            (LPCSTR)FetchString(13705));
+
+        UpdateLabel(m_pMainPanel,
+            0x1000002B,
+            "%d",
+            m_nStoreCost);
+    } else {
+        g_pBaldurChitin->GetTlkTable().Fetch(26287, strRes);
+        pButton->SetText(strRes.szText);
+
+        if (m_pStore->m_header.m_nBuyMarkUp == 0 && m_pStore->m_header.m_nSellMarkDown == 0) {
+            UpdateLabel(m_pMainPanel, 0x1000002F, "");
+            UpdateLabel(m_pMainPanel, 0x1000002B, "");
+        } else {
+            UpdateLabel(m_pMainPanel,
+                0x1000002F,
+                "%s",
+                (LPCSTR)FetchString(13705));
+
+            UpdateLabel(m_pMainPanel,
+                0x1000002B,
+                "%d",
+                m_nStoreCost);
+        }
+    }
+
+    for (INT nIndex = 0; nIndex < 6; nIndex++) {
+        GetGroupItem(m_nTopGroupItem + nIndex, cItem);
+
+        CUIControlButtonStoreGroupItem* pGroupItem = static_cast<CUIControlButtonStoreGroupItem*>(m_pMainPanel->GetControl(nIndex + 13));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
+        // __LINE__: 2545
+        UTIL_ASSERT(pGroupItem != NULL);
+
+        if (bViewable) {
+            CItem* pItem = cItem.m_pItem;
+            if (pItem == NULL) {
+                pGroupItem->m_item.SetResRef(CResRef(""), TRUE);
+                pGroupItem->InvalidateRect();
+            } else if (!(pGroupItem->m_item == *pItem)) {
+                pGroupItem->m_item.SetResRef(pItem->cResRef, TRUE);
+                pGroupItem->m_item.m_useCount1 = pItem->m_useCount1;
+                pGroupItem->m_item.m_useCount2 = pItem->m_useCount2;
+                pGroupItem->m_item.m_useCount3 = pItem->m_useCount3;
+                pGroupItem->m_item.m_wear = pItem->m_wear;
+                pGroupItem->m_item.m_flags = pItem->m_flags;
+                pGroupItem->InvalidateRect();
+            }
+
+            pGroupItem->SetSelected(cItem.m_bSelected);
+
+            if (cItem.m_pItem != NULL && cItem.m_pItem->GetItemType() == 0x3A) {
+                pGroupItem->SetEnabled(cItem.m_bEnabled != 0);
+            } else {
+                pGroupItem->SetEnabled(bCanSell && cItem.m_bEnabled);
+            }
+
+            pGroupItem->SetValid(pGame->CheckIfPlayerInPortraitSlotCanUseItem(static_cast<SHORT>(m_nSelectedCharacter),
+                cItem.m_pItem,
+                strError,
+                TRUE));
+
+            if (cItem.m_pItem != NULL) {
+                sText.Format("%s", (LPCSTR)FetchString(cItem.m_pItem->GetGenericName()));
+                g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_ITEMNAME, sText);
+
+                if (m_pStore->GetType() != 4) {
+                    sText.Format("%d", cItem.m_nValue);
+                    g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_ITEMCOST, sText);
+
+                    sText = FetchString(10162);
+                } else {
+                    sText = FetchString(24890);
+                }
+
+                if (m_pBag != NULL && cItem.m_nStoreCount != 0xFFFF) {
+                    sText.Format("%s (%d)", (LPCSTR)sText.Mid(0), cItem.m_nStoreCount);
+                }
+
+                UpdateLabel(m_pMainPanel,
+                    nIndex + 0x1000001E,
+                    "%s",
+                    (LPCSTR)sText);
+
+                if (!pGroupItem->m_bEnabled) {
+                    HighlightLabel(m_pMainPanel, nIndex + 0x1000001E, TRUE, COLOR_LABEL_DISABLE);
+                } else {
+                    HighlightLabel(m_pMainPanel, nIndex + 0x1000001E, FALSE, COLOR_LABEL_HIGHLIGHT_BONUS);
+                }
+            } else {
+                UpdateLabel(m_pMainPanel, nIndex + 0x1000001E, "");
+            }
+        } else {
+            pGroupItem->m_item.SetResRef(CResRef(""), TRUE);
+            pGroupItem->InvalidateRect();
+            pGroupItem->SetSelected(FALSE);
+            pGroupItem->SetEnabled(FALSE);
+            UpdateLabel(m_pMainPanel, nIndex + 0x1000001E, "");
+        }
+    }
+
+    CUIControlScrollBarStoreGroup* pGroupBar = static_cast<CUIControlScrollBarStoreGroup*>(m_pMainPanel->GetControl(12));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
+    // __LINE__: 2613
+    UTIL_ASSERT(pGroupBar != NULL);
+
+    // NOTE: Uninline.
+    pGroupBar->UpdateScrollBar();
+
+    pButton = static_cast<CUIControlButton*>(m_pMainPanel->GetControl(3));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
+    // __LINE__: 2618
+    UTIL_ASSERT(pButton != NULL);
+
+    pButton->SetEnabled(IsSellItemButtonClickable() && bCanSell);
+
+    if (m_pStore->GetType() != 4) {
+        g_pBaldurChitin->GetTlkTable().Fetch(13704, strRes);
+        pButton->SetText(strRes.szText);
+
+        UpdateLabel(m_pMainPanel,
+            0x10000030,
+            "%s",
+            (LPCSTR)FetchString(13706));
+
+        UpdateLabel(m_pMainPanel,
+            0x1000002C,
+            "%d",
+            m_nGroupCost);
+    } else {
+        g_pBaldurChitin->GetTlkTable().Fetch(26288, strRes);
+        pButton->SetText(strRes.szText);
+
+        if (m_pStore->m_header.m_nBuyMarkUp == 0 && m_pStore->m_header.m_nSellMarkDown == 0) {
+            UpdateLabel(m_pMainPanel, 0x10000030, "");
+            UpdateLabel(m_pMainPanel, 0x1000002C, "");
+        } else {
+            UpdateLabel(m_pMainPanel,
+                0x10000030,
+                "%s",
+                (LPCSTR)FetchString(13706));
+
+            UpdateLabel(m_pMainPanel,
+                0x1000002C,
+                "%d",
+                m_nGroupCost);
+        }
+    }
+
+    m_pMainPanel->GetControl(50)->SetActive(m_pBag != NULL);
+    m_pMainPanel->GetControl(50)->SetInactiveRender(m_pBag != NULL);
+    m_pMainPanel->GetControl(50)->InvalidateRect();
 }
 
 // 0x675380
