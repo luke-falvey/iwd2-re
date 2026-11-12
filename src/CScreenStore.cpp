@@ -1698,7 +1698,117 @@ void CScreenStore::UpdateIdentifyPanel()
 // 0x675940
 void CScreenStore::UpdateBuySpellPanel()
 {
-    // TODO: Incomplete.
+    CScreenStoreItem cItem;
+    CString sToken;
+
+    m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(m_pMainPanel->GetControl(7));
+
+    DWORD nPartyGold = g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_nPartyGold;
+
+    UpdateLabel(m_pMainPanel,
+        0x10000000,
+        "%s",
+        (LPCSTR)FetchString(m_pStore->m_header.m_strName));
+
+    UpdateLabel(m_pMainPanel,
+        0x10000001,
+        "%d",
+        nPartyGold);
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
+    // __LINE__: 2823
+    UTIL_ASSERT(pGame != NULL);
+
+    CGameSave* pSave = pGame->GetGameSave();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
+    // __LINE__: 2825
+    UTIL_ASSERT(pSave != NULL);
+
+    for (INT nIndex = 0; nIndex < 6; nIndex++) {
+        GetSpellItem(m_nTopSpellItem + nIndex, cItem);
+
+        CUIControlButtonStoreStoreSpell* pSpellItem = static_cast<CUIControlButtonStoreStoreSpell*>(m_pMainPanel->GetControl(nIndex + 8));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
+        // __LINE__: 2836
+        UTIL_ASSERT(pSpellItem != NULL);
+
+        if (pSpellItem->m_resRef != cItem.m_cResSpell) {
+            pSpellItem->m_resRef = cItem.m_cResSpell;
+            pSpellItem->InvalidateRect();
+        }
+
+        pSpellItem->SetSelected(cItem.m_bSelected);
+        pSpellItem->SetEnabled(cItem.m_bEnabled);
+
+        if (cItem.m_cResSpell != "") {
+            CSpell cSpell;
+            cSpell.SetResRef(cItem.m_cResSpell, TRUE, TRUE);
+            cSpell.Demand();
+
+            BOOL bValid = sub_67E560(static_cast<SHORT>(m_nSelectedCharacter), cItem.m_cResSpell);
+            pSpellItem->SetValid(bValid);
+
+            sToken.Format("%s", (LPCSTR)FetchString(cSpell.GetGenericName()));
+            g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_ITEMNAME, sToken);
+
+            sToken.Format("%d", cItem.m_nValue);
+            g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_ITEMCOST, sToken);
+
+            UpdateLabel(m_pMainPanel,
+                nIndex + 0x1000000D,
+                "%s",
+                (LPCSTR)FetchString(10162));
+
+            pSpellItem->SetEnabled(bValid);
+
+            cSpell.Release();
+        } else {
+            UpdateLabel(m_pMainPanel, nIndex + 0x1000000D, "");
+        }
+    }
+
+    CUIControlScrollBarStoreSpell* pSpellBar = static_cast<CUIControlScrollBarStoreSpell*>(m_pMainPanel->GetControl(7));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
+    // __LINE__: 2885
+    UTIL_ASSERT(pSpellBar != NULL);
+
+    // NOTE: Uninline.
+    pSpellBar->UpdateScrollBar();
+
+    UpdateLabel(m_pMainPanel,
+        0x10000003,
+        "%d",
+        m_dwSpellCost);
+
+    CUIControlButton* pBuy = static_cast<CUIControlButton*>(m_pMainPanel->GetControl(5));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
+    // __LINE__: 2894
+    UTIL_ASSERT(pBuy != NULL);
+
+    BOOL bEnabled = FALSE;
+
+    POSITION pos = m_lSpellItems.GetHeadPosition();
+    while (pos != NULL) {
+        CScreenStoreItem* pItem = m_lSpellItems.GetAt(pos);
+        if (pItem->m_bSelected) {
+            if (IsCharacterInRange(static_cast<SHORT>(m_nSelectedCharacter))
+                || (m_pMainPanel->m_nID == 5
+                    && !IsCharacterAlive(static_cast<SHORT>(m_nSelectedCharacter)))) {
+                bEnabled = TRUE;
+            }
+            break;
+        }
+
+        m_lSpellItems.GetNext(pos);
+    }
+
+    pBuy->SetEnabled(bEnabled);
 }
 
 // 0x675E80
@@ -4988,6 +5098,13 @@ void CScreenStore::SetChatEditBoxStatus(const CString& sChatText, BOOL bInputCap
             m_cUIManager.SetCapture(pEdit, CUIManager::KEYBOARD);
         }
     }
+}
+
+// 0x67E560
+BOOL CScreenStore::sub_67E560(SHORT nPortraitNum, const CResRef& cResSpell)
+{
+    // TODO: Incomplete.
+    return FALSE;
 }
 
 // 0x67E870

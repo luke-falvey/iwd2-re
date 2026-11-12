@@ -118,7 +118,7 @@ public:
     void ResetErrorPanel(CUIPanel* pPanel);
     void sub_6734F0(CUIPanel* pPanel);
     void sub_673740(CUIPanel* pPanel);
-    BOOL IsCharacterAlive(SHORT nPortraitNum);
+    static BOOL IsCharacterAlive(SHORT nPortraitNum);
     void CheckEnableButtonBar();
     void SwitchMainPanel(DWORD dwMainPanelId);
     void CheckEnablePanels(BOOL bEnable);
@@ -180,6 +180,7 @@ public:
     SHORT GetPanelButtonSequence(INT nButtonIndex);
     STRREF GetPanelButtonToolTip(INT nButtonIndex);
     BOOL IsCharacterInRange(SHORT nPortraitNum);
+    BOOL sub_67E560(SHORT nPortraitNum, const CResRef& cResSpell);
     DWORD GetRoomCost();
     void OnErrorButtonClick(INT nButton);
     void RestParty();
