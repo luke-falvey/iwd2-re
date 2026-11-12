@@ -1,14 +1,20 @@
 #include "CGameDoor.h"
 
 #include "CAIScript.h"
+#include "CAITrigger.h"
 #include "CBaldurChitin.h"
+#include "CCreatureFile.h"
 #include "CGameArea.h"
+#include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CInfCursor.h"
 #include "CInfGame.h"
+#include "CMessage.h"
 #include "CPathSearch.h"
+#include "CProjectile.h"
 #include "CScreenWorld.h"
 #include "CUtil.h"
+#include "CVidMode.h"
 #include "CVidPoly.h"
 
 // 0x8D41D8
@@ -334,6 +340,185 @@ BOOLEAN CGameDoor::CanSaveGame(STRREF& strError)
     return TRUE;
 }
 
+// 0x486860
+void CGameDoor::AddEffect(CGameEffect* pEffect, BYTE list, BOOL noSave, BOOL immediateApply)
+{
+    BOOLEAN bSendStatus = FALSE;
+
+    if (pEffect->m_effectID == CGAMEEFFECT_KNOCK) {
+        if (m_lockDifficulty != 100) {
+            m_dwFlags &= ~0x2;
+
+            CMessage* message = new CMessageDoorOpen(TRUE, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        } else {
+            // NOTE: Original reads marker `-1` from a constant at 0x84C960.
+            g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(-1,
+                23169,
+                RGB(0, 0, 0),
+                RGB(160, 200, 215),
+                -1,
+                m_id,
+                m_id);
+        }
+    } else if (pEffect->m_effectID == CGAMEEFFECT_DETECTTRAPS) {
+        if (m_trapActivated != 0) {
+            if (m_trapDetected == 0
+                && m_trapDetectionDifficulty < 100
+                && (m_dwFlags & 0x8) != 0) {
+                // NOTE: Original reads trigger ID from a constant at
+                // 0x847E40.
+                CAITrigger trigger(CAITRIGGER_DETECTED, m_typeAI, 0);
+
+                CMessage* message = new CMessageSetTrigger(trigger, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                m_trapDetected = TRUE;
+
+                message = new CMessageTriggerStatus(m_dwFlags,
+                    m_trapActivated,
+                    m_trapDetected,
+                    m_id,
+                    m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                bSendStatus = TRUE;
+
+                // NOTE: Original passes `m_id` where the callee expects a
+                // `CGameAIBase*` caller.
+                CGameObject* pObject = m_typeAI.sub_40CCA0(reinterpret_cast<CGameAIBase*>(m_id), FALSE);
+                if (pObject != NULL) {
+                    // NOTE: Uninline.
+                    if (pObject->GetAIType().Equal(CAIObjectType(CGameObject::TYPE_SPRITE))) {
+                        static_cast<CGameAIBase*>(pObject)->AutoPause(0x80);
+                    }
+                }
+            }
+
+            if (m_trapDetected != 0) {
+                // NOTE: Uninline.
+                SetDrawPoly(400);
+            }
+
+            if (bSendStatus == TRUE) {
+                CMessage* message = new CMessageDoorStatus(this, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    } else if (pEffect->m_effectID == CGAMEEFFECT_CASTSPELL) {
+        CAIObjectType type(GetAIType());
+        CAIAction action(CAIAction::FORCESPELL, type, 0, 0, 0);
+
+        CString sResRef;
+        pEffect->m_res.CopyToString(sResRef);
+        action.SetString1(sResRef);
+        action.m_specificID = pEffect->m_effectAmount;
+
+        CMessage* message = new CMessageInsertAction(action, m_id, pEffect->m_sourceID);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    } else if (pEffect->m_effectID == CGAMEEFFECT_SUMMON) {
+        ITEM_EFFECT* effect = new ITEM_EFFECT;
+        CGameEffect::ClearItemEffect(effect, CGAMEEFFECT_SKILLUNSUMMON);
+
+        // NOTE: Original reads duration type 4 from a constant at 0x8491B0.
+        effect->durationType = 4;
+        effect->duration = (pEffect->m_duration - g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime) / 15;
+        effect->effectAmount = 1;
+
+        CGameEffect* pNewEffect = CGameEffect::DecodeEffect(effect,
+            CPoint(-1, -1),
+            -1,
+            CPoint(-1, -1));
+
+        delete effect;
+
+        CPoint ptGrid(pEffect->m_target.x / CPathSearch::GRID_SQUARE_SIZEX,
+            pEffect->m_target.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+        CCreatureFile creatureData;
+
+        // NOTE: Uninline.
+        creatureData.SetResRef(pEffect->m_res, TRUE, TRUE);
+
+        CGameSprite* pSprite = new CGameSprite(creatureData.GetData(),
+            creatureData.GetDataSize(),
+            0,
+            0,
+            -1,
+            0,
+            0,
+            0x7FFFFFFF,
+            CPoint(-1, -1),
+            0);
+
+        pSprite->SetResRef(creatureData.GetResRef().GetResRefStr());
+        creatureData.ReleaseData();
+
+        if (pSprite != NULL) {
+            LONG nSpriteId = pSprite->GetId();
+
+            CString sResRef;
+            pEffect->m_res.CopyToString(sResRef);
+            pSprite->SetResRef(sResRef);
+
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nSpriteId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+            if (rc == CGameObjectArray::SUCCESS) {
+                CPoint ptOpen = m_pArea->m_search.GetNearestOpenSquare(ptGrid,
+                    GetTerrainTable(),
+                    pSprite->m_animation.GetPersonalSpace(),
+                    -1);
+
+                pSprite->AddToArea(m_pArea,
+                    CPoint(ptOpen.x * CPathSearch::GRID_SQUARE_SIZEX, ptOpen.y * CPathSearch::GRID_SQUARE_SIZEY),
+                    0,
+                    pSprite->m_animation.GetListType());
+
+                nSpriteId = pSprite->GetId();
+
+                CProjectile* pProjectile = CProjectile::DecodeProjectile(144, pSprite, FALSE);
+
+                CMessage* message = new CMessageFireProjectile(pProjectile->m_projectileType,
+                    nSpriteId,
+                    CPoint(0, 0),
+                    30,
+                    nSpriteId,
+                    nSpriteId,
+                    0);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                pProjectile->Fire(m_pArea, nSpriteId, nSpriteId, CPoint(0, 0), 0, 0);
+
+                // NOTE: Unused.
+                CAIObjectType typeAI(pSprite->GetAIType());
+                CAIObjectType liveTypeAI(pSprite->m_liveTypeAI);
+                CAIObjectType liveTypeAI2(pSprite->m_liveTypeAI);
+
+                // NOTE: Original reads the permanent duration type from a
+                // constant at 0x8491AA.
+                if (pEffect->m_durationType != 1) {
+                    pNewEffect->m_casterLevel = pEffect->m_casterLevel;
+                    pSprite->AddEffect(pNewEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+                }
+                // NOTE: Otherwise `pNewEffect` leaks.
+
+                pSprite->SetSequence(CGameSprite::SEQ_AWAKE);
+                pSprite->SetFacing(rand() % 16);
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nSpriteId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+    }
+
+    if (pEffect != NULL) {
+        delete pEffect;
+    }
+}
+
 // 0x487460
 void CGameDoor::AIUpdate()
 {
@@ -355,7 +540,51 @@ void CGameDoor::AIUpdate()
     }
 }
 
-// 0x47E040
+// 0x487530
+BOOLEAN CGameDoor::CompressTime(DWORD deltaTime)
+{
+    // NOTE: Unsigned compare.
+    if (deltaTime > static_cast<DWORD>(m_drawPoly)) {
+        m_drawPoly = 0;
+    } else {
+        m_drawPoly = static_cast<SHORT>(m_drawPoly - deltaTime);
+    }
+
+    if (deltaTime > static_cast<DWORD>(CTimerWorld::TIMESCALE_MIN_PER_HOUR
+            * CTimerWorld::TIMESCALE_SEC_PER_MIN
+            * CTimerWorld::TIMESCALE_MSEC_PER_SEC)) {
+        if ((m_dwFlags & 0x1) != 0
+            && (m_dwFlags & 0x20) == 0
+            && m_pArea->m_search.CanToggleDoor(m_pClosedSearch, m_nClosedSearch)
+            && rand() % 5 != 0) {
+            m_dwFlags &= ~0x1;
+            m_pos = m_ptOpenDest;
+            m_tiledObject.m_wAIState = CTiledObject::STATE_SECONDARY_TILE;
+
+            if (m_pOpenSearch != NULL) {
+                m_pArea->m_search.RemoveDoor(m_pOpenSearch, m_nOpenSearch);
+            }
+
+            if (m_pClosedSearch != NULL) {
+                m_pArea->m_search.AddDoor(m_pClosedSearch,
+                    m_nClosedSearch,
+                    (m_dwFlags >> 10) & 0x1);
+            }
+
+            // NOTE: Uninline.
+            if (g_pBaldurChitin->cNetwork.GetSessionHosting() == TRUE) {
+                CMessageDoorStatus* pDoorStatus = new CMessageDoorStatus(this, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pDoorStatus, FALSE);
+            }
+        }
+
+        m_dwFlags &= ~0x1000;
+    }
+
+    return TRUE;
+}
+
+// 0x4876E0
 void CGameDoor::DebugDump(const CString& message, BOOLEAN bEchoToScreen)
 {
     CScreenWorld* pWorld = g_pBaldurChitin->m_pEngineWorld;
@@ -410,6 +639,12 @@ void CGameDoor::DebugDump(const CString& message, BOOLEAN bEchoToScreen)
             FALSE);
 
         sTemp.Format("Trap Detected: %s", m_trapDetected != 0 ? "TRUE" : "FALSE");
+        pWorld->DisplayText(CString(""),
+            sTemp,
+            -1,
+            FALSE);
+
+        sTemp.Format("Reset Trap: %s", (m_dwFlags & 0x4) != 0 ? "TRUE" : "FALSE");
         pWorld->DisplayText(CString(""),
             sTemp,
             -1,
@@ -686,6 +921,253 @@ void CGameDoor::OnActionButton(const CPoint& pt)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameDoor.cpp
         // __LINE__: 989
         UTIL_ASSERT(FALSE);
+    }
+}
+
+// 0x488B30
+void CGameDoor::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
+{
+    // NOTE: Original reads the outline colors from globals at 0x8A85F8
+    // (RGB(32, 64, 160)), 0x8A85FC (RGB(0, 250, 0)), 0x8A8604
+    // (RGB(255, 0, 255)) and 0x8A8608 (RGB(255, 0, 0)).
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    SHORT nState = pGame->GetState();
+    BOOL bRendered = FALSE;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameDoor.cpp
+    // __LINE__: 1028
+    UTIL_ASSERT(pVidMode != NULL);
+
+    if ((m_dwFlags & 0x2000) != 0) {
+        return;
+    }
+
+    if (m_id == m_pArea->m_iPicked) {
+        // NOTE: Uninline.
+        if (m_pArea->m_visibility.IsTileExplored(m_pArea->m_visibility.PointToTile(m_pos))
+            && (m_dwFlags & 0x80) == 0) {
+            if (pGame->GetGroup()->GetCount() > 0 && nState == 0) {
+                if ((m_dwFlags & 0x1) != 0) {
+                    if (CInfinity::TRANSLUCENT_BLTS_ON && !g_pChitin->cVideo.m_bIs3dAccelerated) {
+                        // NOTE: Uninline.
+                        sub_48B600(pArea,
+                            pVidMode,
+                            a3,
+                            g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(32, 64, 160)));
+                        bRendered = TRUE;
+                    }
+
+                    m_pArea->m_cInfinity.OutlinePoly(m_pOpenPolygon,
+                        m_nOpenPolygon,
+                        m_rOpenBounding,
+                        RGB(32, 64, 160));
+                } else {
+                    if (CInfinity::TRANSLUCENT_BLTS_ON && !g_pChitin->cVideo.m_bIs3dAccelerated) {
+                        // NOTE: Uninline.
+                        sub_48B3C0(pArea,
+                            pVidMode,
+                            a3,
+                            g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(32, 64, 160)));
+                        bRendered = TRUE;
+                    }
+
+                    m_pArea->m_cInfinity.OutlinePoly(m_pClosedPolygon,
+                        m_nClosedPolygon,
+                        m_rClosedBounding,
+                        RGB(32, 64, 160));
+                }
+            }
+
+            if (pGame->GetState() == 2) {
+                if (pGame->GetIconIndex() == 36) {
+                    if ((m_trapActivated != 0 && m_trapDetected != 0)
+                        || (m_dwFlags & 0x2) != 0) {
+                        if ((m_dwFlags & 0x1) != 0) {
+                            if (CInfinity::TRANSLUCENT_BLTS_ON && !g_pChitin->cVideo.m_bIs3dAccelerated) {
+                                // NOTE: Uninline.
+                                sub_48B600(pArea,
+                                    pVidMode,
+                                    a3,
+                                    g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(0, 250, 0)));
+                                bRendered = TRUE;
+                            }
+
+                            m_pArea->m_cInfinity.OutlinePoly(m_pOpenPolygon,
+                                m_nOpenPolygon,
+                                m_rOpenBounding,
+                                RGB(0, 250, 0));
+                        } else {
+                            if (CInfinity::TRANSLUCENT_BLTS_ON && !g_pChitin->cVideo.m_bIs3dAccelerated) {
+                                // NOTE: Uninline.
+                                sub_48B3C0(pArea,
+                                    pVidMode,
+                                    a3,
+                                    g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(0, 250, 0)));
+                                bRendered = TRUE;
+                            }
+
+                            m_pArea->m_cInfinity.OutlinePoly(m_pClosedPolygon,
+                                m_nClosedPolygon,
+                                m_rClosedBounding,
+                                RGB(0, 250, 0));
+                        }
+                    }
+                }
+
+                if (pGame->GetIconIndex() == 12
+                    && (m_dwFlags & 0x1) == 0
+                    && (m_dwFlags & 0x2) != 0) {
+                    if (CInfinity::TRANSLUCENT_BLTS_ON && !g_pChitin->cVideo.m_bIs3dAccelerated) {
+                        // NOTE: Uninline.
+                        sub_48B3C0(pArea,
+                            pVidMode,
+                            a3,
+                            g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(0, 250, 0)));
+                        bRendered = TRUE;
+                    }
+
+                    m_pArea->m_cInfinity.OutlinePoly(m_pClosedPolygon,
+                        m_nClosedPolygon,
+                        m_rClosedBounding,
+                        RGB(0, 250, 0));
+                }
+            }
+        }
+    }
+
+    if (m_drawPoly > 0) {
+        if ((m_dwFlags & 0x80) != 0 && (m_dwFlags & 0x100) != 0) {
+            if (CInfinity::TRANSLUCENT_BLTS_ON
+                && !g_pChitin->cVideo.m_bIs3dAccelerated
+                && !bRendered) {
+                if ((m_dwFlags & 0x1) != 0) {
+                    if (m_nOpenPolygon > 0) {
+                        // NOTE: Uninline.
+                        sub_48B600(pArea,
+                            pVidMode,
+                            a3,
+                            g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(255, 0, 255)));
+                    }
+                } else {
+                    if (m_nClosedPolygon > 0) {
+                        // NOTE: Uninline.
+                        sub_48B3C0(pArea,
+                            pVidMode,
+                            a3,
+                            g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(255, 0, 255)));
+                    }
+                }
+            }
+
+            if ((m_dwFlags & 0x1) != 0) {
+                if (m_nOpenPolygon > 0) {
+                    m_pArea->m_cInfinity.OutlinePoly(m_pOpenPolygon,
+                        m_nOpenPolygon,
+                        m_rOpenBounding,
+                        RGB(255, 0, 255));
+                }
+            } else {
+                if (m_nClosedPolygon > 0) {
+                    m_pArea->m_cInfinity.OutlinePoly(m_pClosedPolygon,
+                        m_nClosedPolygon,
+                        m_rClosedBounding,
+                        RGB(255, 0, 255));
+                }
+            }
+        } else {
+            if (CInfinity::TRANSLUCENT_BLTS_ON
+                && !g_pChitin->cVideo.m_bIs3dAccelerated
+                && !bRendered) {
+                if ((m_dwFlags & 0x1) != 0) {
+                    if (m_nOpenPolygon > 0) {
+                        // NOTE: Uninline.
+                        sub_48B600(pArea,
+                            pVidMode,
+                            a3,
+                            g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(255, 0, 0)));
+                    }
+                } else {
+                    if (m_nClosedPolygon > 0) {
+                        // NOTE: Uninline.
+                        sub_48B3C0(pArea,
+                            pVidMode,
+                            a3,
+                            g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(255, 0, 0)));
+                    }
+                }
+            }
+
+            if ((m_dwFlags & 0x1) != 0) {
+                if (m_nOpenPolygon > 0) {
+                    m_pArea->m_cInfinity.OutlinePoly(m_pOpenPolygon,
+                        m_nOpenPolygon,
+                        m_rOpenBounding,
+                        RGB(255, 0, 0));
+                }
+            } else {
+                if (m_nClosedPolygon > 0) {
+                    m_pArea->m_cInfinity.OutlinePoly(m_pClosedPolygon,
+                        m_nClosedPolygon,
+                        m_rClosedBounding,
+                        RGB(255, 0, 0));
+                }
+            }
+        }
+    } else {
+        if ((m_dwFlags & 0x80) != 0) {
+            return;
+        }
+
+        // NOTE: Uninline.
+        if (!m_pArea->m_visibility.IsTileExplored(m_pArea->m_visibility.PointToTile(m_pos))) {
+            return;
+        }
+
+        if (g_pBaldurChitin->pActiveEngine != g_pBaldurChitin->m_pEngineWorld) {
+            return;
+        }
+
+        if (g_pBaldurChitin->m_pEngineWorld->GetMenuKey() != TRUE) {
+            return;
+        }
+
+        if (CInfinity::TRANSLUCENT_BLTS_ON
+            && !g_pChitin->cVideo.m_bIs3dAccelerated
+            && !bRendered) {
+            if ((m_dwFlags & 0x1) != 0) {
+                if (m_nOpenPolygon > 0) {
+                    // NOTE: Uninline.
+                    sub_48B600(pArea,
+                        pVidMode,
+                        a3,
+                        g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(255, 0, 0)));
+                }
+            } else {
+                if (m_nClosedPolygon > 0) {
+                    // NOTE: Uninline.
+                    sub_48B3C0(pArea,
+                        pVidMode,
+                        a3,
+                        g_pBaldurChitin->GetCurrentVideoMode()->FUN_0079adf0(RGB(255, 0, 0)));
+                }
+            }
+        }
+
+        if ((m_dwFlags & 0x1) != 0) {
+            if (m_nOpenPolygon > 0) {
+                m_pArea->m_cInfinity.OutlinePoly(m_pOpenPolygon,
+                    m_nOpenPolygon,
+                    m_rOpenBounding,
+                    RGB(255, 0, 0));
+            }
+        } else {
+            if (m_nClosedPolygon > 0) {
+                m_pArea->m_cInfinity.OutlinePoly(m_pClosedPolygon,
+                    m_nClosedPolygon,
+                    m_rClosedBounding,
+                    RGB(255, 0, 0));
+            }
+        }
     }
 }
 
@@ -1317,6 +1799,18 @@ void CGameDoor::SetDrawPoly(SHORT time)
         }
     }
     m_drawPoly = time;
+}
+
+// 0x48B3C0
+void CGameDoor::sub_48B3C0(CGameArea* pArea, CVidMode* pVidMode, int a3, DWORD rgbColor)
+{
+    // TODO: Incomplete.
+}
+
+// 0x48B600
+void CGameDoor::sub_48B600(CGameArea* pArea, CVidMode* pVidMode, int a3, DWORD rgbColor)
+{
+    // TODO: Incomplete.
 }
 
 // 0x453140

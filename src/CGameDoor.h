@@ -15,11 +15,16 @@ public:
     /* 0000 */ ~CGameDoor() override;
     /* 000C */ void AIUpdate() override;
     /* 0028 */ BOOLEAN CanSaveGame(STRREF& strError) override;
+    /* 002C */ BOOLEAN CompressTime(DWORD deltaTime) override;
     /* 0030 */ void DebugDump(const CString& message, BOOLEAN bEchoToScreen) override;
     /* 0034 */ BOOL IsOver(const CPoint& pt) override;
     /* 0040 */ void OnActionButton(const CPoint& pt) override;
     /* 0048 */ void RemoveFromArea() override;
+    /* 004C */ void Render(CGameArea* pArea, CVidMode* pVidMode, int a3) override;
     /* 0058 */ void SetCursor(LONG nToolTip) override;
+    /* 0078 */ void AddEffect(CGameEffect* pEffect, BYTE list, BOOL noSave, BOOL immediateApply) override;
+    /* 00B8 */ virtual void sub_48B3C0(CGameArea* pArea, CVidMode* pVidMode, int a3, DWORD rgbColor);
+    /* 00BC */ virtual void sub_48B600(CGameArea* pArea, CVidMode* pVidMode, int a3, DWORD rgbColor);
 
     void ToggleDoor(const CAIObjectType& cause, BOOL bIgnoreLock);
     void OnDoorStatusUpdate(BOOLEAN bDoorOpened, DWORD dwFlags, WORD nTrapActivated, WORD nTrapDetected);

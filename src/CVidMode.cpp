@@ -2551,6 +2551,16 @@ DWORD CVidMode::FUN_0079ad90(DWORD dwPixel)
     return ((((m_dwBBitMask & pixel) >> m_dwBBitShift) << field_CA) + (((m_dwGBitMask & pixel) >> m_dwGBitShift) << field_C6) * 2) + (((m_dwRBitMask & pixel) >> m_dwRBitShift) << field_C2);
 }
 
+// 0x79ADF0
+DWORD CVidMode::FUN_0079adf0(COLORREF rgbColor)
+{
+    if (g_pChitin->cVideo.m_nBpp > 16) {
+        return (GetRValue(rgbColor) << m_dwRBitShift) | (GetGValue(rgbColor) << m_dwGBitShift) | (GetBValue(rgbColor) << m_dwBBitShift);
+    } else {
+        return (((GetRValue(rgbColor) >> field_C2) << m_dwRBitShift) | ((GetGValue(rgbColor) >> field_C6) << m_dwGBitShift) | ((GetBValue(rgbColor) >> field_CA) << m_dwBBitShift)) & 0xFFFF;
+    }
+}
+
 // 0x7BC100
 BOOL CVidMode::ActivateVideoMode(CVidMode* pPrevVidMode, HWND hWnd, BOOLEAN bFullscreen)
 {
