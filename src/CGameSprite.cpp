@@ -24859,7 +24859,443 @@ SHORT CGameSprite::Spell(CGameAIBase* pTarget)
 // 0x742840
 SHORT CGameSprite::SpellPoint()
 {
-    // TODO: Incomplete.
+    SHORT nSequence = m_nSequence;
+    CString sSpell("");
+    CPoint ptDest = m_curAction.m_dest;
+
+    if (m_typeAI.m_nGeneral == CAIObjectType::G_DEAD) {
+        return ACTION_DONE;
+    }
+
+    if (m_actionCount == 0) {
+        if (m_curProjectile != NULL) {
+            delete m_curProjectile;
+            m_curProjectile = NULL;
+        }
+
+        if (m_derivedStats.m_bAuraCleansing != 0) {
+            if (m_castCounter != -1) {
+                FeedBack(0x29, 0, 0, 0, -1, 0, 0);
+                m_castCounter = -1;
+            }
+        }
+    }
+
+    SHORT nDirection = m_nDirection;
+    if (nDirection != GetDirection(ptDest)) {
+        CMessage* message = new CMessageSetDirection(ptDest, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        return ACTION_NORMAL;
+    }
+
+    if (!m_derivedStats.m_spellStates[SPLSTATE_VOCALIZE]
+        && (m_derivedStats.m_generalState & STATE_SILENCED) != 0
+        && !sub_763150(CGAMESPRITE_FEAT_SUBVOCAL_CASTING)) {
+        if (strcmp(m_curAction.GetString1(), "") == 0) {
+            DecodeSpell(m_curAction.m_specificID, sSpell);
+            if (strcmp(sSpell, "") == 0) {
+                return ACTION_ERROR;
+            }
+        } else {
+            sSpell = m_curAction.GetString1();
+        }
+
+        CResRef resSilenced(sSpell);
+
+        BYTE nSilencedType = g_pBaldurChitin->GetObjectGame()->GetSpellType(resSilenced);
+        if (nSilencedType == 1 || nSilencedType == 3) {
+            if (strcmp(sSpell, "SPWI219") != 0) {
+                return ACTION_ERROR;
+            }
+        }
+    }
+
+    BYTE nClass = static_cast<BYTE>(m_curAction.m_specificID2);
+    BYTE nSpecIndex = static_cast<BYTE>(m_curAction.m_specificID2 >> 8);
+    DWORD nSpecialization = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetSpecializationMask(nClass, nSpecIndex);
+    BYTE nSpellLevel = static_cast<BYTE>(m_curAction.m_specificID3);
+
+    BOOL bTempSpell = FALSE;
+
+    // NOTE: Unlike `Spell`, `m_bStartedCasting` is never set to TRUE, so this
+    // block runs on every call.
+    if (!m_bStartedCasting) {
+        CSpell* pSpell = m_curSpell;
+        if (pSpell == NULL) {
+            if (strcmp(m_curAction.GetString1(), "") == 0) {
+                DecodeSpell(m_curAction.m_specificID, sSpell);
+                if (strcmp(sSpell, "") == 0) {
+                    return ACTION_ERROR;
+                }
+            } else {
+                sSpell = m_curAction.GetString1();
+            }
+
+            pSpell = new CSpell(CResRef(sSpell));
+            if (pSpell == NULL) {
+                return ACTION_ERROR;
+            }
+
+            bTempSpell = TRUE;
+        } else {
+            bTempSpell = FALSE;
+        }
+
+        BOOL bCheckLOS = ((~pSpell->GetItemFlags()) >> 11) & 1;
+
+        BOOL bMove;
+        if (sub_7567F0(pSpell, ptDest, nClass, nSpecialization)) {
+            if (!m_pArea->CheckLOS(m_pos, ptDest, m_visibleTerrainTable, FALSE) && bCheckLOS) {
+                bMove = TRUE;
+            } else {
+                CMessage* message = new CMessageDropPath(m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                bMove = FALSE;
+            }
+        } else {
+            bMove = TRUE;
+        }
+
+        if (bMove) {
+            SHORT rc = sub_73FEC0(m_curAction.m_dest, 0);
+            if (rc != ACTION_DONE) {
+                if (bTempSpell) {
+                    delete pSpell;
+                }
+
+                return rc;
+            }
+        }
+
+        if (bTempSpell) {
+            delete pSpell;
+        }
+
+        if (m_castCounter == -1) {
+            m_castCounter = 0;
+            m_bInCasting = TRUE;
+        }
+    }
+
+    SHORT nSpellType = 0;
+
+    if (m_castCounter == 0) {
+        if (m_curAction.m_actionID == CAIAction::SPELLPOINTNODEC) {
+            if (!IsVisibleToCaller(FALSE)) {
+                ITEM_EFFECT effect;
+                CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+                // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+                effect.durationType = 1;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    m_pos,
+                    m_id,
+                    CPoint(-1, -1));
+
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            if (m_derivedStats.m_spellStates[SPLSTATE_SANCTUARY]) {
+                ITEM_EFFECT effect;
+                CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_DISPELSANCTUARY);
+                // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+                effect.durationType = 1;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    m_pos,
+                    m_id,
+                    CPoint(-1, -1));
+
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            if (strcmp(m_curAction.GetString1(), "") == 0) {
+                DecodeSpell(m_curAction.m_specificID, sSpell);
+                if (strcmp(sSpell, "") == 0) {
+                    return ACTION_ERROR;
+                }
+            } else {
+                sSpell = m_curAction.GetString1();
+            }
+
+            if (m_curSpell != NULL) {
+                delete m_curSpell;
+                m_curSpell = NULL;
+            }
+
+            m_curSpell = new CSpell(CResRef(sSpell));
+
+            CResRef resSpell(sSpell);
+            m_cGameStats.RecordSpellUse(resSpell);
+
+            if (m_curSpell == NULL) {
+                return ACTION_ERROR;
+            }
+
+            nSpellType = m_curSpell->GetCasterType();
+        } else {
+            // NOTE: The original tests `m_castCounter == 0` a second time.
+            if (!IsVisibleToCaller(FALSE)) {
+                ITEM_EFFECT effect;
+                CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+                // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+                effect.durationType = 1;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    m_pos,
+                    m_id,
+                    CPoint(-1, -1));
+
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            if (m_derivedStats.m_spellStates[SPLSTATE_SANCTUARY]) {
+                ITEM_EFFECT effect;
+                CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_DISPELSANCTUARY);
+                // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+                effect.durationType = 1;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    m_pos,
+                    m_id,
+                    CPoint(-1, -1));
+
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            if (strcmp(m_curAction.GetString1(), "") == 0) {
+                DecodeSpell(m_curAction.m_specificID, sSpell);
+                if (strcmp(sSpell, "") == 0) {
+                    return ACTION_ERROR;
+                }
+            } else {
+                sSpell = m_curAction.GetString1();
+            }
+
+            if (m_curSpell != NULL) {
+                delete m_curSpell;
+                m_curSpell = NULL;
+            }
+
+            CString sObsoletePrefix("**");
+            if (strcmp(sSpell.Left(strlen("**")), sObsoletePrefix) == 0) {
+                CString sError(" ");
+                sError.Format("*** %s is trying to cast an OBSOLETE SPELL: %s.\n",
+                    (LPCSTR)m_sName,
+                    (LPCSTR)sSpell);
+                return ACTION_ERROR;
+            }
+
+            CResRef resSpell(sSpell);
+
+            // NOTE: Unlike `Spell`, the spell use is recorded before the spell
+            // is created.
+            m_cGameStats.RecordSpellUse(resSpell);
+
+            m_curSpell = new CSpell(resSpell);
+
+            if (m_curSpell == NULL) {
+                return ACTION_ERROR;
+            }
+
+            nSpellType = m_curSpell->GetCasterType();
+
+            BOOLEAN bDisabledType = FALSE;
+            UINT nTypeIndex = 0;
+            switch (nSpellType) {
+            case 1:
+                nTypeIndex = 0;
+                break;
+            case 2:
+                nTypeIndex = 1;
+                break;
+            case 4:
+                nTypeIndex = 2;
+                break;
+            default:
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+                // __LINE__: 13477
+                UTIL_ASSERT_MSG(FALSE, "Invalid spell type");
+                break;
+            }
+
+            if (m_derivedStats.m_disabledSpellTypes[nTypeIndex] != 0) {
+                bDisabledType = TRUE;
+            }
+
+            BYTE nKind = g_pBaldurChitin->GetObjectGame()->GetSpellType(resSpell);
+
+            UINT nID = 0;
+            UINT nIndex = 0;
+            BOOLEAN bSuccess = TRUE;
+
+            if (nKind == 1) {
+                if (!g_pBaldurChitin->GetObjectGame()->m_spells.Find(resSpell, nID)) {
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+                    // __LINE__: 13494
+                    UTIL_ASSERT_MSG(FALSE, "Unknown spell");
+                    return ACTION_ERROR;
+                }
+
+                UINT nClassIndex = g_pBaldurChitin->GetObjectGame()->GetSpellcasterIndex(nClass);
+
+                if (nSpecIndex == 0) {
+                    UINT nLevelIndex = nSpellLevel - 1;
+
+                    if (nClass != CAIOBJECTTYPE_C_SORCERER && nClass != CAIOBJECTTYPE_C_BARD) {
+                        unsigned int a4 = 1;
+                        unsigned int a5 = 0;
+                        sub_724FD0(nClass, nLevelIndex, resSpell, a4, a5);
+                    } else {
+                        unsigned int a2 = 1;
+                        BOOLEAN a3 = FALSE;
+                        m_spells.Get(nClassIndex)->sub_7261A0(nLevelIndex, a2, a3);
+
+                        bSuccess = FALSE;
+
+                        CAbilityId ab;
+                        ab.m_itemType = 1;
+                        ab.m_nClass = nClass;
+                        ab.field_1D = nSpellLevel;
+                        ab.field_1E = 0;
+
+                        for (nIndex = 0; nIndex < m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevelIndex)->m_List.size(); nIndex++) {
+                            // NOTE: Uninline.
+                            CGameSpriteSpellListEntry* pEntry = m_spells.Get(nClassIndex)->GetSpellsAtLevel(nLevelIndex)->Get(nIndex);
+
+                            ab.m_res = g_pBaldurChitin->GetObjectGame()->m_spells.Get(pEntry->m_nID);
+                            CheckQuickLists(&ab, -1, FALSE, FALSE);
+                        }
+                    }
+                } else {
+                    UINT nLevelIndex = nSpellLevel - 1;
+                    unsigned int a4 = 1;
+                    unsigned int a5 = 0;
+                    sub_725110(nLevelIndex, resSpell, a4, a5);
+                }
+            } else if (nKind == 2) {
+                if (!g_pBaldurChitin->GetObjectGame()->m_innateSpells.Find(resSpell, nID)) {
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+                    // __LINE__: 13561
+                    UTIL_ASSERT_MSG(FALSE, "Unknown spell");
+                    return ACTION_ERROR;
+                }
+
+                if (m_innateSpells.Find(nID, nIndex) == TRUE) {
+                    if (resSpell == CGameSprite::SPIN275
+                        || resSpell == CGameSprite::SPIN276
+                        || resSpell == CGameSprite::SPIN277
+                        || resSpell == CGameSprite::SPIN278
+                        || resSpell == CGameSprite::SPIN279) {
+                        bSuccess = FALSE;
+                    } else {
+                        unsigned int a2 = 1;
+                        unsigned int a3 = 0;
+                        sub_725270(resSpell, a2, a3);
+                    }
+                }
+            } else if (nKind == 3) {
+                if (!g_pBaldurChitin->GetObjectGame()->m_songs.Find(resSpell, nID)) {
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+                    // __LINE__: 13590
+                    UTIL_ASSERT_MSG(FALSE, "Unknown spell");
+                    return ACTION_ERROR;
+                }
+
+                m_songs.Find(nID, nIndex);
+            } else if (nKind == 4) {
+                if (!g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Find(resSpell, nID)) {
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+                    // __LINE__: 13606
+                    UTIL_ASSERT_MSG(FALSE, "Unknown spell");
+                    return ACTION_ERROR;
+                }
+
+                if (m_shapeshifts.Find(nID, nIndex) == TRUE) {
+                    // NOTE: Unlike `Spell`, there is no special case for SPIN122.
+                    unsigned int a1 = 1;
+                    BOOLEAN a2 = FALSE;
+                    m_shapeshifts.sub_725DB0(a1, a2);
+
+                    bSuccess = FALSE;
+
+                    CAbilityId ab;
+                    ab.m_itemType = 1;
+
+                    for (nIndex = 0; nIndex < m_shapeshifts.m_List.size(); nIndex++) {
+                        // NOTE: Uninline.
+                        CGameSpriteSpellListEntry* pEntry = m_shapeshifts.Get(nIndex);
+
+                        ab.m_res = g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Get(pEntry->m_nID);
+                        ab.field_1D = nSpellLevel;
+                        ab.m_nClass = nClass;
+                        ab.field_1E = 0;
+                        CheckQuickLists(&ab, -1, FALSE, FALSE);
+                    }
+                }
+            }
+
+            if (bDisabledType == TRUE) {
+                delete m_curSpell;
+                m_curSpell = NULL;
+                return ACTION_ERROR;
+            }
+
+            if (bSuccess == TRUE) {
+                CAbilityId ab;
+                ab.m_itemType = 1;
+                ab.m_res = sSpell;
+
+                if (nKind == 1) {
+                    ab.m_nClass = nClass;
+                    ab.field_1D = nSpellLevel;
+                    ab.field_1E = nSpecIndex;
+                }
+
+                CheckQuickLists(&ab, -1, FALSE, FALSE);
+            }
+        }
+    }
+
+    if (m_curSpell == NULL) {
+        if (m_typeAI.m_nEnemyAlly > CAIObjectType::EA_GOODCUTOFF) {
+            return ACTION_NORMAL;
+        }
+
+        return ACTION_INTERRUPTABLE;
+    }
+
+    m_curSpell->Demand();
+
+    SHORT nCasterLevel = GetCasterLevel(m_curSpell, nClass, nSpecialization);
+
+    SPELL_ABILITY* pAbility = NULL;
+    INT nAbilityIdx = 0;
+    if (m_curSpell->GetAbilityCount() > 0) {
+        do {
+            if (m_curSpell->GetAbility(nAbilityIdx)->minCasterLevel > nCasterLevel) {
+                break;
+            }
+
+            pAbility = m_curSpell->GetAbility(nAbilityIdx);
+            nAbilityIdx++;
+        } while (nAbilityIdx < m_curSpell->GetAbilityCount());
+    }
+
+    INT nAbility = nAbilityIdx - 1;
+
+    if (pAbility == NULL) {
+        m_curSpell->Release();
+        return ACTION_ERROR;
+    }
+
+    // TODO: Incomplete. Asm 0x743D9D-0x74466F is not translated yet.
 
     return ACTION_ERROR;
 }
