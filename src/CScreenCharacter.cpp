@@ -3348,7 +3348,557 @@ void CScreenCharacter::UpdateGeneralInformation(CUIControlTextDisplay* pText, CG
 // 0x5DE2C0
 void CScreenCharacter::UpdateEquipmentInformation(CUIControlTextDisplay* pText, CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
+    CTlkTable& tlk = g_pBaldurChitin->m_cTlkTable;
+    const CRuleTables& rule = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
+    CString sTemp;
+
+    // NOTE: Result is unused.
+    pSprite->GetSpecialization();
+
+    CDerivedStats* pDStats = pSprite->GetDerivedStats();
+    CCreatureFileHeader* pBStats = pSprite->GetBaseStats();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 5386
+    UTIL_ASSERT(pDStats != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 5388
+    UTIL_ASSERT(pBStats != NULL);
+
+    INT nBaseAttackBonus;
+    INT nAttacks;
+    INT nStep;
+    rule.sub_546B60(pSprite, nBaseAttackBonus, nAttacks, nStep, TRUE);
+
+    CItem* curWeapon = NULL;
+    CItem* curWeaponSecond = NULL;
+    const ITEM_ABILITY* curAttackSecond = NULL;
+
+    if (&pSprite->m_equipment != NULL) {
+        curWeapon = pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon];
+        curWeaponSecond = pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())];
+
+        if (curWeapon != NULL) {
+            curWeapon->Demand();
+        }
+
+        if (curWeaponSecond != NULL) {
+            curWeaponSecond->Demand();
+        }
+
+        if (pSprite->m_equipment.m_selectedWeapon == 42
+            || (curWeaponSecond != NULL
+                && (curWeaponSecond->GetItemType() == 47
+                    || curWeaponSecond->GetItemType() == 53
+                    || curWeaponSecond->GetItemType() == 49
+                    || curWeaponSecond->GetItemType() == 41))) {
+            if (curWeaponSecond != NULL) {
+                curWeaponSecond->Release();
+            }
+            curWeaponSecond = NULL;
+        }
+
+        if (curWeapon == NULL) {
+            pSprite->SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 0, 1);
+
+            curWeapon = pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon];
+            if (curWeapon != NULL) {
+                curWeapon->Demand();
+            }
+        }
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 5425
+    UTIL_ASSERT(curWeapon != NULL);
+
+    SHORT nOffA = 0;
+    SHORT nOffB = 0;
+    SHORT nOffC = 0;
+
+    INT n7240A0 = pSprite->sub_7240A0();
+    INT n724170 = pSprite->sub_724170();
+
+    const ITEM_ABILITY* curAttack = curWeapon->GetAbility(pSprite->m_equipment.m_selectedWeaponAbility);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 5440
+    UTIL_ASSERT(curAttack != NULL);
+
+    SHORT nMainA = pSprite->sub_73CAE0(curWeapon, curAttack);
+    nMainA += pSprite->sub_73CC40(curWeapon, curAttack);
+
+    SHORT nMainB = pSprite->sub_73CA20(curWeapon, curAttack);
+    nMainB += pSprite->sub_73CF10(curWeapon, curAttack);
+    nMainB += pSprite->sub_73D080(FALSE);
+
+    SHORT nMainC = pSprite->sub_73CB10(curWeapon, curAttack);
+
+    if (curWeaponSecond != NULL) {
+        // NOTE: Uninline.
+        CButtonData buttonData;
+
+        pSprite->GetQuickWeapon(static_cast<BYTE>(pSprite->sub_726800() - 0x2B), buttonData);
+
+        curAttackSecond = curWeaponSecond->GetAbility(buttonData.m_abilityId.m_abilityNum);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 5464
+        UTIL_ASSERT(curAttackSecond != NULL);
+
+        nOffA = pSprite->sub_73CA20(curWeaponSecond, curAttackSecond);
+        nOffA += pSprite->sub_73CAE0(curWeaponSecond, curAttackSecond);
+        nOffA += pSprite->sub_73CC40(curWeaponSecond, curAttackSecond);
+
+        nOffB = pSprite->sub_73CF10(curWeaponSecond, curAttackSecond);
+        nOffB += pSprite->sub_73D080(TRUE);
+
+        nOffC = pSprite->sub_73CB10(curWeaponSecond, curAttackSecond);
+    }
+
+    SHORT nGeneralBonus = pSprite->sub_73C7E0();
+    nGeneralBonus = pSprite->sub_73D420() + nGeneralBonus + pSprite->sub_73CAD0();
+
+    CString sLine;
+    CString sValue;
+
+    UpdateTextForceColor(pText,
+        RGB(200, 200, 0),
+        "%s",
+        (LPCSTR)FetchString(9457));
+
+    SHORT launcherSlot;
+    BOOLEAN bRanged = FALSE;
+    CItem* pLauncher = pSprite->GetLauncher(curAttack, launcherSlot);
+    if (pLauncher != NULL) {
+        pLauncher->Demand();
+        if (pLauncher->GetAbility(0) != NULL) {
+            bRanged = TRUE;
+        }
+    }
+
+    if (bRanged == FALSE) {
+        // NOTE: Only the low byte of `type` is compared.
+        if (static_cast<BYTE>(curAttack->type) == 2) {
+            bRanged = TRUE;
+        }
+    }
+
+    if (pLauncher != NULL) {
+        pLauncher->Release();
+    }
+
+    UINT nRuleAttacks = nAttacks;
+
+    if (curWeapon != NULL
+        && curWeaponSecond != NULL
+        && curWeapon != curWeaponSecond
+        && curWeaponSecond->GetItemType() != 47
+        && curWeaponSecond->GetItemType() != 53
+        && curWeaponSecond->GetItemType() != 49
+        && curWeaponSecond->GetItemType() != 41) {
+        nAttacks = pDStats->m_nNumberOfAttacks - 1;
+    } else {
+        nAttacks = pDStats->m_nNumberOfAttacks;
+    }
+
+    if (curWeapon != NULL && curWeapon != curWeaponSecond) {
+        sLine.Format("%s: ", (LPCSTR)FetchString(734));
+
+        for (INT i = 0; i < nAttacks; i++) {
+            INT nBase = nBaseAttackBonus;
+            if (pDStats->m_spellStates[SPLSTATE_FEAT_RAPID_SHOT] && bRanged == TRUE && i == 0) {
+                nBase += -5;
+            }
+
+            SHORT nAttackBonus = rule.sub_547020(nBase, nStep, i)
+                + n724170
+                + n7240A0
+                + nGeneralBonus
+                + nMainC
+                + nMainB
+                + nMainA;
+
+            if (pDStats->m_spellStates[SPLSTATE_FEAT_RAPID_SHOT] && bRanged == TRUE) {
+                nAttackBonus -= 2;
+            }
+
+            sValue.Format("%+d", nAttackBonus);
+            sLine += sValue;
+
+            if (i + 1 < nAttacks) {
+                sLine += "/";
+            }
+        }
+
+        UpdateText(pText, "%s", (LPCSTR)sLine);
+
+        sLine.Format("  %s: ", (LPCSTR)FetchString(31353));
+
+        for (UINT i = 0; static_cast<INT>(i) < nAttacks; i++) {
+            INT nBase = nBaseAttackBonus;
+            if (pDStats->m_spellStates[SPLSTATE_FEAT_RAPID_SHOT] && bRanged == TRUE) {
+                if (i == 0) {
+                    nBase += -5;
+                }
+                nBase -= 2;
+            }
+
+            if (i < nRuleAttacks) {
+                sValue.Format("%+d", rule.sub_547020(nBase, nStep, i));
+                sLine += sValue;
+            }
+
+            if (i + 1 < nRuleAttacks) {
+                sLine += "/";
+            }
+        }
+
+        UpdateTextNoTrim(pText, "%s", (LPCSTR)sLine);
+
+        if (nMainA != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(32560),
+                nMainA);
+        }
+
+        if (nMainB != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(32561),
+                nMainB);
+        }
+
+        if (nMainC != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(33547),
+                nMainC);
+        }
+
+        if (n7240A0 != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(39816),
+                n7240A0);
+        }
+
+        if (n724170 != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(39822),
+                n724170);
+        }
+    }
+
+    if (curWeaponSecond != NULL) {
+        if (curWeapon != curWeaponSecond) {
+            UpdateText(pText, "");
+        }
+
+        SHORT nOffhandBonus = nBaseAttackBonus
+            + n7240A0
+            + nGeneralBonus
+            + nOffC
+            + nOffB
+            + nOffA;
+
+        sLine.Format("%s: %+d", (LPCSTR)FetchString(733), nOffhandBonus);
+        UpdateText(pText, "%s", (LPCSTR)sLine);
+
+        sLine.Format("  %s: ", (LPCSTR)FetchString(31353));
+
+        sValue.Format("%+d", nBaseAttackBonus);
+        sLine += sValue;
+
+        UpdateTextNoTrim(pText, "%s", (LPCSTR)sLine);
+
+        if (nOffA != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(32560),
+                nOffA);
+        }
+
+        if (nOffB != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(32561),
+                nOffB);
+        }
+
+        if (nOffC != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(33547),
+                nOffC);
+        }
+
+        if (n7240A0 != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(39816),
+                n7240A0);
+        }
+
+        if (n724170 != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(39822),
+                n724170);
+        }
+    }
+
+    if (nGeneralBonus != 0) {
+        UpdateTextNoTrim(pText,
+            "  %s: %+d",
+            (LPCSTR)FetchString(33548),
+            nGeneralBonus);
+    }
+
+    UpdateText(pText, "");
+
+    if (pDStats->m_nDamageBonus != 0) {
+        UpdateText(pText,
+            "%s: %+d",
+            (LPCSTR)FetchString(40353),
+            pDStats->m_nDamageBonus);
+
+        UpdateText(pText, "");
+    }
+
+    if (curWeapon == curWeaponSecond) {
+        sTemp.Format("%d", 1);
+    } else if (pSprite->m_equipment.m_selectedWeapon != 42
+        && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())] != NULL
+        && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 47
+        && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 53
+        && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 49
+        && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 41) {
+        sTemp.Format("%d+%d", pDStats->m_nNumberOfAttacks - 1, 1);
+    } else {
+        sTemp.Format("%d", pDStats->m_nNumberOfAttacks);
+    }
+
+    // NOTE: Calls `GetCriticalHitBonus` twice.
+    if (pSprite->GetCriticalHitBonus() != 0) {
+        INT nCriticalHitBonus = pSprite->GetCriticalHitBonus();
+        CString sCritical;
+
+        if (nCriticalHitBonus == 0) {
+            sCritical.Format("%s: %d", (LPCSTR)FetchString(41025), 0);
+        } else {
+            sCritical.Format("%s: %+d", (LPCSTR)FetchString(41025), nCriticalHitBonus);
+        }
+
+        UpdateText(pText, "%s", (LPCSTR)sCritical);
+    }
+
+    UpdateText(pText,
+        "%s: %s",
+        (LPCSTR)FetchString(9458),
+        (LPCSTR)sTemp);
+
+    UpdateText(pText, "");
+
+    UpdateTextForceColor(pText,
+        RGB(200, 200, 0),
+        "%s",
+        (LPCSTR)FetchString(33553));
+
+    UpdateText(pText,
+        "%s: %d",
+        (LPCSTR)FetchString(33553),
+        pSprite->GetAC());
+
+    // NOTE: Base armor class (`0x84EBBC`).
+    UpdateTextNoTrim(pText,
+        "  %s: %d",
+        (LPCSTR)FetchString(31353),
+        10);
+
+    INT nExpertise = pSprite->sub_726270(CGAMESPRITE_FEAT_EXPERTISE);
+    if (bRanged == TRUE) {
+        nExpertise = 0;
+    }
+
+    if (pDStats->field_6 != 0) {
+        UpdateTextNoTrim(pText,
+            "  %s: %+d",
+            (LPCSTR)FetchString(11997),
+            pDStats->field_6);
+    }
+
+    if (pDStats->field_8 != 0) {
+        UpdateTextNoTrim(pText,
+            "  %s: %+d",
+            (LPCSTR)FetchString(33551),
+            pDStats->field_8);
+    }
+
+    if (pDStats->field_A != 0) {
+        UpdateTextNoTrim(pText,
+            "  %s: %+d",
+            (LPCSTR)FetchString(12006),
+            pDStats->field_A);
+    }
+
+    if (pDStats->field_C - nExpertise != 0) {
+        UpdateTextNoTrim(pText,
+            "  %s: %+d",
+            (LPCSTR)FetchString(33552),
+            pDStats->field_C - nExpertise);
+    }
+
+    if (pSprite->sub_723EA0() != 0) {
+        UpdateTextNoTrim(pText,
+            "  %s: %+d",
+            (LPCSTR)FetchString(1151),
+            pSprite->sub_723EA0());
+    }
+
+    if (pSprite->HasClassLevel(CAIOBJECTTYPE_C_MONK)) {
+        sTemp.Format("%+d", pSprite->sub_723F60());
+        tlk.SetToken(TOKEN_NUMBER, sTemp);
+
+        UpdateText(pText,
+            "%s",
+            (LPCSTR)FetchString(39431)); // "Monk Wisdom Bonus: <number> to AC"
+    }
+
+    if (nExpertise != 0 && bRanged == FALSE) {
+        UpdateTextNoTrim(pText,
+            "  %s: %+d",
+            (LPCSTR)FetchString(rule.GetFeatName(CGAMESPRITE_FEAT_EXPERTISE)),
+            nExpertise);
+    }
+
+    if (pDStats->m_nACCrushingMod != 0
+        || pDStats->m_nACMissileMod != 0
+        || pDStats->m_nACPiercingMod != 0
+        || pDStats->m_nACSlashingMod != 0) {
+        UpdateText(pText, "");
+
+        UpdateTextForceColor(pText,
+            RGB(200, 200, 0),
+            "%s",
+            (LPCSTR)FetchString(11766));
+    }
+
+    if (pDStats->m_nACCrushingMod != 0) {
+        UpdateText(pText,
+            "%s: %+d",
+            (LPCSTR)FetchString(11770),
+            pDStats->m_nACCrushingMod);
+    }
+
+    if (pDStats->m_nACMissileMod != 0) {
+        UpdateText(pText,
+            "%s: %+d",
+            (LPCSTR)FetchString(11767),
+            pDStats->m_nACMissileMod);
+    }
+
+    if (pDStats->m_nACPiercingMod != 0) {
+        UpdateText(pText,
+            "%s: %+d",
+            (LPCSTR)FetchString(11769),
+            pDStats->m_nACPiercingMod);
+    }
+
+    if (pDStats->m_nACSlashingMod != 0) {
+        UpdateText(pText,
+            "%s: %+d",
+            (LPCSTR)FetchString(11768),
+            pDStats->m_nACSlashingMod);
+    }
+
+    // NOTE: Truncated to SHORT.
+    INT nSpellFailure = static_cast<SHORT>(pSprite->sub_724430());
+
+    if (pSprite->HasClassMask(CLASSMASK_BARD | CLASSMASK_SORCERER | CLASSMASK_WIZARD)) {
+        UpdateText(pText, "");
+
+        UpdateTextForceColor(pText,
+            RGB(200, 200, 0),
+            "%s",
+            (LPCSTR)FetchString(41391));
+
+        UpdateText(pText,
+            "%s: %d%%",
+            (LPCSTR)FetchString(41390),
+            nSpellFailure);
+
+        INT n724360 = pSprite->sub_724360();
+        if (n724360 != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d%%",
+                (LPCSTR)FetchString(39816),
+                n724360);
+        }
+
+        INT n724270 = pSprite->sub_724270();
+        if (n724270 != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d%%",
+                (LPCSTR)FetchString(39822),
+                n724270);
+        }
+
+        INT nArmoredArcana = 0;
+        if (pSprite->sub_763150(CGAMESPRITE_FEAT_ARMORED_ARCANA) == 1) {
+            nArmoredArcana = pSprite->GetFeatValue(CGAMESPRITE_FEAT_ARMORED_ARCANA) * 5;
+            UpdateTextNoTrim(pText,
+                "  %s: %+d%%",
+                (LPCSTR)FetchString(36352),
+                -nArmoredArcana);
+        }
+
+        INT nTotalFailure = nArmoredArcana - n724270 - n724360 + nSpellFailure;
+        if (nTotalFailure < 0) {
+            nTotalFailure = 0;
+        }
+
+        if (nSpellFailure != 0 && nTotalFailure != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d%%",
+                (LPCSTR)FetchString(33548),
+                nTotalFailure);
+        }
+    }
+
+    UpdateText(pText, "");
+
+    if (curWeapon != NULL || curWeaponSecond != NULL) {
+        UpdateTextForceColor(pText,
+            RGB(200, 200, 0),
+            "%s",
+            (LPCSTR)FetchString(41119));
+
+        if (curWeapon != NULL) {
+            if (curWeapon != curWeaponSecond) {
+                sub_5DF910(pText, pSprite, curWeapon, curAttack, TRUE);
+                UpdateText(pText, "");
+            }
+
+            curWeapon->Release();
+        }
+
+        if (curWeaponSecond != NULL
+            && curWeaponSecond->GetItemType() != 47
+            && curWeaponSecond->GetItemType() != 53
+            && curWeaponSecond->GetItemType() != 49
+            && curWeaponSecond->GetItemType() != 41) {
+            sub_5DF910(pText, pSprite, curWeaponSecond, curAttackSecond, FALSE);
+            UpdateText(pText, "");
+
+            curWeaponSecond->Release();
+        }
+    }
+
+    UpdateSavingThrows(pText, *pDStats);
 }
 
 // 0x5DF910
