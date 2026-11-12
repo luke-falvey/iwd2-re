@@ -28,9 +28,13 @@ public:
     CParticle(const CParticle& particle);
     BYTE AsynchronousUpdate();
     void Render(LPVOID pSurface, LONG lPitch, const CRect& rClipRect, USHORT nFlag, USHORT nBlobSize);
+    void RenderBlob16(WORD* pSurface, LONG lPitch, LONG lX, LONG lY, const CRect& rClipRect, USHORT nFlag, WORD color);
+    void RenderBlob24(BYTE* pSurface, LONG lPitch, LONG lX, LONG lY, const CRect& rClipRect, USHORT nFlag, DWORD color);
     void RenderBlob32(DWORD* pSurface, LONG lPitch, LONG lX, LONG lY, const CRect& rClipRect, USHORT nFlag, DWORD dwColor);
     void Render3d(const CRect& rClipRect, const CRect& rLockedRect, USHORT nFlag, USHORT nBlobSize);
 
+    void RenderDot16(WORD* pSurface, LONG lPitch, LONG lX, LONG lY, const CRect& rClipRect, DWORD color);
+    void RenderDot24(BYTE* pSurface, LONG lPitch, LONG lX, LONG lY, const CRect& rClipRect, DWORD color);
     void RenderDot32(DWORD* pSurface, LONG lPitch, LONG lX, LONG lY, const CRect& rClipRect, DWORD color);
 
     SHORT m_nTimeStamp;
