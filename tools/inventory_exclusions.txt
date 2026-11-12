@@ -298,3 +298,12 @@
 # CResHelper<CResEffect, 1016>::SetResRef (the repo template in CRes.h; resource type 0x3F8
 # passed to CDimm::GetResObject, same body as the other CResHelper instances).
 0x4C5D90
+# CTypedPtrList<CPtrList, CAIAction*> constructor (implicit), third vtable: CPtrList(nBlockSize)
+# (0x7FB239) then store of the vtable 0x847C18; returns this. Callers (GroupSetTarget,
+# HandleFollowPath, FollowLeader) pass 10 and store 0x847B90 afterwards.
+0x40A130
+
+# CTypedPtrList<CPtrList, LONG*>::GetNext(POSITION& pos) (not inlined here): takes the POSITION*
+# as its only stack argument, loads node = *pos, stores node->pNext into *pos and returns
+# &node->data (node + 8). Called by HandleFollowPath for m_memberList.
+0x409800

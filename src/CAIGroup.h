@@ -85,6 +85,7 @@ public:
     void SetGroupTriggerId(LONG triggerId);
     CPoint* GetOffsets(SHORT formationType, SHORT direction, BOOLEAN bMinSix);
     void RotateOffsets(CPoint* pOffsets, SHORT nOffsets, SHORT direction);
+    SHORT* GetFacings(SHORT formationType, SHORT direction);
     void RemoveFromSearch(CSearchBitmap* search);
     void AddToSearch(CSearchBitmap* search);
     LONG GetGroupLeader();
@@ -103,7 +104,7 @@ public:
     void AddTrigger(CAITrigger& trigger);
     BOOL InList(LONG characterId);
     void FollowLeader(CPoint target, BOOL additive);
-    void HandleFollowPath(LONG* pPath, INT nPath, CPoint target, CPoint start, BOOL additive);
+    void HandleFollowPath(LONG* pPath, SHORT nPath, CPoint target, CPoint start, BOOL additive);
 
     BYTE GetCount();
 
