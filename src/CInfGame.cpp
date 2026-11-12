@@ -3695,6 +3695,8 @@ static void sub_5A3DB0(BYTE** ppCreature, LONG* pCreatureSize)
 {
 #define OLD(type, offset) (*reinterpret_cast<type*>(pOld + (offset)))
 #define NEW(type, offset) (*reinterpret_cast<type*>(pNew + (offset)))
+#define HALF(n) (((n) & 0xFE) > 2 ? (n) >> 1 : 1)
+#define THIRD(n) ((n) / 3 > 1 ? (n) / 3 : 1)
 
     BYTE* pOld = *ppCreature;
     BYTE* pNew = new BYTE[*pCreatureSize];
@@ -3876,10 +3878,197 @@ static void sub_5A3DB0(BYTE** ppCreature, LONG* pCreatureSize)
 
     OLD(BYTE, 0x234) = OLD(BYTE, 0x234) > 1 ? OLD(BYTE, 0x234) : 1;
 
+    switch (OLD(BYTE, 0x2DB)) {
+    case 1:
+    case 202:
+        NEW(DWORD, 0x3B6) = 0x400;
+        NEW(BYTE, 0x95) = OLD(BYTE, 0x234);
+        pTable[3] = 0xB;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        NEW(DWORD, 0x270) = 0x4000;
+        break;
+    case 2:
+    case 203:
+        // NOTE: The mask is wider than the 16-bit value, so the test is
+        // always false.
+        if ((OLD(WORD, 0x246) & 0x40000000) != 0) {
+            *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x1;
+            NEW(BYTE, 0x8B) = OLD(BYTE, 0x234);
+            pTable[3] = 0x1;
+            NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        } else {
+            *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x10;
+            NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+            pTable[3] = 0x5;
+            NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        }
+        break;
+    case 3:
+    case 204:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x4;
+        NEW(BYTE, 0x8D) = OLD(BYTE, 0x234);
+        pTable[3] = 0x3;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    case 4:
+    case 205:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x100;
+        NEW(BYTE, 0x93) = OLD(BYTE, 0x234);
+        pTable[3] = 0x9;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    case 5:
+    case 206:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x2;
+        NEW(BYTE, 0x8C) = OLD(BYTE, 0x234);
+        pTable[3] = 0x2;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    case 6:
+    case 207:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x40;
+        NEW(BYTE, 0x91) = OLD(BYTE, 0x234);
+        pTable[3] = 0x7;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        NEW(DWORD, 0x270) = 0x1;
+        break;
+    case 7:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x410;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x235);
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 8:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x14;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x8D) = OLD(BYTE, 0x235);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 9:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x110;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x93) = OLD(BYTE, 0x235);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 10:
+        OLD(BYTE, 0x234) = THIRD(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = THIRD(OLD(BYTE, 0x235));
+        OLD(BYTE, 0x236) = THIRD(OLD(BYTE, 0x236));
+        NEW(DWORD, 0x3B6) = 0x510;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x95) = OLD(BYTE, 0x235);
+        NEW(BYTE, 0x93) = OLD(BYTE, 0x236);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x236) + OLD(BYTE, 0x235);
+        break;
+    case 11:
+    case 208:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x8;
+        NEW(BYTE, 0x8E) = OLD(BYTE, 0x234);
+        pTable[3] = 0x4;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    case 12:
+    case 209:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x80;
+        NEW(BYTE, 0x92) = OLD(BYTE, 0x234);
+        pTable[3] = 0x8;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    case 13:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x500;
+        NEW(BYTE, 0x95) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x93) = OLD(BYTE, 0x235);
+        pTable[3] = 0xB;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 14:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        NEW(DWORD, 0x3B6) = 0x404;
+        NEW(BYTE, 0x8D) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x95) = OLD(BYTE, 0x235);
+        pTable[3] = 0x3;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 15:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        NEW(DWORD, 0x3B6) = 0x104;
+        NEW(BYTE, 0x8D) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x93) = OLD(BYTE, 0x235);
+        pTable[3] = 0x3;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 16:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        NEW(DWORD, 0x3B6) = 0x18;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x8E) = OLD(BYTE, 0x235);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 17:
+        OLD(BYTE, 0x234) = THIRD(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = THIRD(OLD(BYTE, 0x235));
+        OLD(BYTE, 0x236) = THIRD(OLD(BYTE, 0x236));
+        NEW(DWORD, 0x3B6) = 0x414;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x95) = OLD(BYTE, 0x235);
+        NEW(BYTE, 0x8D) = OLD(BYTE, 0x236);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x236) + OLD(BYTE, 0x235);
+        break;
+    case 18:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        NEW(DWORD, 0x3B6) = 0x84;
+        NEW(BYTE, 0x8D) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x92) = OLD(BYTE, 0x235);
+        pTable[3] = 0x3;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 19:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x200;
+        NEW(BYTE, 0x94) = OLD(BYTE, 0x234);
+        pTable[3] = 0xA;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    case 20:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x20;
+        NEW(BYTE, 0x90) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        pTable[3] = 0x6;
+        NEW(DWORD, 0x270) = 0x8;
+        break;
+    default:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x10;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    }
+
     // TODO: Incomplete.
 
 #undef OLD
 #undef NEW
+#undef HALF
+#undef THIRD
 }
 
 // Converts "CRE V2.1" creature to "CRE V2.2" format.
