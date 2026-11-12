@@ -379,3 +379,30 @@
 # this->m_pchData, then calls CString::operator= (0x7FCD57) with the source. Called to
 # build by-value CString arguments in 0x5A7E40 and 0x60BA30.
 0x5A9660
+
+# CScreenCreateChar helpers that are compiler/library instantiations:
+# 0x4464A0 and 0x5F9810/0x60BB80 copy/erase 16-byte elements of an STL vector;
+# 0x448580 clears a std::list (frees nodes via operator delete, sentinel node);
+# 0x4436C0 and 0x443810 are implicit destructors of CObList-derived list classes;
+# 0x47A5C0 is CResHelper<T,nType>::SetResRef (template in CRes.h).
+0x4464A0
+0x448580
+0x4436C0
+0x443810
+0x5F9810
+0x60BB80
+0x47A5C0
+
+# CResHelper<T, nType>::~CResHelper() (the repo template in CRes.h; Ghidra calls it
+# C2DArray_Destruct, identical code folded): cancels a pending request, releases pRes.
+0x7B5370
+
+# std::vector<16-byte element> uninitialized copy / copy-construct helper (MSVC 6 STL
+# instantiation, member of the vector, RET 0xc): copies [first, last) to dest in 16-byte
+# steps (skipping NULL dest slots) and returns dest end. Used by CGameSpriteSpellList::operator=.
+0x448680
+
+# std::vector<16-byte element>::insert(pos, n, value) (MSVC 6 STL instantiation, RET 0xc,
+# 752 bytes): reallocating and in-place paths for push_back/insert. Used by
+# CGameSpriteSpellList::operator= (0x444EA0).
+0x449110
