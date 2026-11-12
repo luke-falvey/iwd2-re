@@ -532,6 +532,24 @@ CVidPolyCacheEntry::CVidPolyCacheEntry()
     m_pVertices = NULL;
 }
 
+// 0x7C0CF0
+CVidPolyCache::~CVidPolyCache()
+{
+    m_cs.Lock();
+
+    POSITION pos = GetHeadPosition();
+    while (pos != NULL) {
+        CVidPolyCacheEntry* pEntry = static_cast<CVidPolyCacheEntry*>(GetNext(pos));
+        if (pEntry != NULL) {
+            delete pEntry;
+        }
+    }
+
+    RemoveAll();
+
+    m_cs.Unlock();
+}
+
 // 0x7C1DE0
 BOOL CVidPolyCache::sub_7C1DE0(CVidPoly* pPoly)
 {

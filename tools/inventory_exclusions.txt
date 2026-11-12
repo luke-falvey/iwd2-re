@@ -1883,3 +1883,15 @@
 0x53CAE0
 0x59C2F0
 0x78E1E0
+# zlib 1.1.2 (statically linked, version string "1.1.2" at 0x8BDD80; the repo links
+# third_party/zlib): 0x7D70F0 deflateInit_ (calls deflateInit2_ with Z_DEFLATED, 15, 8,
+# Z_DEFAULT_STRATEGY), 0x7D7120 deflateInit2_ (checks version[0] and sizeof(z_stream) 0x38,
+# windowBits 8..15, memLevel 1..9, level -1 -> 6; zcalloc 0x7DA0D0 / zcfree 0x7DA0F0),
+# 0x7D7410 deflate, 0x7D7880 deflateEnd, 0x7D7930 a deflate_* block compressor
+# (calls fill_window 0x7D7BD0), 0x7D7BD0 fill_window (the more = -2 case).
+0x7D70F0
+0x7D7120
+0x7D7410
+0x7D7880
+0x7D7930
+0x7D7BD0
