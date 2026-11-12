@@ -11,37 +11,6 @@ CVisualEffectComponent::CVisualEffectComponent()
     memset(this, 0, sizeof(*this));
 }
 
-// 0x402940
-void* CResBinary::Demand()
-{
-    void* pData = CRes::Demand();
-
-    if (field_54 == 0 || CRes::GetDemands() <= 1) {
-        if (pData != NULL) {
-            field_50 = reinterpret_cast<BYTE*>(pData) + 4;
-            field_54 = 1;
-        }
-
-        if (field_54 == 0) {
-            return NULL;
-        }
-    }
-
-    return pData;
-}
-
-// 0x402980
-int CResBinary::Release()
-{
-    int rc = CRes::Release();
-
-    if (CRes::GetDemands() <= 0) {
-        field_54 = 0;
-    }
-
-    return rc;
-}
-
 // 0x554870
 CVisualEffect::CVisualEffect()
     : m_lChildren(10)
