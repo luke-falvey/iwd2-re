@@ -638,7 +638,6 @@ BOOL CUIControlEditMultiLine::OnRButtonDown(CPoint pt)
 // 0x4DB160
 void CUIControlEditMultiLine::OnKeyDown(SHORT nKey)
 {
-    // TODO: Incomplete.
     CString sText;
 
     // FIXME: Unused.
@@ -1807,10 +1806,299 @@ void CUIControlEditMultiLine::OnKeyDown(SHORT nKey)
 
         InvalidateRect();
         break;
-    default:
+    default: {
         // 0x4DF1FB - 0x4E03E9 (4590 bytes)
-        // TODO: Incomplete.
+
+        // 0x8ABA48
+        static BYTE digits[] = {
+            '0',
+            '1',
+            '2',
+            '3',
+            '4',
+            '5',
+            '6',
+            '7',
+            '8',
+            '9',
+        };
+
+        // 0x8ABA54
+        static BYTE shiftedDigits[] = {
+            ')',
+            '!',
+            '@',
+            '#',
+            '$',
+            '%',
+            '^',
+            '&',
+            '*',
+            '(',
+        };
+
+        // 0x8ABA3C
+        static BYTE symbolKeys[] = {
+            VK_OEM_1,
+            VK_OEM_PLUS,
+            VK_OEM_COMMA,
+            VK_OEM_MINUS,
+            VK_OEM_PERIOD,
+            VK_OEM_2,
+            VK_OEM_3,
+            VK_OEM_4,
+            VK_OEM_5,
+            VK_OEM_6,
+            VK_OEM_7,
+            0,
+        };
+
+        // 0x8ABA24
+        static BYTE symbols[] = {
+            ';',
+            '=',
+            ',',
+            '-',
+            '.',
+            '/',
+            '`',
+            '[',
+            '\\',
+            ']',
+            '\'',
+            0,
+        };
+
+        // 0x8ABA30
+        static BYTE shiftedSymbols[] = {
+            ':',
+            '+',
+            '<',
+            '_',
+            '>',
+            '?',
+            '~',
+            '{',
+            '|',
+            '}',
+            '"',
+            0,
+        };
+
+        if (nKey >= 'A' && nKey <= 'Z') {
+            if (field_85A == 2) {
+                InvalidateRect();
+                return;
+            }
+
+            switch (m_nTextCapitalization) {
+            case 0:
+                if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() == m_pPanel->m_pManager->m_pWarp->GetCapsLockKey()) {
+                    nKey += 0x20;
+                }
+                break;
+            case 1:
+                break;
+            case 2:
+                nKey += 0x20;
+                break;
+            }
+
+            if (field_88E != -1 && field_88A != -1) {
+                if (field_88E < field_88A) {
+                    m_sText = m_sText.Left(field_88E)
+                        + static_cast<char>(nKey)
+                        + m_sText.Right(m_sText.GetLength() - field_88A);
+                } else {
+                    m_sText = m_sText.Left(field_88A)
+                        + static_cast<char>(nKey)
+                        + m_sText.Right(m_sText.GetLength() - field_88E);
+
+                    field_86A = field_88A + 1;
+                }
+
+                field_88A = -1;
+                field_88E = -1;
+
+                CalculateNewLines(3);
+            } else {
+                m_sText = m_sText.Left(field_86A)
+                    + static_cast<char>(nKey)
+                    + m_sText.Right(m_sText.GetLength() - field_86A);
+
+                field_86A++;
+
+                CalculateNewLines(1);
+            }
+        } else if ((nKey >= '0' && nKey <= '9') || (nKey >= VK_NUMPAD0 && nKey <= VK_NUMPAD9)) {
+            if (nKey >= VK_NUMPAD0 && nKey <= VK_NUMPAD9) {
+                nKey -= '0';
+            }
+
+            if (field_88E != -1 && field_88A != -1) {
+                if (field_88E < field_88A) {
+                    if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                        m_sText = m_sText.Left(field_88E)
+                            + static_cast<char>(shiftedDigits[nKey - '0'])
+                            + m_sText.Right(m_sText.GetLength() - field_88A);
+                    } else {
+                        m_sText = m_sText.Left(field_88E)
+                            + static_cast<char>(digits[nKey - '0'])
+                            + m_sText.Right(m_sText.GetLength() - field_88A);
+                    }
+                } else {
+                    if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                        m_sText = m_sText.Left(field_88A)
+                            + static_cast<char>(shiftedDigits[nKey - '0'])
+                            + m_sText.Right(m_sText.GetLength() - field_88E);
+                    } else {
+                        m_sText = m_sText.Left(field_88A)
+                            + static_cast<char>(digits[nKey - '0'])
+                            + m_sText.Right(m_sText.GetLength() - field_88E);
+                    }
+
+                    field_86A = field_88A + 1;
+                }
+
+                field_88A = -1;
+                field_88E = -1;
+
+                CalculateNewLines(3);
+            } else {
+                if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                    m_sText = m_sText.Left(field_86A)
+                        + static_cast<char>(shiftedDigits[nKey - '0'])
+                        + m_sText.Right(m_sText.GetLength() - field_86A);
+                } else {
+                    m_sText = m_sText.Left(field_86A)
+                        + static_cast<char>(digits[nKey - '0'])
+                        + m_sText.Right(m_sText.GetLength() - field_86A);
+                }
+
+                field_86A++;
+
+                CalculateNewLines(1);
+            }
+        } else if (nKey == VK_MULTIPLY
+            || nKey == VK_DIVIDE
+            || nKey == VK_ADD
+            || nKey == VK_SUBTRACT
+            || nKey == VK_DECIMAL) {
+            int ch;
+            switch (nKey) {
+            case VK_MULTIPLY:
+                ch = '*';
+                break;
+            case VK_ADD:
+                ch = '+';
+                break;
+            case VK_SUBTRACT:
+                ch = '-';
+                break;
+            case VK_DECIMAL:
+                ch = '.';
+                break;
+            case VK_DIVIDE:
+                ch = '/';
+                break;
+            default:
+                // NOTE: Unreachable, `nKey` is one of the keys above.
+                ch = 'X';
+                break;
+            }
+
+            if (field_88E != -1 && field_88A != -1) {
+                if (field_88E < field_88A) {
+                    m_sText = m_sText.Left(field_88E)
+                        + static_cast<char>(ch)
+                        + m_sText.Right(m_sText.GetLength() - field_88A);
+                } else {
+                    m_sText = m_sText.Left(field_88A)
+                        + static_cast<char>(ch)
+                        + m_sText.Right(m_sText.GetLength() - field_88E);
+
+                    field_86A = field_88A + 1;
+                }
+
+                field_88A = -1;
+                field_88E = -1;
+
+                CalculateNewLines(3);
+            } else {
+                m_sText = m_sText.Left(field_86A)
+                    + static_cast<char>(ch)
+                    + m_sText.Right(m_sText.GetLength() - field_86A);
+
+                field_86A++;
+
+                CalculateNewLines(1);
+            }
+        } else {
+            BYTE index = 0;
+            do {
+                if (symbolKeys[index] == static_cast<BYTE>(nKey)) {
+                    break;
+                }
+
+                index++;
+            } while (index < 12);
+
+            if (index == 12) {
+                InvalidateRect();
+                return;
+            }
+
+            // NOTE: Entry 11 of the key table is 0, and entry 11 of the
+            // symbol tables is the terminator.
+            if (field_88E != -1 && field_88A != -1) {
+                if (field_88E < field_88A) {
+                    if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                        m_sText = m_sText.Left(field_88E)
+                            + static_cast<char>(shiftedSymbols[index])
+                            + m_sText.Right(m_sText.GetLength() - field_88A);
+                    } else {
+                        m_sText = m_sText.Left(field_88E)
+                            + static_cast<char>(symbols[index])
+                            + m_sText.Right(m_sText.GetLength() - field_88A);
+                    }
+                } else {
+                    if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                        m_sText = m_sText.Left(field_88A)
+                            + static_cast<char>(shiftedSymbols[index])
+                            + m_sText.Right(m_sText.GetLength() - field_88E);
+                    } else {
+                        m_sText = m_sText.Left(field_88A)
+                            + static_cast<char>(symbols[index])
+                            + m_sText.Right(m_sText.GetLength() - field_88E);
+                    }
+
+                    field_86A = field_88A + 1;
+                }
+
+                field_88A = -1;
+                field_88E = -1;
+
+                CalculateNewLines(3);
+            } else {
+                if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                    m_sText = m_sText.Left(field_86A)
+                        + static_cast<char>(shiftedSymbols[index])
+                        + m_sText.Right(m_sText.GetLength() - field_86A);
+                } else {
+                    m_sText = m_sText.Left(field_86A)
+                        + static_cast<char>(symbols[index])
+                        + m_sText.Right(m_sText.GetLength() - field_86A);
+                }
+
+                field_86A++;
+
+                CalculateNewLines(1);
+            }
+        }
+
+        InvalidateRect();
         break;
+    }
     }
 }
 
