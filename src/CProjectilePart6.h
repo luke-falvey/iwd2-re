@@ -17,7 +17,10 @@ class CProjectileHelper84EEA8 {
 public:
     CProjectileHelper84EEA8();
     /* 0000 */ virtual void Virtual0();
-    /* 0004 */ virtual std::list<LONG> Virtual4();
+    /* 0004 */ virtual std::set<DWORD> Virtual4();
+    std::list<LONG> sub_55A890(const std::set<DWORD>& targets);
+    void sub_55AB20(const std::list<LONG>& targets);
+    void sub_55AB80(LONG nTarget);
 
     /* 0004 */ CProjectile* m_pProjectile;
     /* 0008 */ std::map<LONG, CPoint> field_8;
@@ -36,7 +39,7 @@ public:
 class CProjectileHelper84EEB0 : public CProjectileHelper84EEA8 {
 public:
     CProjectileHelper84EEB0();
-    /* 0004 */ std::list<LONG> Virtual4() override;
+    /* 0004 */ std::set<DWORD> Virtual4() override;
     void sub_55B010(CPoint& a1, CPoint& a2);
 
     /* 0036 */ LONG field_36;

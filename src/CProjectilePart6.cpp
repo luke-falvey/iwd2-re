@@ -32,15 +32,106 @@ CProjectileHelper84EEA8::CProjectileHelper84EEA8()
 // 0x55A610
 void CProjectileHelper84EEA8::Virtual0()
 {
+    if (field_30 != TRUE) {
+        if (field_1C <= 0) {
+            std::set<DWORD> targets = Virtual4();
+            std::list<LONG> filtered = sub_55A890(targets);
+            sub_55AB20(filtered);
+
+            field_1C = field_18;
+        }
+
+        field_1C--;
+    }
+}
+
+// 0x55A890
+std::list<LONG> CProjectileHelper84EEA8::sub_55A890(const std::set<DWORD>& targets)
+{
+    // NOTE: Inlined `std::set::find`.
+    for (std::map<LONG, CPoint>::iterator it = field_8.begin(); it != field_8.end(); it++) {
+        if (targets.find(it->first) == targets.end()) {
+            it->second.x = 0;
+        }
+    }
+
+    std::list<LONG> result;
+
+    for (std::set<DWORD>::const_iterator it = targets.begin(); it != targets.end(); it++) {
+        // NOTE: Inlined `std::map::operator[]`.
+        CPoint& entry = field_8[*it];
+
+        if (entry.y < field_24) {
+            if (entry.x % field_20 == 0) {
+                result.push_back(*it);
+                entry.y++;
+            }
+        }
+
+        entry.x++;
+    }
+
+    return result;
+}
+
+// 0x55AB20
+void CProjectileHelper84EEA8::sub_55AB20(const std::list<LONG>& targets)
+{
+    for (std::list<LONG>::const_iterator it = targets.begin(); it != targets.end(); it++) {
+        if (field_31 == TRUE && *it == m_pProjectile->m_sourceId) {
+            continue;
+        }
+
+        field_2C++;
+        if (field_2C > field_28) {
+            field_30 = TRUE;
+            return;
+        }
+
+        sub_55AB80(*it);
+    }
+}
+
+// 0x55AB80
+void CProjectileHelper84EEA8::sub_55AB80(LONG nTarget)
+{
     // TODO: Incomplete.
 }
 
 // 0x55AD90
-std::list<LONG> CProjectileHelper84EEA8::Virtual4()
+std::set<DWORD> CProjectileHelper84EEA8::Virtual4()
 {
-    // TODO: Incomplete.
+    CTypedPtrList<CPtrList, LONG*> targets(10);
 
-    return std::list<LONG>();
+    m_pProjectile->m_pArea->GetAllInRange(m_pProjectile->GetVertListPos(),
+        m_pProjectile->GetPos(),
+        CAIObjectType::ANYONE,
+        static_cast<WORD>(field_32),
+        m_pProjectile->m_terrainTable,
+        targets,
+        TRUE,
+        FALSE);
+
+    m_pProjectile->m_pArea->GetAllInRangeBack(m_pProjectile->GetPos(),
+        CAIObjectType::ANYONE,
+        static_cast<WORD>(field_32),
+        m_pProjectile->m_terrainTable,
+        targets,
+        TRUE,
+        FALSE,
+        FALSE);
+
+    std::set<DWORD> result;
+
+    POSITION pos = targets.GetHeadPosition();
+    while (pos != NULL) {
+        LONG nTarget = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+        // NOTE: Inlined `std::set::insert` with a begin() hint.
+        result.insert(result.begin(), nTarget);
+    }
+
+    return result;
 }
 
 // 0x55AF40
@@ -82,11 +173,53 @@ void CProjectileHelper84EEB0::sub_55B010(CPoint& a1, CPoint& a2)
 }
 
 // 0x55B1B0
-std::list<LONG> CProjectileHelper84EEB0::Virtual4()
+std::set<DWORD> CProjectileHelper84EEB0::Virtual4()
 {
-    // TODO: Incomplete.
+    CPoint ptPoly[4];
 
-    return std::list<LONG>();
+    CPoint& pos0 = m_pProjectile->GetPos();
+    ptPoly[0].x = pos0.x + field_3C[0].x;
+    ptPoly[0].y = pos0.y + field_3C[0].y;
+
+    CPoint& pos1 = m_pProjectile->GetPos();
+    ptPoly[1].x = pos1.x + field_3C[1].x;
+    ptPoly[1].y = pos1.y + field_3C[1].y;
+
+    CPoint& pos2 = m_pProjectile->GetPos();
+    ptPoly[2].x = pos2.x + field_3C[2].x;
+    ptPoly[2].y = pos2.y + field_3C[2].y;
+
+    CPoint& pos3 = m_pProjectile->GetPos();
+    ptPoly[3].x = pos3.x + field_3C[3].x;
+    ptPoly[3].y = pos3.y + field_3C[3].y;
+
+    CRect rBounding;
+    rBounding.left = min(min(ptPoly[0].x, ptPoly[1].x), min(ptPoly[2].x, ptPoly[3].x));
+    rBounding.top = min(min(ptPoly[0].y, ptPoly[1].y), min(ptPoly[2].y, ptPoly[3].y));
+    rBounding.right = max(max(ptPoly[0].x, ptPoly[1].x), max(ptPoly[2].x, ptPoly[3].x));
+    rBounding.bottom = max(max(ptPoly[0].y, ptPoly[1].y), max(ptPoly[2].y, ptPoly[3].y));
+
+    CTypedPtrList<CPtrList, LONG*> targets(10);
+
+    m_pProjectile->m_pArea->GetAllInPoly(rBounding,
+        ptPoly,
+        4,
+        CAIObjectType::ANYONE,
+        m_pProjectile->m_pArea->m_visibleTerrainTable,
+        targets,
+        FALSE);
+
+    std::set<DWORD> result;
+
+    POSITION pos = targets.GetHeadPosition();
+    while (pos != NULL) {
+        LONG nTarget = reinterpret_cast<LONG>(targets.GetNext(pos));
+
+        // NOTE: Inlined `std::set::insert` with a begin() hint.
+        result.insert(result.begin(), nTarget);
+    }
+
+    return result;
 }
 
 // 0x579B40
