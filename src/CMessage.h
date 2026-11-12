@@ -500,8 +500,8 @@ public:
     BOOLEAN sub_439250(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_43A470(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_43A7C0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
-    void sub_43A210(CString sArea, WORD startX, WORD startY, CString szNote, DWORD dwFlags, STRREF strRef);
-    void sub_43A5C0(CString sArea, WORD startX, WORD startY, CString szNote, DWORD dwFlags, STRREF strRef);
+    BOOLEAN sub_43A210(CString sArea, WORD startX, WORD startY, CString szNote, DWORD dwFlags, STRREF strRef);
+    BOOLEAN sub_43A5C0(CString sArea, WORD startX, WORD startY, CString szNote, DWORD dwFlags, STRREF strRef);
     BOOLEAN sub_43B080(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_43B1A0(CString sAreaString, BOOLEAN bVote);
     BOOLEAN sub_43B380(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
@@ -1282,6 +1282,24 @@ public:
 
 class CMessageSpriteUpdate : public CMessage {
 public:
+    static const DWORD FLAG_PATH;
+    static const DWORD FLAG_POSITION;
+    static const DWORD FLAG_STATE;
+    static const DWORD FLAG_HITPOINTS;
+    static const DWORD FLAG_AC_MODS;
+    static const DWORD FLAG_FIELD_74;
+    static const DWORD FLAG_ENEMY_ALLY;
+    static const DWORD FLAG_LEVEL_UP;
+    static const DWORD FLAG_SEQUENCE;
+    static const DWORD FLAG_FACING;
+    static const DWORD FLAG_AREA;
+    static const DWORD FLAG_FIELD_60;
+    static const DWORD FLAG_FADE_SPEED;
+    static const DWORD FLAG_VISUAL_EFFECTS;
+    static const DWORD FLAG_TRANSLUCENT;
+    static const DWORD FLAG_SPELL_STATES;
+    static const DWORD FLAG_SKILLS;
+
     CMessageSpriteUpdate(CGameSprite* pSprite, LONG caller, LONG target);
     ~CMessageSpriteUpdate() override;
     SHORT GetCommType() override;
@@ -1300,18 +1318,6 @@ public:
     /* 002A */ SHORT m_nFacing;
     /* 002C */ DWORD m_dwState;
     /* 0030 */ std::bitset<256> m_spellStates;
-    /* 0038 */ short field_38;
-    /* 003A */ short field_3A;
-    /* 003C */ short field_3C;
-    /* 003E */ short field_3E;
-    /* 0040 */ short field_40;
-    /* 0042 */ short field_42;
-    /* 0044 */ short field_44;
-    /* 0046 */ short field_46;
-    /* 0048 */ short field_48;
-    /* 004A */ short field_4A;
-    /* 004C */ short field_4C;
-    /* 004E */ short field_4E;
     /* 0050 */ std::bitset<32> m_visualEffects;
     /* 0054 */ BYTE m_nFadeSpeed;
     /* 0055 */ unsigned char field_55;
