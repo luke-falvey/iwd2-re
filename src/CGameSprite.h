@@ -461,6 +461,8 @@ public:
     /* 0014 */ LONG GetTargetId() override;
     /* 0018 */ void GetNextWaypoint(CPoint* pt) override;
     /* 0028 */ BOOLEAN CanSaveGame(STRREF& strError) override;
+    /* 002C */ BOOLEAN CompressTime(DWORD deltaTime) override;
+    /* 0030 */ void DebugDump(const CString& message, BOOLEAN bEchoToScreen) override;
     /* 0034 */ BOOL IsOver(const CPoint& pt) override;
     /* 0038 */ BOOL DoesIntersect(CRect r);
     /* 003C */ BOOL OnSearchMap() override;
@@ -468,6 +470,7 @@ public:
     /* 0044 */ void OnFormationButton(const CPoint& pt) override;
     /* 0048 */ void RemoveFromArea() override;
     /* 004C */ void Render(CGameArea* pArea, CVidMode* pVidMode, INT nSurface) override;
+    /* 0050 */ BOOLEAN DoAIUpdate(BOOLEAN active, LONG counter) override;
     /* 0058 */ void SetCursor(LONG nToolTip) override;
     /* 0064 */ BOOL EvaluateStatusTrigger(const CAITrigger& trigger) override;
     /* 0070 */ void UpdateTarget(CGameObject* pTarget) override;
@@ -479,6 +482,7 @@ public:
     /* 0094 */ void SetScript(SHORT level, CAIScript* script) override;
     /* 009C */ const BYTE* GetVisibleTerrainTable() override;
     /* 00A0 */ const BYTE* GetTerrainTable() override;
+    /* 00AC */ void ApplyTriggers() override;
     /* 00B0 */ void AutoPause(DWORD type) override;
     /* 00B4 */ BOOL GetCanSeeInvisible() override;
     /* 00B8 */ virtual void SetTarget(const CPoint& target, BOOL collisionPath);
@@ -931,6 +935,11 @@ public:
     /* 4F90 */ CSound m_sndSpriteEffect;
     /* 4FF4 */ int m_nNumberOfTimesTalkedTo;
     /* 4FF8 */ BOOL m_bSeenPartyBefore;
+    // NOTE: At 0x4FFC in the original. Left without an offset annotation
+    // because the members before it are already misplaced (see
+    // tests/layout/known_mismatches.txt) and a new entry would fail the
+    // layout test.
+    CResRef field_4FFC;
     /* 5004 */ LONG m_nNumberOfTimesInteractedWith[24];
     /* 5064 */ SHORT m_nHappiness;
     /* 5066 */ CAIObjectType m_interactingWith;

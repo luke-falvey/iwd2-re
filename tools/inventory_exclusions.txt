@@ -1301,3 +1301,13 @@
 0x453541
 # Static initializer thunk: MOV ECX,global; JMP CMessageSpriteEquipment constructor.
 0x4F6FB0
+
+# Not a function start: the tail of CGameSprite::sub_720B50 (0x720B50, size 223), which Ghidra split
+# at 0x720C2F. The whole function ends at 0x72208F (RET 0x8). The repo body of sub_720B50 covers it
+# (the att1..fall blocks that parse the comma lists and AddTail onto field_72F0..field_73EC).
+0x720C2F
+
+# Compiler-generated destructor of STR_RES (CStrRes.h): destroys cSound (+0x4)
+# then szText (+0x0). Emitted out of line; called when a STR_RES local goes out of
+# scope, e.g. in CGameSprite::DebugDump (inlined GetName).
+0x425B80
