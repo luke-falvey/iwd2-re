@@ -306,3 +306,27 @@ void CUtil::TrimRight(CString& sString)
 
     sString = sString.Left(nEnd + 1);
 }
+
+// 0x781630
+DWORD CUtil::RotateLeft(DWORD nValue, BYTE nBits, BYTE nShift)
+{
+    if (nValue == 0 || nBits == 0 || nShift == 0 || nShift >= nBits) {
+        return nValue;
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\chitin\ChUtil.cpp
+    // __LINE__: 1161
+    UTIL_ASSERT(nBits <= 32);
+
+    DWORD nResult = (nValue >> (nBits - nShift)) & ((1 << nShift) - 1);
+    DWORD nShifted = nValue << nShift;
+
+    // NOTE: Compares the bit count with a byte count (probably
+    // `sizeof(DWORD)`), so the high bits are only cleared for fields narrower
+    // than 4 bits.
+    if (nBits < 4) {
+        nShifted &= (1 << nBits) - 1;
+    }
+
+    return nResult | nShifted;
+}

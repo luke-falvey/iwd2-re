@@ -2380,7 +2380,7 @@ void CUIControlSliderOptionsSlider::OnThumbFinalChange()
     g_pBaldurChitin->m_pEngineOptions->UpdatePopupPanel(m_pPanel->m_nID, FALSE);
 }
 
-// 0x658A60
+// 0x658760
 CUIControlButtonOptionsGameCommand::CUIControlButtonOptionsGameCommand(CUIPanel* panel, UI_CONTROL_BUTTON* controlInfo)
     : CUIControlButton(panel, controlInfo, LBUTTON, 0)
 {
@@ -2422,10 +2422,13 @@ CUIControlButtonOptionsGameCommand::CUIControlButtonOptionsGameCommand(CUIPanel*
             // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenOptions.cpp
             // __LINE__: 3817
             UTIL_ASSERT(FALSE);
+            dwStrId = 0xFFFFFFFF;
         }
         break;
     case 6:
-        dwStrId = controlInfo->base.nID;
+        // NOTE: Original passes the `controlInfo` pointer itself as the
+        // string id.
+        dwStrId = reinterpret_cast<DWORD>(controlInfo);
         break;
     case 7:
         switch (m_nID) {
@@ -2436,6 +2439,7 @@ CUIControlButtonOptionsGameCommand::CUIControlButtonOptionsGameCommand(CUIPanel*
             // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenOptions.cpp
             // __LINE__: 3834
             UTIL_ASSERT(FALSE);
+            dwStrId = 0xFFFFFFFF;
         }
         break;
     case 8:
@@ -2450,12 +2454,14 @@ CUIControlButtonOptionsGameCommand::CUIControlButtonOptionsGameCommand(CUIPanel*
             // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenOptions.cpp
             // __LINE__: 3852
             UTIL_ASSERT(FALSE);
+            dwStrId = 0xFFFFFFFF;
         }
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenOptions.cpp
         // __LINE__: 3859
         UTIL_ASSERT(FALSE);
+        dwStrId = 0xFFFFFFFF;
     }
 
     g_pBaldurChitin->GetTlkTable().Fetch(dwStrId, strRes);

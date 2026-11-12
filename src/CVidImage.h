@@ -46,6 +46,7 @@ public:
     void SetRes(CResTile* pNewResTiles);
     BOOL Render(LPDIRECTDRAWSURFACE pSurface, INT x, INT y, const CRect& rClip, DWORD dwFlags);
     BOOL Render(LPDIRECTDRAWSURFACE pSurface, INT x, INT y, CResTile* pResStencil, const CRect& rClip, DWORD dwFlags);
+    BOOL RenderBlended(LPDIRECTDRAWSURFACE pSurface, INT x, INT y, const CRect& rClip, CResTile* pResBlend, BYTE nBlend, DWORD dwFlags);
 
     BOOL BltTile8To16(WORD* pSurface, LONG lPitch, BYTE* pData, const CSize& blitSize, LONG nDataJump, DWORD dwFlags);
     BOOL BltStencilTile8To16(WORD* pSurface, LONG lPitch, BYTE* pData, BYTE* pStencilData, const CSize& blitSize, LONG nDataJump, DWORD dwFlags);

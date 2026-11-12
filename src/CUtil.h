@@ -19,6 +19,7 @@ public:
     static BOOL IsDBCSTrailByte(const CString& sString, int end);
     static void TrimLeft(CString& sString);
     static void TrimRight(CString& sString);
+    static DWORD RotateLeft(DWORD nValue, BYTE nBits, BYTE nShift);
 
     static CCriticalSection ZLIB_CRITICAL_SECTION;
 };
