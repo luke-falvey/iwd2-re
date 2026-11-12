@@ -420,3 +420,49 @@
 # CGameAnimationType84EEB8 scalar deleting destructor (compiler generated): calls
 # ~CGameAnimationType84EEB8 (0x55D2E0), then operator delete when the flag is set.
 0x55D2C0
+
+# std::bitset<256> (library): 0x4C4B90 set(pos, val) (range check 0x45E3D0, then OR / AND NOT of
+# the dword at pos >> 5), 0x4C4BF0 test(pos) (range check, returns (word & mask) != 0).
+0x4C4B90
+0x4C4BF0
+
+# std::bitset<32> (library): 0x4C4C30 set(pos, val), range check via 0x4C5790.
+0x4C4C30
+
+# std::set<int> of CDamageReduction (library, nil sentinel 0x8D13F4, key at node+0xC signed):
+# 0x447B60 constructor (head node + shared nil), 0x447E50 insert(value), 0x447F30 erase(first, last),
+# 0x449400 erase(iterator) (red-black rebalance), 0x449840 _Erase (post-order delete),
+# 0x44B1E0 iterator::operator-- / ++ (walk to the in-order neighbour).
+0x447B60
+0x447E50
+0x447F30
+0x449400
+0x449840
+0x44B1E0
+
+# std::set<DWORD> m_naturalImmunities (library, nil sentinel 0x8D13F0): 0x448DD0 insert(value),
+# 0x44AB10 _Copy (key copy via 0x517000), 0x44B180 iterator::operator++.
+0x448DD0
+0x44AB10
+0x44B180
+
+# std::set<LONG> (library, nil sentinel 0x8D48B4): 0x4C54E0 _Copy (key copy via 0x517000),
+# 0x4C5BF0 iterator::operator++.
+0x4C54E0
+0x4C5BF0
+
+# std::set<std::string> m_spellImmunities (library, nil sentinel 0x8D13E8): 0x4C5870 insert-position
+# search/insert (string compare 0x4C5E80), 0x4C5D30 iterator::operator++.
+0x4C5870
+0x4C5D30
+
+# std::string (MSVC 6) compare(pos, n, str, len) overloads (library): 0x4C5E80 compare(const string&)
+# via memcmp then length, 0x4C5ED0 compare(pos, n, ptr, len) (range check 0x7F9C0E).
+0x4C5E80
+0x4C5ED0
+
+# std::string (MSVC 6) reserve/_Tidy-style trim (library, refcount byte at ptr-1; calls 0x44BC00 and
+# 0x44BE10), and std::list<0x1C-byte element> insert(result, where, value): operator_new(0x24),
+# links prev/next, copies 7 dwords to node+8, ++size (+8).
+0x56BDD0
+0x56BE50
