@@ -5382,14 +5382,32 @@ BOOL CGameEffectDeath::ApplyEffect(CGameSprite* pSprite)
         PlaySound(CResRef("SHATTER"), pSprite);
         nShatterType = 1;
 
-        // TODO: Incomplete. Creates two 0xCA-byte particle objects
-        // (constructor 0x51AE40, args: the words at 0x84D5EC, 0x84D604 and
-        // 0x84D5F0, asserts `m_wType & TYPE_EXPLOSION` from CParticle.h).
-        // The first gets velocity `m_source` (+0xBE/+0xC2), the second
-        // `-m_source`, both get `+0xC6 = 100` and are added with vtable
-        // slot 0x08 (`AddToArea`) to `pSprite->m_pArea` at
-        // `pSprite->GetPos()`, height `(rFx.bottom - rFx.top) * 5 / 10`
-        // (`rFx` from `CalculateFxRect` with `posZ`), `LIST_BACK`.
+        {
+            CGameSparkle* pSparkle1 = new CGameSparkle(10 /* 0x84D5EC */, CGameSparkle::TYPE_EXPLOSION /* 0x84D604 */, 25 /* 0x84D5F0 */);
+            pSparkle1->SetExplosionVelocity(m_source);
+
+            CRect rFx;
+            CPoint ptReference;
+
+            // NOTE: Uninline.
+            pSprite->GetAnimation()->CalculateFxRect(rFx, ptReference, posZ);
+
+            pSparkle1->m_nGravity = 100;
+
+            SHORT nHeight = static_cast<SHORT>((rFx.bottom - rFx.top) * 5 / 10);
+            pSparkle1->AddToArea(pSprite->m_pArea,
+                pSprite->GetPos(),
+                nHeight,
+                CGameObject::LIST_BACK);
+
+            CGameSparkle* pSparkle2 = new CGameSparkle(10 /* 0x84D5EC */, CGameSparkle::TYPE_EXPLOSION /* 0x84D604 */, 25 /* 0x84D5F0 */);
+            pSparkle2->SetExplosionVelocity(CPoint(-m_source.x, -m_source.y));
+            pSparkle2->m_nGravity = 100;
+            pSparkle2->AddToArea(pSprite->m_pArea,
+                pSprite->GetPos(),
+                nHeight,
+                CGameObject::LIST_BACK);
+        }
         break;
     case 0x80:
         pSprite->GetBaseStats()->m_hitPoints = -10;
@@ -5398,8 +5416,32 @@ BOOL CGameEffectDeath::ApplyEffect(CGameSprite* pSprite)
         PlaySound(CResRef("SHATTER"), pSprite);
         nShatterType = 0;
 
-        // TODO: Incomplete. Same particle objects as in case 0x40, but
-        // constructed with the word at 0x84D5EA instead of 0x84D5EC.
+        {
+            CGameSparkle* pSparkle1 = new CGameSparkle(9 /* 0x84D5EA */, CGameSparkle::TYPE_EXPLOSION /* 0x84D604 */, 25 /* 0x84D5F0 */);
+            pSparkle1->SetExplosionVelocity(m_source);
+
+            CRect rFx;
+            CPoint ptReference;
+
+            // NOTE: Uninline.
+            pSprite->GetAnimation()->CalculateFxRect(rFx, ptReference, posZ);
+
+            pSparkle1->m_nGravity = 100;
+
+            SHORT nHeight = static_cast<SHORT>((rFx.bottom - rFx.top) * 5 / 10);
+            pSparkle1->AddToArea(pSprite->m_pArea,
+                pSprite->GetPos(),
+                nHeight,
+                CGameObject::LIST_BACK);
+
+            CGameSparkle* pSparkle2 = new CGameSparkle(9 /* 0x84D5EA */, CGameSparkle::TYPE_EXPLOSION /* 0x84D604 */, 25 /* 0x84D5F0 */);
+            pSparkle2->SetExplosionVelocity(CPoint(-m_source.x, -m_source.y));
+            pSparkle2->m_nGravity = 100;
+            pSparkle2->AddToArea(pSprite->m_pArea,
+                pSprite->GetPos(),
+                nHeight,
+                CGameObject::LIST_BACK);
+        }
         break;
     case 0x100:
         pSprite->GetBaseStats()->m_hitPoints = -10;
@@ -5421,9 +5463,6 @@ BOOL CGameEffectDeath::ApplyEffect(CGameSprite* pSprite)
         // __LINE__: 7596
         UTIL_ASSERT_MSG(FALSE, "Weird death type");
     }
-
-    // NOTE: Unused (consumed only by the untranslated particle code above).
-    (void)posZ;
 
     if (!bFrozen) {
         if (pSprite->GetVertListType() == CGameObject::LIST_BACK) {
