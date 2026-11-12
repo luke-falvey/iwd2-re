@@ -6474,7 +6474,7 @@ LONG CGameArea::GetBattleSongCounter()
     return m_nBattleSongCounter;
 }
 
-// 0x453070;
+// 0x453070
 BYTE CGameArea::GetId()
 {
     return m_id;

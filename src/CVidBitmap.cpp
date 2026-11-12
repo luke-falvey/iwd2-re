@@ -619,6 +619,24 @@ static void BltBmpGetEffects(CVidImage* pImage, CVidBitmapEffects& effects, DWOR
     effects.bLight = pImage->GetLight(effects.nLightRed, effects.nLightGreen, effects.nLightBlue, dwFlags);
 }
 
+// NOTE: One pixel of the inline assembly at 0x7B3FF8 (the non-transparent
+// path of `BltBmp24To16Tint`): the effects subroutine at 0x7B3F66, then only
+// the low byte of each channel is shifted down but the whole low word is
+// shifted up. The low word of the result is the 16-bit pixel; the upper 16
+// bits are the upper bits of the red channel register, left as they are.
+static DWORD BltBmpPack16(BYTE nRed, BYTE nGreen, BYTE nBlue, DWORD dwFlags, const CVidBitmapEffects& effects, BYTE nRDown, BYTE nGDown, BYTE nBDown, BYTE nRShift, BYTE nGShift, BYTE nBShift)
+{
+    DWORD r = nRed;
+    DWORD g = nGreen;
+    DWORD b = nBlue;
+    BltBmpApplyEffects(r, g, b, dwFlags, effects);
+
+    return (r & 0xFFFF0000)
+        | static_cast<WORD>(static_cast<WORD>(((r & 0xFF00) | (static_cast<BYTE>(r) >> nRDown)) << nRShift)
+            | static_cast<WORD>(((g & 0xFF00) | (static_cast<BYTE>(g) >> nGDown)) << nGShift)
+            | static_cast<WORD>(((b & 0xFF00) | (static_cast<BYTE>(b) >> nBDown)) << nBShift));
+}
+
 // NOTE: The non-transparent path of the original is inline assembly which
 // writes two pixels at once whenever it can.
 //
@@ -676,28 +694,72 @@ BOOL CVidBitmap::BltBmp24To16Tint(WORD* pSurface, LONG lPitch, BYTE* pData, cons
             nDataIndex += nDataJump;
         }
     } else {
+        // NOTE: This path is the inline assembly at 0x7B3FF8 (Ghidra split it
+        // off). Rows are `do`/`while` loops (no check for an empty bitmap).
+        // Pixels are written in pairs as DWORDs: the first pixel of a pair is
+        // the low word, and the upper 16 bits of its red channel register
+        // are ORed into the high word (the second pixel). An odd row starts
+        // with a single WORD pixel; a row of width 1 (only `cx & 0xFFFE` is
+        // tested) is written one WORD pixel at a time.
         BYTE* pDest = reinterpret_cast<BYTE*>(pSurface);
         LONG nSurfaceJump = lPitch + 2 * bmpSize.cx;
+        DWORD nWidth = bmpSize.cx;
+        LONG nHeight = bmpSize.cy;
+        DWORD nPairs;
+        DWORD nCount;
+        DWORD nColor1;
+        DWORD nColor2;
 
-        for (LONG y = 0; y < bmpSize.cy; y++) {
-            for (LONG x = 0; x < bmpSize.cx; x++) {
-                DWORD r = pData[2];
-                DWORD g = pData[1];
-                DWORD b = pData[0];
-                BltBmpApplyEffects(r, g, b, dwFlags, effects);
+        if ((nWidth & 0xFFFE) != 0) {
+            if ((nWidth & 0x1) == 0) {
+                nPairs = nWidth >> 1;
+                do {
+                    nCount = nPairs;
+                    do {
+                        nColor2 = BltBmpPack16(pData[5], pData[4], pData[3], dwFlags, effects, nRDown, nGDown, nBDown, nRShift, nGShift, nBShift);
+                        nColor1 = BltBmpPack16(pData[2], pData[1], pData[0], dwFlags, effects, nRDown, nGDown, nBDown, nRShift, nGShift, nBShift);
+                        *reinterpret_cast<DWORD*>(pDest) = nColor1 | ((nColor2 << 16) & 0xFFFF0000);
 
-                // NOTE: Only the low byte is shifted down but the whole low
-                // word is shifted up.
-                *reinterpret_cast<WORD*>(pDest) = static_cast<WORD>(((r & 0xFF00) | (static_cast<BYTE>(r) >> nRDown)) << nRShift)
-                    | static_cast<WORD>(((g & 0xFF00) | (static_cast<BYTE>(g) >> nGDown)) << nGShift)
-                    | static_cast<WORD>(((b & 0xFF00) | (static_cast<BYTE>(b) >> nBDown)) << nBShift);
+                        pData += 6;
+                        pDest += 4;
+                    } while (--nCount != 0);
 
-                pData += 3;
-                pDest += 2;
+                    pDest -= nSurfaceJump;
+                    pData += nDataJump;
+                } while (--nHeight != 0);
+            } else {
+                nPairs = nWidth >> 1;
+                do {
+                    nCount = nPairs;
+
+                    nColor1 = BltBmpPack16(pData[2], pData[1], pData[0], dwFlags, effects, nRDown, nGDown, nBDown, nRShift, nGShift, nBShift);
+                    pData += 3;
+                    *reinterpret_cast<WORD*>(pDest) = static_cast<WORD>(nColor1);
+                    pDest += 2;
+
+                    do {
+                        nColor2 = BltBmpPack16(pData[5], pData[4], pData[3], dwFlags, effects, nRDown, nGDown, nBDown, nRShift, nGShift, nBShift);
+                        nColor1 = BltBmpPack16(pData[2], pData[1], pData[0], dwFlags, effects, nRDown, nGDown, nBDown, nRShift, nGShift, nBShift);
+                        *reinterpret_cast<DWORD*>(pDest) = nColor1 | ((nColor2 << 16) & 0xFFFF0000);
+
+                        pData += 6;
+                        pDest += 4;
+                    } while (--nCount != 0);
+
+                    pDest -= nSurfaceJump;
+                    pData += nDataJump;
+                } while (--nHeight != 0);
             }
+        } else {
+            do {
+                nColor1 = BltBmpPack16(pData[2], pData[1], pData[0], dwFlags, effects, nRDown, nGDown, nBDown, nRShift, nGShift, nBShift);
+                pData += 3;
+                *reinterpret_cast<WORD*>(pDest) = static_cast<WORD>(nColor1);
+                pDest += 2;
 
-            pDest -= nSurfaceJump;
-            pData += nDataJump;
+                pDest -= nSurfaceJump;
+                pData += nDataJump;
+            } while (--nHeight != 0);
         }
     }
 

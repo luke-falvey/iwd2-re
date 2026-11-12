@@ -4,6 +4,7 @@
 #include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CMessage.h"
+#include "CProjectile.h"
 #include "IcewindMisc.h"
 
 // 0x8E6400
@@ -88,7 +89,50 @@ void Icewind586B70::sub_586D60(CGameSprite* sprite1, CGameSprite* sprite2)
 // 0x586DC0
 void Icewind586B70::sub_586DC0(CGameSprite* sprite)
 {
-    // TODO: Incomplete.
+    LONG nId = sprite->GetId();
+
+    std::vector<Entry>::iterator it = mEntries.begin();
+    while (it != mEntries.end() && nId != it->field_0) {
+        it++;
+    }
+
+    if (it == mEntries.end()) {
+        return;
+    }
+
+    if (it->field_8 == true) {
+        return;
+    }
+
+    // NOTE: Uninline.
+    it->Clear();
+
+    CProjectile* pProjectile = CProjectile::sub_560310(0x15, NULL, FALSE);
+
+    CMessage* message = new CMessageFireProjectile(0x1015,
+        sprite->GetId(),
+        sprite->GetPos(),
+        0,
+        sprite->GetId(),
+        sprite->GetId(),
+        0);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+    pProjectile->Fire(sprite->GetArea(),
+        sprite->GetId(),
+        sprite->GetId(),
+        sprite->GetPos(),
+        0,
+        0);
+
+    sprite->sub_75F3D0(1);
+
+    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+        message = new CMessage90(sprite->GetId(), sprite->GetId(), TRUE);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    sprite->m_removeFromArea = TRUE;
 }
 
 // 0x586F20

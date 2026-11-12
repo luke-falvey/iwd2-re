@@ -400,6 +400,48 @@ void CGameAnimationTypeMonsterMulti::CalculateGCBoundsRect(CRect& rGCBounds, con
     rGCBounds.bottom = rGCBounds.top + nHeight;
 }
 
+// 0x6B5D80
+void CGameAnimationTypeMonsterMulti::ChangeDirection(SHORT nDirection)
+{
+    BYTE quad;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+    // __LINE__: 10426
+    UTIL_ASSERT(m_currentVidCell != NULL);
+
+    m_currentBamDirection = nDirection;
+    m_currentVidCell = m_currentVidCellBase;
+
+    if (m_currentBamDirection > m_extendDirectionTest) {
+        m_splitDirectionBamChar = static_cast<CHAR>(0x40 - m_currentBamDirection);
+
+        for (quad = 0; quad < m_nQuadrants; quad++) {
+            if (m_bSplitBams) {
+                // NOTE: Uninline.
+                m_currentVidCell[quad].SetResRef(CResRef(m_currentVidCell[quad].GetResRef().GetResRefStr().Left(7) + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_currentVidCell[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_currentVidCell);
+            }
+
+            m_currentVidCell[quad].SequenceSet(9 * m_currentBamSequence - m_currentBamDirection + 16);
+        }
+    } else {
+        m_splitDirectionBamChar = static_cast<CHAR>(m_currentBamDirection + '0');
+
+        for (quad = 0; quad < m_nQuadrants; quad++) {
+            if (m_bSplitBams) {
+                // NOTE: Uninline. The `CResHelper::SetResRef` call inside is
+                // inlined here (but not in the branch above).
+                m_currentVidCell[quad].SetResRef(CResRef(m_currentVidCell[quad].GetResRef().GetResRefStr().Left(7) + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_currentVidCell[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_currentVidCell);
+            }
+
+            m_currentVidCell[quad].SequenceSet(9 * m_currentBamSequence + m_currentBamDirection);
+        }
+    }
+}
+
 // 0x6B61E0
 char* CGameAnimationTypeMonsterMulti::GetSndReady()
 {

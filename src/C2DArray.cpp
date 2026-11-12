@@ -6,7 +6,10 @@
 #define NEWLINE '\n'
 #define SPACE ' '
 
-// NOTE: Inlined.
+// NOTE: Inlined in most places; the out-of-line copy is called by
+// `CRuleTables::CRuleTables`.
+//
+// 0x5402E0
 C2DArray::C2DArray()
 {
     m_nSizeX = 0;
@@ -16,7 +19,10 @@ C2DArray::C2DArray()
     m_pArray = NULL;
 }
 
-// NOTE: Inlined.
+// NOTE: Inlined in most places; the out-of-line copy is called by
+// `CRuleTables::~CRuleTables`.
+//
+// 0x426500
 C2DArray::~C2DArray()
 {
     if (m_pNamesX != NULL) {
