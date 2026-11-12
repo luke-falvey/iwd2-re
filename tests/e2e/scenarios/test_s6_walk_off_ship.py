@@ -35,6 +35,8 @@ BOX_FROM = (270, 110)
 BOX_TO = (430, 280)
 # A spot on the dock next to the foot of the gangplank.
 DOCK_SPOT = (150, 340)
+# Somewhere harmless to leave the pointer: the middle of the message window.
+PARK_SPOT = (300, 560)
 
 ACTION_BAR_REGION = (0, 435, 500, 55)
 PORTRAITS_REGION = (500, 435, 300, 55)
@@ -74,7 +76,11 @@ def test_s6_walk_off_ship(game, golden_dir):
     check(checkpoint, "selected-portraits", region=PORTRAITS_REGION, settle=1.0, max_diff=0.004)
 
     game.click(*DOCK_SPOT)
-    time.sleep(20.0)
+    # Park the pointer over the message window. Left on the dock it can end up
+    # over a character, whose portrait then pulses and never settles.
+    time.sleep(0.5)
+    game.move(*PARK_SPOT)
+    time.sleep(19.5)
     check(checkpoint, "walked-action-bar", region=ACTION_BAR_REGION, settle=1.0)
     check(checkpoint, "walked-portraits", region=PORTRAITS_REGION, settle=1.0, max_diff=0.004)
     check(checkpoint, "walked-messages", region=MESSAGE_REGION, settle=1.0)
