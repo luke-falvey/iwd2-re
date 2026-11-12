@@ -1386,7 +1386,51 @@ void CInfGame::DestroyGame(BOOLEAN bProgressBarRequired, BOOLEAN bProgressBarInP
 // 0x5A0160
 void CInfGame::sub_5A0160()
 {
-    // TODO: Incomplete.
+    CFileFind fileFind;
+    CString sDirName;
+    CString sPattern;
+    CString sResolved;
+    CString sFileName;
+    CString sBaseName;
+    CString sExtension;
+    CString sValue;
+
+    sDirName = g_pChitin->cDimm.cResCache.m_sDirName;
+    sPattern = sDirName + "data\\*.*";
+
+    if (!g_pChitin->lAliases.ResolveFileName(sPattern, sResolved)) {
+        sResolved = sPattern;
+    }
+
+    BOOL bWorking = fileFind.FindFile(sResolved);
+    while (bWorking) {
+        bWorking = fileFind.FindNextFile();
+        sFileName = fileFind.GetFileName();
+
+        int nSlash;
+        while ((nSlash = sFileName.Find('\\')) != -1) {
+            sFileName = sFileName.Right(sFileName.GetLength() - nSlash - 1);
+        }
+
+        sBaseName = sFileName.Left(sFileName.GetLength() - 4);
+        sExtension = sFileName.Right(4);
+        sExtension.MakeUpper();
+
+        if (strcmp(sExtension, ".BIF") == 0) {
+            CPoint ptLocation;
+            if (m_ruleTables.m_tCacheValidation.Find(sBaseName, ptLocation, FALSE) == TRUE) {
+                // NOTE: Uninline.
+                sValue = m_ruleTables.m_tCacheValidation.GetAt(CPoint(1, ptLocation.y));
+            } else {
+                // NOTE: Uninline.
+                sValue = m_ruleTables.m_tCacheValidation.GetDefault();
+            }
+
+            LONG nValue = atoi(sValue.GetBuffer(sValue.GetLength()));
+
+            g_pChitin->cDimm.cResCache.ValidateFile(g_pChitin->cDimm.GetResFileID(sBaseName), nValue);
+        }
+    }
 }
 
 // 0x5A04B0
