@@ -8,8 +8,10 @@
 #include "CInfGame.h"
 #include "CInfinity.h"
 #include "CParticle.h"
+#include "CMessage.h"
 #include "CPathSearch.h"
 #include "CUtil.h"
+#include "CVisualEffect.h"
 
 // 0x52AD60
 CProjectileBAM::CProjectileBAM(CResRef resRef)
@@ -92,8 +94,6 @@ void CProjectileBAM::SetPaletteRange(USHORT nRange, USHORT nValue)
 // 0x52B900
 void CProjectileBAM::AIUpdate()
 {
-    // TODO: Incomplete.
-
     CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
     if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
         return;
@@ -503,8 +503,6 @@ void CProjectileBAM::sub_52C8C0(CVidCell* pVidCell)
 // 0x52C050
 void CProjectileBAM::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
-
     CGameObject* pTarget;
     CGameObject* pSource;
     CPoint ptTarget;
@@ -571,6 +569,7 @@ void CProjectileBAM::Fire(CGameArea* pArea, LONG source, LONG target, CPoint tar
         return;
     }
 
+    // NOTE: Uninline.
     LONG nSourceHeight = DetermineHeight(static_cast<CGameSprite*>(pSource));
     CPoint ptSource = pSource->GetPos();
     BOOL bSprite = pSource->GetObjectType() == CGameObject::TYPE_SPRITE;
@@ -591,17 +590,36 @@ void CProjectileBAM::Fire(CGameArea* pArea, LONG source, LONG target, CPoint tar
     }
 
     if (field_17E.Compare("") != 0) {
-        // TODO: Incomplete. Original code is:
-        //
-        // field_182 = sub_554D20(field_17E, pArea, ptStart, target, targetPos, nSourceHeight);
-        //
-        // (0x554D20 creates a VEF object, adds it to the area and returns
-        // its id.) Then it sends a message (size 0x2A, vtable 0x84D328)
-        // built from `target`, `m_id`, `CResRef(field_17E)`, the area
-        // resref as a string, `ptStart`, `targetPos` and `nSourceHeight`
-        // via `CMessageHandler::AddMessage(pMessage, FALSE)`. Finally it
-        // locks `field_182` with `GetDeny`, stores `m_speed` at offset 0x82
-        // of that object and sets bit 0 of the dword at offset 0x9A.
+        field_182 = CVisualEffect::sub_554D20(field_17E, pArea, ptStart, target, targetPos, nSourceHeight);
+
+        CString sAreaName;
+        pArea->m_resRef.CopyToString(sAreaName);
+
+        CMessage86* pMessage = new CMessage86(CResRef(field_17E),
+            sAreaName,
+            ptStart,
+            targetPos,
+            static_cast<WORD>(nSourceHeight),
+            m_id,
+            target);
+        g_pBaldurChitin->m_cMessageHandler.AddMessage(pMessage, FALSE);
+
+        CGameObject* pVef;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(field_182,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pVef,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            static_cast<CVisualEffect*>(pVef)->field_82 = m_speed;
+            static_cast<CVisualEffect*>(pVef)->field_9A |= 0x1;
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(field_182,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
     }
 
     LONG nDistance = (ptTarget.y - ptStart.y) * (ptTarget.y - ptStart.y) * 16 / 9
@@ -629,12 +647,14 @@ void CProjectileBAM::Fire(CGameArea* pArea, LONG source, LONG target, CPoint tar
 
     AddToArea(pArea, ptStart, nSourceHeight, CGameObject::LIST_FRONT);
 
+    // NOTE: Uninline.
     PlaySound(m_fireSoundRef, m_loopFireSound, FALSE);
 
     m_posExact.x = ptStart.x << CParticle::RESOLUTION_INC;
     m_posDest.x = ptTarget.x;
     m_posExact.y = 4 * (ptStart.y << CParticle::RESOLUTION_INC) / 3;
     m_posDest.y = ptTarget.y;
+    // NOTE: Uninline.
     m_nDirection = GetDirection(ptTarget);
 }
 
