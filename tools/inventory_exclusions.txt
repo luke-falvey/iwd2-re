@@ -1311,3 +1311,7 @@
 # then szText (+0x0). Emitted out of line; called when a STR_RES local goes out of
 # scope, e.g. in CGameSprite::DebugDump (inlined GetName).
 0x425B80
+
+# Catch handler (compiler-generated funclet) of CTlkFileOverrideText::GetString (0x7B6650):
+# catch (CException* e) { sString = ""; e->Delete(); } then resumes at 0x7B6750.
+0x7B671B
