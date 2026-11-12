@@ -7309,7 +7309,7 @@ void CUIControlButtonInventoryHistoryIcon::SetItem(CItem* pItem)
     }
 }
 
-// 0x634950
+// 0x633F10
 BOOL CUIControlButtonInventoryHistoryIcon::Render(BOOL bForce)
 {
     CVidCell vcIcon;
@@ -7400,7 +7400,7 @@ CUIControlButtonInventoryAbilitiesAbility::CUIControlButtonInventoryAbilitiesAbi
     m_nSelectedFrame = 0;
 }
 
-// 0x634280
+// 0x634390
 CUIControlButtonInventoryAbilitiesAbility::~CUIControlButtonInventoryAbilitiesAbility()
 {
 }

@@ -40,6 +40,7 @@ public:
 
 class CVidPolyCache : public CPtrList {
 public:
+    CVidPolyCache();
     ~CVidPolyCache() override;
     BOOL sub_7C1DE0(CVidPoly* pPoly);
     void sub_7C1EC0(CVidPoly* pPoly);

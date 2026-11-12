@@ -2816,7 +2816,7 @@ CUIControlButtonWorldMapScroll::CUIControlButtonWorldMapScroll(CUIPanel* panel, 
 {
 }
 
-// 0x6A0310
+// 0x6A0350
 CUIControlButtonWorldMapScroll::~CUIControlButtonWorldMapScroll()
 {
 }

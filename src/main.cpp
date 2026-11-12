@@ -46,6 +46,7 @@ static BOOL IsSupportedOS(DWORD& majorVersion, DWORD& minorVersion)
     return supported;
 }
 
+// 0x4218F0
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     std::cout << std::endl;
