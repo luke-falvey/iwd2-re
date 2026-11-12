@@ -392,3 +392,7 @@
 0x5F9810
 0x60BB80
 0x47A5C0
+
+# CResHelper<T, nType>::~CResHelper() (the repo template in CRes.h; Ghidra calls it
+# C2DArray_Destruct, identical code folded): cancels a pending request, releases pRes.
+0x7B5370
