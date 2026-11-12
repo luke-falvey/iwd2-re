@@ -5,6 +5,7 @@
 #include "CCreatureFile.h"
 #include "CGameAnimationType.h"
 #include "CGameArea.h"
+#include "CGameButtonList.h"
 #include "CGameEffect.h"
 #include "CGameObjectArray.h"
 #include "CGameSprite.h"
@@ -4538,7 +4539,55 @@ void CScreenCreateChar::CompleteCharacterAbilities(CGameSprite* pSprite)
 // 0x612DE0
 void CScreenCreateChar::CompleteCharacterSkills(CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    RemoveItems(pSprite);
+
+    pSprite->GetBaseStats()->m_gold = pGame->GetRuleTables().GetStartingGold(pSprite);
+
+    if (pSprite->GetAIType().m_nClass != CAIObjectType::C_MONK) {
+        pSprite->GetEquipment()->m_items[CGameSpriteEquipment::SLOT_WEAPON] = new CItem(CResRef("00STAF01"), 0, 0, 0, 0, 0);
+
+        pSprite->SelectWeaponAbility(CGameSpriteEquipment::SLOT_WEAPON, 0, 1, 1);
+
+        CGameButtonList* pButtons = pSprite->GetItemUsages(CGameSpriteEquipment::SLOT_WEAPON, 1, 0);
+        POSITION pos = pButtons->GetHeadPosition();
+        if (pos != NULL) {
+            CButtonData* pButtonData = pButtons->GetNext(pos);
+
+            // NOTE: Uninline.
+            pSprite->SetQuickWeapon(0, *pButtonData);
+
+            if (pButtonData->m_abilityId.m_itemNum >= 11
+                && pButtonData->m_abilityId.m_itemNum <= 14) {
+                // NOTE: Uninline.
+                pSprite->SetQuickWeapon(0, static_cast<BYTE>(pButtonData->m_abilityId.m_itemNum));
+            } else {
+                // NOTE: Uninline.
+                pSprite->SetQuickWeapon(0, static_cast<BYTE>(0));
+            }
+
+            delete pButtonData;
+
+            while (pos != NULL) {
+                delete pButtons->GetNext(pos);
+            }
+        }
+
+        pButtons->RemoveAll();
+        delete pButtons;
+    }
+
+    CCreatureFileHeader oldBaseStats;
+    CDerivedStats DStats;
+
+    pSprite->UpdateFeats(&oldBaseStats, &DStats);
+
+    // NOTE: The original calls an empty function (0x71E750, `RET 8`) here with
+    // `&oldBaseStats` and `&DStats`.
+
+    pSprite->field_562C = 1;
+    pSprite->ProcessEffectList();
 }
 
 // 0x613310
