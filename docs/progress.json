@@ -4,17 +4,17 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 8243,
-  "functions_done": 7971,
-  "functions_complete": 7969,
+  "functions_total": 8238,
+  "functions_done": 7979,
+  "functions_complete": 7977,
   "incomplete_markers": 3,
   "incomplete_by_file": {
     "src/BalDataTypes.h": 1,
     "src/CScreenChapter.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10601,
-  "annotations_not_function_start": 2607,
+  "annotations_total": 10610,
+  "annotations_not_function_start": 2608,
   "duplicate_annotations": {
     "0x7ACD60": [
       "src/CAIObjectType.cpp",
@@ -433,10 +433,6 @@
     ],
     "0x6C2D70": [
       "src/CGameAnimationTypeMonsterAnkheg.cpp",
-      "src/CGameAnimationTypeMonsterQuadrant.cpp"
-    ],
-    "0x6E7A40": [
-      "src/CGameAnimationTypeMonsterIcewind.cpp",
       "src/CGameAnimationTypeMonsterQuadrant.cpp"
     ],
     "0x6B12A0": [
@@ -2100,6 +2096,7 @@
     "0x85BDC4",
     "0x85BDC8",
     "0x85BDCC",
+    "0x85BDD0",
     "0x85C09C",
     "0x85C09E",
     "0x85C0A0",
@@ -3822,9 +3819,9 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3734699,
-  "bytes_done": 3682329,
-  "bytes_complete": 3681500,
+  "bytes_total": 3729316,
+  "bytes_done": 3691665,
+  "bytes_complete": 3690836,
   "largest_stubs": [
     {
       "addr": "0x5D4190",
@@ -3853,7 +3850,7 @@
     {
       "addr": "0x77F190",
       "name": "FUN_0077f190",
-      "translated_callers": 15,
+      "translated_callers": 17,
       "size": 40
     },
     {
