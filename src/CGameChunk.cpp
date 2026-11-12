@@ -42,17 +42,17 @@ CGameChunk::CGameChunk(USHORT animationID, BYTE* pColors, const CString& sSoundN
     m_sound.SetResRef(CResRef(sSoundName), TRUE, TRUE);
     m_sound.SetChannel(14, reinterpret_cast<DWORD>(pArea));
 
-    field_88 = 1;
-    field_8C = a6;
-    field_94 = a8;
-    field_99 = a9;
-    field_9A = a10;
+    m_bFlying = 1;
+    m_ptVelocity = a6;
+    m_nVelocityZ = a8;
+    m_nTicksLeft = a9;
+    m_nFadeTicks = a10;
 
     // NOTE: Original copies the table from 0x8A8154, a second copy of the
     // visible terrain table (not the default one).
     memcpy(m_terrainTable, CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE, 16);
 
-    field_98 = 3;
+    m_nBounces = 3;
 
     if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Add(&m_id, this, INFINITE) != CGameObjectArray::SUCCESS) {
         // NOTE: Deletes the object that is still under construction.
@@ -80,9 +80,9 @@ void CGameChunk::AIUpdate()
 
     BOOL bPlaySound = FALSE;
 
-    if (field_88 == 0) {
-        field_99--;
-        if (field_99 == 0) {
+    if (m_bFlying == 0) {
+        m_nTicksLeft--;
+        if (m_nTicksLeft == 0) {
             RemoveFromArea();
         }
         return;
@@ -90,8 +90,8 @@ void CGameChunk::AIUpdate()
 
     CPoint ptGrid(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX, m_pos.y / CPathSearch::GRID_SQUARE_SIZEY);
 
-    m_posZ -= field_94;
-    field_94--;
+    m_posZ -= m_nVelocityZ;
+    m_nVelocityZ--;
 
     if (m_posZ >= 0) {
         m_posZ = 0;
@@ -104,19 +104,19 @@ void CGameChunk::AIUpdate()
             return;
         }
 
-        if (field_98 > 0) {
-            field_94 = (rand() % 3 + 1) * field_98;
+        if (m_nBounces > 0) {
+            m_nVelocityZ = (rand() % 3 + 1) * m_nBounces;
             bPlaySound = TRUE;
-            field_98--;
+            m_nBounces--;
         } else {
-            field_88 = 0;
+            m_bFlying = 0;
         }
     }
 
     LONG nOldHeight = m_pArea->GetHeightOffset(m_pos, CGameObject::LIST_BACK);
 
-    m_pos.x += field_8C.x;
-    m_pos.y += field_8C.y;
+    m_pos.x += m_ptVelocity.x;
+    m_pos.y += m_ptVelocity.y;
 
     LONG nNewHeight = m_pArea->GetHeightOffset(m_pos, CGameObject::LIST_BACK);
 
@@ -131,13 +131,13 @@ void CGameChunk::AIUpdate()
             m_posZ += static_cast<SHORT>(nNewHeight) - static_cast<SHORT>(nOldHeight);
         } else {
             if (ptGrid.x != ptNewGrid.x) {
-                m_pos.x += -field_8C.x * 2;
-                field_8C.x = -field_8C.x;
+                m_pos.x += -m_ptVelocity.x * 2;
+                m_ptVelocity.x = -m_ptVelocity.x;
             }
 
             if (ptGrid.y != ptNewGrid.y) {
-                m_pos.y += -field_8C.y * 2;
-                field_8C.y = -field_8C.y;
+                m_pos.y += -m_ptVelocity.y * 2;
+                m_ptVelocity.y = -m_ptVelocity.y;
             }
 
             bPlaySound = TRUE;
@@ -189,7 +189,7 @@ void CGameChunk::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
 
     BYTE bDithered = FALSE;
     BYTE bFadeOut = FALSE;
-    if (field_99 < field_9A) {
+    if (m_nTicksLeft < m_nFadeTicks) {
         bFadeOut = TRUE;
     }
 
@@ -257,12 +257,12 @@ CGame85BF7C::CGame85BF7C(USHORT animationID, BYTE* pColors, const CString& sSoun
     m_sound.SetResRef(CResRef(sSoundName), TRUE, TRUE);
     m_sound.SetChannel(14, reinterpret_cast<DWORD>(pArea));
 
-    field_88 = 1;
-    field_8C = pos;
-    field_94 = a7;
-    field_9C = a8;
-    field_9E = a9;
-    field_9F = a10;
+    m_bVisible = 1;
+    m_ptFixedPos = pos;
+    m_ptVelocity = a7;
+    m_nTicksLeft = a8;
+    m_nFadeTicks = a9;
+    m_nMode = a10;
 
     // NOTE: Original copies the table from 0x8A8154, a second copy of the
     // visible terrain table (not the default one).
@@ -293,14 +293,14 @@ void CGame85BF7C::AIUpdate()
         return;
     }
 
-    if (field_9C == 0) {
+    if (m_nTicksLeft == 0) {
         if (m_animation.IsEndOfSequence()) {
             RemoveFromArea();
             return;
         }
     } else {
-        field_9C--;
-        if (field_9C == 0) {
+        m_nTicksLeft--;
+        if (m_nTicksLeft == 0) {
             RemoveFromArea();
             return;
         }
@@ -308,43 +308,43 @@ void CGame85BF7C::AIUpdate()
 
     CPoint ptGrid(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX, m_pos.y / CPathSearch::GRID_SQUARE_SIZEY);
 
-    field_8C.x += field_94.x;
-    field_8C.y += field_94.y;
-    m_pos.x = field_8C.x >> 10;
-    m_pos.y = field_8C.y >> 10;
+    m_ptFixedPos.x += m_ptVelocity.x;
+    m_ptFixedPos.y += m_ptVelocity.y;
+    m_pos.x = m_ptFixedPos.x >> 10;
+    m_pos.y = m_ptFixedPos.y >> 10;
 
     CPoint ptNewGrid(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX, m_pos.y / CPathSearch::GRID_SQUARE_SIZEY);
 
     if (ptGrid.x != ptNewGrid.x || ptGrid.y != ptNewGrid.y) {
         SHORT nTableIndex;
         if (m_pArea->m_search.GetLOSCost(ptNewGrid, m_terrainTable, nTableIndex, FALSE) == CPathSearch::COST_IMPASSABLE) {
-            if (field_9F == 1) {
+            if (m_nMode == 1) {
                 RemoveFromArea();
                 return;
             }
 
-            if (field_9F == 0) {
-                CPoint ptOld = field_8C;
+            if (m_nMode == 0) {
+                CPoint ptOld = m_ptFixedPos;
 
                 if (ptGrid.x != ptNewGrid.x) {
-                    field_8C.x += -field_94.x * 2;
-                    m_pos.x = field_8C.x >> 10;
-                    field_94.x = -field_94.x;
+                    m_ptFixedPos.x += -m_ptVelocity.x * 2;
+                    m_pos.x = m_ptFixedPos.x >> 10;
+                    m_ptVelocity.x = -m_ptVelocity.x;
                 }
 
                 if (ptGrid.y != ptNewGrid.y) {
-                    field_8C.y += -field_94.y * 2;
-                    m_pos.y = field_8C.y >> 10;
-                    field_94.y = -field_94.y;
+                    m_ptFixedPos.y += -m_ptVelocity.y * 2;
+                    m_pos.y = m_ptFixedPos.y >> 10;
+                    m_ptVelocity.y = -m_ptVelocity.y;
                 }
 
-                SHORT nDirection = CGameSprite::GetDirection(ptOld, field_8C);
+                SHORT nDirection = CGameSprite::GetDirection(ptOld, m_ptFixedPos);
                 m_animation.ChangeDirection(nDirection);
             } else {
-                field_88 = 0;
+                m_bVisible = 0;
             }
         } else {
-            field_88 = 1;
+            m_bVisible = 1;
         }
     }
 
@@ -385,7 +385,7 @@ void CGame85BF7C::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
     BYTE bFadeOut = FALSE;
     CInfinity* pInfinity = &m_pArea->m_cInfinity;
 
-    if (field_88 == 0) {
+    if (m_bVisible == 0) {
         return;
     }
 
@@ -394,7 +394,7 @@ void CGame85BF7C::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
         return;
     }
 
-    if (static_cast<SHORT>(field_9C) < field_9E) {
+    if (static_cast<SHORT>(m_nTicksLeft) < m_nFadeTicks) {
         bFadeOut = TRUE;
     }
 
@@ -446,8 +446,8 @@ CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const C
     memcpy(m_colors, pColors, sizeof(m_colors));
 
     LONG nRadius = static_cast<SHORT>(a5) - 1;
-    field_18B = a7;
-    field_18A = static_cast<BYTE>(nRadius / a6 + 1);
+    m_nMode = a7;
+    m_nTicksLeft = static_cast<BYTE>(nRadius / a6 + 1);
     field_188 = a8;
 
     switch (a1) {
@@ -534,50 +534,50 @@ CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const C
         break;
     }
 
-    field_1A0 = NULL;
+    m_pCells = NULL;
 
     LONG nCells = nRadius / CPathSearch::GRID_SQUARE_SIZEX + 1;
-    field_18C = nCells;
-    field_190 = nCells;
+    m_nHalfWidth = nCells;
+    m_nHalfHeight = nCells;
 
-    field_194 = new BYTE[(nCells * 2 + 1) * (nCells * 2 + 1)];
-    if (field_194 == NULL) {
+    m_pGrid = new BYTE[(nCells * 2 + 1) * (nCells * 2 + 1)];
+    if (m_pGrid == NULL) {
         // NOTE: Deletes the object that is still under construction.
         delete this;
         return;
     }
 
     nCells = nRadius / (CPathSearch::GRID_SQUARE_SIZEX * 2) + 1;
-    field_18C = nCells;
-    field_190 = nCells;
+    m_nHalfWidth = nCells;
+    m_nHalfHeight = nCells;
 
-    LONG nIndex = g_pChitin->GetCurrentVideoMode()->GetEllipseArcPixelList(field_18C, field_190, field_194);
+    LONG nIndex = g_pChitin->GetCurrentVideoMode()->GetEllipseArcPixelList(m_nHalfWidth, m_nHalfHeight, m_pGrid);
     field_198 = nIndex + 1;
-    field_194[field_198 - 1] = 1;
+    m_pGrid[field_198 - 1] = 1;
 
-    nIndex = g_pChitin->GetCurrentVideoMode()->GetEllipseArcPixelList(field_190, field_18C, field_194 + field_198);
+    nIndex = g_pChitin->GetCurrentVideoMode()->GetEllipseArcPixelList(m_nHalfHeight, m_nHalfWidth, m_pGrid + field_198);
     field_19C = nIndex + 1;
-    field_194[field_198 + field_19C - 1] = 1;
+    m_pGrid[field_198 + field_19C - 1] = 1;
 
     nCells = nRadius / CPathSearch::GRID_SQUARE_SIZEX + 1;
-    field_18C = nCells;
-    field_190 = nCells;
+    m_nHalfWidth = nCells;
+    m_nHalfHeight = nCells;
 
-    field_1A0 = new CELL[(field_19C + field_198) * 4];
-    if (field_1A0 == NULL) {
+    m_pCells = new CELL[(field_19C + field_198) * 4];
+    if (m_pCells == NULL) {
         // NOTE: Deletes the object that is still under construction.
         delete this;
         return;
     }
 
-    field_1A4 = new BYTE[(field_19C + field_198) * 4];
-    if (field_1A4 == NULL) {
+    m_pCellStates = new BYTE[(field_19C + field_198) * 4];
+    if (m_pCellStates == NULL) {
         // NOTE: Deletes the object that is still under construction.
         delete this;
         return;
     }
 
-    memset(field_1A4, 0, (field_198 + field_19C) * 4);
+    memset(m_pCellStates, 0, (field_198 + field_19C) * 4);
 
     LONG nOriginX = pos.x;
     LONG nOriginY = pos.y * 4 / 3;
@@ -590,34 +590,34 @@ CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const C
         LONG dy = nCurY - nOriginY;
         LONG nDistance = static_cast<LONG>(sqrt(static_cast<double>(dx * dx + dy * dy)) + 0.5);
 
-        field_1A0[i].field_4 = 0;
-        field_1A0[field_198 + field_19C + i].field_4 = 0;
-        field_1A0[i + (field_198 + field_19C) * 2].field_4 = 0;
-        field_1A0[i + (field_198 + field_19C) * 3].field_4 = 0;
+        m_pCells[i].nOffsetX = 0;
+        m_pCells[field_198 + field_19C + i].nOffsetX = 0;
+        m_pCells[i + (field_198 + field_19C) * 2].nOffsetX = 0;
+        m_pCells[i + (field_198 + field_19C) * 3].nOffsetX = 0;
 
-        field_1A0[i].field_0 = 0;
-        field_1A0[field_198 + field_19C + i].field_0 = 0;
-        field_1A0[i + (field_198 + field_19C) * 2].field_0 = 0;
-        field_1A0[i + (field_198 + field_19C) * 3].field_0 = 0;
+        m_pCells[i].nOffsetY = 0;
+        m_pCells[field_198 + field_19C + i].nOffsetY = 0;
+        m_pCells[i + (field_198 + field_19C) * 2].nOffsetY = 0;
+        m_pCells[i + (field_198 + field_19C) * 3].nOffsetY = 0;
 
-        field_1A0[i].field_C = (dx * nSpeed << 10) / nDistance;
-        field_1A0[field_198 + field_19C + i].field_C = field_1A0[i].field_C;
+        m_pCells[i].nVelocityX = (dx * nSpeed << 10) / nDistance;
+        m_pCells[field_198 + field_19C + i].nVelocityX = m_pCells[i].nVelocityX;
 
-        if (field_1A0[i].field_C == 0) {
-            field_1A4[i + (field_19C + field_198) * 2] = 2;
-            field_1A4[i + (field_198 + field_19C) * 3] = 2;
+        if (m_pCells[i].nVelocityX == 0) {
+            m_pCellStates[i + (field_19C + field_198) * 2] = 2;
+            m_pCellStates[i + (field_198 + field_19C) * 3] = 2;
         }
 
-        field_1A0[i + (field_198 + field_19C) * 2].field_C = -field_1A0[i].field_C;
-        field_1A0[i + (field_198 + field_19C) * 3].field_C = -field_1A0[i].field_C;
+        m_pCells[i + (field_198 + field_19C) * 2].nVelocityX = -m_pCells[i].nVelocityX;
+        m_pCells[i + (field_198 + field_19C) * 3].nVelocityX = -m_pCells[i].nVelocityX;
 
-        field_1A0[i].field_8 = (dy * nSpeed << 10) / nDistance;
-        field_1A0[field_198 + field_19C + i].field_8 = -field_1A0[i].field_8;
-        field_1A0[i + (field_198 + field_19C) * 2].field_8 = field_1A0[i].field_8;
-        field_1A0[i + (field_198 + field_19C) * 3].field_8 = -field_1A0[i].field_8;
+        m_pCells[i].nVelocityY = (dy * nSpeed << 10) / nDistance;
+        m_pCells[field_198 + field_19C + i].nVelocityY = -m_pCells[i].nVelocityY;
+        m_pCells[i + (field_198 + field_19C) * 2].nVelocityY = m_pCells[i].nVelocityY;
+        m_pCells[i + (field_198 + field_19C) * 3].nVelocityY = -m_pCells[i].nVelocityY;
 
         nCurX += CPathSearch::GRID_SQUARE_SIZEX * 2;
-        nCurY -= field_194[i] * CPathSearch::GRID_SQUARE_SIZEY * 2;
+        nCurY -= m_pGrid[i] * CPathSearch::GRID_SQUARE_SIZEY * 2;
     }
 
     nCurX = static_cast<SHORT>(a5) + nOriginX;
@@ -628,33 +628,33 @@ CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const C
         LONG dy = nCurY - nOriginY;
         LONG nDistance = static_cast<LONG>(sqrt(static_cast<double>(dx * dx + dy * dy)) + 0.5);
 
-        field_1A0[field_198 + i].field_4 = 0;
-        field_1A0[field_198 * 2 + field_19C + i].field_4 = 0;
-        field_1A0[i + (field_198 + field_19C) * 2 + field_198].field_4 = 0;
-        field_1A0[i + (field_198 + field_19C) * 3 + field_198].field_4 = 0;
+        m_pCells[field_198 + i].nOffsetX = 0;
+        m_pCells[field_198 * 2 + field_19C + i].nOffsetX = 0;
+        m_pCells[i + (field_198 + field_19C) * 2 + field_198].nOffsetX = 0;
+        m_pCells[i + (field_198 + field_19C) * 3 + field_198].nOffsetX = 0;
 
-        field_1A0[field_198 + i].field_0 = 0;
-        field_1A0[field_198 * 2 + field_19C + i].field_0 = 0;
-        field_1A0[i + (field_198 + field_19C) * 2 + field_198].field_0 = 0;
-        field_1A0[i + (field_198 + field_19C) * 3 + field_198].field_0 = 0;
+        m_pCells[field_198 + i].nOffsetY = 0;
+        m_pCells[field_198 * 2 + field_19C + i].nOffsetY = 0;
+        m_pCells[i + (field_198 + field_19C) * 2 + field_198].nOffsetY = 0;
+        m_pCells[i + (field_198 + field_19C) * 3 + field_198].nOffsetY = 0;
 
-        field_1A0[field_198 + i].field_C = (dx * nSpeed << 10) / nDistance;
-        field_1A0[field_198 * 2 + field_19C + i].field_C = field_1A0[field_198 + i].field_C;
-        field_1A0[i + (field_198 + field_19C) * 2 + field_198].field_C = -field_1A0[field_198 + i].field_C;
-        field_1A0[i + (field_198 + field_19C) * 3 + field_198].field_C = -field_1A0[field_198 + i].field_C;
+        m_pCells[field_198 + i].nVelocityX = (dx * nSpeed << 10) / nDistance;
+        m_pCells[field_198 * 2 + field_19C + i].nVelocityX = m_pCells[field_198 + i].nVelocityX;
+        m_pCells[i + (field_198 + field_19C) * 2 + field_198].nVelocityX = -m_pCells[field_198 + i].nVelocityX;
+        m_pCells[i + (field_198 + field_19C) * 3 + field_198].nVelocityX = -m_pCells[field_198 + i].nVelocityX;
 
-        field_1A0[field_198 + i].field_8 = (dy * nSpeed << 10) / nDistance;
-        field_1A0[field_198 * 2 + field_19C + i].field_8 = -field_1A0[field_198 + i].field_8;
-        field_1A0[i + (field_198 + field_19C) * 2 + field_198].field_8 = field_1A0[field_198 + i].field_8;
-        field_1A0[i + (field_198 + field_19C) * 3 + field_198].field_8 = -field_1A0[field_198 + i].field_8;
+        m_pCells[field_198 + i].nVelocityY = (dy * nSpeed << 10) / nDistance;
+        m_pCells[field_198 * 2 + field_19C + i].nVelocityY = -m_pCells[field_198 + i].nVelocityY;
+        m_pCells[i + (field_198 + field_19C) * 2 + field_198].nVelocityY = m_pCells[field_198 + i].nVelocityY;
+        m_pCells[i + (field_198 + field_19C) * 3 + field_198].nVelocityY = -m_pCells[field_198 + i].nVelocityY;
 
         // NOTE: Tests the entry at `i`, not at `field_198 + i`.
-        if (field_1A0[i].field_8 == 0) {
-            field_1A4[field_198 * 2 + field_19C + i] = 2;
-            field_1A4[i + (field_198 + field_19C) * 3 + field_198] = 2;
+        if (m_pCells[i].nVelocityY == 0) {
+            m_pCellStates[field_198 * 2 + field_19C + i] = 2;
+            m_pCellStates[i + (field_198 + field_19C) * 3 + field_198] = 2;
         }
 
-        nCurX -= field_194[field_198 + i] * CPathSearch::GRID_SQUARE_SIZEX * 2;
+        nCurX -= m_pGrid[field_198 + i] * CPathSearch::GRID_SQUARE_SIZEX * 2;
         nCurY += CPathSearch::GRID_SQUARE_SIZEY * 2;
     }
 
@@ -680,9 +680,9 @@ CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const C
             ptPos,
             0,
             ptZero,
-            static_cast<WORD>(field_18A * 2 + field_188),
+            static_cast<WORD>(m_nTicksLeft * 2 + field_188),
             0,
-            field_18B);
+            m_nMode);
     }
 }
 
@@ -690,33 +690,163 @@ CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const C
 // NOTE: 0x711C90 is the scalar deleting destructor (compiler-generated).
 CGame85BFE8::~CGame85BFE8()
 {
-    if (field_194 != NULL) {
-        delete[] field_194;
+    if (m_pGrid != NULL) {
+        delete[] m_pGrid;
     }
 
-    if (field_1A0 != NULL) {
-        delete[] field_1A0;
+    if (m_pCells != NULL) {
+        delete[] m_pCells;
     }
 
-    if (field_1A4 != NULL) {
-        delete[] field_1A4;
+    if (m_pCellStates != NULL) {
+        delete[] m_pCellStates;
     }
 }
 
 // 0x711D90
 void CGame85BFE8::AIUpdate()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    BOOL bDone = TRUE;
+
+    m_nTicksLeft--;
+    if (m_nTicksLeft == 0) {
+        if (m_vidCell.IsEndOfSequence(FALSE)) {
+            RemoveFromArea();
+            return;
+        }
+
+        m_nTicksLeft++;
+        m_vidCell.FrameAdvance();
+        return;
+    }
+
+    memset(m_pGrid, 0, (m_nHalfHeight * 2 + 1) * (m_nHalfWidth * 2 + 1));
+
+    for (SHORT i = 0; i < (field_198 + field_19C) * 4; i++) {
+        if (m_pCellStates[i] == 2) {
+            continue;
+        }
+
+        m_pCells[i].nOffsetX += m_pCells[i].nVelocityX;
+        m_pCells[i].nOffsetY += m_pCells[i].nVelocityY;
+
+        CPoint ptCell(((m_pCells[i].nOffsetX >> 10) + m_pos.x) / CPathSearch::GRID_SQUARE_SIZEX,
+            (((m_pCells[i].nOffsetY * 3 / 4) >> 10) + m_pos.y) / CPathSearch::GRID_SQUARE_SIZEY);
+
+        SHORT nTableIndex;
+        if (m_pArea->m_search.GetLOSCost(ptCell, m_terrainTable, nTableIndex, FALSE) == CPathSearch::COST_IMPASSABLE) {
+            if (m_nMode == 1) {
+                m_pCellStates[i] = 2;
+            }
+
+            if (m_nMode != 0) {
+                if (m_pCellStates[i] == 0) {
+                    bDone = FALSE;
+                }
+
+                continue;
+            }
+
+            CPoint ptPrevCell(((((m_pCells[i].nOffsetX - m_pCells[i].nVelocityX) >> 10) + m_pos.x)) / CPathSearch::GRID_SQUARE_SIZEX,
+                ((((m_pCells[i].nOffsetY - m_pCells[i].nVelocityY) * 3 / 4) >> 10) + m_pos.y) / CPathSearch::GRID_SQUARE_SIZEY);
+
+            if (ptPrevCell.x != ptCell.x) {
+                m_pCells[i].nOffsetX -= m_pCells[i].nVelocityX * 2;
+                m_pCells[i].nVelocityX = -m_pCells[i].nVelocityX;
+            }
+
+            if (ptPrevCell.y != ptCell.y) {
+                m_pCells[i].nOffsetY += -m_pCells[i].nVelocityY * 2;
+                m_pCells[i].nVelocityY = -m_pCells[i].nVelocityY;
+            }
+        }
+
+        LONG nRow = (m_pCells[i].nOffsetY / CPathSearch::GRID_SQUARE_SIZEX >> 10) + m_nHalfHeight;
+        LONG nIndex = (m_pCells[i].nOffsetX / CPathSearch::GRID_SQUARE_SIZEX >> 10) + m_nHalfWidth + nRow * (m_nHalfWidth * 2 + 1);
+
+        if (field_7E != ANIMATION_ID_NONE) {
+            DWORD nCube = m_nTicksLeft * m_nTicksLeft * m_nTicksLeft;
+            DWORD nChance = ((nCube / 1000 + 10) * 3) >> 1;
+            if (nChance == 0 || rand() % static_cast<LONG>(nChance) == 0) {
+                CPoint ptNew(m_pCells[i].nOffsetX + (m_pos.x << 10),
+                    m_pCells[i].nOffsetY * 3 / 4 + (m_pos.y << 10));
+                CPoint ptZero(0, 0);
+
+                new CGame85BF7C(field_80,
+                    m_colors,
+                    m_sSoundName,
+                    m_pArea,
+                    ptNew,
+                    0,
+                    ptZero,
+                    static_cast<WORD>(m_nTicksLeft * 2 + field_188),
+                    0,
+                    m_nMode);
+            }
+        }
+
+        BYTE nOld = m_pGrid[nIndex]++;
+        if (nOld == 0) {
+            if (m_pCellStates[i] == 0) {
+                CPoint ptNew(m_pCells[i].nOffsetX + (m_pos.x << 10),
+                    m_pCells[i].nOffsetY * 3 / 4 + (m_pos.y << 10));
+                CPoint ptVelocity(m_pCells[i].nVelocityX, m_pCells[i].nVelocityY * 3 / 4);
+
+                new CGame85BF7C(field_7E,
+                    m_colors,
+                    m_sSoundName,
+                    m_pArea,
+                    ptNew,
+                    0,
+                    ptVelocity,
+                    m_nTicksLeft,
+                    0,
+                    m_nMode);
+
+                m_pCellStates[i] = 1;
+            }
+        } else if (m_pCellStates[i] == 0) {
+            bDone = FALSE;
+        }
+    }
+
+    if (bDone) {
+        if (m_vidCell.IsEndOfSequence(FALSE)) {
+            RemoveFromArea();
+            return;
+        }
+    }
+
+    m_vidCell.FrameAdvance();
 }
 
 // 0x712310
 void CGame85BFE8::RemoveFromArea()
 {
-    // TODO: Incomplete.
+    CGameObject::RemoveFromArea();
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+        CGameObjectArray::THREAD_ASYNCH,
+        NULL,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+        // __LINE__: 14752
+        UTIL_ASSERT(FALSE);
+    }
+
+    delete this;
 }
 
 // 0x7122E0
 void CGame85BFE8::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
 {
-    // TODO: Incomplete.
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+    // __LINE__: 14661
+    UTIL_ASSERT(pVidMode != NULL);
 }
