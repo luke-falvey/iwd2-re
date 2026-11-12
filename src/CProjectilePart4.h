@@ -27,6 +27,7 @@ class CProjectileArea84F448 : public CProjectileArea {
 public:
     CProjectileArea84F448();
     /* 0094 */ void Virtual94(std::list<LONG>& targets) override;
+    int sub_571A60();
 };
 
 // vtable 0x84F4E4

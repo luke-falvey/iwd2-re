@@ -99,3 +99,77 @@
 # std::set<DWORD> insert(const value&) returning pair<iterator, bool>: red-black tree insert with
 # nil sentinel 0x8E28C8, called from CProjectileArea850384::AIUpdate (field_65E).
 0x55BE00
+
+# std::string (MSVC 6) _Eos(n): `_Len = n; _Ptr[n] = 0` (stores arg to +8, writes NUL at ptr+n).
+0x44BC00
+
+# std::string (MSVC 6) _Grow(n, trim): n > npos-1 -> _Xlen (0x7F9AC2); refcount byte at ptr-1 is
+# decremented/freed via operator delete; trim zeroes ptr/len/res (+4/+8/+C) or NUL-terminates.
+0x44BC20
+
+# std::list<LONG> element insert(iterator& result, node* where, const LONG& val): operator_new(0xC),
+# links prev/next, copies *val into node+8, ++size (+8), stores node into *result.
+0x5371C0
+
+# std::string (MSVC 6) assign(const char* s, size_t n): _Grow(n) (0x44BE10), then rep movsd/movsb of n
+# bytes into _Ptr and NUL-terminates at _Ptr[n]; refcount-byte test at ptr-1.
+0x537220
+
+# std::list<LONG> _Buynode(next, prev): operator_new(0xC), next defaults to self, prev defaults to self.
+0x55BB90
+
+# std::list<LONG> erase(first, last): unlinks each node, operator_delete, --size (+8); stores first at *result.
+0x55BB40
+
+# std::list::begin(): `*result = head->next` (head at +4, first node pointer at [head]).
+0x5F9AA0
+
+# std::list<LONG> insert(where, first, last) range: per element operator_new(0xC), link, copy node+8, ++size.
+0x5867D0
+
+# std::map<LONG,LONG> iterator::operator++ (nil sentinel 0x8E3E38; right-descend then left-walk,
+# or climb parents).
+0x570CC0
+
+# std::map<LONG,LONG> erase(iterator): red-black tree node removal (1017 bytes, rotations around
+# nil sentinel 0x8E3E38).
+0x570780
+
+# std::map<LONG,LONG> lower_bound/find(key): descends from header->parent comparing key at node+0xC,
+# nil sentinel 0x8E3E38; returns iterator through the out pointer.
+0x570C50
+
+# std::map<LONG,LONG> insert(const value&) returning pair<iterator,bool>: descent comparing key at
+# node+0xC against nil 0x8E3E38, then _Insert (0x570E00).
+0x570690
+
+# std::map<LONG,LONG> lower_bound(key) returning the iterator in EAX: same tree descent as 0x570C50
+# (nil sentinel 0x8E3E38, key at node+0xC, left/right at +0/+8).
+0x577D60
+
+# std::set<DWORD> lower_bound(key): descent with key at node+0xC, nil sentinel 0x8E28C8.
+0x577D90
+
+# std::string (MSVC 6) _Tidy(bool): if ptr non-null and refcount byte at ptr-1 is 0/0xFF operator_delete
+# else decrement; zeroes ptr/len/res.
+0x448D50
+
+# std::list erase(iterator) single: unlink node, operator_delete, --size (+8), return next in *result.
+0x44AD80
+
+# std::vector<8-byte element> size(): `first ? (last - first) >> 3 : 0`.
+0x582210
+
+# std::vector<8-byte element> _Ucopy(first, last, dest): copies 8 bytes per element, sets _Last (+8).
+0x582230
+
+# std::ostringstream-like (FS:[0] SEH frame, vtables 0x8516EC/0x8610E4, stringbuf free via 0x5836F0
+# and std::string _Tidy 0x448D50) most-derived destructor body.
+0x582BA0
+
+# std::ios_base-like destructor tail: stores vtable 0x8610CC then jumps to 0x7F98B8.
+0x582780
+
+# Deleting-destructor thunk of the same iostream (this-0x58 adjustor): calls 0x582BA0, 0x582780,
+# operator_delete on flag bit 0.
+0x583500

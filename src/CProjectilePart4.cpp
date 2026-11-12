@@ -1,10 +1,15 @@
 #include "CProjectilePart4.h"
 
+#include <stdlib.h>
+
 #include "CBaldurChitin.h"
 #include "CGameArea.h"
+#include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
+#include "CProjectilePart3.h"
 #include "CUtil.h"
+#include "IcewindMisc.h"
 
 // 0x571170
 CProjectileArea84F274::CProjectileArea84F274()
@@ -80,7 +85,78 @@ CProjectileArea84F3AC::CProjectileArea84F3AC()
 // 0x5716B0
 void CProjectileArea84F3AC::Virtual98(LONG nTargetId)
 {
-    // TODO: Incomplete.
+    CGameObject* pSource;
+    CGameObject* pTarget;
+
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pSource,
+            INFINITE)
+        != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pTarget,
+            INFINITE)
+        != CGameObjectArray::SUCCESS) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return;
+    }
+
+    if (pTarget->GetObjectType() != CGameObject::TYPE_SPRITE) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return;
+    }
+
+    if (pTarget->GetObjectType() != CGameObject::TYPE_SPRITE) {
+        pTarget->GetPos();
+    }
+
+    if (pTarget->GetObjectType() == CGameObject::TYPE_SPRITE) {
+        static_cast<CGameSprite*>(pTarget)->m_posOld = pTarget->GetPos();
+    }
+
+    CProjectile* pProjectile = CProjectile::DecodeProjectile(field_2B2 + 1, NULL, FALSE);
+    pProjectile->field_18A = field_18A;
+    pProjectile->field_186 = field_186;
+    pProjectile->m_fireSoundRef = CResRef("");
+
+    POSITION pos = m_effectList.GetHeadPosition();
+    while (pos != NULL) {
+        CGameEffect* pEffect = m_effectList.GetNext(pos);
+        pProjectile->AddEffect(pEffect->Copy());
+    }
+
+    // NOTE: Result unused.
+    static_cast<void>(field_4C4.find(nTargetId));
+
+    pProjectile->Fire(field_EA,
+        m_id,
+        nTargetId,
+        pTarget->GetPos(),
+        50,
+        0);
+
+    // NOTE: Releases share on `m_callBackProjectile`, which was never
+    // acquired here.
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_callBackProjectile,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x571930
@@ -98,10 +174,70 @@ CProjectileArea84F448::CProjectileArea84F448()
     field_2AE = 300;
 }
 
+// 0x571A60
+int CProjectileArea84F448::sub_571A60()
+{
+    CGameObject* pObject;
+    SHORT nLevel;
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pObject,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCProjectileAreas.cpp
+        // __LINE__: 395
+        UTIL_ASSERT(FALSE);
+    }
+
+    if (pObject->GetObjectType() != CGameObject::TYPE_SPRITE) {
+        nLevel = 11;
+    } else {
+        nLevel = static_cast<CGameSprite*>(pObject)->GetDerivedStats()->SumSorcererWizardLevels();
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    int nTotal = 0;
+    for (int nCount = nLevel; nCount > 0; nCount--) {
+        nTotal += rand() % 4 + 1;
+    }
+
+    return nTotal;
+}
+
 // 0x571B30
 void CProjectileArea84F448::Virtual94(std::list<LONG>& targets)
 {
-    // TODO: Incomplete.
+    std::list<LONG> filtered;
+
+    int nBudget = sub_571A60();
+
+    for (std::list<LONG>::iterator it = targets.begin(); it != targets.end() && nBudget > 0; ++it) {
+        CGameObject* pObject;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                int nLevel = static_cast<CGameSprite*>(pObject)->GetDerivedStats()->GetLevel();
+                if (nLevel <= nBudget && nLevel <= 9) {
+                    nBudget -= nLevel;
+                    filtered.push_back(*it);
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    CProjectileArea::Virtual94(filtered);
 }
 
 // 0x571CE0
@@ -225,7 +361,15 @@ CProjectileArea84F754::CProjectileArea84F754()
 // 0x572540
 void CProjectileArea84F754::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    CProjectile84E8C0* pProjectile = new CProjectile84E8C0(CString("FStrikH"),
+        CString(""),
+        0xFF,
+        0,
+        0,
+        0x1C);
+    pProjectile->Fire(pArea, source, target, targetPos, nHeight, nType);
+
+    CProjectileArea::Fire(pArea, source, target, targetPos, nHeight, nType);
 }
 
 // 0x572670
@@ -268,7 +412,39 @@ CProjectileArea84F88C::CProjectileArea84F88C()
 // 0x572960
 void CProjectileArea84F88C::Virtual94(std::list<LONG>& targets)
 {
-    // TODO: Incomplete.
+    std::list<LONG> filtered;
+
+    int nCount = rand() % 4 + 1;
+    int nFound = 0;
+
+    for (std::list<LONG>::iterator it = targets.begin(); it != targets.end(); ++it) {
+        CGameObject* pObject;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                filtered.push_back(*it);
+                if (IcewindMisc::IsAnimal(static_cast<CGameSprite*>(pObject)) == TRUE) {
+                    nFound++;
+                    if (nFound == nCount) {
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                        break;
+                    }
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    CProjectileArea::Virtual94(filtered);
 }
 
 // 0x572B30
@@ -289,7 +465,52 @@ CProjectileArea84F928::CProjectileArea84F928()
 // 0x572C60
 void CProjectileArea84F928::Virtual94(std::list<LONG>& targets)
 {
-    // TODO: Incomplete.
+    std::list<LONG> filtered;
+
+    int nCount = rand() % 4 + 1;
+    int nFound = 0;
+
+    std::list<LONG>::iterator it = targets.begin();
+    for (; it != targets.end(); ++it) {
+        CGameObject* pObject;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pObject->GetObjectType() != CGameObject::TYPE_SPRITE) {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            } else if (IcewindMisc::IsUndead(static_cast<CGameSprite*>(pObject)) == TRUE) {
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            } else {
+                filtered.push_back(*it);
+                nFound++;
+                if (nFound == nCount) {
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    break;
+                }
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+    }
+
+    CProjectileArea::Virtual94(filtered);
+
+    // NOTE: `it` is `targets.end()` unless the loop was left early. The
+    // original releases the share on it again here.
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x572E60
@@ -310,7 +531,39 @@ CProjectileArea84F9C4::CProjectileArea84F9C4()
 // 0x572F90
 void CProjectileArea84F9C4::Virtual94(std::list<LONG>& targets)
 {
-    // TODO: Incomplete.
+    std::list<LONG> filtered;
+
+    int nCount = rand() % 4 + 1;
+    int nFound = 0;
+
+    for (std::list<LONG>::iterator it = targets.begin(); it != targets.end(); ++it) {
+        CGameObject* pObject;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                filtered.push_back(*it);
+                if (IcewindMisc::IsHumanoid(static_cast<CGameSprite*>(pObject)) == TRUE) {
+                    nFound++;
+                    if (nFound == nCount) {
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                        break;
+                    }
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    CProjectileArea::Virtual94(filtered);
 }
 
 // 0x573160
@@ -331,7 +584,39 @@ CProjectileArea84FA60::CProjectileArea84FA60()
 // 0x573290
 void CProjectileArea84FA60::Virtual94(std::list<LONG>& targets)
 {
-    // TODO: Incomplete.
+    std::list<LONG> filtered;
+
+    int nCount = rand() % 4 + 1;
+    int nFound = 0;
+
+    for (std::list<LONG>::iterator it = targets.begin(); it != targets.end(); ++it) {
+        CGameObject* pObject;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                filtered.push_back(*it);
+                if (IcewindMisc::IsUndead(static_cast<CGameSprite*>(pObject)) == TRUE) {
+                    nFound++;
+                    if (nFound == nCount) {
+                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                        break;
+                    }
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    CProjectileArea::Virtual94(filtered);
 }
 
 // 0x573460
@@ -383,6 +668,84 @@ CProjectileArea84FB98::CProjectileArea84FB98()
 void CProjectileArea84FB98::AIUpdate()
 {
     // TODO: Incomplete.
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    if (field_2B6 == 0) {
+        if (!field_4E0) {
+            m_pos.x = m_posDest.x;
+            m_pos.y = m_posDest.y;
+            OnArrival();
+            return;
+        }
+
+        m_pVidCell->FrameAdvance();
+
+        LONG dy = m_posDest.y - m_pos.y;
+        LONG dx = m_posDest.x - m_pos.x;
+        if (dy * dy * 16 / 9 + dx * dx > (m_speed + 1) * (m_speed + 1)) {
+            Virtual84(m_posDest);
+
+            if (field_E2 != 0) {
+                // TODO: Incomplete. Creates an object (size 0xCA, constructor
+                // 0x51AE40, vtable 0x84D618) from `field_9A`, the word at
+                // 0x84D600 and the word at 0x84D5F0, then calls its
+                // `AddToArea(field_EA, m_pos, m_posZ, CGameObject::LIST_FRONT)`.
+            }
+
+            m_sound.SetCoordinates(m_pos.x, m_pos.y, m_posZ);
+        } else {
+            OnArrival();
+        }
+
+        return;
+    }
+
+    if (field_304 != 0) {
+        field_308.FrameAdvance();
+    }
+
+    if (field_3E2 != 0) {
+        field_3E6.FrameAdvance();
+    }
+
+    if (field_65E != 0 && field_65E % 100 == 0) {
+        PlaySound(CResRef("ARE_M05a"), FALSE, TRUE);
+
+        CTypedPtrList<CPtrList, LONG*> targets(10);
+
+        field_EA->GetAllInRange(m_posVertList,
+            m_pos,
+            field_2BE,
+            field_2AE,
+            m_terrainTable,
+            targets,
+            TRUE,
+            field_300);
+        field_EA->GetAllInRangeBack(m_pos,
+            field_2BE,
+            field_2AE,
+            m_terrainTable,
+            targets,
+            TRUE,
+            FALSE,
+            field_300);
+
+        POSITION pos = targets.GetHeadPosition();
+        while (pos != NULL) {
+            Virtual98(reinterpret_cast<LONG>(targets.GetNext(pos)));
+        }
+    }
+
+    field_65E++;
+    field_4C0--;
+    if (field_4C0 <= 0) {
+        RemoveSelf();
+    }
 }
 
 // 0x573AF0
@@ -454,5 +817,31 @@ CProjectileArea84FD6C::CProjectileArea84FD6C()
 // 0x573FC0
 void CProjectileArea84FD6C::Virtual94(std::list<LONG>& targets)
 {
-    // TODO: Incomplete.
+    std::list<LONG> filtered;
+
+    int nBudget = 200;
+
+    for (std::list<LONG>::iterator it = targets.begin(); it != targets.end(); ++it) {
+        CGameObject* pObject;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                SHORT nHitPoints = static_cast<CGameSprite*>(pObject)->m_baseStats.m_hitPoints;
+                if (nHitPoints <= 100 && nHitPoints <= nBudget) {
+                    nBudget -= nHitPoints;
+                    filtered.push_back(*it);
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    CProjectileArea::Virtual94(filtered);
 }

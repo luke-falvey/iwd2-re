@@ -651,6 +651,7 @@ public:
     BYTE GetLevel();
     DWORD GetSorcererWizardLevel();
     DWORD GetBardMonkRogueLevel();
+    BYTE SumSorcererWizardLevels();
     void Marshal(BYTE** pStats, LONG* nStats);
     void Unmarshal(BYTE* pStats, LONG nStats);
     BOOL HasClassMask(INT iClassType);
