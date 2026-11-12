@@ -4291,9 +4291,142 @@ INT CInfGame::sub_5A69B0(BYTE* pCreature)
         nOffset += sizeof(OldKnownSpell);
     }
 
-    // TODO: Incomplete.
+    DWORD nOldSize = *reinterpret_cast<DWORD*>(pCreature + 0x3BE) * sizeof(OldKnownSpell);
 
-    return 0;
+    DWORD nInfoOffset = 0;
+    for (DWORD nInfo = 0; nInfo < *reinterpret_cast<DWORD*>(pCreature + 0x3C6); nInfo++) {
+        OldMemorizationInfo* pInfo = reinterpret_cast<OldMemorizationInfo*>(pCreature + *reinterpret_cast<DWORD*>(pCreature + 0x3C2) + nInfoOffset);
+
+        for (DWORD nMemorized = 0; nMemorized < pInfo->m_count; nMemorized++) {
+            OldMemorizedSpell* pSpell = reinterpret_cast<OldMemorizedSpell*>(pCreature + (pInfo->m_index + nMemorized) * sizeof(OldMemorizedSpell) + *reinterpret_cast<DWORD*>(pCreature + 0x3CA));
+
+            if (pInfo->m_spellType == SPELLTYPE_INNATE) {
+                UINT nID = 0;
+                CResRef resRef(pSpell->m_spellId);
+
+                // NOTE: Uninline.
+                if (g_pBaldurChitin->GetObjectGame()->m_songs.Find(resRef, nID)) {
+                    UINT nIndex = 0;
+                    if (songs.Find(nID, nIndex) == TRUE) {
+                        UINT nCount = 0;
+                        if ((static_cast<BYTE>(pSpell->m_flags) & 1) != 0) {
+                            nCount = 1;
+                        }
+
+                        songs.Add(nID, 1, nCount, 0);
+                    }
+                } else {
+                    nID = 0;
+                    CResRef resRef2(pSpell->m_spellId);
+
+                    // NOTE: Uninline.
+                    if (g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Find(resRef2, nID)) {
+                        UINT nIndex = 0;
+                        if (shapeshifts.Find(nID, nIndex) == TRUE) {
+                            UINT nCount = 0;
+                            if ((static_cast<BYTE>(pSpell->m_flags) & 1) != 0) {
+                                nCount = 1;
+                            }
+
+                            shapeshifts.Add(nID, 1, nCount, 0);
+                        }
+                    } else {
+                        nID = 0;
+                        CResRef resRef3(pSpell->m_spellId);
+
+                        // NOTE: Uninline.
+                        if (g_pBaldurChitin->GetObjectGame()->m_innateSpells.Find(resRef3, nID)) {
+                            UINT nIndex = 0;
+                            if (innateSpells.Find(nID, nIndex) == TRUE) {
+                                UINT nCount = 0;
+                                if ((static_cast<BYTE>(pSpell->m_flags) & 1) != 0) {
+                                    nCount = 1;
+                                }
+
+                                innateSpells.Add(nID, 1, nCount, 0);
+                            }
+                        } else {
+                            // NOTE: Uninline.
+                            char szResRef[RESREF_SIZE + 1];
+                            memcpy(szResRef, pSpell->m_spellId, RESREF_SIZE);
+                            szResRef[RESREF_SIZE] = '\0';
+
+                            CString sError("");
+                            sError.Format("*** OBSOLETE SPELL FILE: %s", szResRef);
+                        }
+                    }
+                }
+            } else {
+                UINT nID = 0;
+                CResRef resRef(pSpell->m_spellId);
+
+                // NOTE: Uninline.
+                if (g_pBaldurChitin->GetObjectGame()->m_spells.Find(resRef, nID)) {
+                    UINT nLevel = pInfo->m_spellLevel;
+                    UINT nIndex = 0;
+
+                    // NOTE: Uninline.
+                    if (spells.Get(nClassIndex)->GetSpellsAtLevel(nLevel)->Find(nID, nIndex) == TRUE) {
+                        UINT nCount = 0;
+                        if ((static_cast<BYTE>(pSpell->m_flags) & 1) != 0) {
+                            nCount = 1;
+                        }
+
+                        UINT nLevelAdd = pInfo->m_spellLevel;
+
+                        // NOTE: Uninline.
+                        spells.Get(nClassIndex)->Add(nID, nLevelAdd, 1, nCount, 0);
+                    }
+
+                    UINT nDomainLevel = pInfo->m_spellLevel;
+
+                    // NOTE: Uninline.
+                    if (domainSpells.GetSpellsAtLevel(nDomainLevel)->Find(nID, nIndex) == TRUE) {
+                        UINT nCount = 0;
+                        if ((static_cast<BYTE>(pSpell->m_flags) & 1) != 0) {
+                            nCount = 1;
+                        }
+
+                        UINT nLevelAdd = pInfo->m_spellLevel;
+                        domainSpells.Add(nID, nLevelAdd, 1, nCount, 0);
+                    }
+                } else {
+                    // NOTE: Uninline.
+                    char szResRef[RESREF_SIZE + 1];
+                    memcpy(szResRef, pSpell->m_spellId, RESREF_SIZE);
+                    szResRef[RESREF_SIZE] = '\0';
+
+                    CString sError("");
+                    sError.Format("*** OBSOLETE SPELL FILE: %s", szResRef);
+                }
+            }
+        }
+
+        nOldSize += pInfo->m_count * sizeof(OldMemorizedSpell);
+        nInfoOffset += sizeof(OldMemorizationInfo);
+    }
+
+    nOldSize += *reinterpret_cast<DWORD*>(pCreature + 0x3C6) * sizeof(OldMemorizationInfo);
+
+    DWORD nNewSize = 0;
+
+    for (UINT nClassLoop = 0; nClassLoop < CSPELLLIST_NUM_CLASSES; nClassLoop++) {
+        for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+            // NOTE: Uninline.
+            nNewSize += spells.Get(nClassLoop)->GetSpellsAtLevel(nLevel)->m_List.size() * sizeof(CGameSpriteSpellListEntry) + 8;
+        }
+    }
+
+    for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+        // NOTE: Uninline.
+        nNewSize += domainSpells.GetSpellsAtLevel(nLevel)->m_List.size() * sizeof(CGameSpriteSpellListEntry) + 8;
+    }
+
+    nNewSize += innateSpells.m_List.size() * sizeof(CGameSpriteSpellListEntry) + 8;
+    nNewSize += songs.m_List.size() * sizeof(CGameSpriteSpellListEntry) + 8;
+    nNewSize += shapeshifts.m_List.size() * sizeof(CGameSpriteSpellListEntry) + 8;
+
+    return nNewSize - nOldSize;
 }
 
 // 0x5A7740
