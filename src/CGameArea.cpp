@@ -6080,15 +6080,13 @@ void CGameArea::SortLists()
                 && g_pBaldurChitin->GetObjectGame()->GetVisibleArea() == this)) {
             bSort = TRUE;
 
-            if (nFront + nFrontAdd == 0) {
-                LeaveCriticalSection(&(g_pBaldurChitin->m_pEngineWorld->field_106));
-                return;
-            }
-
-            pObjects = new CGameObject*[nFront + nFrontAdd];
-            if (pObjects == NULL) {
-                LeaveCriticalSection(&(g_pBaldurChitin->m_pEngineWorld->field_106));
-                return;
+            if (nFront + nFrontAdd != 0) {
+                pObjects = new CGameObject*[nFront + nFrontAdd];
+                if (pObjects == NULL) {
+                    g_pBaldurChitin->GetObjectGame()->EndListManipulation(this);
+                    LeaveCriticalSection(&(g_pBaldurChitin->m_pEngineWorld->field_106));
+                    return;
+                }
             }
         } else {
             bSort = FALSE;
@@ -6122,10 +6120,14 @@ void CGameArea::SortLists()
                 m_pGame->GetObjectArray()->ReleaseShare(iObject,
                     CGameObjectArray::THREAD_ASYNCH,
                     INFINITE);
-            } else if (rc != CGameObjectArray::DELETED) {
-                // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
-                // __LINE__: 8076
-                UTIL_ASSERT(FALSE);
+            } else {
+                nFrontAdd--;
+
+                if (rc != CGameObjectArray::DELETED) {
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
+                    // __LINE__: 8076
+                    UTIL_ASSERT(FALSE);
+                }
             }
         }
 
@@ -6157,7 +6159,7 @@ void CGameArea::SortLists()
                 if (m_lVertSortBack.IsEmpty()) {
                     posVertList = m_lVertSortBack.AddTail(reinterpret_cast<int*>(pObject->GetId()));
                 } else {
-                    posVertList = m_lVertSortBack.InsertAfter(m_lVertSortBack.GetTailPosition(),
+                    posVertList = m_lVertSortBack.InsertBefore(m_lVertSortBack.GetTailPosition(),
                         reinterpret_cast<int*>(pObject->GetId()));
                 }
                 pObject->SetVertListPos(posVertList);
@@ -6191,7 +6193,7 @@ void CGameArea::SortLists()
                 if (m_lVertSortFlight.IsEmpty()) {
                     posVertList = m_lVertSortFlight.AddTail(reinterpret_cast<int*>(pObject->GetId()));
                 } else {
-                    posVertList = m_lVertSortFlight.InsertAfter(m_lVertSortFlight.GetTailPosition(),
+                    posVertList = m_lVertSortFlight.InsertBefore(m_lVertSortFlight.GetTailPosition(),
                         reinterpret_cast<int*>(pObject->GetId()));
                 }
                 pObject->SetVertListPos(posVertList);
