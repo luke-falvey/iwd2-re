@@ -6,6 +6,8 @@
 #include "CVidFont.h"
 #include "CVidMosaic.h"
 
+class CVidInf;
+
 class CSwitchCDStatus {
 public:
     CSwitchCDStatus();
@@ -13,7 +15,7 @@ public:
 
     void Init();
     void Update(BOOLEAN a1, BOOLEAN a2, BYTE a3, const CString& a4, BOOLEAN a5, BOOLEAN a6, BOOLEAN a7);
-    void FUN_0054e220(CVidMode* pVidMode, int x, int y, const CSize* pSize, const CRect* pClip, const CString* sText, CVidFont* pFont, DWORD dwFlags);
+    void FUN_0054e220(CVidInf* pVidInf, int x, int y, const CSize* pSize, const CRect* pClip, const CString* sText, CVidFont* pFont, DWORD dwFlags);
 
     /* 0000 */ int field_0;
     /* 0004 */ int field_4;

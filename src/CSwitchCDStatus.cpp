@@ -6,6 +6,7 @@
 #include "CInfGame.h"
 #include "CUIControlLabel.h"
 #include "CUIManager.h"
+#include "CUtil.h"
 #include "CVidInf.h"
 #include "CVideo.h"
 #include "CWarp.h"
@@ -97,12 +98,105 @@ void CSwitchCDStatus::Init()
 }
 
 
-// 0x54E220
-void CSwitchCDStatus::FUN_0054e220(CVidMode* pVidMode, int x, int y, const CSize* pSize, const CRect* pClip, const CString* sText, CVidFont* pFont, DWORD dwFlags)
-{
-    // TODO: Incomplete.
-}
+// 0x84C97E
+static WORD word_84C97E = 0;
 
+// 0x54E220
+void CSwitchCDStatus::FUN_0054e220(CVidInf* pVidInf, int x, int y, const CSize* pSize, const CRect* pClip, const CString* sText, CVidFont* pFont, DWORD dwFlags)
+{
+    CRect rText(x, y, x + pSize->cx, y + pSize->cy);
+
+    WORD nMargin = (g_pBaldurChitin->field_4A28 != 0 ? 2 : 1) * word_84C97E;
+    nMargin <<= 1;
+    if (g_pBaldurChitin->field_4A28 != 0) {
+        nMargin <<= 1;
+    }
+
+    CRect rClip;
+    IntersectRect(&rClip, &rText, pClip);
+    rText = rClip;
+
+    SHORT nLineHeight = pFont->GetFontHeight(TRUE);
+
+    // NOTE: The flag values are read from word globals: 0x84C97C is
+    // `CUIControlLabel::TYPE_WORD_WRAP`, the others are unnamed.
+    if (static_cast<WORD>(CUIControlLabel::TYPE_WORD_WRAP & dwFlags) == 0
+        || nLineHeight > pSize->cy - nMargin) {
+        nLineHeight = static_cast<SHORT>(pSize->cy - nMargin);
+    }
+
+    int nMaxLines = (pSize->cy - nMargin) / nLineHeight;
+    CString* pText = new CString[nMaxLines];
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CSwitchCDStatus.cpp
+    // __LINE__: 712
+    UTIL_ASSERT(pText);
+
+    BYTE nLines = CUtil::SplitString(pFont,
+        *sText,
+        static_cast<WORD>(pSize->cx - nMargin),
+        static_cast<BYTE>((pSize->cy - nMargin) / nLineHeight),
+        pText,
+        FALSE,
+        TRUE,
+        TRUE,
+        0xFFFF);
+
+    int nOffset;
+    if (static_cast<WORD>(0x20 & dwFlags) != 0) {
+        // 0x84C976
+        nOffset = nMargin >> 1;
+    } else if (static_cast<WORD>(0x80 & dwFlags) != 0) {
+        // 0x84C97A
+        nOffset = pSize->cy - nLines * nLineHeight - (nMargin >> 1);
+    } else {
+        nOffset = (pSize->cy >> 1) - ((nLines * nLineHeight) >> 1);
+    }
+    y += nOffset;
+
+    SHORT nBaseLineHeight = pFont->GetBaseLineHeight(TRUE);
+
+    // NOTE: When none of the three horizontal alignment flags (0x8, 0x10,
+    // 0x4) is set, the original leaves the stack slot that held `sText` as
+    // the x position.
+    int nTextX = reinterpret_cast<int>(sText);
+
+    if (static_cast<WORD>(0x8 & dwFlags) != 0) {
+        nTextX = (nMargin >> 1) + x;
+    }
+
+    if (nLines > 0) {
+        int nLine = 0;
+        do {
+            if (static_cast<WORD>(0x10 & dwFlags) != 0) {
+                if ((nMargin >> 1) > pSize->cx - (nMargin >> 1) - pFont->GetStringLength(pText[nLine], TRUE)) {
+                    nTextX = (nMargin >> 1) + x;
+                } else {
+                    nTextX = pSize->cx - (nMargin >> 1) - pFont->GetStringLength(pText[nLine], TRUE) + x;
+                }
+            } else if (static_cast<WORD>(0x4 & dwFlags) != 0) {
+                if ((nMargin >> 1) > (pSize->cx >> 1) - (pFont->GetStringLength(pText[nLine], TRUE) >> 1)) {
+                    nTextX = (nMargin >> 1) + x;
+                } else {
+                    nTextX = (pSize->cx >> 1) - (pFont->GetStringLength(pText[nLine], TRUE) >> 1) + x;
+                }
+            }
+
+            pVidInf->BKTextOut(pFont,
+                pText[nLine],
+                nTextX,
+                nBaseLineHeight + y,
+                rText,
+                0,
+                TRUE);
+
+            y += nLineHeight;
+            nLine++;
+        } while (nLine != nLines);
+    }
+
+    delete[] pText;
+}
 // 0x54D5A0
 void CSwitchCDStatus::Update(BOOLEAN a1, BOOLEAN a2, BYTE a3, const CString& a4, BOOLEAN a5, BOOLEAN a6, BOOLEAN a7)
 {
