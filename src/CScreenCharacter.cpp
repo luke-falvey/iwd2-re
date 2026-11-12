@@ -6471,6 +6471,73 @@ void CScreenCharacter::ResetCustomizeBiographyPanel(CUIPanel* pPanel, CGameSprit
     pButton->SetEnabled(g_pBaldurChitin->GetTlkTable().m_override.Fetch(strBiography, strRes));
 }
 
+// 0x8B2AB4
+static const char* szLineIndent = "   ";
+
+// 0x8F2B28
+//
+// NOTE: The size of the buffer is not known.
+static char szLineBuffer[1024];
+
+// 0x5EF760
+char* CScreenCharacter::sub_5EF760(const CString& sName, const CString& sValue, BYTE a3)
+{
+    char szBuffer[1000];
+
+    if (a3) {
+        strcpy(szBuffer, "L......................... ");
+        strncpy(szBuffer, sName, sName.GetLength());
+        strcat(szBuffer, sValue);
+        strcat(szBuffer, "\n");
+
+        strcpy(szLineBuffer, szLineIndent);
+        strcat(szLineBuffer, szBuffer);
+    } else {
+        strcpy(szLineBuffer, "L............................ ");
+        strncpy(szLineBuffer, sName, sName.GetLength());
+        strcat(szLineBuffer, sValue);
+        strcat(szLineBuffer, "\n");
+    }
+
+    return szLineBuffer;
+}
+
+// 0x5EF920
+void CScreenCharacter::sub_5EF920(FILE* pFile, const CString& sName, const CString& sValue, BYTE a4)
+{
+    CString sNameText;
+    CString sValueText;
+
+    sNameText.Format("%s", (LPCSTR)sName);
+    sValueText.Format("%s", (LPCSTR)sValue);
+
+    fputs(sub_5EF760(sNameText, sValueText, a4), pFile);
+}
+
+// 0x5EF9E0
+void CScreenCharacter::sub_5EF9E0(FILE* pFile, const CString& sName, int nValue, BYTE a4)
+{
+    CString sNameText;
+    CString sValueText;
+
+    sNameText.Format("%s", (LPCSTR)sName);
+    sValueText.Format("%d", nValue);
+
+    fputs(sub_5EF760(sNameText, sValueText, a4), pFile);
+}
+
+// 0x5EFAA0
+void CScreenCharacter::sub_5EFAA0(FILE* pFile, const CString& sName, const char* szFormat, int nValue, BYTE a5)
+{
+    CString sNameText;
+    CString sValueText;
+
+    sNameText.Format("%s", (LPCSTR)sName);
+    sValueText.Format(szFormat, nValue);
+
+    fputs(sub_5EF760(sNameText, sValueText, a5), pFile);
+}
+
 // 0x5EFB60
 void CScreenCharacter::sub_5EFB60(FILE* pFile, STRREF strDescription)
 {

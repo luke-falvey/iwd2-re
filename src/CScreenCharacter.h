@@ -119,6 +119,10 @@ public:
     void sub_5E87E0(CGameSprite* pSprite);
     void sub_5F7B00(CGameSprite* pSprite);
     CString sub_5EFFD0(BOOLEAN& bFlag);
+    static char* sub_5EF760(const CString& sName, const CString& sValue, BYTE a3);
+    static void sub_5EF920(FILE* pFile, const CString& sName, const CString& sValue, BYTE a4);
+    static void sub_5EF9E0(FILE* pFile, const CString& sName, int nValue, BYTE a4);
+    static void sub_5EFAA0(FILE* pFile, const CString& sName, const char* szFormat, int nValue, BYTE a5);
     static void sub_5EFB60(FILE* pFile, STRREF strDescription);
     static void sub_5EFCC0(FILE* pFile, CItem* pItem, BYTE a3, BYTE a4);
     void sub_5E4560();
