@@ -29,6 +29,33 @@ CGameSpy::~CGameSpy()
     field_1 = 0;
 }
 
+// 0x4D0B20
+BOOLEAN CGameSpy::sub_4D0B20(SOCKET* pSocket, BOOLEAN a2)
+{
+    if (field_0) {
+        SOCKET sock;
+        if (a2 == TRUE) {
+            sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        } else {
+            sock = socket(AF_INET, SOCK_STREAM, 0);
+        }
+
+        if (sock != INVALID_SOCKET) {
+            // NOTE: Original code reuses the `a2` argument slot for the
+            // non-blocking flag.
+            u_long nNonBlocking = 1;
+            if (ioctlsocket(sock, FIONBIO, &nNonBlocking) == 0) {
+                *pSocket = sock;
+                return TRUE;
+            }
+
+            closesocket(sock);
+        }
+    }
+
+    return FALSE;
+}
+
 // 0x4D1EC0
 BOOLEAN CGameSpy::sub_4D1EC0(BOOL a1)
 {

@@ -3450,39 +3450,123 @@ void CScreenConnection::HandleEMEvent(BYTE nEvent, BYTE nEventStage)
                     m_bEnumeratingAsynchronous = FALSE;
                 }
 
+                // NOTE: Original code reuses the argument slots of this
+                // function for `bFailed` and `sock`.
+                BOOLEAN bFailed = FALSE;
+
                 if (g_pChitin->cGameSpy.field_0 == 1) {
-                    // TODO: Incomplete.
+                    CString sGameSpyAddress;
+                    sGameSpyAddress = g_pChitin->cNetwork.m_sIPAddress;
+
+                    if (sGameSpyAddress != "") {
+                        SOCKET sock;
+                        sockaddr_in addr;
+
+                        if (!g_pChitin->cGameSpy.sub_4D0B20(&sock, FALSE)) {
+                            bFailed = TRUE;
+                        }
+
+                        addr.sin_family = AF_INET;
+
+                        addr.sin_addr.s_addr = inet_addr(sGameSpyAddress.GetBuffer(sGameSpyAddress.GetLength()));
+                        if (addr.sin_addr.s_addr == INADDR_NONE) {
+                            bFailed = TRUE;
+                        }
+
+                        addr.sin_port = htons(CNetwork::DEFAULT_PORT);
+
+                        if (!bFailed) {
+                            if (connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != SOCKET_ERROR) {
+                                closesocket(sock);
+                                bFailed = TRUE;
+                            } else if (WSAGetLastError() != WSAEWOULDBLOCK) {
+                                closesocket(sock);
+                                bFailed = TRUE;
+                            }
+                        }
+
+                        g_pChitin->cNetwork.field_9D = 1;
+                        g_pChitin->cNetwork.field_9E = 0;
+
+                        if (!bFailed) {
+                            if (WSAAsyncSelect(sock, g_pChitin->GetWnd()->GetSafeHwnd(), 0x403, FD_CONNECT) > 0) {
+                                bFailed = TRUE;
+                                closesocket(sock);
+                            } else {
+                                for (INT nTries = 0; nTries <= 50; nTries++) {
+                                    if (g_pChitin->cNetwork.field_9E) {
+                                        break;
+                                    }
+
+                                    SleepEx(100, FALSE);
+                                }
+
+                                WSAAsyncSelect(sock, g_pChitin->GetWnd()->GetSafeHwnd(), 0, 0);
+                                closesocket(sock);
+
+                                if (!g_pChitin->cNetwork.field_9E) {
+                                    bFailed = TRUE;
+                                }
+                            }
+                        }
+
+                        g_pChitin->cNetwork.field_9D = 0;
+                        g_pChitin->cNetwork.field_9E = 0;
+                    }
                 }
 
-                CString sIPAddress = g_pChitin->cNetwork.m_sIPAddress;
+                if (!bFailed) {
+                    CString sIPAddress;
+                    sIPAddress = g_pChitin->cNetwork.m_sIPAddress;
 
-                if (g_pChitin->cNetwork.m_bConnectionInitialized == TRUE) {
-                    g_pChitin->cNetwork.EnumerateSessions(FALSE, FALSE);
-                }
+                    BOOLEAN bHasIPAddress = FALSE;
+                    if (sIPAddress != "") {
+                        bHasIPAddress = TRUE;
+                    }
 
-                int v1 = 10;
-                if (sIPAddress != "") {
-                    v1 = 60;
-                }
+                    if (g_pChitin->cNetwork.m_bConnectionInitialized == TRUE) {
+                        g_pChitin->cNetwork.EnumerateSessions(m_bEnumeratingAsynchronous, FALSE);
+                    }
 
-                if (m_bEnumeratingAsynchronous == TRUE || sIPAddress != "") {
-                    // NOTE: Original code is slightly different (loop body
-                    // inlined a couple of times).
-                    while (v1 > 0) {
-                        for (int v2 = 0; v2 < 10; v2++) {
+                    INT nTimeout = 10;
+                    if (bHasIPAddress == TRUE) {
+                        nTimeout = 60;
+                    }
+
+                    if (m_bEnumeratingAsynchronous == TRUE || bHasIPAddress == TRUE) {
+                        // NOTE: Loop body is inlined three times in the
+                        // original code.
+                        for (INT nSleep = 0; nSleep < 10; nSleep++) {
                             SleepEx(500, FALSE);
                         }
 
                         if (g_pChitin->cNetwork.m_bConnectionInitialized == TRUE) {
-                            g_pChitin->cNetwork.EnumerateSessions(m_bEnumeratingAsynchronous,
-                                FALSE);
+                            g_pChitin->cNetwork.EnumerateSessions(m_bEnumeratingAsynchronous, FALSE);
                         }
 
-                        if (g_pChitin->cNetwork.m_nTotalSessions != 0) {
-                            break;
+                        if (g_pChitin->cNetwork.m_nTotalSessions == 0) {
+                            nTimeout -= 10;
+
+                            for (INT nSleep = 0; nSleep < 10; nSleep++) {
+                                SleepEx(500, FALSE);
+                            }
+
+                            if (g_pChitin->cNetwork.m_bConnectionInitialized == TRUE) {
+                                g_pChitin->cNetwork.EnumerateSessions(m_bEnumeratingAsynchronous, FALSE);
+                            }
                         }
 
-                        v1 -= 10;
+                        while (nTimeout > 10 && g_pChitin->cNetwork.m_nTotalSessions == 0) {
+                            nTimeout -= 10;
+
+                            for (INT nSleep = 0; nSleep < 10; nSleep++) {
+                                SleepEx(500, FALSE);
+                            }
+
+                            if (g_pChitin->cNetwork.m_bConnectionInitialized == TRUE) {
+                                g_pChitin->cNetwork.EnumerateSessions(m_bEnumeratingAsynchronous, FALSE);
+                            }
+                        }
                     }
                 }
             } else {

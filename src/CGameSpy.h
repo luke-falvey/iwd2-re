@@ -8,6 +8,7 @@ class CGameSpy {
 public:
     CGameSpy();
     ~CGameSpy();
+    BOOLEAN sub_4D0B20(SOCKET* pSocket, BOOLEAN a2);
     BOOLEAN sub_4D1EC0(BOOL a1);
     void sub_4D2060();
     BOOLEAN sub_4D2210();
