@@ -178,7 +178,7 @@ void CInfCursor::SetCursor(INT nNewCursor, BOOLEAN bForce)
                 m_vcToolTip.GetFrameSize(2, m_vcToolTip.field_5DC, size2, FALSE);
 
                 // TODO: Check cast.
-                m_vcToolTip.field_5DE = static_cast<short>((size1.cx / 2) + (size2.cx / 2));
+                m_vcToolTip.field_5DE = static_cast<short>((size1.cx >> 1) + (size2.cx >> 1));
                 m_vcToolTip.field_5E2 = 0;
 
                 pVidMode->SetPointer(&m_vcToolTip, TRUE, -1);

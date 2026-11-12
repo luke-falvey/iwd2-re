@@ -837,25 +837,25 @@ void CGameAnimationTypeMonsterQuadrant::Render(CInfinity* pInfinity, CVidMode* p
         }
 
         if (pInfinity->FXLock(rFXRect, dwRenderFlags)) {
-            COLORREF oldTintColor = m_currentVidCell->GetTintColor();
+            COLORREF oldTintColor = m_currentVidCell[quad].GetTintColor();
             BYTE b = GetBValue(oldTintColor) + GetBValue(rgbTintColor) - 255 >= 0
                 ? GetBValue(oldTintColor) + GetBValue(rgbTintColor) + 1
                 : 0;
             BYTE g = GetGValue(oldTintColor) + GetGValue(rgbTintColor) - 255 >= 0
                 ? GetGValue(oldTintColor) + GetGValue(rgbTintColor) + 1
                 : 0;
-            BYTE r = GetBValue(oldTintColor) + GetBValue(rgbTintColor) - 255 >= 0
-                ? GetBValue(oldTintColor) + GetBValue(rgbTintColor) + 1
+            BYTE r = GetRValue(oldTintColor) + GetRValue(rgbTintColor) - 255 >= 0
+                ? GetRValue(oldTintColor) + GetRValue(rgbTintColor) + 1
                 : 0;
             m_currentVidCell[quad].SetTintColor(RGB(r, g, b));
 
-            pInfinity->FXRender(m_currentVidCell,
+            pInfinity->FXRender(&(m_currentVidCell[quad]),
                 ptQuadCenter.x,
                 ptQuadCenter.y,
                 dwRenderFlags,
                 transparency);
 
-            m_currentVidCell->SetTintColor(oldTintColor);
+            m_currentVidCell[quad].SetTintColor(oldTintColor);
 
             CalculateGCBoundsRect(rQuadGCBounds,
                 ptNewPos,
@@ -868,7 +868,7 @@ void CGameAnimationTypeMonsterQuadrant::Render(CInfinity* pInfinity, CVidMode* p
                 ptPos.y - posZ,
                 posZ,
                 ptQuadCenter,
-                CRect(rGCBounds.left, rGCBounds.top - posZ, rGCBounds.right, rGCBounds.bottom - posZ),
+                rQuadGCBounds,
                 bDithered,
                 dwRenderFlags);
 
