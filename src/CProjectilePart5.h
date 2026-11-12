@@ -57,7 +57,8 @@ public:
     CProjectileArea850384();
     /* 000C */ void AIUpdate() override;
 
-    /* 065E */ std::set<LONG> field_65E;
+    // NOTE: Keys are compared as unsigned in the original.
+    /* 065E */ std::set<DWORD> field_65E;
     /* 066E */ LONG field_66E;
 };
 

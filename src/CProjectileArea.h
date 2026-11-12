@@ -68,6 +68,7 @@ public:
 
     void sub_5703F0(CGameAIBase* pSource);
     void sub_5704E0(CGameAIBase* pSource);
+    void sub_5705D0(LONG nSourceId);
 
     /* 02AE */ SHORT field_2AE;
     /* 02B0 */ SHORT field_2B0;

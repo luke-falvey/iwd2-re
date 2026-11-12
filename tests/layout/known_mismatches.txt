@@ -1146,7 +1146,6 @@ CGameSpy::field_1E
 CGameSpy::field_22
 CGameSpy::field_26
 CGameSpy::field_28
-CGameStatic::m_vidCell
 CImm::field_128
 CImm::field_12C
 CImm::field_130

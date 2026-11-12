@@ -20,7 +20,7 @@ public:
     CVidCell* GetVidCell();
 
     /* 006E */ CAreaFileStaticObject m_header;
-    /* 00BC */ CVidCell m_vidCell;
+    /* 00BA */ CVidCell m_vidCell;
 };
 
 #endif /* CGAMESTATIC_H_ */
