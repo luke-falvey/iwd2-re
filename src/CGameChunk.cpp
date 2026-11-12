@@ -163,13 +163,87 @@ BOOLEAN CGameChunk::CanSaveGame(STRREF& strError)
 // 0x70FCF0
 void CGameChunk::RemoveFromArea()
 {
-    // TODO: Incomplete.
+    CGameObject::RemoveFromArea();
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+        CGameObjectArray::THREAD_ASYNCH,
+        NULL,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+        // __LINE__: 13954
+        UTIL_ASSERT(FALSE);
+    }
+
+    delete this;
 }
 
 // 0x70FA90
 void CGameChunk::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
 {
-    // TODO: Incomplete.
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+    // __LINE__: 13882
+    UTIL_ASSERT(pVidMode != NULL);
+
+    CInfinity* pInfinity = &m_pArea->m_cInfinity;
+
+    BYTE bDithered = FALSE;
+    BYTE bFadeOut = FALSE;
+    if (field_99 < field_9A) {
+        bFadeOut = TRUE;
+    }
+
+    // NOTE: Uninline.
+    if (!m_pArea->m_visibility.IsTileVisible(m_pArea->m_visibility.PointToTile(m_pos))) {
+        return;
+    }
+
+    CRect rView(pInfinity->nCurrentX,
+        pInfinity->nCurrentY,
+        pInfinity->rViewPort.right - pInfinity->rViewPort.left + pInfinity->nCurrentX,
+        pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + pInfinity->nCurrentY);
+
+    CRect rFx;
+    CPoint ptReference;
+    m_animation.CalculateFxRect(rFx, ptReference, m_posZ);
+
+    CPoint pos = m_pos;
+    pos.y += m_pArea->GetHeightOffset(m_pos, CGameObject::LIST_BACK);
+
+    CRect rGCBounds;
+    m_animation.CalculateGCBoundsRect(rGCBounds,
+        pos,
+        ptReference,
+        m_posZ,
+        rFx.right - rFx.left,
+        rFx.bottom - rFx.top);
+
+    if (!IntersectRect(&rView, &rGCBounds, &rView)) {
+        return;
+    }
+
+    CPoint ptTint(pos.x, pos.y + m_posZ);
+    COLORREF rgbTint = m_pArea->GetTintColor(ptTint, m_listType);
+
+    if (m_id == m_pArea->m_iPicked
+        || g_pBaldurChitin->GetObjectGame()->m_cOptions.m_bAlwaysDither
+        || g_pBaldurChitin->GetObjectGame()->m_bForceDither) {
+        bDithered = TRUE;
+    }
+
+    m_animation.Render(pInfinity,
+        pVidMode,
+        a3,
+        rFx,
+        pos,
+        ptReference,
+        0x30000,
+        rgbTint,
+        rGCBounds,
+        bDithered,
+        bFadeOut,
+        m_posZ,
+        0);
 }
 
 // 0x70FD50
@@ -214,19 +288,156 @@ CGame85BF7C::~CGame85BF7C()
 // 0x710090
 void CGame85BF7C::AIUpdate()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    if (field_9C == 0) {
+        if (m_animation.IsEndOfSequence()) {
+            RemoveFromArea();
+            return;
+        }
+    } else {
+        field_9C--;
+        if (field_9C == 0) {
+            RemoveFromArea();
+            return;
+        }
+    }
+
+    CPoint ptGrid(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX, m_pos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    field_8C.x += field_94.x;
+    field_8C.y += field_94.y;
+    m_pos.x = field_8C.x >> 10;
+    m_pos.y = field_8C.y >> 10;
+
+    CPoint ptNewGrid(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX, m_pos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    if (ptGrid.x != ptNewGrid.x || ptGrid.y != ptNewGrid.y) {
+        SHORT nTableIndex;
+        if (m_pArea->m_search.GetLOSCost(ptNewGrid, m_terrainTable, nTableIndex, FALSE) == CPathSearch::COST_IMPASSABLE) {
+            if (field_9F == 1) {
+                RemoveFromArea();
+                return;
+            }
+
+            if (field_9F == 0) {
+                CPoint ptOld = field_8C;
+
+                if (ptGrid.x != ptNewGrid.x) {
+                    field_8C.x += -field_94.x * 2;
+                    m_pos.x = field_8C.x >> 10;
+                    field_94.x = -field_94.x;
+                }
+
+                if (ptGrid.y != ptNewGrid.y) {
+                    field_8C.y += -field_94.y * 2;
+                    m_pos.y = field_8C.y >> 10;
+                    field_94.y = -field_94.y;
+                }
+
+                SHORT nDirection = CGameSprite::GetDirection(ptOld, field_8C);
+                m_animation.ChangeDirection(nDirection);
+            } else {
+                field_88 = 0;
+            }
+        } else {
+            field_88 = 1;
+        }
+    }
+
+    m_animation.IncrementFrame();
+
+    if (rand() % 200 == 0) {
+        if (!m_sound.IsSoundPlaying()) {
+            m_sound.Play(m_pos.x, m_pos.y, 0, 0);
+        }
+    }
 }
 
 // 0x710550
 void CGame85BF7C::RemoveFromArea()
 {
-    // TODO: Incomplete.
+    CGameObject::RemoveFromArea();
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+        CGameObjectArray::THREAD_ASYNCH,
+        NULL,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+        // __LINE__: 14270
+        UTIL_ASSERT(FALSE);
+    }
+
+    delete this;
 }
 
 // 0x710330
 void CGame85BF7C::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
 {
-    // TODO: Incomplete.
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+    // __LINE__: 14202
+    UTIL_ASSERT(pVidMode != NULL);
+
+    BYTE bFadeOut = FALSE;
+    CInfinity* pInfinity = &m_pArea->m_cInfinity;
+
+    if (field_88 == 0) {
+        return;
+    }
+
+    // NOTE: Uninline.
+    if (!m_pArea->m_visibility.IsTileVisible(m_pArea->m_visibility.PointToTile(m_pos))) {
+        return;
+    }
+
+    if (static_cast<SHORT>(field_9C) < field_9E) {
+        bFadeOut = TRUE;
+    }
+
+    CRect rView(pInfinity->nCurrentX,
+        pInfinity->nCurrentY,
+        pInfinity->rViewPort.right - pInfinity->rViewPort.left + pInfinity->nCurrentX,
+        pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + pInfinity->nCurrentY);
+
+    CRect rFx;
+    CPoint ptReference;
+    m_animation.CalculateFxRect(rFx, ptReference, m_posZ);
+
+    CPoint pos = m_pos;
+    pos.y += m_pArea->GetHeightOffset(m_pos, CGameObject::LIST_BACK);
+
+    CRect rGCBounds;
+    m_animation.CalculateGCBoundsRect(rGCBounds,
+        pos,
+        ptReference,
+        m_posZ,
+        rFx.right - rFx.left,
+        rFx.bottom - rFx.top);
+
+    if (!IntersectRect(&rView, &rGCBounds, &rView)) {
+        return;
+    }
+
+    CPoint ptTint(pos.x, pos.y + m_posZ);
+    COLORREF rgbTint = m_pArea->GetTintColor(ptTint, m_listType);
+
+    m_animation.Render(pInfinity,
+        pVidMode,
+        a3,
+        rFx,
+        pos,
+        ptReference,
+        0x30000,
+        rgbTint,
+        rGCBounds,
+        FALSE,
+        bFadeOut,
+        m_posZ,
+        0);
 }
 
 // 0x7105B0
