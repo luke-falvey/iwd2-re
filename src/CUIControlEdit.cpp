@@ -569,12 +569,6 @@ void CUIControlEdit::OnKeyDown(SHORT nKey)
     }
 }
 
-// 0x4D89E0
-void sub_4D89E0()
-{
-    // TODO: Incomplete.
-}
-
 // 0x4D8A60
 BOOL CUIControlEdit::NeedRender()
 {
