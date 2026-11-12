@@ -4399,9 +4399,270 @@ void CScreenCharacter::OnDoneButtonClick()
 // 0x5E3B80
 BOOL CScreenCharacter::OnCancelButtonClick()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
-    return FALSE;
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 7934
+    UTIL_ASSERT(pGame != NULL);
+
+    // NOTE: Uninline.
+    CUIPanel* pPanel = GetTopPopup();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 7936
+    UTIL_ASSERT(pPanel != NULL);
+
+    CSingleLock renderLock(&(m_cUIManager.field_36), FALSE);
+    renderLock.Lock(INFINITE);
+
+    // NOTE: Uninline.
+    LONG nCharacterId = pGame->GetCharacterId(m_nSelectedCharacter);
+
+    CGameSprite* pSprite;
+    BYTE rc;
+    do {
+        rc = pGame->GetObjectArray()->GetDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        renderLock.Unlock();
+        return FALSE;
+    }
+
+    switch (pPanel->m_nID) {
+    case 4:
+    case 9:
+    case 10:
+    case 12:
+    case 50:
+    case 51:
+    case 52:
+    case 53:
+    case 57:
+        DismissPopup(pSprite);
+        break;
+    case 6:
+        pSprite->m_baseStats.m_specialization = field_77C;
+        m_nSpecialization = field_77C;
+
+        DismissPopup(pSprite);
+        sub_5E1B20(pPanel->m_nID, pSprite);
+        break;
+    case 7:
+        pSprite->m_baseStats.m_STRBase = m_pTempBaseStats->m_STRBase;
+        pSprite->m_baseStats.m_DEXBase = m_pTempBaseStats->m_DEXBase;
+        pSprite->m_baseStats.m_CONBase = m_pTempBaseStats->m_CONBase;
+        pSprite->m_baseStats.m_INTBase = m_pTempBaseStats->m_INTBase;
+        pSprite->m_baseStats.m_WISBase = m_pTempBaseStats->m_WISBase;
+        pSprite->m_baseStats.m_CHRBase = m_pTempBaseStats->m_CHRBase;
+
+        DismissPopup(pSprite);
+        sub_5E1B20(pPanel->m_nID, pSprite);
+        break;
+    case 8:
+        for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+            if (m_spells.m_lists[nLevel].m_List.size() != 0) {
+                m_spells.m_lists[nLevel].m_List.clear();
+                m_spells.m_lists[nLevel].field_14 = 0;
+                m_spells.m_lists[nLevel].field_18 = 0;
+            }
+        }
+        field_2B6 = 0;
+
+        // NOTE: The original calls the by-value `operator=` and discards the
+        // result.
+        pSprite->m_spells = m_pTempDerivedStats->m_spells;
+        pSprite->m_domainSpells = m_pTempDerivedStats->field_CAC;
+
+        DismissPopup(pSprite);
+        sub_5E1B20(pPanel->m_nID, pSprite);
+        break;
+    case 11:
+        DismissPopup(pSprite);
+
+        if (m_pScripts != NULL) {
+            delete m_pScripts;
+            m_pScripts = NULL;
+        }
+
+        break;
+    case 13:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 8031
+        UTIL_ASSERT(m_pCharacters != NULL);
+
+        delete m_pCharacters;
+        m_pCharacters = NULL;
+
+        DismissPopup(pSprite);
+        break;
+    case 16:
+        if (m_pTempBaseStats != NULL) {
+            for (INT nIndex = 0; nIndex < 8; nIndex++) {
+                pSprite->m_baseStats.m_favoredEnemies[nIndex] = m_pTempBaseStats->m_favoredEnemies[nIndex];
+            }
+        }
+
+        DismissPopup(pSprite);
+        sub_5E1B20(pPanel->m_nID, pSprite);
+        break;
+    case 17: {
+        m_cResPortraitSmall.GetResRef(pSprite->m_baseStats.m_portraitSmall);
+        m_cResPortraitLarge.GetResRef(pSprite->m_baseStats.m_portraitLarge);
+
+        m_cResPortraitSmallTemp = m_cResPortraitSmall;
+        m_cResPortraitLargeTemp = m_cResPortraitLarge;
+
+        pSprite->m_secondarySounds = m_cResSoundSet;
+
+        DWORD nLength = field_856.GetLength();
+        memcpy(pSprite->field_725A, field_856.GetBuffer(nLength), min(nLength, 32));
+        if (nLength < 32) {
+            pSprite->field_725A[nLength] = '\0';
+        }
+
+        CAIScript* pScript = new CAIScript();
+        pScript->sub_514220(CResRef(field_832));
+        pScript->Read(CResRef(field_832), TRUE);
+
+        // NOTE: Script level is a constant at 0x8485D8.
+        pSprite->SetScript(3, pScript);
+
+        DismissPopup(pSprite);
+        break;
+    }
+    case 18:
+        m_cResPortraitSmall.GetResRef(pSprite->m_baseStats.m_portraitSmall);
+        m_cResPortraitLarge.GetResRef(pSprite->m_baseStats.m_portraitLarge);
+
+        m_cResPortraitSmallTemp = m_cResPortraitSmall;
+        m_cResPortraitLargeTemp = m_cResPortraitLarge;
+
+        DismissPopup(pSprite);
+        break;
+    case 19:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 8048
+        UTIL_ASSERT(m_pPortraits != NULL);
+
+        delete m_pPortraits;
+        m_pPortraits = NULL;
+
+        DismissPopup(pSprite);
+        break;
+    case 20: {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 8070
+        UTIL_ASSERT(m_pSounds != NULL);
+
+        delete m_pSounds;
+        m_pSounds = NULL;
+
+        pSprite->m_secondarySounds = m_cResSoundSet;
+
+        DWORD nLength = field_856.GetLength();
+        memcpy(pSprite->field_725A, field_856.GetBuffer(nLength), min(nLength, 32));
+        if (nLength < 32) {
+            pSprite->field_725A[nLength] = '\0';
+        }
+
+        DismissPopup(pSprite);
+        break;
+    }
+    case 54: {
+        g_pBaldurChitin->m_pEngineCharacter->m_nSpecialization = field_77C;
+
+        pSprite->SetAIType(m_typeAI, TRUE, TRUE);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 8094
+        UTIL_ASSERT((m_pTempBaseStats != NULL) && (m_pTempDerivedStats != NULL));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 8095
+        UTIL_ASSERT(m_pBeforeLevelUpDerivedStats != NULL);
+
+        DWORD nGeneralState = pSprite->m_derivedStats.m_generalState;
+
+        pSprite->m_baseStats = *m_pTempBaseStats;
+
+        // NOTE: Bit 11 is `STATE_DEAD`.
+        DWORD bDead = (nGeneralState >> 11) & 1;
+
+        pSprite->m_derivedStats = *m_pTempDerivedStats;
+
+        pSprite->m_nHPCONBonusTotalOld = field_866;
+        field_866 = 0;
+
+        SHORT nHitPoints = pSprite->m_baseStats.m_hitPoints;
+        SHORT nMaxHitPoints = pSprite->m_derivedStats.m_nMaxHitPoints;
+        WORD nMaxHitPointsBase = pSprite->m_baseStats.m_maxHitPointsBase;
+        LONG nHPCONBonusTotalOld = pSprite->m_nHPCONBonusTotalOld;
+
+        pSprite->field_562C = 1;
+        pSprite->ProcessEffectList();
+
+        pSprite->m_baseStats.m_hitPoints = nHitPoints;
+        pSprite->m_derivedStats.m_nMaxHitPoints = nMaxHitPoints;
+        pSprite->m_baseStats.m_maxHitPointsBase = nMaxHitPointsBase;
+        pSprite->m_nHPCONBonusTotalOld = nHPCONBonusTotalOld;
+
+        if (bDead != 0) {
+            pSprite->m_baseStats.m_generalState |= 0x800;
+            pSprite->m_derivedStats.m_generalState |= 0x800;
+        }
+
+        delete m_pTempBaseStats;
+        m_pTempBaseStats = NULL;
+
+        delete m_pTempDerivedStats;
+        m_pTempDerivedStats = NULL;
+
+        delete m_pBeforeLevelUpDerivedStats;
+        m_pBeforeLevelUpDerivedStats = NULL;
+
+        DismissPopup(pSprite);
+        sub_5E1B20(pPanel->m_nID, pSprite);
+        break;
+    }
+    case 55:
+        // NOTE: Constant at 0x84EA68.
+        for (m_nTopSkill = 0; static_cast<USHORT>(m_nTopSkill) < 16; m_nTopSkill++) {
+            pSprite->SetSkillValue(static_cast<USHORT>(m_nTopSkill), m_storedSkills[static_cast<USHORT>(m_nTopSkill)]);
+        }
+
+        DismissPopup(pSprite);
+        sub_5E1B20(pPanel->m_nID, pSprite);
+        break;
+    case 56:
+        // NOTE: Constant at 0x84EA66.
+        for (INT nFeat = 0; nFeat < 75; nFeat++) {
+            pSprite->SetFeatValue(g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetFeatId(nFeat),
+                m_storedFeats[nFeat]);
+        }
+
+        DismissPopup(pSprite);
+        sub_5E1B20(pPanel->m_nID, pSprite);
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 8163
+        UTIL_ASSERT(FALSE);
+        break;
+    }
+
+    pGame->GetObjectArray()->ReleaseDeny(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    renderLock.Unlock();
+
+    m_cUIManager.InvalidateRect(NULL);
+
+    return TRUE;
 }
 
 // 0x5E4560
