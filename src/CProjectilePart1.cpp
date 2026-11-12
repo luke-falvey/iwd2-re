@@ -1203,7 +1203,7 @@ void CProjectileBAM84DE94::Fire(CGameArea* pArea, LONG source, LONG target, CPoi
         CGameEffect* pEffect = m_effectList.GetNext(pos);
 
         CGameEffect* pCopy = pEffect->Copy();
-        pCopy->m_slotNum = pProjectile->m_projectileType;
+        pCopy->m_projectileType = pProjectile->m_projectileType;
         pProjectile->m_effectList.AddTail(pCopy);
     }
 
