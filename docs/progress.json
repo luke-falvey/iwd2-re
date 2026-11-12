@@ -5,26 +5,17 @@
     "0x7DA200"
   ],
   "functions_total": 9647,
-  "functions_done": 7877,
-  "functions_complete": 7857,
-  "incomplete_markers": 21,
+  "functions_done": 7888,
+  "functions_complete": 7880,
+  "incomplete_markers": 9,
   "incomplete_by_file": {
-    "src/CVidPoly.cpp": 6,
-    "src/CGameSpy.cpp": 2,
-    "src/CVidBlitter.cpp": 2,
+    "src/CVidBlitter.cpp": 5,
     "src/BalDataTypes.h": 1,
-    "src/CBaldurEngine.cpp": 1,
-    "src/CGameAnimationTypeMonsterAnkheg.cpp": 1,
-    "src/CGameAnimationTypeMonsterLayeredSpell.cpp": 1,
-    "src/CInfinity.cpp": 1,
     "src/CMessage.cpp": 1,
     "src/CScreenChapter.cpp": 1,
-    "src/CUnknown2.cpp": 1,
-    "src/CUtil.cpp": 1,
-    "src/CWarp.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10499,
+  "annotations_total": 10510,
   "annotations_not_function_start": 2600,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -3831,43 +3822,13 @@
     "0xA1917C"
   ],
   "bytes_total": 3817699,
-  "bytes_done": 3590347,
-  "bytes_complete": 3581004,
+  "bytes_done": 3593165,
+  "bytes_complete": 3590027,
   "largest_stubs": [
     {
-      "addr": "0x780CF0",
-      "name": "CUtil_SplitString",
-      "size": 1036
-    },
-    {
-      "addr": "0x6C3910",
-      "name": "FUN_006c3910",
-      "size": 1019
-    },
-    {
-      "addr": "0x5D2530",
-      "name": "CInfinity_RenderMessageScreen",
-      "size": 1008
-    },
-    {
-      "addr": "0x4D1220",
-      "name": "FUN_004d1220",
-      "size": 931
-    },
-    {
-      "addr": "0x4D0F40",
-      "name": "FUN_004d0f40",
-      "size": 725
-    },
-    {
-      "addr": "0x7B7280",
-      "name": "FUN_007b7280",
-      "size": 609
-    },
-    {
-      "addr": "0x7B74F0",
-      "name": "FUN_007b74f0",
-      "size": 599
+      "addr": "0x7B7070",
+      "name": "FUN_007b7070",
+      "size": 515
     },
     {
       "addr": "0x5D4190",
@@ -3880,59 +3841,29 @@
       "size": 453
     },
     {
+      "addr": "0x7B6B20",
+      "name": "FUN_007b6b20",
+      "size": 403
+    },
+    {
+      "addr": "0x7B6DC0",
+      "name": "FUN_007b6dc0",
+      "size": 352
+    },
+    {
       "addr": "0x586DC0",
       "name": "CSummonLimitStruct_Unsummon",
       "size": 343
     },
     {
-      "addr": "0x7D6FD0",
-      "name": "FUN_007d6fd0",
-      "size": 288
+      "addr": "0x7B6F20",
+      "name": "FUN_007b6f20",
+      "size": 333
     },
     {
-      "addr": "0x6C00D0",
-      "name": "FUN_006c00d0",
-      "size": 285
-    },
-    {
-      "addr": "0x7D6EB0",
-      "name": "FUN_007d6eb0",
-      "size": 278
-    },
-    {
-      "addr": "0x7D6DA0",
-      "name": "FUN_007d6da0",
-      "size": 261
-    },
-    {
-      "addr": "0x4289C0",
-      "name": "FUN_004289c0",
-      "size": 259
-    },
-    {
-      "addr": "0x7D6CA0",
-      "name": "FUN_007d6ca0",
-      "size": 247
-    },
-    {
-      "addr": "0x7B5550",
-      "name": "CBaldurEngine_TimerUpdate",
-      "size": 163
-    },
-    {
-      "addr": "0x7C25B0",
-      "name": "FUN_007c25b0",
-      "size": 126
-    },
-    {
-      "addr": "0x7C2040",
-      "name": "FUN_007c2040",
-      "size": 121
-    },
-    {
-      "addr": "0x7C1FD0",
-      "name": "FUN_007c1fd0",
-      "size": 106
+      "addr": "0x7B6CC0",
+      "name": "FUN_007b6cc0",
+      "size": 253
     }
   ],
   "next": [
@@ -4093,24 +4024,6 @@
       "size": 30
     },
     {
-      "addr": "0x4D0520",
-      "name": "FUN_004d0520",
-      "translated_callers": 2,
-      "size": 124
-    },
-    {
-      "addr": "0x4D05A0",
-      "name": "FUN_004d05a0",
-      "translated_callers": 2,
-      "size": 221
-    },
-    {
-      "addr": "0x4D06D0",
-      "name": "FUN_004d06d0",
-      "translated_callers": 2,
-      "size": 350
-    },
-    {
       "addr": "0x547880",
       "name": "FUN_00547880",
       "translated_callers": 2,
@@ -4121,24 +4034,6 @@
       "name": "FUN_00596250",
       "translated_callers": 2,
       "size": 139
-    },
-    {
-      "addr": "0x79AD20",
-      "name": "FUN_0079ad20",
-      "translated_callers": 2,
-      "size": 112
-    },
-    {
-      "addr": "0x79AD90",
-      "name": "FUN_0079ad90",
-      "translated_callers": 2,
-      "size": 87
-    },
-    {
-      "addr": "0x7B6B20",
-      "name": "FUN_007b6b20",
-      "translated_callers": 2,
-      "size": 403
     },
     {
       "addr": "0x40FA70",
@@ -4235,6 +4130,42 @@
       "name": "CAIObjectType_SetAndReturn",
       "translated_callers": 1,
       "size": 19
+    },
+    {
+      "addr": "0x45EAA0",
+      "name": "FUN_0045eaa0",
+      "translated_callers": 1,
+      "size": 19
+    },
+    {
+      "addr": "0x45EAC0",
+      "name": "FUN_0045eac0",
+      "translated_callers": 1,
+      "size": 19
+    },
+    {
+      "addr": "0x47A5A0",
+      "name": "FUN_0047a5a0",
+      "translated_callers": 1,
+      "size": 25
+    },
+    {
+      "addr": "0x4866C0",
+      "name": "FUN_004866c0",
+      "translated_callers": 1,
+      "size": 30
+    },
+    {
+      "addr": "0x4C8FF0",
+      "name": "FUN_004c8ff0",
+      "translated_callers": 1,
+      "size": 30
+    },
+    {
+      "addr": "0x4C9970",
+      "name": "FUN_004c9970",
+      "translated_callers": 1,
+      "size": 30
     }
   ]
 }
