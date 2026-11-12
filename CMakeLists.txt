@@ -489,6 +489,11 @@ add_executable(${EXECUTABLE_NAME} WIN32
 )
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE iwd2-core)
 
+# The original was built with 2-byte struct packing. `pack_prefix.h` includes
+# every system header with the default packing and then switches to 2, so the
+# project's own types are laid out as in the original.
+target_compile_options(iwd2-core PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:/FIpack_prefix.h>")
+
 option(IWD2RE_BUILD_TESTS "Build tests" ON)
 if(IWD2RE_BUILD_TESTS)
     enable_testing()

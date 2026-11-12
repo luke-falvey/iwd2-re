@@ -30,4 +30,5 @@ add_test(NAME unit COMMAND iwd2-tests)
 # The original was built with 2-byte struct packing (annotated offsets put
 # ints on 2-byte boundaries). Measure offsets the same way. MFC and Windows
 # headers set their own packing, so their types are unaffected.
-set_source_files_properties("${LAYOUT_TEST}" PROPERTIES COMPILE_OPTIONS "/Zp2")
+# (The 2-byte packing now comes from pack_prefix.h, force-included through
+# iwd2-core for every source file, tests included.)
