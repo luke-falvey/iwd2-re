@@ -501,6 +501,7 @@ public:
     BOOLEAN sub_43A470(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_43A7C0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_43B080(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_43B1A0(CString sAreaString, BOOLEAN bVote);
     BOOLEAN sub_43B380(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_43B680(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
 

@@ -8695,9 +8695,50 @@ BOOLEAN CBaldurMessage::sub_43A470(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 // 0x43A7C0
 BOOLEAN CBaldurMessage::sub_43A7C0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    CString sArea;
+    CString sNote;
+    INT nMsgPtr;
+    BYTE nLength;
+    DWORD nNoteLength;
 
-    return FALSE;
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished) {
+        return FALSE;
+    }
+
+    nMsgPtr = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    nLength = *reinterpret_cast<BYTE*>(pMessage + nMsgPtr);
+    nMsgPtr += sizeof(BYTE);
+
+    sArea = CString(reinterpret_cast<char*>(pMessage + nMsgPtr), nLength);
+    nMsgPtr += nLength;
+
+    WORD startX = *reinterpret_cast<WORD*>(pMessage + nMsgPtr);
+    nMsgPtr += sizeof(WORD);
+
+    WORD startY = *reinterpret_cast<WORD*>(pMessage + nMsgPtr);
+    nMsgPtr += sizeof(WORD);
+
+    nNoteLength = *reinterpret_cast<DWORD*>(pMessage + nMsgPtr);
+    nMsgPtr += sizeof(DWORD);
+
+    sNote = CString(reinterpret_cast<char*>(pMessage + nMsgPtr), nNoteLength);
+    nMsgPtr += nNoteLength;
+
+    DWORD dwFlags = *reinterpret_cast<DWORD*>(pMessage + nMsgPtr);
+
+    m_bInOnAreaMapNoteAnnounce = TRUE;
+
+    g_pBaldurChitin->GetObjectGame()->GetArea(sArea)->GetAreaNotes()->Add(sArea,
+        startX,
+        startY,
+        sNote,
+        dwFlags,
+        -1);
+
+    m_bInOnAreaMapNoteAnnounce = FALSE;
+
+    return TRUE;
 }
 
 // 0x43A910
@@ -8927,17 +8968,133 @@ void CBaldurMessage::SetDeleteAreaString(CString sAreaString)
 // 0x43B080
 BOOLEAN CBaldurMessage::sub_43B080(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    CString sAreaString;
+    INT nMsgPtr;
+    BYTE nLength;
+    BOOLEAN bVote;
 
-    return FALSE;
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        return FALSE;
+    }
+
+    nMsgPtr = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    nLength = *reinterpret_cast<BYTE*>(pMessage + nMsgPtr);
+    nMsgPtr += sizeof(BYTE);
+
+    sAreaString = CString(reinterpret_cast<char*>(pMessage + nMsgPtr), nLength);
+
+    CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sAreaString);
+    if (pArea != NULL
+        && pArea->m_nCharacters == 0
+        && pArea != g_pBaldurChitin->GetObjectGame()->m_pGameAreaMaster) {
+        pArea->field_AE6 = 0;
+        bVote = TRUE;
+    } else {
+        bVote = FALSE;
+    }
+
+    sub_43B1A0(sAreaString, bVote);
+
+    return TRUE;
+}
+
+// 0x43B1A0
+BOOLEAN CBaldurMessage::sub_43B1A0(CString sAreaString, BOOLEAN bVote)
+{
+    CString sHostName;
+    DWORD dwSize;
+    BYTE* pMessage;
+    BYTE nAreaStringLength;
+    DWORD nMsgPtr;
+    BYTE nVote;
+
+    if (bVote == TRUE) {
+        nVote = DELETEAREA_YES_VOTE;
+    } else {
+        nVote = DELETEAREA_NO_VOTE;
+    }
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        return FALSE;
+    }
+
+    // NOTE: Uninline.
+    g_pChitin->cNetwork.GetHostPlayerName(sHostName);
+
+    if (strcmp(sHostName, "") == 0) {
+        return FALSE;
+    }
+
+    nAreaStringLength = static_cast<BYTE>(sAreaString.GetLength());
+
+    dwSize = sizeof(BYTE) + nAreaStringLength + sizeof(BYTE);
+    pMessage = CreateBuffer(dwSize);
+    if (pMessage == NULL) {
+        return FALSE;
+    }
+
+    nMsgPtr = 0;
+
+    *reinterpret_cast<BYTE*>(pMessage + nMsgPtr) = nAreaStringLength;
+    nMsgPtr += sizeof(BYTE);
+
+    memcpy(pMessage + nMsgPtr, sAreaString.GetBuffer(nAreaStringLength), nAreaStringLength);
+    nMsgPtr += nAreaStringLength;
+
+    *reinterpret_cast<BYTE*>(pMessage + nMsgPtr) = nVote;
+    nMsgPtr += sizeof(BYTE);
+
+    g_pChitin->cNetwork.SendSpecificMessage(sHostName,
+        CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_DELETEAREA,
+        MSG_SUBTYPE_DELETEAREA_REPLY,
+        pMessage,
+        nMsgPtr);
+
+    DestroyBuffer(pMessage);
+
+    return TRUE;
 }
 
 // 0x43B380
 BOOLEAN CBaldurMessage::sub_43B380(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    CString sAreaString;
+    INT nMsgPtr;
+    BYTE nLength;
+    BYTE nVote;
+    BYTE cnt;
 
-    return FALSE;
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || !g_pChitin->cNetwork.m_bIsHost) {
+        return FALSE;
+    }
+
+    nMsgPtr = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    nLength = *reinterpret_cast<BYTE*>(pMessage + nMsgPtr);
+    nMsgPtr += sizeof(BYTE);
+
+    sAreaString = CString(reinterpret_cast<char*>(pMessage + nMsgPtr), nLength);
+    nMsgPtr += nLength;
+
+    nVote = *reinterpret_cast<BYTE*>(pMessage + nMsgPtr);
+
+    if (m_bDeleteAreaPolling == TRUE
+        && strcmp(sAreaString, GetDeleteAreaString()) == 0) {
+        PLAYER_ID playerID = g_pChitin->cNetwork.GetPlayerID(nMsgFrom);
+
+        for (cnt = 0; cnt < CMultiplayerSettings::MAX_PLAYERS; cnt++) {
+            if (playerID == m_pnDeleteAreaVoters[cnt]) {
+                m_pnDeleteAreaVotes[cnt] = nVote;
+            }
+        }
+    }
+
+    return TRUE;
 }
 
 // 0x43B4C0
