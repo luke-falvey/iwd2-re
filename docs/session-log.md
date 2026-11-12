@@ -31,7 +31,7 @@ Newest first. Each entry covers what was done, what's blocked and what's next.
 - `CCreatureFile::ReleaseData` (0x5C7B00) takes one stack argument in the original; the repo declares none.
 - Four `CBaldurMessage` party-order functions read network flags through `g_pChitin` where the original uses `g_pBaldurChitin` (same object).
 - `CGameSprite::Animate` (0x728560) looks misnamed: it tests "not dead".
-- S5 flake (dialogue keys out of step) has not recurred in about 60 runs since the pauses were lengthened; cause still unknown.
+- S5 flake (dialogue keys out of step) has not recurred in about 15 runs since the pauses were lengthened; cause still unknown.
 
 ## 2026-11-12 (S5 follow-up): inventory differences fixed, batches 19–22
 
