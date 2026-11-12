@@ -428,7 +428,7 @@ void CProjectileArea850420::AIUpdate()
 
     CTypedPtrList<CPtrList, LONG*> targets(10);
 
-    m_pArea->GetAllInRange(m_posVertList,
+    field_EA->GetAllInRange(m_posVertList,
         m_pos,
         field_2BE,
         field_2AE,
@@ -436,7 +436,7 @@ void CProjectileArea850420::AIUpdate()
         targets,
         FALSE,
         TRUE);
-    m_pArea->GetAllInRangeBack(m_pos,
+    field_EA->GetAllInRangeBack(m_pos,
         field_2BE,
         field_2AE,
         m_terrainTable,
