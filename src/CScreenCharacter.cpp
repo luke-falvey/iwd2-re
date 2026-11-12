@@ -3,6 +3,7 @@
 #include "CAIObjectType.h"
 #include "CAIScript.h"
 #include "CBaldurChitin.h"
+#include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CIcon.h"
 #include "CInfCursor.h"
@@ -3175,6 +3176,307 @@ void CScreenCharacter::UpdateGeneralInformation(CUIControlTextDisplay* pText, CG
 void CScreenCharacter::UpdateEquipmentInformation(CUIControlTextDisplay* pText, CGameSprite* pSprite)
 {
     // TODO: Incomplete.
+}
+
+// 0x5DF910
+void CScreenCharacter::sub_5DF910(CUIControlTextDisplay* pText, CGameSprite* pSprite, CItem* pItem, const ITEM_ABILITY* pAbility, BOOL bRight)
+{
+    CString sLine;
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (pItem == NULL) {
+        return;
+    }
+
+    STRREF strHand;
+    if (bRight) {
+        // NOTE: Only the low byte of `type` is compared.
+        if (static_cast<BYTE>(pAbility->type) == 2) {
+            strHand = 41123;
+        } else {
+            strHand = 734;
+        }
+    } else {
+        strHand = 733;
+    }
+
+    UpdateText(pText,
+        "%s - %s",
+        (LPCSTR)FetchString(strHand),
+        (LPCSTR)FetchString(pItem->GetGenericName()));
+
+    if ((pItem->m_flags & 0x1) != 0) {
+        INT nLauncherBonus = 0;
+
+        SHORT launcherSlot;
+        CItem* pLauncher = pSprite->GetLauncher(pAbility, launcherSlot);
+        if (pLauncher != NULL) {
+            pLauncher->Demand();
+
+            ITEM_ABILITY* pLauncherAbility = pLauncher->GetAbility(0);
+            if (pLauncherAbility != NULL) {
+                // NOTE: Zero-extended.
+                nLauncherBonus = static_cast<WORD>(pLauncherAbility->damageDiceBonus);
+            }
+
+            pLauncher->Release();
+        }
+
+        SHORT nDamageBonus = pAbility->damageDiceBonus;
+        if (pAbility->damageDiceCount != 0) {
+            if (nDamageBonus != 0) {
+                UpdateTextNoTrim(pText,
+                    "  %s: %dd%d%+d",
+                    (LPCSTR)FetchString(39518), // "Damage"
+                    pAbility->damageDiceCount,
+                    pAbility->damageDice,
+                    nDamageBonus);
+            } else {
+                UpdateTextNoTrim(pText,
+                    "  %s: %dd%d",
+                    (LPCSTR)FetchString(39518), // "Damage"
+                    pAbility->damageDiceCount,
+                    pAbility->damageDice);
+            }
+        } else {
+            UpdateTextNoTrim(pText,
+                "  %s: %s",
+                (LPCSTR)FetchString(39518), // "Damage"
+                (LPCSTR)FetchString(41409));
+        }
+
+        INT nMinDamage = pAbility->damageDiceCount + nDamageBonus;
+        INT nMaxDamage = pAbility->damageDice * pAbility->damageDiceCount + nDamageBonus;
+
+        LONG nEffect = 0;
+        WORD nSelectedWeaponAbility = pSprite->m_equipment.m_selectedWeaponAbility;
+
+        CGameEffect* pEffect = pItem->GetAbilityEffect(nSelectedWeaponAbility, nEffect, NULL);
+        while (pEffect != NULL) {
+            // NOTE: Only the high word of the flags is used.
+            BOOL bDisplay = TRUE;
+            STRREF strDamageType;
+
+            if (pEffect->m_effectID == CGAMEEFFECT_DAMAGE) {
+                switch (pEffect->m_dwFlags & 0xFFFF0000) {
+                case 0x00000000:
+                    strDamageType = 11770;
+                    break;
+                case 0x00010000:
+                    strDamageType = 15578;
+                    break;
+                case 0x00020000:
+                    strDamageType = 15546;
+                    break;
+                case 0x00040000:
+                    strDamageType = 15577;
+                    break;
+                case 0x00080000:
+                    strDamageType = 15545;
+                    break;
+                case 0x00100000:
+                    strDamageType = 11769;
+                    break;
+                case 0x00200000:
+                    strDamageType = 38135;
+                    break;
+                case 0x00400000:
+                    strDamageType = 40319;
+                    break;
+                case 0x01000000:
+                    strDamageType = 11768;
+                    break;
+                case 0x02000000:
+                    strDamageType = 11769;
+                    break;
+                case 0x04000000:
+                    strDamageType = 11770;
+                    break;
+                case 0x08000000:
+                    strDamageType = 14043;
+                    break;
+                case 0x20000000:
+                    strDamageType = 39609;
+                    break;
+                case 0x40000000:
+                    strDamageType = 39575;
+                    break;
+                default:
+                    bDisplay = FALSE;
+                    break;
+                }
+            } else if (pEffect->m_effectID == 241) {
+                strDamageType = 41410;
+            } else {
+                bDisplay = FALSE;
+            }
+
+            // NOTE: `pEffect` is never freed.
+            if (bDisplay) {
+                CString sExtra;
+
+                // NOTE: Unsigned.
+                DWORD nRange = static_cast<WORD>(pEffect->m_probabilityUpper) - static_cast<WORD>(pEffect->m_probabilityLower) + 1;
+                DWORD nChance = nRange > 100 ? 100 : nRange;
+                if (pEffect->m_probabilityLower == 0 && pEffect->m_probabilityUpper != 100) {
+                    nChance--;
+                }
+
+                sLine.Format("  %s: ", (LPCSTR)FetchString(strDamageType));
+
+                if (pEffect->m_numDice != 0 && pEffect->m_diceSize != 0) {
+                    if (pEffect->m_effectAmount != 0) {
+                        if (pAbility->damageDiceCount != 0) {
+                            sExtra.Format("%+dd%d%+d", pEffect->m_numDice, pEffect->m_diceSize, pEffect->m_effectAmount);
+                        } else {
+                            sExtra.Format("%dd%d%+d", pEffect->m_numDice, pEffect->m_diceSize, pEffect->m_effectAmount);
+                        }
+                    } else {
+                        if (pAbility->damageDiceCount != 0) {
+                            sExtra.Format("%+dd%d", pEffect->m_numDice, pEffect->m_diceSize);
+                        } else {
+                            sExtra.Format("%dd%d", pEffect->m_numDice, pEffect->m_diceSize);
+                        }
+                    }
+                    sLine += sExtra;
+                } else if (pEffect->m_effectAmount != 0) {
+                    sExtra.Format("%+d", pEffect->m_effectAmount);
+                    sLine += sExtra;
+                }
+
+                if (nChance == 100) {
+                    nMinDamage += pEffect->m_effectAmount + pEffect->m_numDice;
+                }
+
+                nMaxDamage += pEffect->m_diceSize * pEffect->m_numDice + pEffect->m_effectAmount;
+
+                if (nChance != 100) {
+                    sExtra.Format(" (%d%%)", nChance);
+                    sLine += sExtra;
+                }
+
+                UpdateTextNoTrim(pText, "%s", (LPCSTR)sLine);
+            }
+
+            nEffect++;
+            pEffect = pItem->GetAbilityEffect(nSelectedWeaponAbility, nEffect, NULL);
+        }
+
+        if (nLauncherBonus != 0) {
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(41408),
+                nLauncherBonus);
+            nMinDamage += nLauncherBonus;
+            nMaxDamage += nLauncherBonus;
+        }
+
+        INT nStrengthBonus = pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_derivedStats.m_nSTR);
+        if ((pAbility->abilityFlags & 0x1) != 0 && nStrengthBonus != 0) {
+            if (!bRight) {
+                if (nStrengthBonus > 1) {
+                    nStrengthBonus = nStrengthBonus / 2;
+                }
+            } else {
+                if ((pItem->GetFlagsFile() & 0x2) != 0) {
+                    if (pItem->GetItemIcon() != CResRef("FIST")) {
+                        if (nStrengthBonus > 0) {
+                            // NOTE: The multiplier is at 0x851DD4.
+                            nStrengthBonus = static_cast<INT>(static_cast<float>(nStrengthBonus) * 1.5f);
+                        }
+                    }
+                }
+            }
+
+            nMinDamage += nStrengthBonus;
+            nMaxDamage += nStrengthBonus;
+
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(1145), // "Strength"
+                nStrengthBonus);
+        }
+
+        LONG nDamageBonusStat;
+        if (bRight) {
+            nDamageBonusStat = pSprite->m_derivedStats.m_DamageBonusRight;
+        } else {
+            nDamageBonusStat = pSprite->m_derivedStats.m_DamageBonusLeft;
+        }
+
+        if (nDamageBonusStat != 0) {
+            nMinDamage += nDamageBonusStat;
+            nMaxDamage += nDamageBonusStat;
+
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(32561),
+                nDamageBonusStat);
+        }
+
+        INT nFeat = pSprite->sub_726270(47);
+
+        // NOTE: Only the low byte of `type` is tested.
+        if (nFeat > 0
+            && (pAbility->type & 0x1) != 0
+            && pSprite->sub_763150(47)) {
+            nMinDamage += nFeat;
+            nMaxDamage += nFeat;
+
+            UpdateTextNoTrim(pText,
+                "  %s: %+d",
+                (LPCSTR)FetchString(pGame->GetRuleTables().GetFeatName(47)),
+                nFeat);
+        }
+
+        if (nMaxDamage != 0) {
+            if (nMinDamage < 1) {
+                nMinDamage = 1;
+            }
+
+            if (nMaxDamage < 1) {
+                nMaxDamage = 1;
+            }
+
+            if (nMinDamage != nMaxDamage) {
+                UpdateTextNoTrim(pText,
+                    "  %s: %d-%d",
+                    (LPCSTR)FetchString(41120),
+                    nMinDamage,
+                    nMaxDamage);
+            } else {
+                UpdateTextNoTrim(pText,
+                    "  %s: %d",
+                    (LPCSTR)FetchString(41120),
+                    nMaxDamage);
+            }
+        }
+
+        SHORT nCriticalRange = static_cast<SHORT>(pItem->sub_4E9840(pAbility) + pSprite->GetCriticalHitBonus());
+        DWORD nCriticalMultiplier = pItem->GetCriticalHitMultiplier();
+
+        if (nCriticalRange != 0) {
+            INT nCriticalMin = 20 - nCriticalRange;
+            if (nCriticalMin < 1) {
+                nCriticalMin = 1;
+            }
+
+            UpdateTextNoTrim(pText,
+                "  %s: %d-20 / x%d",
+                (LPCSTR)FetchString(41122),
+                nCriticalMin,
+                static_cast<WORD>(nCriticalMultiplier));
+        } else {
+            UpdateTextNoTrim(pText,
+                "  %s: 20 / x%d",
+                (LPCSTR)FetchString(41122),
+                static_cast<WORD>(nCriticalMultiplier));
+        }
+    } else {
+        UpdateTextNoTrim(pText,
+            "  %s",
+            (LPCSTR)FetchString(41121));
+    }
 }
 
 // 0x5E0200
