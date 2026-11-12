@@ -4,6 +4,13 @@
 #include "CGameObjectArray.h"
 #include "CInfGame.h"
 
+// 0x554D20
+LONG CVisualEffect::sub_554D20(CString sVefName, CGameArea* pArea, CPoint& ptStart, LONG target, CPoint& targetPos, LONG nHeight)
+{
+    // TODO: Incomplete.
+    return -1;
+}
+
 // 0x555200
 void CVisualEffect::SetAllDelete()
 {
