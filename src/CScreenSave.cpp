@@ -1,6 +1,7 @@
 #include "CScreenSave.h"
 
 #include "CBaldurChitin.h"
+#include "CCreatureFile.h"
 #include "CGameArea.h"
 #include "CGameSprite.h"
 #include "CInfCursor.h"
@@ -10,6 +11,7 @@
 #include "CScreenLoad.h"
 #include "CScreenOptions.h"
 #include "CScreenWorld.h"
+#include "CTimerWorld.h"
 #include "CUIControlLabel.h"
 #include "CUIControlTextDisplay.h"
 #include "CUIPanel.h"
@@ -879,7 +881,189 @@ void CScreenSave::FreeGameSlots()
 // 0x65BCF0
 void CScreenSave::RefreshGameSlots()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    CStringList* pGames = pGame->GetSaveGames();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSave.cpp
+    // __LINE__: 1433
+    UTIL_ASSERT(pGames != NULL);
+
+    CVariable cVariable;
+    CResRef cResPortrait;
+    CResGame cResGame;
+    CResRef v1; // NOTE: Unused.
+    CString sDirName;
+    CString sChapter;
+    CString sResText;
+    CString sName;
+    CString sFileName;
+    ULONG nGameTime;
+    INT nChapter;
+    BYTE nSex; // NOTE: Unused.
+
+    FreeGameSlots();
+
+    m_nNumGameSlots = pGames->GetCount() + 1;
+    m_aGameSlots.SetSize(m_nNumGameSlots);
+
+    m_nMaxSlotNumber = -1;
+    m_nTopGameSlot = max(min(m_nTopGameSlot, m_nNumGameSlots - GAME_SLOTS), 0);
+
+    INT nIndex = 0;
+
+    POSITION pos = pGames->GetHeadPosition();
+    while (pos != NULL) {
+        sFileName = pGames->GetAt(pos);
+        if (sFileName != "default") {
+            m_aGameSlots[nIndex] = new CScreenSaveGameSlot();
+            m_aGameSlots[nIndex]->m_sFileName = pGames->GetAt(pos);
+
+            CString sNumber = m_aGameSlots[nIndex]->m_sFileName.SpanIncluding("0123456789");
+            if (m_aGameSlots[nIndex]->m_sFileName[sNumber.GetLength()] == '-') {
+                m_aGameSlots[nIndex]->m_sSlotName = m_aGameSlots[nIndex]->m_sFileName.Right(m_aGameSlots[nIndex]->m_sFileName.GetLength() - sNumber.GetLength() - 1);
+
+                INT nNumber = atol(sNumber);
+                if (nNumber > m_nMaxSlotNumber && nNumber >= 4) {
+                    m_nMaxSlotNumber = nNumber;
+                }
+            } else {
+                m_aGameSlots[nIndex]->m_sSlotName = m_aGameSlots[nIndex]->m_sFileName;
+            }
+
+            sDirName = pGame->GetDirSaveRoot() + m_aGameSlots[nIndex]->m_sFileName + "\\";
+
+            if (g_pChitin->cDimm.ServiceFromFile(&cResGame, sDirName + "ICEWIND2.GAM")) {
+                BYTE* pGameData = reinterpret_cast<BYTE*>(cResGame.m_pData);
+                CSavedGameHeader* pSavedGameHeader = reinterpret_cast<CSavedGameHeader*>(pGameData + 8);
+                CSavedGamePartyCreature* pCreature = reinterpret_cast<CSavedGamePartyCreature*>(pGameData + pSavedGameHeader->m_partyCreatureTableOffset);
+                CCreatureFileHeader* pCreatureFileHeader;
+                if (pCreature->m_creatureResRef[0] != '\0') {
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSave.cpp
+                    // __LINE__: 1508
+                    UTIL_ASSERT(pCreature->m_creatureSize == 0);
+
+                    CCreatureFile cCreatureFile;
+
+                    // NOTE: Uninline.
+                    cCreatureFile.SetResRef(CResRef(pCreature->m_creatureResRef), TRUE, TRUE);
+
+                    pCreatureFileHeader = reinterpret_cast<CCreatureFileHeader*>(cCreatureFile.GetData());
+                    cResPortrait = pCreatureFileHeader->m_portraitSmall;
+                    nSex = pCreatureFileHeader->m_sex;
+
+                    cCreatureFile.ReleaseData();
+                } else {
+                    pCreatureFileHeader = reinterpret_cast<CCreatureFileHeader*>(pGameData + pCreature->m_creatureOffset + 8);
+                    cResPortrait = pCreatureFileHeader->m_portraitSmall;
+                    nSex = pCreatureFileHeader->m_sex;
+                }
+
+                if (pCreatureFileHeader->m_name != -1) {
+                    sName = FetchString(pCreatureFileHeader->m_name);
+                } else {
+                    sName = pCreature->m_name;
+                }
+
+                nGameTime = pSavedGameHeader->m_worldTime * CTimerWorld::TIMESCALE_MSEC_PER_SEC;
+
+                CFileStatus cFileStatus;
+                if (g_pChitin->cDimm.LocalGetFileStatus(sDirName + "ICEWIND2.GAM", cFileStatus)) {
+                    m_aGameSlots[nIndex]->field_314 = cFileStatus.m_mtime.Format("%a, %b %d, %Y - %I:%M %p");
+                }
+
+                nChapter = -1;
+                for (DWORD nVariable = 0; nVariable < pSavedGameHeader->m_globalVariablesCount; nVariable++) {
+                    CAreaVariable* pAreaVariable = reinterpret_cast<CAreaVariable*>(pGameData + pSavedGameHeader->m_globalVariablesOffset) + nVariable;
+
+                    // NOTE: Looks odd, probably inlined assignment.
+                    if (&cVariable != pAreaVariable) {
+                        strncpy(cVariable.m_name, pAreaVariable->m_name, SCRIPTNAME_SIZE);
+                        cVariable.m_type = pAreaVariable->m_type;
+                        cVariable.m_resRefType = pAreaVariable->m_resRefType;
+                        cVariable.m_dwValue = pAreaVariable->m_dwValue;
+                        cVariable.m_intValue = pAreaVariable->m_intValue;
+                        cVariable.m_floatValue = pAreaVariable->m_floatValue;
+                        strncpy(cVariable.m_stringValue, pAreaVariable->m_stringValue, SCRIPTNAME_SIZE);
+                    }
+
+                    if (cVariable.GetName() == CInfGame::CHAPTER_GLOBAL) {
+                        nChapter = cVariable.m_intValue;
+                    }
+                }
+
+                if (nChapter < 0) {
+                    nChapter = 0;
+                }
+
+                sResText = "chapters";
+
+                CList<STRREF, STRREF>* pList = pGame->GetRuleTables().GetChapterText(CResRef(sResText), nChapter);
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSave.cpp
+                // __LINE__: 1573
+                UTIL_ASSERT(pList != NULL);
+
+                if (pList->GetCount() > 0) {
+                    sChapter = FetchString(pList->GetHead());
+                }
+
+                delete pList;
+
+                // NOTE: Looks unsafe.
+                free(cResGame.m_pData);
+                cResGame.m_pData = NULL;
+            }
+
+            if (!g_pChitin->cDimm.ServiceFromFile(&(m_aGameSlots[nIndex]->m_cResScreenShot), sDirName + "ICEWIND2.BMP")) {
+                m_aGameSlots[nIndex]->m_cResScreenShot.m_pData = NULL;
+            }
+
+            if (!g_pChitin->cDimm.ServiceFromFile(&(m_aGameSlots[nIndex]->m_cBmpResPortrait0), sDirName + "PORTRT0.BMP")) {
+                m_aGameSlots[nIndex]->m_cBmpResPortrait0.m_pData = NULL;
+            }
+
+            if (!g_pChitin->cDimm.ServiceFromFile(&(m_aGameSlots[nIndex]->m_cBmpResPortrait1), sDirName + "PORTRT1.BMP")) {
+                m_aGameSlots[nIndex]->m_cBmpResPortrait1.m_pData = NULL;
+            }
+
+            if (!g_pChitin->cDimm.ServiceFromFile(&(m_aGameSlots[nIndex]->m_cBmpResPortrait2), sDirName + "PORTRT2.BMP")) {
+                m_aGameSlots[nIndex]->m_cBmpResPortrait2.m_pData = NULL;
+            }
+
+            if (!g_pChitin->cDimm.ServiceFromFile(&(m_aGameSlots[nIndex]->m_cBmpResPortrait3), sDirName + "PORTRT3.BMP")) {
+                m_aGameSlots[nIndex]->m_cBmpResPortrait3.m_pData = NULL;
+            }
+
+            if (!g_pChitin->cDimm.ServiceFromFile(&(m_aGameSlots[nIndex]->m_cBmpResPortrait4), sDirName + "PORTRT4.BMP")) {
+                m_aGameSlots[nIndex]->m_cBmpResPortrait4.m_pData = NULL;
+            }
+
+            if (!g_pChitin->cDimm.ServiceFromFile(&(m_aGameSlots[nIndex]->m_cBmpResPortrait5), sDirName + "PORTRT5.BMP")) {
+                m_aGameSlots[nIndex]->m_cBmpResPortrait5.m_pData = NULL;
+            }
+
+            // NOTE: The original calls an empty function (0x71E750, `RET 8`)
+            // here with `cResPortrait` and `nSex`.
+
+            m_aGameSlots[nIndex]->m_cResPortrait = cResPortrait;
+            m_aGameSlots[nIndex]->m_sCharacterName = sName;
+            m_aGameSlots[nIndex]->m_nTime = nGameTime;
+            m_aGameSlots[nIndex]->m_nChapter = nChapter;
+            m_aGameSlots[nIndex]->m_sChapter = sChapter;
+
+            nIndex++;
+        }
+
+        pGames->GetNext(pos);
+    }
+
+    nIndex++;
+    m_nNumGameSlots = nIndex;
+
+    m_aGameSlots[m_nNumGameSlots - 1] = new CScreenSaveGameSlot();
+
+    delete pGames;
 }
 
 // 0x65C850
