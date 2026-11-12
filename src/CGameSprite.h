@@ -554,7 +554,7 @@ public:
     CGameButtonList* GetSongsButtonList();
     BOOLEAN CanCast(BYTE nClass, DWORD nSpecialization, CSpell* pSpell);
     CGameButtonList* sub_714F70(const BYTE& nClass);
-    CGameButtonList* sub_7155C0(const BYTE& nClass, DWORD a2);
+    CGameButtonList* sub_7155C0(const BYTE& nClass, DWORD nSpecialization);
     CGameButtonList* sub_715BD0();
     void sub_716770(CButtonData& cButtonData);
     CGameButtonList* sub_716E80(INT a1);
