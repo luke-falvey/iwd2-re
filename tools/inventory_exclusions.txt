@@ -472,3 +472,6 @@
 
 # CList<DWORD, DWORD>::NewNode(pPrev, pNext) (MFC template instantiation; called from 0x559B40).
 0x547800
+
+# CResHelper<CResText, 1012>::~CResHelper (C2DArray destructor body; template instantiation).
+0x7B5370
