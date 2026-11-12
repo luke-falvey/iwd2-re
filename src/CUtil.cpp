@@ -107,35 +107,48 @@ BYTE CUtil::SplitString(CVidFont* pTextFont, const CString& sSource, WORD nLineL
 
         int nSpace = -1;
 
-        // TODO: Incomplete (unclear DBCS code).
-        for (int nIndex = 0; nIndex < pStringsOut[nCurrentLine].GetLength(); nIndex++) {
-            char ch = pStringsOut[nCurrentLine][nIndex];
-            if (ch == '\n' || ch == '\r') {
-                if (nCurrentLine + 1 < nMaxStrings) {
-                    pStringsOut[nCurrentLine + 1] = pStringsOut[nCurrentLine].Mid(nIndex + 1);
+        int nIndex = 0;
+        while (nIndex < pStringsOut[nCurrentLine].GetLength()) {
+            int nNext = nIndex;
+
+            if (g_pChitin->field_1A0 && IsDBCSLeadByte(pStringsOut[nCurrentLine][nIndex])) {
+                nNext = nIndex + 1;
+            } else {
+                char ch = pStringsOut[nCurrentLine][nIndex];
+                if (ch == '\n' || ch == '\r') {
+                    if (nCurrentLine + 1 < nMaxStrings) {
+                        pStringsOut[nCurrentLine + 1] = pStringsOut[nCurrentLine].Mid(nIndex + 1);
+                    }
+
+                    if (nCurrentLine + 1 != nMaxStrings || bCheckRemainderForNewLine) {
+                        pStringsOut[nCurrentLine] = pStringsOut[nCurrentLine].Left(nIndex);
+                    }
+
+                    break;
                 }
 
-                if (nCurrentLine + 1 != nMaxStrings || bCheckRemainderForNewLine) {
-                    pStringsOut[nCurrentLine] = pStringsOut[nCurrentLine].Left(nIndex);
+                if (ch == ' ') {
+                    nSpace = nIndex;
                 }
-
-                break;
             }
 
-            if (ch == ' ') {
-                nSpace = nIndex;
-            }
+            nNext++;
 
-            LONG nSubStringWidth = pTextFont->GetStringLength(pStringsOut[nCurrentLine].Left(nIndex + 1), TRUE);
+            LONG nSubStringWidth = pTextFont->GetStringLength(pStringsOut[nCurrentLine].Left(nNext), TRUE);
 
             // NOTE: Signed compare.
-            if (nSubStringWidth > static_cast<WORD>(nLineLength)
+            if (nSubStringWidth > nLineLength - (g_pChitin->field_1A0 ? 10 : 0)
                 || (nSubStringWidth >= nSuggestedSplitLength
                     && nSpace == nIndex)) {
                 if (nCurrentLine + 1 < nMaxStrings) {
                     if (bDivideWords || nSpace == -1) {
-                        pStringsOut[nCurrentLine + 1] = pStringsOut[nCurrentLine].Mid(nIndex);
-                        pStringsOut[nCurrentLine] = pStringsOut[nCurrentLine].Left(nIndex);
+                        if (g_pChitin->field_1A0 && IsDBCSLeadByte(pStringsOut[nCurrentLine][nIndex])) {
+                            pStringsOut[nCurrentLine + 1] = pStringsOut[nCurrentLine].Mid(nIndex);
+                            pStringsOut[nCurrentLine] = pStringsOut[nCurrentLine].Left(nIndex);
+                        } else {
+                            pStringsOut[nCurrentLine + 1] = pStringsOut[nCurrentLine].Mid(nIndex);
+                            pStringsOut[nCurrentLine] = pStringsOut[nCurrentLine].Left(nIndex);
+                        }
                     } else {
                         pStringsOut[nCurrentLine + 1] = pStringsOut[nCurrentLine].Mid(nSpace + 1);
                         pStringsOut[nCurrentLine] = pStringsOut[nCurrentLine].Left(nSpace);
@@ -144,6 +157,8 @@ BYTE CUtil::SplitString(CVidFont* pTextFont, const CString& sSource, WORD nLineL
 
                 break;
             }
+
+            nIndex = nNext;
         }
 
         nCurrentLine++;
