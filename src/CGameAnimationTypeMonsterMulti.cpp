@@ -4,6 +4,7 @@
 #include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CUtil.h"
+#include "CVidMode.h"
 
 // 0x6B4180
 CGameAnimationTypeMonsterMulti::CGameAnimationTypeMonsterMulti(USHORT animationID, BYTE* colorRangeValues, WORD facing)
@@ -826,6 +827,124 @@ void CGameAnimationTypeMonsterMulti::SetColorRangeAll(BYTE rangeValue)
         for (BYTE colorRange = 0; colorRange < CVidPalette::NUM_RANGES; colorRange++) {
             SetColorRange(colorRange, rangeValue);
         }
+    }
+}
+
+// 0x6B71F0
+void CGameAnimationTypeMonsterMulti::Render(CInfinity* pInfinity, CVidMode* pVidMode, INT nSurface, const CRect& rectFX, const CPoint& ptNewPos, const CPoint& ptReference, DWORD dwRenderFlags, COLORREF rgbTintColor, const CRect& rGCBounds, BOOL bDithered, BOOL bFadeOut, LONG posZ, BYTE transparency)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+    // __LINE__: 11138
+    UTIL_ASSERT(pInfinity != NULL && pVidMode != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+    // __LINE__: 11139
+    UTIL_ASSERT(m_currentVidCell != NULL);
+
+    CRect rView(pInfinity->nCurrentX,
+        pInfinity->nCurrentY,
+        pInfinity->rViewPort.right - pInfinity->rViewPort.left + pInfinity->nCurrentX,
+        pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + pInfinity->nCurrentY);
+
+    CPoint ptPos(ptNewPos.x, ptNewPos.y + posZ);
+
+    if (m_currentBamDirection > m_extendDirectionTest) {
+        dwRenderFlags |= CInfinity::MIRROR_FX;
+    }
+
+    dwRenderFlags |= CInfinity::FXPREP_COPYFROMBACK | 0x4;
+
+    if (transparency != 0) {
+        dwRenderFlags |= 0x2;
+    }
+
+    if (field_446) {
+        field_44A->pRes->Demand();
+    }
+
+    CPoint ptQuadCenter;
+    CSize frameSize;
+    CRect rFXRect;
+    CRect rQuadGCBounds;
+    for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+        m_currentVidCell[quad].GetCurrentCenterPoint(ptQuadCenter, FALSE);
+        m_currentVidCell[quad].GetCurrentFrameSize(frameSize, FALSE);
+        rFXRect.SetRect(0, 0, frameSize.cx, frameSize.cy);
+
+        // NOTE: The result overwrites `frameSize` and is never used.
+        pVidMode->GetFXSize(frameSize);
+
+        CalculateGCBoundsRect(rQuadGCBounds,
+            ptNewPos,
+            ptQuadCenter,
+            posZ,
+            rFXRect.Width(),
+            rFXRect.Height());
+
+        if ((rView & rQuadGCBounds).IsRectEmpty()) {
+            continue;
+        }
+
+        // NOTE: The result of `FXPrep` is ignored.
+        pInfinity->FXPrep(rFXRect, dwRenderFlags, nSurface, ptPos, ptQuadCenter);
+
+        if (!pInfinity->FXLock(rFXRect, dwRenderFlags)) {
+            continue;
+        }
+
+        if (field_446) {
+            CResBitmap* pBitmap = field_44A->pRes;
+            m_currentVidCell[quad].SetPalette(pBitmap->GetColorTable(),
+                pBitmap->GetColorCount(),
+                CVidPalette::TYPE_RESOURCE);
+        }
+
+        COLORREF oldTintColor = m_currentVidCell[quad].GetTintColor();
+
+        INT nRed = GetRValue(rgbTintColor) + GetRValue(oldTintColor) - 255;
+        nRed = nRed < 0 ? 0 : nRed;
+
+        INT nGreen = GetGValue(rgbTintColor) + GetGValue(oldTintColor) - 255;
+        nGreen = nGreen < 0 ? 0 : nGreen;
+
+        INT nBlue = GetBValue(rgbTintColor) + GetBValue(oldTintColor) - 255;
+        nBlue = nBlue < 0 ? 0 : nBlue;
+
+        m_currentVidCell[quad].SetTintColor(RGB(nRed, nGreen, nBlue));
+
+        pInfinity->FXRender(&(m_currentVidCell[quad]),
+            ptQuadCenter.x,
+            ptQuadCenter.y,
+            dwRenderFlags,
+            transparency);
+
+        m_currentVidCell[quad].SetTintColor(oldTintColor);
+
+        pInfinity->FXRenderClippingPolys(ptPos.x,
+            ptPos.y - posZ,
+            posZ,
+            ptQuadCenter,
+            rQuadGCBounds,
+            bDithered,
+            dwRenderFlags);
+
+        if (bFadeOut) {
+            pInfinity->FXUnlock(dwRenderFlags, &rFXRect, ptPos + ptQuadCenter);
+        } else {
+            pInfinity->FXUnlock(dwRenderFlags, NULL, CPoint(0, 0));
+        }
+
+        pInfinity->FXBltFrom(nSurface,
+            rFXRect,
+            ptPos.x,
+            ptPos.y,
+            ptQuadCenter.x,
+            ptQuadCenter.y,
+            dwRenderFlags);
+    }
+
+    if (field_446) {
+        field_44A->pRes->Release();
     }
 }
 
