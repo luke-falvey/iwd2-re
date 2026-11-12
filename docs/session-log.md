@@ -2,6 +2,37 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-12 (night): batches 23–33
+
+**Merged.** Every batch went translator → verifier(s) → fixes confirmed against the listing → merge → `tools\check.ps1` → S1–S5.
+- 23, 26, 28, 31: `CMessage.cpp` — 13 + 31 + 18 + 10 functions (resource demand, character slot updates, party order, world map, movies, rest, time/weather sync, leave-area, map notes, delete-area vote, two unmarshallers), plus `CGameAreaNotes::Add`/`DeleteANote` and `CGameSprite::sub_6F3B80`.
+- 24: `CDerivedStats::Reload` and `operator=` completed.
+- 25, 27, 29: `CProjectilePart3`, `Part5`, `Part4`, `Part6` (71 functions).
+- 30, 32: new class `CGameSparkle` (constructor 0x51AE40, AddToArea, AIUpdate, Render), the projectile blocks that were waiting on it, `CGameEffectSparkle::ApplyEffect`, eight `CProjectilePart1` functions.
+- 33: `CInfGame::sub_5AE020` (party order) and `sub_5C3B20` (leave area, Lua variant).
+
+**Progress:** 7,592 of 9,752 counted functions without TODO (77.9%), 82.7% of bytes, as of batch 31; S1–S5 pass on every merged build.
+
+**What the verifiers caught (all confirmed and fixed).**
+- `CMessage51::MarshalMessage` released the wrong id; `CDerivedStats::Reload` sign-extended a byte the original zero-extends.
+- `CProjectileArea850420::AIUpdate` ran its range queries on `m_pArea` instead of `field_EA`.
+- `CGameEffectSparkle::ApplyEffect` passed the wrong effect fields to the sparkle constructor.
+- `CMessageSpriteUpdate` declared twelve fields overlapping its spell-state bitset, shifting every later member by 0x18. The class now passes the layout test.
+- `CGameAreaNotes::GetNoteAt` returns the last note when none matches in the original.
+- Smaller shape fixes (single `GetPos` call, a shift instead of a divide).
+
+**Library code.** About 75 addresses are now in `tools/inventory_exclusions.txt` (MSVC 6 `std::set`/`map`/`list`/`vector`/`string` internals, `CTypedPtrList` constructors, scalar deleting destructors, template instantiations). Translators are told to exclude these with evidence rather than translate them.
+
+**Tool fix.** `tools/packet.py` named stack slots 8 bytes off after `PUSH a; PUSH b; CALL [vtbl+getter]; PUSH ...; CALL f`. Pushes left by a zero-argument getter (a fixed list of common `CGameObject` slots) are now carried to the next call. Other zero-argument virtual calls (for example vtbl+0xA0, `GetTerrainTable`) can still cause this; translators and verifiers are told to check such spans against the raw listing.
+
+**Open**
+- Stubs added by these batches: `CInfGame::sub_5C4AD0` (10 KB, in progress), `CScreenWorldMap::sub_69D0F0` (11.8 KB), `CBaldurMessage::sub_437D70`, `CGameSparkle::sub_51CE50`, and the two object classes created by projectiles (vtables 0x85BFE8 and 0x85BF7C, in progress).
+- `CScreenWorld::m_bHardPaused` and `m_bPaused` are declared `BOOL` but the original compares one byte.
+- `CCreatureFile::ReleaseData` (0x5C7B00) takes one stack argument in the original; the repo declares none.
+- Four `CBaldurMessage` party-order functions read network flags through `g_pChitin` where the original uses `g_pBaldurChitin` (same object).
+- `CGameSprite::Animate` (0x728560) looks misnamed: it tests "not dead".
+- S5 flake (dialogue keys out of step) has not recurred in about 60 runs since the pauses were lengthened; cause still unknown.
+
 ## 2026-11-12 (S5 follow-up): inventory differences fixed, batches 19–22
 
 **Inventory screen.** The three differences S5 left open are fixed:
