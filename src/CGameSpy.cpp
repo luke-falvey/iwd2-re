@@ -61,9 +61,70 @@ BOOLEAN CGameSpy::sub_4D0B20(SOCKET* pSocket, BOOLEAN a2)
 // 0x4D0980
 BOOLEAN CGameSpy::sub_4D0980()
 {
-    // TODO: Incomplete.
+    CString sHost;
+    sHost = "master.gamespy.com";
 
-    return FALSE;
+    hostent* pHost = NULL;
+    char buffer[0x400];
+
+    EnterCriticalSection(&(g_pChitin->cNetwork.field_F6A));
+
+    if (!field_0) {
+        WSADATA wsaData;
+        WSAStartup(2, &wsaData);
+        if (wsaData.wVersion != 2) {
+            WSACleanup();
+            field_0 = 0;
+        } else {
+            field_0 = 1;
+        }
+
+        if (!field_0) {
+            // NOTE: Original code leaves the critical section entered on
+            // this path.
+            return FALSE;
+        }
+    }
+
+    CWnd* pWnd = g_pChitin->GetWnd();
+    HANDLE hRequest = WSAAsyncGetHostByName(pWnd != NULL ? pWnd->GetSafeHwnd() : NULL,
+        0x402,
+        sHost,
+        buffer,
+        0x400);
+
+    field_26 = 0;
+
+    if (hRequest == NULL) {
+        field_0 = 0;
+        WSACleanup();
+    } else {
+        BYTE nTries = 0;
+        do {
+            nTries++;
+            SleepEx(300, FALSE);
+        } while (!field_26 && nTries < 10);
+
+        if (!field_26) {
+            WSACancelAsyncRequest(hRequest);
+            field_0 = 0;
+            WSACleanup();
+        } else {
+            pHost = reinterpret_cast<hostent*>(buffer);
+        }
+    }
+
+    if (field_0 == 1) {
+        if (pHost != NULL) {
+            field_6 = *reinterpret_cast<DWORD*>(pHost->h_addr_list[0]);
+        } else {
+            field_0 = 0;
+            WSACleanup();
+        }
+    }
+
+    LeaveCriticalSection(&(g_pChitin->cNetwork.field_F6A));
+    return field_0;
 }
 
 // 0x4D0B80
@@ -99,10 +160,359 @@ BOOLEAN CGameSpy::sub_4D0B80(SOCKET s, DWORD* pAddr, WORD* pPort, char** ppBuf, 
     return TRUE;
 }
 
-// 0x4D15D0
-void CGameSpy::sub_4D15D0(DWORD nAddr, DWORD nPort, char* pBuf, DWORD nLen)
+// 0x4D0C70
+BOOLEAN CGameSpy::sub_4D0C70(DWORD nAddr, DWORD nPort)
+{
+    CString sQueryId;
+
+    if (field_22 == NULL) {
+        return FALSE;
+    }
+
+    field_1E++;
+    sQueryId.Format("\\queryid\\%d.%d\n", field_1A, field_1E);
+
+    int nLength = sQueryId.GetLength();
+    memcpy(field_22 + field_16, sQueryId.GetBuffer(nLength), nLength);
+    field_16 += sQueryId.GetLength();
+
+    sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = nAddr;
+    addr.sin_port = htons(static_cast<u_short>(nPort));
+    sendto(field_E, field_22, field_16, 0, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
+
+    memset(field_22, 0, 0x578);
+    field_16 = 0;
+
+    return TRUE;
+}
+
+// 0x4D0DA0
+BOOLEAN CGameSpy::sub_4D0DA0(const char* pBuf, DWORD nLen, CString sKey, char** ppValue, DWORD* pValueLen)
+{
+    CString sSearch;
+
+    *ppValue = NULL;
+    *pValueLen = 0;
+
+    sSearch = "\\" + sKey;
+    sSearch += "\\";
+
+    CString sBuffer(pBuf, nLen);
+
+    int nStart = sBuffer.Find(sSearch);
+    if (nStart == -1) {
+        return FALSE;
+    }
+
+    nStart += sSearch.GetLength();
+
+    BYTE nEnd = static_cast<BYTE>(nStart);
+    while (nEnd < nLen && pBuf[nEnd] != '\\') {
+        nEnd++;
+    }
+
+    DWORD nValueLen = nEnd - nStart;
+    *pValueLen = nValueLen;
+
+    if (nValueLen != 0) {
+        *ppValue = new char[nValueLen];
+        if (*ppValue == NULL) {
+            *pValueLen = 0;
+            return FALSE;
+        }
+
+        memcpy(*ppValue, pBuf + nStart, nValueLen);
+    }
+
+    return TRUE;
+}
+
+// 0x4D0F40
+BOOLEAN CGameSpy::sub_4D0F40(DWORD nAddr, DWORD nPort, char* pSecure)
 {
     // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x4D1220
+BOOLEAN CGameSpy::sub_4D1220(DWORD nAddr, DWORD nPort, char* pSecure)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
+// 0x4D15D0
+BOOLEAN CGameSpy::sub_4D15D0(DWORD nAddr, DWORD nPort, char* pBuf, DWORD nLen)
+{
+    char* pSecure = NULL;
+    char* pValue;
+    DWORD nValueLen;
+    BYTE* pResponse;
+    DWORD nResponseLen;
+    DWORD nCount;
+    BYTE* pData;
+
+    field_1A++;
+    if (field_1A >= 100) {
+        field_1A = 0;
+    }
+
+    field_1E = 0;
+
+    field_22 = new char[0x578];
+    if (field_22 == NULL) {
+        return FALSE;
+    }
+
+    field_16 = 0;
+
+    if (sub_4D0DA0(pBuf, nLen, "secure", &pValue, &nValueLen) == TRUE && pValue != NULL) {
+        pSecure = new char[6];
+        if (pSecure == NULL) {
+            delete[] field_22;
+            return FALSE;
+        }
+
+        memcpy(pSecure, pValue, 6);
+
+        if (pValue != NULL && nValueLen != 0) {
+            delete[] pValue;
+        }
+    }
+
+    if (sub_4D0DA0(pBuf, nLen, "basic", &pValue, &nValueLen) == TRUE) {
+        if (g_pChitin->GetGameSpyResponse(0, &pResponse, &nResponseLen) == TRUE) {
+            nCount = nResponseLen;
+            pData = pResponse;
+            if (field_22 != NULL) {
+                if (field_16 + nCount >= 0x546) {
+                    sub_4D0C70(nAddr, nPort);
+                }
+
+                memcpy(field_22 + field_16, pData, nCount);
+                field_16 += nCount;
+            }
+
+            if (nCount != 0) {
+                delete[] pData;
+            }
+        }
+        if (pValue != NULL && nValueLen != 0) {
+            delete[] pValue;
+        }
+    }
+
+    if (sub_4D0DA0(pBuf, nLen, "info", &pValue, &nValueLen) == TRUE) {
+        if (field_16 != 0) {
+            sub_4D0F40(nAddr, nPort, pSecure);
+        }
+        if (g_pChitin->GetGameSpyResponse(1, &pResponse, &nResponseLen) == TRUE) {
+            nCount = nResponseLen;
+            pData = pResponse;
+            if (field_22 != NULL) {
+                if (field_16 + nCount >= 0x546) {
+                    sub_4D0C70(nAddr, nPort);
+                }
+
+                memcpy(field_22 + field_16, pData, nCount);
+                field_16 += nCount;
+            }
+
+            if (nCount != 0) {
+                delete[] pData;
+            }
+        }
+        if (pValue != NULL && nValueLen != 0) {
+            delete[] pValue;
+        }
+    }
+
+    if (sub_4D0DA0(pBuf, nLen, "rules", &pValue, &nValueLen) == TRUE) {
+        if (field_16 != 0) {
+            sub_4D0F40(nAddr, nPort, pSecure);
+        }
+        if (g_pChitin->GetGameSpyResponse(2, &pResponse, &nResponseLen) == TRUE) {
+            nCount = nResponseLen;
+            pData = pResponse;
+            if (field_22 != NULL) {
+                if (field_16 + nCount >= 0x546) {
+                    sub_4D0C70(nAddr, nPort);
+                }
+
+                memcpy(field_22 + field_16, pData, nCount);
+                field_16 += nCount;
+            }
+
+            if (nCount != 0) {
+                delete[] pData;
+            }
+        }
+        if (pValue != NULL && nValueLen != 0) {
+            delete[] pValue;
+        }
+    }
+
+    if (sub_4D0DA0(pBuf, nLen, "players", &pValue, &nValueLen) == TRUE) {
+        if (field_16 != 0) {
+            sub_4D0F40(nAddr, nPort, pSecure);
+        }
+        if (g_pChitin->GetGameSpyResponse(3, &pResponse, &nResponseLen) == TRUE) {
+            nCount = nResponseLen;
+            pData = pResponse;
+            if (field_22 != NULL) {
+                if (field_16 + nCount >= 0x546) {
+                    sub_4D0C70(nAddr, nPort);
+                }
+
+                memcpy(field_22 + field_16, pData, nCount);
+                field_16 += nCount;
+            }
+
+            if (nCount != 0) {
+                delete[] pData;
+            }
+        }
+        if (pValue != NULL && nValueLen != 0) {
+            delete[] pValue;
+        }
+    }
+
+    if (sub_4D0DA0(pBuf, nLen, "status", &pValue, &nValueLen) == TRUE) {
+        if (field_16 != 0) {
+            sub_4D0F40(nAddr, nPort, pSecure);
+        }
+        if (g_pChitin->GetGameSpyResponse(0, &pResponse, &nResponseLen) == TRUE) {
+            nCount = nResponseLen;
+            pData = pResponse;
+            if (field_22 != NULL) {
+                if (field_16 + nCount >= 0x546) {
+                    sub_4D0C70(nAddr, nPort);
+                }
+
+                memcpy(field_22 + field_16, pData, nCount);
+                field_16 += nCount;
+            }
+
+            if (nCount != 0) {
+                delete[] pData;
+            }
+        }
+        if (field_16 != 0) {
+            sub_4D0F40(nAddr, nPort, pSecure);
+        }
+        if (g_pChitin->GetGameSpyResponse(1, &pResponse, &nResponseLen) == TRUE) {
+            nCount = nResponseLen;
+            pData = pResponse;
+            if (field_22 != NULL) {
+                if (field_16 + nCount >= 0x546) {
+                    sub_4D0C70(nAddr, nPort);
+                }
+
+                memcpy(field_22 + field_16, pData, nCount);
+                field_16 += nCount;
+            }
+
+            if (nCount != 0) {
+                delete[] pData;
+            }
+        }
+        if (field_16 != 0) {
+            sub_4D0F40(nAddr, nPort, pSecure);
+        }
+        if (g_pChitin->GetGameSpyResponse(2, &pResponse, &nResponseLen) == TRUE) {
+            nCount = nResponseLen;
+            pData = pResponse;
+            if (field_22 != NULL) {
+                if (field_16 + nCount >= 0x546) {
+                    sub_4D0C70(nAddr, nPort);
+                }
+
+                memcpy(field_22 + field_16, pData, nCount);
+                field_16 += nCount;
+            }
+
+            if (nCount != 0) {
+                delete[] pData;
+            }
+        }
+        if (field_16 != 0) {
+            sub_4D0F40(nAddr, nPort, pSecure);
+        }
+        if (g_pChitin->GetGameSpyResponse(3, &pResponse, &nResponseLen) == TRUE) {
+            nCount = nResponseLen;
+            pData = pResponse;
+            if (field_22 != NULL) {
+                if (field_16 + nCount >= 0x546) {
+                    sub_4D0C70(nAddr, nPort);
+                }
+
+                memcpy(field_22 + field_16, pData, nCount);
+                field_16 += nCount;
+            }
+
+            if (nCount != 0) {
+                delete[] pData;
+            }
+        }
+        if (pValue != NULL && nValueLen != 0) {
+            delete[] pValue;
+        }
+    }
+
+    if (sub_4D0DA0(pBuf, nLen, "echo", &pValue, &nValueLen) == TRUE) {
+        if (field_16 != 0) {
+            sub_4D0F40(nAddr, nPort, pSecure);
+        }
+
+        CString sEcho("\\echo\\");
+
+        if (nValueLen >= 0x546) {
+            delete[] field_22;
+            return FALSE;
+        }
+
+        nResponseLen = sEcho.GetLength() + nValueLen;
+        pResponse = new BYTE[nResponseLen];
+        if (pResponse == NULL) {
+            delete[] field_22;
+            return FALSE;
+        }
+
+        memcpy(pResponse, sEcho.GetBuffer(sEcho.GetLength()), sEcho.GetLength());
+        memcpy(pResponse + sEcho.GetLength(), pValue, nValueLen);
+
+        nCount = nResponseLen;
+        pData = pResponse;
+        if (field_22 != NULL) {
+            if (field_16 + nCount >= 0x546) {
+                sub_4D0C70(nAddr, nPort);
+            }
+
+            memcpy(field_22 + field_16, pData, nCount);
+            field_16 += nCount;
+        }
+
+        delete[] pResponse;
+
+        if (pValue != NULL && nValueLen != 0) {
+            delete[] pValue;
+        }
+    }
+
+    if (field_16 != 0) {
+        sub_4D1220(nAddr, nPort, pSecure);
+    }
+
+    if (pSecure != NULL) {
+        delete[] pSecure;
+    }
+
+    delete[] field_22;
+    return TRUE;
 }
 
 // 0x4D1EC0

@@ -14,7 +14,8 @@ CVidMosaic::CVidMosaic()
 // 0x7B0B20
 CVidMosaic::~CVidMosaic()
 {
-    // TODO: Incomplete.
+    // NOTE: The asm is the inlined `CResHelper` and `CVidImage` base
+    // destructors.
 }
 
 // 0x7B0BF0
