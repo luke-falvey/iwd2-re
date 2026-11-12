@@ -50,6 +50,7 @@ public:
     /* 00FC */ BOOL RenderPointer() override;
     /* 0100 */ void RestoreSurfaces() override;
     /* 010C */ void ParsePixelFormat(const DDPIXELFORMAT& ddpf) override;
+    /* 0110 */ BOOLEAN PrintSurfaceToBmp(LPBYTE& data, int nSurface, const CRect& rSurface, LONG& size, short nScale) override;
     /* 011C */ ~CVidInf() override;
     /* 0120 */ BOOL CreateSurfaces3d() override;
     /* 0124 */ BOOL DestroySurfaces3d(CVidMode* pNextVidMode) override;
@@ -86,6 +87,7 @@ public:
     BOOL WindowedFlip3d(BOOL bRenderCursor);
     BOOL RenderPointer3d(UINT nSurface);
     void DoTextOut3d(UINT nSurface, const CString& sText, int x, int y, COLORREF color);
+    BOOLEAN PrintSurfaceToBmp3d(LPBYTE& pRGBBytes, int nSurface, const CRect& rSurface, LONG& size, short nScale);
 
     /* 00F4 */ DDSURFACEDESC m_SurfaceDesc;
     /* 0160 */ CRect m_rLockedRect;
