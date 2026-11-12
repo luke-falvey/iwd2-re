@@ -251,6 +251,121 @@ CProjectileArea84F0DC::CProjectileArea84F0DC(const CProjectileAreaVisual* a1, co
     CGameObject::AddToArea(pArea, *pos, 0, CGameObject::LIST_FRONT);
 }
 
+// 0x56CF00
+// NOTE: 0x56CEE0 is the scalar deleting destructor (compiler-generated).
+CProjectileArea84F0DC::~CProjectileArea84F0DC()
+{
+    if (m_pGrid != NULL) {
+        delete[] m_pGrid;
+    }
+
+    if (m_pCells != NULL) {
+        delete[] m_pCells;
+    }
+
+    if (m_pCellStates != NULL) {
+        delete[] m_pCellStates;
+    }
+}
+
+// 0x56D0A0
+void CProjectileArea84F0DC::AIUpdate()
+{
+    // TODO: Incomplete.
+}
+
+// 0x56D9B0
+void CProjectileArea84F0DC::RemoveFromArea()
+{
+    CGameObject::RemoveFromArea();
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+        CGameObjectArray::THREAD_ASYNCH,
+        NULL,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameFireball.cpp
+        // __LINE__: 493
+        UTIL_ASSERT(FALSE);
+        return;
+    }
+
+    delete this;
+}
+
+// 0x56D730
+void CProjectileArea84F0DC::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameFireball.cpp
+    // __LINE__: 396
+    UTIL_ASSERT(pVidMode != NULL);
+
+    CInfinity* pInfinity = &m_pArea->m_cInfinity;
+
+    CPoint ptTile;
+    ptTile.x = m_pos.x < 0 ? 0 : m_pos.x;
+    if (ptTile.x >= m_pArea->m_cInfinity.nAreaX - 1) {
+        ptTile.x = m_pArea->m_cInfinity.nAreaX - 1;
+    }
+    ptTile.y = m_pos.y < 0 ? 0 : m_pos.y;
+    if (ptTile.y >= m_pArea->m_cInfinity.nAreaY - 1) {
+        ptTile.y = m_pArea->m_cInfinity.nAreaY - 1;
+    }
+
+    // NOTE: Uninline.
+    if (!m_pArea->m_visibility.IsTileVisible(m_pArea->m_visibility.PointToTile(ptTile))) {
+        return;
+    }
+
+    if (!field_2A0) {
+        return;
+    }
+
+    if (field_8A.IsEndOfSequence(FALSE)) {
+        return;
+    }
+
+    CPoint ptRef;
+    field_8A.GetCurrentCenterPoint(ptRef, FALSE);
+
+    CSize size;
+    field_8A.GetCurrentFrameSize(size, FALSE);
+
+    CRect rFx;
+    rFx.SetRect(0, 0, size.cx, size.cy);
+
+    CPoint pos;
+    pos.x = m_pos.x;
+    pos.y = m_pos.y + m_pArea->GetHeightOffset(m_pos, m_listType);
+
+    LONG left = pos.x - ptRef.x;
+    LONG top = pos.y + (m_posZ - ptRef.y);
+    LONG right = rFx.right - rFx.left + left;
+    LONG bottom = rFx.bottom - rFx.top + top;
+
+    DWORD dwFlags = CInfinity::FXPREP_COPYFROMBACK | field_290.m_dwFlags;
+
+    pInfinity->FXPrep(rFx, dwFlags, a3, pos, ptRef);
+
+    if (!pInfinity->FXLock(rFx, dwFlags)) {
+        return;
+    }
+
+    pInfinity->FXRender(&field_8A, ptRef.x, ptRef.y, field_290.m_dwFlags, 0);
+
+    CRect rGCBounds(left, top - m_posZ, right, bottom - m_posZ);
+    pInfinity->FXRenderClippingPolys(pos.x,
+        pos.y - m_posZ,
+        m_posZ,
+        ptRef,
+        rGCBounds,
+        FALSE,
+        field_290.m_dwFlags);
+
+    pInfinity->FXUnlock(dwFlags, NULL, CPoint(0, 0));
+    pInfinity->FXBltFrom(a3, rFx, pos.x, pos.y, ptRef.x, ptRef.y, field_290.m_dwFlags | 1);
+}
+
 // 0x5703F0
 void CProjectileArea::sub_5703F0(CGameAIBase* pSource)
 {

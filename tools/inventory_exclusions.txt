@@ -395,3 +395,11 @@
 # and the head pointer (+0x4). Called from the inlined CProjectileArea::field_64E construction
 # (0x56BF30).
 0x570D50
+
+# CProjectileArea84F0DC scalar deleting destructor (compiler generated): calls
+# ~CProjectileArea84F0DC (0x56CF00), then operator delete when the flag is set.
+0x56CEE0
+
+# CProjectileBAM84E724 scalar deleting destructor (compiler generated): calls
+# ~CProjectileBAM84E724 (0x533930), then operator delete when the flag is set.
+0x533910

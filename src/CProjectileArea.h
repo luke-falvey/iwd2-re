@@ -75,6 +75,10 @@ public:
     };
 
     CProjectileArea84F0DC(const CProjectileAreaVisual* a1, const CProjectileAreaVisual2* a2, const CProjectileAreaVisual3* a3, CGameArea* pArea, const CPoint* pos, SHORT a6, BYTE a7, BYTE a8, WORD a9);
+    /* 0000 */ ~CProjectileArea84F0DC() override;
+    /* 000C */ void AIUpdate() override;
+    /* 0048 */ void RemoveFromArea() override;
+    /* 004C */ void Render(CGameArea* pArea, CVidMode* pVidMode, int a3) override;
 
     /* 006E */ BYTE m_terrainTable[16];
     /* 007E */ SHORT field_7E;

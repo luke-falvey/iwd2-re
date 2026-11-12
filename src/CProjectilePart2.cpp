@@ -664,15 +664,27 @@ CProjectileBAM84E724::CProjectileBAM84E724(CResRef resRef, SHORT a2, SHORT nDire
 }
 
 // 0x533930
+// NOTE: 0x533910 is the scalar deleting destructor (compiler-generated). The
+// destructors of the base classes are inlined.
 CProjectileBAM84E724::~CProjectileBAM84E724()
 {
-    // TODO: Incomplete.
 }
 
 // 0x533AE0
 void CProjectileBAM84E724::Virtual88(CGameArea* pArea, CPoint* pt, LONG posZ)
 {
-    // TODO: Incomplete.
+    field_EA = pArea;
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Add(&m_id, this, INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        delete this;
+        return;
+    }
+
+    AddToArea(pArea, *pt, posZ, CGameObject::LIST_FRONT);
+
+    // NOTE: Inlined PlaySound.
+    PlaySound(m_fireSoundRef, m_loopFireSound, FALSE);
 }
 
 // 0x533CB0
