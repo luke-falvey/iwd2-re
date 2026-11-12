@@ -14,6 +14,7 @@
 #include "CProjectile.h"
 #include "CScreenWorld.h"
 #include "CUtil.h"
+#include "CVidInf.h"
 #include "CVidMode.h"
 #include "CVidPoly.h"
 
@@ -1804,13 +1805,89 @@ void CGameDoor::SetDrawPoly(SHORT time)
 // 0x48B3C0
 void CGameDoor::sub_48B3C0(CGameArea* pArea, CVidMode* pVidMode, int a3, DWORD rgbColor)
 {
-    // TODO: Incomplete.
+    CInfinity* pInfinity = pArea->GetInfinity();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameDoor.cpp
+    // __LINE__: 2155
+    UTIL_ASSERT(pInfinity != NULL && pVidMode != NULL);
+
+    CRect rViewPort;
+    rViewPort.left = m_pArea->GetInfinity()->nCurrentX;
+    rViewPort.top = m_pArea->GetInfinity()->nCurrentY;
+    rViewPort.right = m_pArea->GetInfinity()->rViewPort.right - m_pArea->GetInfinity()->rViewPort.left + rViewPort.left;
+    rViewPort.bottom = m_pArea->GetInfinity()->rViewPort.bottom - m_pArea->GetInfinity()->rViewPort.top + rViewPort.top;
+
+    INT nRects = field_6DA.GetSize();
+    CPoint ptRef(0, 0);
+
+    CVidPoly vidPoly;
+    vidPoly.SetPoly(reinterpret_cast<WORD*>(field_6EE), m_nClosedPolygon);
+
+    for (INT nIndex = 0; nIndex < nRects; nIndex++) {
+        CRect* pRect = field_6DA[nIndex];
+        if (pRect != NULL) {
+            CRect rClip = rViewPort & *pRect;
+            if (!rClip.IsRectNull()) {
+                CPoint ptPos(rClip.left, rClip.top);
+                CRect rFX(rClip);
+                rFX.OffsetRect(-rClip.left, -rClip.top);
+
+                if (pInfinity->FXPrep(rFX, CInfinity::FXPREP_COPYFROMBACK, a3, ptPos, ptRef)) {
+                    if (pInfinity->FXLock(rFX, 0)) {
+                        static_cast<CVidInf*>(pVidMode)->FXRender(&vidPoly, rClip, rgbColor, 0x10, ptPos, FALSE);
+
+                        if (pInfinity->FXUnlock(0, NULL, CPoint(0, 0))) {
+                            pInfinity->FXBltFrom(a3, rFX, ptPos.x, ptPos.y, ptRef.x, ptRef.y, 0);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 // 0x48B600
 void CGameDoor::sub_48B600(CGameArea* pArea, CVidMode* pVidMode, int a3, DWORD rgbColor)
 {
-    // TODO: Incomplete.
+    CInfinity* pInfinity = pArea->GetInfinity();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameDoor.cpp
+    // __LINE__: 2204
+    UTIL_ASSERT(pInfinity != NULL && pVidMode != NULL);
+
+    CRect rViewPort;
+    rViewPort.left = m_pArea->GetInfinity()->nCurrentX;
+    rViewPort.top = m_pArea->GetInfinity()->nCurrentY;
+    rViewPort.right = m_pArea->GetInfinity()->rViewPort.right - m_pArea->GetInfinity()->rViewPort.left + rViewPort.left;
+    rViewPort.bottom = m_pArea->GetInfinity()->rViewPort.bottom - m_pArea->GetInfinity()->rViewPort.top + rViewPort.top;
+
+    INT nRects = field_6F2.GetSize();
+    CPoint ptRef(0, 0);
+
+    CVidPoly vidPoly;
+    vidPoly.SetPoly(reinterpret_cast<WORD*>(field_706), m_nOpenPolygon);
+
+    for (INT nIndex = 0; nIndex < nRects; nIndex++) {
+        CRect* pRect = field_6F2[nIndex];
+        if (pRect != NULL) {
+            CRect rClip = rViewPort & *pRect;
+            if (!rClip.IsRectNull()) {
+                CPoint ptPos(rClip.left, rClip.top);
+                CRect rFX(rClip);
+                rFX.OffsetRect(-rClip.left, -rClip.top);
+
+                if (pInfinity->FXPrep(rFX, CInfinity::FXPREP_COPYFROMBACK, a3, ptPos, ptRef)) {
+                    if (pInfinity->FXLock(rFX, 0)) {
+                        static_cast<CVidInf*>(pVidMode)->FXRender(&vidPoly, rClip, rgbColor, 0x10, ptPos, FALSE);
+
+                        if (pInfinity->FXUnlock(0, NULL, CPoint(0, 0))) {
+                            pInfinity->FXBltFrom(a3, rFX, ptPos.x, ptPos.y, ptRef.x, ptRef.y, 0);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 // 0x453140
