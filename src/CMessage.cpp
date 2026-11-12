@@ -701,6 +701,12 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_PAUSING_PERMIT_REQUEST = 82;
 // 0x84CFAC
 const BYTE CBaldurMessage::MSG_SUBTYPE_PAUSING_ANNOUNCE = 65;
 
+// 0x84CFAD
+const BYTE CBaldurMessage::MSG_TYPE_REFORMPARTY = 113;
+
+// 0x84CFAF
+const BYTE CBaldurMessage::MSG_SUBTYPE_REFORMPARTY_ANNOUNCE = 115;
+
 // 0x84CFB0
 const BYTE CBaldurMessage::MSG_TYPE_RESOURCE = 82;
 
@@ -749,6 +755,15 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_MPSYNCH_REQUEST = 82;
 // 0x84CFCA
 const BYTE CBaldurMessage::MSG_SUBTYPE_MPSYNCH_REPLY = 80;
 
+// 0x84CFCB
+const BYTE CBaldurMessage::MSG_TYPE_TIME = 84;
+
+// 0x84CFCC
+const BYTE CBaldurMessage::MSG_SUBTYPE_TIME_SYNCH = 116;
+
+// 0x84CFCD
+const BYTE CBaldurMessage::MSG_SUBTYPE_TIME_CHANGE = 99;
+
 // 0x84CFCE
 const BYTE CBaldurMessage::MSG_TYPE_VERSION = 86;
 
@@ -757,6 +772,12 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_VERSION_SERVER = 115;
 
 // 0x84CFD0
 const BYTE CBaldurMessage::VERSION_NUM_FIELDS = 3;
+
+// 0x84CFD1
+const BYTE CBaldurMessage::MSG_TYPE_WEATHER = 87;
+
+// 0x84CFD2
+const BYTE CBaldurMessage::MSG_SUBTYPE_WEATHER_BROADCAST = 119;
 
 // 0x84CFD3
 const BYTE CBaldurMessage::MSG_TYPE_LEAVEAREALUA = 88;
@@ -4239,11 +4260,7 @@ BOOLEAN CBaldurMessage::sub_430DC0(LONG nObjectId)
         return FALSE;
     }
 
-    if (g_pChitin->cNetwork.m_nHostPlayer == -1) {
-        sHostName = "";
-    } else {
-        sHostName = g_pChitin->cNetwork.m_psPlayerName[g_pChitin->cNetwork.m_nHostPlayer];
-    }
+    g_pChitin->cNetwork.GetHostPlayerName(sHostName);
 
     if (strcmp(sHostName, "") == 0) {
         return FALSE;
@@ -4719,11 +4736,7 @@ BOOLEAN CBaldurMessage::CharacterPartyOrderRequest()
         return sub_432610();
     }
 
-    if (g_pChitin->cNetwork.m_nHostPlayer == -1) {
-        sHostName = "";
-    } else {
-        sHostName = g_pChitin->cNetwork.m_psPlayerName[g_pChitin->cNetwork.m_nHostPlayer];
-    }
+    g_pChitin->cNetwork.GetHostPlayerName(sHostName);
 
     if (strcmp(sHostName, "") == 0) {
         return FALSE;
@@ -6973,59 +6986,222 @@ BOOLEAN CBaldurMessage::sub_436D10(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 // 0x436D40
 BOOLEAN CBaldurMessage::sub_436D40(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || !g_pChitin->cNetwork.m_bIsHost) {
+        return FALSE;
+    }
 
-    return FALSE;
+    BOOLEAN bStartReformParty = TRUE;
+
+    if (!g_pBaldurChitin->GetObjectGame()->GetMultiplayerSettings()->GetPermission(nMsgFrom, CGamePermission::LEADER)) {
+        return FALSE;
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->m_gameSave.m_mode == 0x182
+        || g_pBaldurChitin->GetObjectGame()->m_gameSave.m_mode == 0x502) {
+        bStartReformParty = FALSE;
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->m_multiplayerSettings.m_bHostPermittedDialog == TRUE) {
+        bStartReformParty = FALSE;
+    }
+
+    CScreenWorld* pWorld = g_pBaldurChitin->m_pEngineWorld;
+    if (pWorld->m_bHardPaused == TRUE || !bStartReformParty) {
+        pWorld->SetPendingReformParty();
+    } else {
+        pWorld->StartReformPartyMultiplayerHost();
+    }
+
+    return TRUE;
 }
 
 // 0x436DF0
 BOOLEAN CBaldurMessage::SendReformPartyAnnounceStatus()
 {
-    // TODO: Incomplete.
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || !g_pChitin->cNetwork.m_bIsHost) {
+        return FALSE;
+    }
 
-    return FALSE;
+    BYTE* pData = CreateBuffer(1);
+    if (pData == NULL) {
+        return FALSE;
+    }
+
+    pData[0] = TRUE;
+
+    g_pChitin->cNetwork.SendSpecificMessage(CString(""),
+        CNetwork::SEND_GUARANTEED | CNetwork::SEND_ALL_PLAYERS,
+        MSG_TYPE_REFORMPARTY,
+        MSG_SUBTYPE_REFORMPARTY_ANNOUNCE,
+        pData,
+        1);
+
+    DestroyBuffer(pData);
+
+    return TRUE;
 }
 
 // 0x436EF0
 BOOLEAN CBaldurMessage::sub_436EF0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        return FALSE;
+    }
 
-    return FALSE;
+    CScreenWorld* pWorld = g_pBaldurChitin->m_pEngineWorld;
+    if (g_pBaldurChitin->pActiveEngine != pWorld) {
+        g_pBaldurChitin->pActiveEngine->SelectEngine(pWorld);
+    }
+
+    // NOTE: Only the low byte of `m_bPaused` is read.
+    pWorld->m_bPausedBeforePickParty = static_cast<BYTE>(pWorld->m_bPaused);
+
+    // NOTE: Non-virtual call to an empty function at 0x799CA0.
+    pWorld->CBaldurEngine::CheckEnableLeftPanel();
+
+    return TRUE;
 }
 
 // 0x436F50
-void CBaldurMessage::WeatherBroadcast(WORD wWeatherFlags)
+BOOLEAN CBaldurMessage::WeatherBroadcast(WORD wWeatherFlags)
 {
-    // TODO: Incomplete.
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || !g_pChitin->cNetwork.m_bIsHost) {
+        return FALSE;
+    }
+
+    BYTE* pData = CreateBuffer(2);
+    if (pData == NULL) {
+        return FALSE;
+    }
+
+    *reinterpret_cast<WORD*>(pData) = wWeatherFlags;
+
+    g_pChitin->cNetwork.SendSpecificMessage(CString(""),
+        CNetwork::SEND_GUARANTEED | CNetwork::SEND_ALL_PLAYERS,
+        MSG_TYPE_WEATHER,
+        MSG_SUBTYPE_WEATHER_BROADCAST,
+        pData,
+        2);
+
+    DestroyBuffer(pData);
+
+    return TRUE;
 }
 
 // 0x437050
 BOOLEAN CBaldurMessage::sub_437050(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        return FALSE;
+    }
 
-    return FALSE;
+    WORD wWeatherFlags = *reinterpret_cast<WORD*>(pMessage + CNetwork::SPEC_MSG_HEADER_LENGTH);
+
+    g_pBaldurChitin->m_pEngineWorld->m_weather.SetCurrentWeather(g_pBaldurChitin->GetObjectGame()->m_pGameAreaMaster,
+        wWeatherFlags);
+
+    return TRUE;
 }
 
 // 0x4370B0
-void CBaldurMessage::TimeSynchBroadcast(ULONG nGameTime, BOOLEAN bCompressTime)
+BOOLEAN CBaldurMessage::TimeSynchBroadcast(ULONG nGameTime, BOOLEAN bCompressTime)
 {
-    // TODO: Incomplete.
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || !g_pChitin->cNetwork.m_bIsHost) {
+        return FALSE;
+    }
+
+    BYTE* pData = CreateBuffer(5);
+    if (pData == NULL) {
+        return FALSE;
+    }
+
+    *reinterpret_cast<ULONG*>(pData) = nGameTime;
+    pData[4] = bCompressTime;
+
+    g_pChitin->cNetwork.SendSpecificMessage(CString(""),
+        CNetwork::SEND_GUARANTEED | CNetwork::SEND_ALL_PLAYERS,
+        MSG_TYPE_TIME,
+        MSG_SUBTYPE_TIME_SYNCH,
+        pData,
+        5);
+
+    DestroyBuffer(pData);
+
+    return TRUE;
 }
 
 // 0x4371B0
 BOOLEAN CBaldurMessage::sub_4371B0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
-    // TODO: Incomplete.
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        return FALSE;
+    }
 
-    return FALSE;
+    DWORD cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
+
+    ULONG nGameTime = *reinterpret_cast<ULONG*>(pMessage + cnt);
+    cnt += sizeof(ULONG);
+
+    BOOLEAN bCompressTime = pMessage[cnt];
+
+    CTimerWorld* pWorldTimer = &(g_pBaldurChitin->GetObjectGame()->m_worldTime);
+    ULONG nOldGameTime = pWorldTimer->m_gameTime;
+
+    if (bCompressTime == TRUE
+        || nOldGameTime < nGameTime - CTimerWorld::MULTIPLAYER_TIME_SYNCH_DELTA
+        || nOldGameTime > nGameTime + CTimerWorld::MULTIPLAYER_TIME_SYNCH_DELTA) {
+        pWorldTimer->m_gameTime = nGameTime;
+        pWorldTimer->CheckForTriggerEventPast();
+    }
+
+    if (bCompressTime == TRUE) {
+        // NOTE: Inlined.
+        g_pBaldurChitin->m_pEngineWorld->CompressTime(nGameTime - nOldGameTime);
+    }
+
+    return TRUE;
 }
 
 // 0x437240
-void CBaldurMessage::TimeChangeToServer(DWORD deltaTime)
+BOOLEAN CBaldurMessage::TimeChangeToServer(DWORD deltaTime)
 {
-    // TODO: Incomplete.
+    CString sHostName;
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        return FALSE;
+    }
+
+    g_pChitin->cNetwork.GetHostPlayerName(sHostName);
+
+    if (strcmp(sHostName, "") == 0) {
+        return FALSE;
+    }
+
+    BYTE* pData = CreateBuffer(4);
+    if (pData == NULL) {
+        return FALSE;
+    }
+
+    *reinterpret_cast<DWORD*>(pData) = deltaTime;
+
+    g_pChitin->cNetwork.SendSpecificMessage(sHostName,
+        CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_TIME,
+        MSG_SUBTYPE_TIME_CHANGE,
+        pData,
+        4);
+
+    DestroyBuffer(pData);
+
+    return TRUE;
 }
 
 // 0x437390

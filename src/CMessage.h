@@ -246,6 +246,9 @@ public:
     static const BYTE MSG_SUBTYPE_PAUSING_PERMIT_REQUEST;
     static const BYTE MSG_SUBTYPE_PAUSING_ANNOUNCE;
 
+    static const BYTE MSG_TYPE_REFORMPARTY;
+    static const BYTE MSG_SUBTYPE_REFORMPARTY_ANNOUNCE;
+
     static const BYTE MSG_TYPE_RESOURCE;
     static const BYTE MSG_SUBTYPE_RESOURCE_DEMAND;
     static const BYTE MSG_SUBTYPE_RESOURCE_REPLY;
@@ -274,6 +277,13 @@ public:
     static const BYTE MSG_TYPE_MOVIE;
     static const BYTE MSG_SUBTYPE_MOVIE_REQUEST;
     static const BYTE MSG_SUBTYPE_MOVIE_ANNOUNCE;
+
+    static const BYTE MSG_TYPE_TIME;
+    static const BYTE MSG_SUBTYPE_TIME_SYNCH;
+    static const BYTE MSG_SUBTYPE_TIME_CHANGE;
+
+    static const BYTE MSG_TYPE_WEATHER;
+    static const BYTE MSG_SUBTYPE_WEATHER_BROADCAST;
 
     static const BYTE MSG_TYPE_VERSION;
     static const BYTE MSG_SUBTYPE_VERSION_SERVER;
@@ -384,9 +394,9 @@ public:
     BOOLEAN MovieAnnounceStatus(CResRef cResMovie);
     BOOLEAN SendReformPartyAnnounceStatus();
     BOOLEAN sub_436C00();
-    void WeatherBroadcast(WORD wWeatherFlags);
-    void TimeSynchBroadcast(ULONG nGameTime, BOOLEAN bCompressTime);
-    void TimeChangeToServer(ULONG deltaTime);
+    BOOLEAN WeatherBroadcast(WORD wWeatherFlags);
+    BOOLEAN TimeSynchBroadcast(ULONG nGameTime, BOOLEAN bCompressTime);
+    BOOLEAN TimeChangeToServer(ULONG deltaTime);
     BYTE LeaveAreaLuaRequestToServer(LONG nCharacterId, CPoint ptStart, LONG nFace, CString sArea, CString sParchment);
     BOOLEAN OnLeaveAreaLuaRequestToServer(INT nMsgFrom, BYTE* pByteMessage, DWORD dwSize);
     BOOLEAN OnLeaveAreaNameRequestToServer(INT nMsgFrom, BYTE* pByteMessage, DWORD dwSize);
