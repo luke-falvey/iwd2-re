@@ -24,6 +24,7 @@ class CGameSpriteSpellList {
 public:
     CGameSpriteSpellList();
     ~CGameSpriteSpellList();
+    CGameSpriteSpellList operator=(const CGameSpriteSpellList& other);
     BOOLEAN Add(const UINT& nID, const unsigned int& a2, const unsigned int& a3, const unsigned int& a4);
     BOOLEAN Remove(const UINT& nID, BOOLEAN a2, const unsigned& a3, const unsigned& a4);
     BOOLEAN sub_725C50(const UINT& nID, const unsigned int& a2, const BOOLEAN& a3);
