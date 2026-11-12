@@ -4168,7 +4168,131 @@ static void sub_5A5060(BYTE** ppCreature, LONG* pCreatureSize, BYTE* pOldCreatur
 // 0x5A69B0
 INT CInfGame::sub_5A69B0(BYTE* pCreature)
 {
+    // NOTE: Not original. Layouts of the "CRE V2.1" tables read below.
+    struct OldKnownSpell {
+        RESREF m_spellId;
+        WORD m_spellLevel;
+        WORD m_spellType;
+    };
+
+    struct OldMemorizationInfo {
+        WORD m_spellLevel;
+        WORD field_2;
+        WORD field_4;
+        WORD m_spellType;
+        DWORD m_index;
+        DWORD m_count;
+    };
+
+    struct OldMemorizedSpell {
+        RESREF m_spellId;
+        DWORD m_flags;
+    };
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 6440
+    UTIL_ASSERT(pCreature != NULL);
+
+    if (memcmp(pCreature, "CRE V2.0", 8) != 0
+        && memcmp(pCreature, "CRE V2.1", 8) != 0) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 6446
+        UTIL_ASSERT(FALSE);
+        return 0;
+    }
+
+    BYTE& nClass = pCreature[0x387];
+    if (nClass == 0 || nClass == 0xFF) {
+        nClass = CAIOBJECTTYPE_C_FIGHTER;
+    }
+
+    UINT nClassIndex = 0;
+    if (nClass == CAIOBJECTTYPE_C_BARD
+        || nClass == CAIOBJECTTYPE_C_CLERIC
+        || nClass == CAIOBJECTTYPE_C_DRUID
+        || nClass == CAIOBJECTTYPE_C_PALADIN
+        || nClass == CAIOBJECTTYPE_C_RANGER
+        || nClass == CAIOBJECTTYPE_C_SORCERER
+        || nClass == CAIOBJECTTYPE_C_WIZARD) {
+        nClassIndex = g_pBaldurChitin->GetObjectGame()->GetSpellcasterIndex(nClass);
+    }
+
+    CGameSpriteSpells spells;
+    CGameSpriteGroupedSpellList domainSpells;
+    CGameSpriteSpellList innateSpells;
+    CGameSpriteSpellList songs;
+    CGameSpriteSpellList shapeshifts;
+
+    // NOTE: Original reads spell type from a constant at 0x85BB63 (2).
+    const WORD SPELLTYPE_INNATE = 2;
+
+    DWORD nOffset = 0;
+    for (DWORD nSpell = 0; nSpell < *reinterpret_cast<DWORD*>(pCreature + 0x3BE); nSpell++) {
+        OldKnownSpell* tempOldSpell = reinterpret_cast<OldKnownSpell*>(pCreature + *reinterpret_cast<DWORD*>(pCreature + 0x3BA) + nOffset);
+
+        // FIXME: `m_spellLevel >= 0` is always true.
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 6486
+        UTIL_ASSERT(tempOldSpell->m_spellLevel >= 0 && tempOldSpell->m_spellLevel < CSPELLLIST_MAX_LEVELS);
+
+        if (tempOldSpell->m_spellType == SPELLTYPE_INNATE) {
+            UINT nID = 0;
+            CResRef resRef(tempOldSpell->m_spellId);
+
+            // NOTE: Uninline.
+            if (g_pBaldurChitin->GetObjectGame()->m_songs.Find(resRef, nID)) {
+                songs.Add(nID, 1, 1, 0);
+            } else {
+                nID = 0;
+                CResRef resRef2(tempOldSpell->m_spellId);
+
+                // NOTE: Uninline.
+                if (g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Find(resRef2, nID)) {
+                    shapeshifts.Add(nID, 1, 1, 0);
+                } else {
+                    nID = 0;
+                    CResRef resRef3(tempOldSpell->m_spellId);
+
+                    // NOTE: Uninline.
+                    if (g_pBaldurChitin->GetObjectGame()->m_innateSpells.Find(resRef3, nID)) {
+                        innateSpells.Add(nID, 1, 1, 0);
+                    } else {
+                        // NOTE: Uninline.
+                        char szResRef[RESREF_SIZE + 1];
+                        memcpy(szResRef, tempOldSpell->m_spellId, RESREF_SIZE);
+                        szResRef[RESREF_SIZE] = '\0';
+
+                        CString sError("");
+                        sError.Format("*** OBSOLETE SPELL FILE: %s", szResRef);
+                    }
+                }
+            }
+        } else {
+            UINT nID = 0;
+            CResRef resRef(tempOldSpell->m_spellId);
+
+            // NOTE: Uninline.
+            if (g_pBaldurChitin->GetObjectGame()->m_spells.Find(resRef, nID)) {
+                UINT nLevel = tempOldSpell->m_spellLevel;
+
+                // NOTE: Uninline.
+                spells.Get(nClassIndex)->Add(nID, nLevel, 1, 1, 0);
+            } else {
+                // NOTE: Uninline.
+                char szResRef[RESREF_SIZE + 1];
+                memcpy(szResRef, tempOldSpell->m_spellId, RESREF_SIZE);
+                szResRef[RESREF_SIZE] = '\0';
+
+                CString sError("");
+                sError.Format("*** OBSOLETE SPELL FILE: %s", szResRef);
+            }
+        }
+
+        nOffset += sizeof(OldKnownSpell);
+    }
+
     // TODO: Incomplete.
+
     return 0;
 }
 
