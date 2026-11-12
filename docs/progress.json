@@ -4,17 +4,17 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 8263,
-  "functions_done": 7964,
-  "functions_complete": 7962,
+  "functions_total": 8243,
+  "functions_done": 7971,
+  "functions_complete": 7969,
   "incomplete_markers": 3,
   "incomplete_by_file": {
     "src/BalDataTypes.h": 1,
     "src/CScreenChapter.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10593,
-  "annotations_not_function_start": 2606,
+  "annotations_total": 10601,
+  "annotations_not_function_start": 2607,
   "duplicate_annotations": {
     "0x7ACD60": [
       "src/CAIObjectType.cpp",
@@ -3374,6 +3374,7 @@
     "0x9039D8",
     "0x9060EC",
     "0x9060F0",
+    "0x9060F4",
     "0x9064F4",
     "0x9064F8",
     "0x9068F8",
@@ -3821,9 +3822,9 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3741260,
-  "bytes_done": 3675438,
-  "bytes_complete": 3674609,
+  "bytes_total": 3734699,
+  "bytes_done": 3682329,
+  "bytes_complete": 3681500,
   "largest_stubs": [
     {
       "addr": "0x5D4190",
