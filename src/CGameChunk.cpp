@@ -48,9 +48,9 @@ CGameChunk::CGameChunk(USHORT animationID, BYTE* pColors, const CString& sSoundN
     field_99 = a9;
     field_9A = a10;
 
-    // NOTE: Original copies the table from 0x8A8154, which has the same
-    // values (see `CGameArea::CGameArea`).
-    memcpy(m_terrainTable, CGameObject::DEFAULT_TERRAIN_TABLE, 16);
+    // NOTE: Original copies the table from 0x8A8154, a second copy of the
+    // visible terrain table (not the default one).
+    memcpy(m_terrainTable, CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE, 16);
 
     field_98 = 3;
 
@@ -190,9 +190,9 @@ CGame85BF7C::CGame85BF7C(USHORT animationID, BYTE* pColors, const CString& sSoun
     field_9E = a9;
     field_9F = a10;
 
-    // NOTE: Original copies the table from 0x8A8154, which has the same
-    // values (see `CGameArea::CGameArea`).
-    memcpy(m_terrainTable, CGameObject::DEFAULT_TERRAIN_TABLE, 16);
+    // NOTE: Original copies the table from 0x8A8154, a second copy of the
+    // visible terrain table (not the default one).
+    memcpy(m_terrainTable, CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE, 16);
 
     if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Add(&m_id, this, INFINITE) != CGameObjectArray::SUCCESS) {
         // NOTE: Deletes the object that is still under construction.
@@ -447,9 +447,9 @@ CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const C
         nCurY += CPathSearch::GRID_SQUARE_SIZEY * 2;
     }
 
-    // NOTE: Original copies the table from 0x8A8154, which has the same
-    // values (see `CGameArea::CGameArea`).
-    memcpy(m_terrainTable, CGameObject::DEFAULT_TERRAIN_TABLE, 16);
+    // NOTE: Original copies the table from 0x8A8154, a second copy of the
+    // visible terrain table (not the default one).
+    memcpy(m_terrainTable, CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE, 16);
 
     if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Add(&m_id, this, INFINITE) != CGameObjectArray::SUCCESS) {
         // NOTE: Deletes the object that is still under construction.

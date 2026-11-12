@@ -43,7 +43,7 @@ CProjectileBAM::CProjectileBAM(CResRef resRef)
     field_E6 = 0x20000;
     field_1DA = 0;
     field_29C = FALSE;
-    memcpy(m_terrainTable, CGameObject::DEFAULT_TERRAIN_TABLE, 16);
+    memcpy(m_terrainTable, CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE, 16);
     m_callBackProjectile = CGameObjectArray::INVALID_INDEX;
     field_17E = "";
     field_182 = CGameObjectArray::INVALID_INDEX;
