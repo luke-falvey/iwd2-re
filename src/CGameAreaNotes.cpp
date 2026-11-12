@@ -453,15 +453,18 @@ CAreaUserNote* CGameAreaNotes::GetNoteAt(const CPoint& pt)
         return NULL;
     }
 
+    // NOTE: Original returns the last note in the list when none has this
+    // id (it only returns NULL when the search ends on a NULL note).
+    CAreaUserNote* pNote = NULL;
     POSITION pos = m_areaNoteList.GetHeadPosition();
     while (pos != NULL) {
-        CAreaUserNote* pNote = m_areaNoteList.GetNext(pos);
+        pNote = m_areaNoteList.GetNext(pos);
         if (pNote->m_id == id) {
             return pNote;
         }
     }
 
-    return NULL;
+    return pNote;
 }
 
 // 0x47BB90
