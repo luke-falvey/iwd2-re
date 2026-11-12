@@ -536,6 +536,8 @@ public:
 
     void SetSource(LONG* pAmountLeft, CGameSprite* pSourceCreature, CGameEffect* pSourceEffect);
     LONG Absorb(LONG nDamage);
+    BOOLEAN sub_447CD0();
+    LONG sub_447E30();
 
     LONG m_nAmount;
     DWORD m_nEnchantment;
@@ -582,6 +584,8 @@ public:
 class CDamageReductionList : public std::vector<CDamageReduction> {
 public:
     LONG Apply(LONG nDamage, LONG nEnchantment, DWORD nDamageType);
+    CDamageReduction* sub_448130(LONG a1);
+    CDamageReduction* sub_4481A0(LONG nEnchantment, DWORD nDamageType);
 };
 
 class CPersistantEffectListRegenerated : public CTypedPtrList<CPtrList, CPersistantEffect*> {
