@@ -1311,3 +1311,31 @@
 # then szText (+0x0). Emitted out of line; called when a STR_RES local goes out of
 # scope, e.g. in CGameSprite::DebugDump (inlined GetName).
 0x425B80
+
+# Catch handler (compiler-generated funclet) of CTlkFileOverrideText::GetString (0x7B6650):
+# catch (CException* e) { sString = ""; e->Delete(); } then resumes at 0x7B6750.
+0x7B671B
+
+# GLSetup client library (third-party OpenGL driver detection/loader, statically
+# linked; 0x7B7750-0x7BBA40). The game only enters it from CChitin::Init3d
+# (0x7C8990) when the INI keys "Program Options"/"Use GLSetup" and "GLSetup Driver"
+# are set: it calls 0x7B7D40(driver index) and copies the library's wgl/pixel-format
+# pointers (0x9074C8..0x9074E4, 0x8BBCD8, 0x8BBCE0) into CChitin3d. The repo omits
+# that path (see the NOTE in CChitin::Init3d) and loads opengl32.dll directly.
+# Evidence: driver table at 0x8BB0A8 ("\opengl32.dll"/"\glu32.dll" "Default OpenGL
+# Driver", "\3dfxogl.dll" "3dfx Installed OpenGL Driver", "\opengl.dll" "SGI Software
+# OpenGL Driver", "\3dfxvgl.dll" "3dfx Standalone OpenGL Driver"); registry key
+# "Software\Silicon Graphics\OpenGL" value "OverrideDispatch" and env var
+# "FX_GLIDE_NO_SPLASH" (0x7BAAC0); version-resource probing (0x7BB5D0); plain C
+# cdecl functions on globals (0x906910..0x9074E4), no MFC, no game asserts or
+# source paths; nothing outside the range references it except Init3d.
+0x7B7750
+0x7B7940
+0x7B7D40
+0x7B7DA0
+0x7BAAC0
+0x7BB5D0
+0x7BB8F0
+0x7BB940
+0x7BB9A0
+0x7BBA00

@@ -157,35 +157,424 @@ HRESULT CVidBlitter::BltFast(IDirectDrawSurface* lpDDSurface, DWORD dwX, DWORD d
 // 0x7B6B20
 HRESULT CVidBlitter::FUN_007b6b20(IDirectDrawSurface* lpDDSurface, LPRECT lpDestRect, IDirectDrawSurface* lpDDSrcSurface, LPRECT lpSrcRect)
 {
-    // TODO: Incomplete.
+    HRESULT hr;
 
-    return S_OK;
+    while (1) {
+        m_ddsdDest.dwSize = sizeof(DDSURFACEDESC);
+        hr = lpDDSurface->Lock(lpDestRect, &m_ddsdDest, DDLOCK_WAIT | DDLOCK_WRITEONLY, NULL);
+        if (hr == DDERR_SURFACELOST) {
+            // NOTE: Uninline.
+            g_pChitin->GetCurrentVideoMode()->RestoreSurfaces();
+            continue;
+        }
+
+        if (hr != DDERR_SURFACEBUSY) {
+            break;
+        }
+    }
+
+    if (hr != DD_OK) {
+        switch (hr) {
+        case E_OUTOFMEMORY:
+            return DDERR_EXCEPTION;
+        case E_INVALIDARG:
+        case DDERR_INVALIDOBJECT:
+        case DDERR_SURFACELOST:
+        case DDERR_WASSTILLDRAWING:
+            return hr;
+        default:
+            return E_FAIL;
+        }
+    }
+
+    while (1) {
+        m_ddsdSrc.dwSize = sizeof(DDSURFACEDESC);
+        hr = lpDDSrcSurface->Lock(lpSrcRect, &m_ddsdSrc, DDLOCK_WAIT | DDLOCK_READONLY, NULL);
+        if (hr == DDERR_SURFACELOST) {
+            // NOTE: Uninline.
+            g_pChitin->GetCurrentVideoMode()->RestoreSurfaces();
+            continue;
+        }
+
+        if (hr != DDERR_SURFACEBUSY) {
+            break;
+        }
+    }
+
+    if (hr != DD_OK) {
+        lpDDSurface->Unlock(m_ddsdDest.lpSurface);
+
+        switch (hr) {
+        case E_OUTOFMEMORY:
+            return DDERR_EXCEPTION;
+        case E_INVALIDARG:
+        case DDERR_INVALIDOBJECT:
+        case DDERR_SURFACELOST:
+        case DDERR_WASSTILLDRAWING:
+            return hr;
+        default:
+            return E_FAIL;
+        }
+    }
+
+    m_pDestSurface = reinterpret_cast<BYTE*>(m_ddsdDest.lpSurface);
+    m_pSrcSurface = reinterpret_cast<BYTE*>(m_ddsdSrc.lpSurface);
+
+    return DD_OK;
 }
 
+// NOTE: Copies one row of `nBytes` bytes left-right mirrored: the destination
+// is written forwards and the source is read backwards from its end, one
+// 16-bit pixel at a time, so `pDest` pixel `i` = `pSrc` pixel `n - 1 - i`.
+//
+// The original is an `__asm` block: it reads the source a dword (two pixels)
+// at a time from the end and swaps the halves with `ROR EAX, 16`, stores
+// dwords to a dword-aligned destination, first stores one word when the
+// destination is only word-aligned, and finishes with a byte-wise tail for
+// the last `count & 3` bytes. The C++ below is a behavioural equivalent that
+// keeps the asm's two cursors (`s` = ESI, `d` = EDI) so the odd-byte tails,
+// which are not a clean mirror (they only matter for odd byte counts; the
+// callers always pass an even count), behave exactly as in the original.
+//
 // 0x7B6CC0
 void CVidBlitter::FUN_007b6cc0(BYTE* pDest, BYTE* pSrc, int nBytes)
 {
-    // TODO: Incomplete.
+    DWORD nCount = nBytes;
+    DWORD nRemainder;
+    BYTE* s;
+    BYTE* d;
+
+    if (nCount < 4) {
+        s = pSrc - 2;
+        d = pDest - 4;
+        nRemainder = nCount;
+    } else {
+        DWORD nAlign = reinterpret_cast<DWORD>(pDest) & 3;
+        if (nAlign == 1 || nAlign == 3) {
+            // NOTE: The original jumps out of the `__asm` block without
+            // popping the two registers it pushed, so the function returns
+            // with EBX, ESI and EDI of the caller corrupted.
+
+            // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidSoftBlt.cpp
+            // __LINE__: 635
+            UTIL_ASSERT_MSG(FALSE, "Error performing software Blt");
+            return;
+        }
+
+        s = pSrc + nCount - 4;
+        d = pDest - 4;
+
+        if (nAlign == 2) {
+            nCount -= 2;
+            s -= 2;
+            d += 2;
+            *reinterpret_cast<WORD*>(d + 2) = *reinterpret_cast<WORD*>(s + 4);
+        }
+
+        nRemainder = nCount & 3;
+
+        for (DWORD n = nCount >> 2; n != 0; n--) {
+            d += 4;
+            DWORD dw = *reinterpret_cast<DWORD*>(s);
+            s -= 4;
+            *reinterpret_cast<DWORD*>(d) = (dw >> 16) | (dw << 16);
+        }
+    }
+
+    switch (nRemainder) {
+    case 3:
+        d[6] = s[1];
+        // FALLTHROUGH
+    case 2:
+        d[4] = s[2];
+        // FALLTHROUGH
+    case 1:
+        d[5] = s[3];
+        break;
+    }
 }
 
+// NOTE: Colour-keyed version of `FUN_007b6cc0`: copies one row of `nBytes`
+// bytes left-right mirrored (destination forwards, source backwards), and
+// leaves a destination pixel untouched when the source pixel equals the
+// colour key. In the dword loop the first pixel of each pair (low word) is
+// compared with the low word of `dwColorKey` and the second (high word) with
+// the high word; single pixels are compared with the low word. The callers
+// pass the key replicated into both halves.
+//
+// The original is an `__asm` block reading the source a dword at a time
+// from the end (`ROR EAX, 16`, `XOR EAX, EBX` against the key, then a dword,
+// one word or no store), with a word preamble for a word-aligned destination
+// and a byte-wise tail. The C++ below is a behavioural equivalent keeping the
+// asm's cursors (`s` = ESI, `d` = EDI) so that the odd-byte tails behave as in
+// the original; the 3-byte tail is not keyed and writes one byte before the
+// current position.
+//
 // 0x7B6DC0
 void CVidBlitter::FUN_007b6dc0(BYTE* pDest, BYTE* pSrc, int nBytes, DWORD dwColorKey)
 {
-    // TODO: Incomplete.
+    DWORD nCount = nBytes;
+    DWORD nRemainder;
+    WORD wKey = static_cast<WORD>(dwColorKey);
+    BYTE* s;
+    BYTE* d;
+
+    if (nCount < 4) {
+        s = pSrc - 2;
+        d = pDest - 4;
+        nRemainder = nCount;
+    } else {
+        DWORD nAlign = reinterpret_cast<DWORD>(pDest) & 3;
+        if (nAlign == 1 || nAlign == 3) {
+            // NOTE: The original jumps out of the `__asm` block without
+            // popping the two registers it pushed, so the function returns
+            // with EBX, ESI and EDI of the caller corrupted.
+
+            // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidSoftBlt.cpp
+            // __LINE__: 862
+            UTIL_ASSERT_MSG(FALSE, "Error performing software Blt");
+            return;
+        }
+
+        s = pSrc + nCount - 4;
+        d = pDest - 4;
+
+        if (nAlign == 2) {
+            nCount -= 2;
+            s -= 2;
+            d += 2;
+            if (*reinterpret_cast<WORD*>(s + 4) != wKey) {
+                d[2] = s[4];
+                d[3] = s[5];
+            }
+        }
+
+        nRemainder = nCount & 3;
+
+        for (DWORD n = nCount >> 2; n != 0; n--) {
+            d += 4;
+            DWORD dw = *reinterpret_cast<DWORD*>(s);
+            s -= 4;
+            dw = (dw >> 16) | (dw << 16);
+
+            DWORD dwDiff = dw ^ dwColorKey;
+            if (dwDiff != 0) {
+                if ((dwDiff & 0xFFFF) == 0) {
+                    *reinterpret_cast<WORD*>(d + 2) = static_cast<WORD>(dw >> 16);
+                } else if ((dwDiff & 0xFFFF0000) == 0) {
+                    *reinterpret_cast<WORD*>(d) = static_cast<WORD>(dw);
+                } else {
+                    *reinterpret_cast<DWORD*>(d) = dw;
+                }
+            }
+        }
+    }
+
+    switch (nRemainder) {
+    case 2:
+        if (*reinterpret_cast<WORD*>(s + 2) != wKey) {
+            d[4] = s[2];
+            d[5] = s[3];
+        }
+        break;
+    case 3:
+        d[2] = s[3];
+        d[4] = s[2];
+        d[5] = s[3];
+        break;
+    case 1:
+        d[5] = s[3];
+        break;
+    }
 }
 
+// NOTE: Copies one row of `nBytes` bytes forwards and leaves a destination
+// pixel untouched when the source pixel equals the colour key. In the dword
+// loop the first pixel of each pair (low word) is compared with the low word
+// of `dwColorKey` and the second (high word) with the high word; single
+// pixels are compared with the low word. The callers pass the key replicated
+// into both halves.
+//
+// The original is an `__asm` block reading a dword (two pixels) at a time
+// (`XOR EAX, EBX` against the key, then a dword, one word or no store), with
+// a word preamble for a word-aligned destination and a byte-wise tail. The
+// C++ below is a behavioural equivalent keeping the asm's cursors (`s` = ESI,
+// `d` = EDI) so that the odd-byte tails behave as in the original; the 1- and
+// 3-byte tails are not keyed and read and write past the current position.
+//
 // 0x7B6F20
 void CVidBlitter::FUN_007b6f20(BYTE* pDest, BYTE* pSrc, int nBytes, DWORD dwColorKey)
 {
-    // TODO: Incomplete.
+    DWORD nCount = nBytes;
+    DWORD nRemainder;
+    WORD wKey = static_cast<WORD>(dwColorKey);
+    BYTE* s = pSrc;
+    BYTE* d = pDest;
+
+    if (nCount < 4) {
+        nRemainder = nCount;
+    } else {
+        DWORD nAlign = reinterpret_cast<DWORD>(pDest) & 3;
+        if (nAlign == 1 || nAlign == 3) {
+            // NOTE: The original jumps out of the `__asm` block without
+            // popping the two registers it pushed, so the function returns
+            // with EBX, ESI and EDI of the caller corrupted.
+
+            // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidSoftBlt.cpp
+            // __LINE__: 1091
+            UTIL_ASSERT_MSG(FALSE, "Error performing software Blt");
+            return;
+        }
+
+        if (nAlign == 2) {
+            nCount -= 2;
+            if (*reinterpret_cast<WORD*>(s) != wKey) {
+                d[0] = s[0];
+                d[1] = s[1];
+            }
+            s += 2;
+            d += 2;
+        }
+
+        nRemainder = nCount & 3;
+
+        for (DWORD n = nCount >> 2; n != 0; n--) {
+            DWORD dw = *reinterpret_cast<DWORD*>(s);
+            s += 4;
+
+            DWORD dwDiff = dw ^ dwColorKey;
+            if (dwDiff != 0) {
+                if ((dwDiff & 0xFFFF) == 0) {
+                    *reinterpret_cast<WORD*>(d + 2) = static_cast<WORD>(dw >> 16);
+                } else if ((dwDiff & 0xFFFF0000) == 0) {
+                    *reinterpret_cast<WORD*>(d) = static_cast<WORD>(dw);
+                } else {
+                    *reinterpret_cast<DWORD*>(d) = dw;
+                }
+            }
+
+            d += 4;
+        }
+    }
+
+    switch (nRemainder) {
+    case 2:
+        if (*reinterpret_cast<WORD*>(s) != wKey) {
+            d[0] = s[0];
+            d[1] = s[1];
+        }
+        break;
+    case 3:
+        d[2] = s[3];
+        d[4] = s[2];
+        d[5] = s[3];
+        break;
+    case 1:
+        d[5] = s[3];
+        break;
+    }
 }
 
+// NOTE: Colour fill of `lpDestRect` (the whole surface when NULL) with the
+// low word of `lpDDBltFx->dwFillColor`. The original fills each row with
+// `REP STOSD` of the colour replicated into both halves of a dword, after
+// one word store when the row start is not dword-aligned and with one word
+// store for an odd pixel count. The C++ below is a behavioural equivalent.
+//
 // 0x7B7070
 HRESULT CVidBlitter::FUN_007b7070(IDirectDrawSurface* lpDDSurface, LPRECT lpDestRect, LPDDBLTFX lpDDBltFx)
 {
-    // TODO: Incomplete.
+    DDSURFACEDESC ddsd;
+    RECT rect;
+    DWORD nWidth;
+    int nHeight;
+    HRESULT hr;
 
-    return S_OK;
+    if (lpDestRect == NULL) {
+        ddsd.dwSize = sizeof(DDSURFACEDESC);
+        lpDDSurface->GetSurfaceDesc(&ddsd);
+        nWidth = ddsd.dwWidth;
+        nHeight = ddsd.dwHeight;
+        SetRect(&rect, 0, 0, ddsd.dwWidth, ddsd.dwHeight);
+    } else {
+        nWidth = lpDestRect->right - lpDestRect->left;
+        nHeight = lpDestRect->bottom - lpDestRect->top;
+        CopyRect(&rect, lpDestRect);
+    }
+
+    while (1) {
+        m_ddsdDest.dwSize = sizeof(DDSURFACEDESC);
+        hr = lpDDSurface->Lock(&rect, &m_ddsdDest, DDLOCK_WAIT | DDLOCK_WRITEONLY, NULL);
+        if (hr == DDERR_SURFACELOST) {
+            // NOTE: Uninline.
+            g_pChitin->GetCurrentVideoMode()->RestoreSurfaces();
+            continue;
+        }
+
+        if (hr != DDERR_SURFACEBUSY) {
+            break;
+        }
+    }
+
+    if (hr != DD_OK) {
+        switch (hr) {
+        case E_OUTOFMEMORY:
+            return DDERR_EXCEPTION;
+        case E_INVALIDARG:
+        case DDERR_INVALIDOBJECT:
+        case DDERR_SURFACELOST:
+        case DDERR_WASSTILLDRAWING:
+            return hr;
+        default:
+            return E_FAIL;
+        }
+    }
+
+    int nPitch = m_ddsdDest.lPitch >> 1;
+    m_pDestSurface = reinterpret_cast<BYTE*>(m_ddsdDest.lpSurface);
+
+    for (int y = nHeight; y > 0; y--) {
+        DWORD dwColor = static_cast<WORD>(lpDDBltFx->dwFillColor);
+        dwColor = (dwColor << 16) + dwColor;
+
+        BYTE* pDest = m_pDestSurface;
+        DWORD nCount = nWidth;
+
+        if ((reinterpret_cast<DWORD>(pDest) & 3) != 0) {
+            // NOTE: With a zero width this makes the count 0xFFFFFFFF and the
+            // following `REP STOSD` runs away, as in the original.
+            *reinterpret_cast<WORD*>(pDest) = static_cast<WORD>(dwColor);
+            nCount--;
+            pDest += 2;
+        }
+
+        for (DWORD n = nCount >> 1; n != 0; n--) {
+            *reinterpret_cast<DWORD*>(pDest) = dwColor;
+            pDest += 4;
+        }
+
+        if ((nCount & 1) != 0) {
+            *reinterpret_cast<WORD*>(pDest) = static_cast<WORD>(dwColor);
+        }
+
+        m_pDestSurface += nPitch * 2;
+    }
+
+    hr = lpDDSurface->Unlock(m_ddsdDest.lpSurface);
+    switch (hr) {
+    case DD_OK:
+        return DD_OK;
+    case E_OUTOFMEMORY:
+        return DDERR_EXCEPTION;
+    case E_INVALIDARG:
+    case DDERR_INVALIDOBJECT:
+    case DDERR_SURFACEBUSY:
+    case DDERR_SURFACELOST:
+    case DDERR_WASSTILLDRAWING:
+        return hr;
+    default:
+        return E_FAIL;
+    }
 }
 
 // 0x7B7280
