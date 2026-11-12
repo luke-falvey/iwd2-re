@@ -116,6 +116,8 @@ public:
     BOOL IsDoneButtonClickable(CGameSprite* pSprite);
     void OnDoneButtonClick();
     BOOL OnCancelButtonClick();
+    void sub_5E87E0(CGameSprite* pSprite);
+    void sub_5F7B00(CGameSprite* pSprite);
     void sub_5E4560();
     BOOL sub_5E4E80(CGameSprite* pSprite);
     BOOL sub_5E0FD0(DWORD dwPopupId, CGameSprite* pSprite);

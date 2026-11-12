@@ -3684,7 +3684,115 @@ void CScreenCharacter::ResetPopupPanel(DWORD dwPanelId, CGameSprite* pSprite, in
 // 0x5E0B20
 void CScreenCharacter::UpdatePopupPanel(DWORD dwPanelId, CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
+    CUIPanel* pPanel;
+    CUIControlButton* pButton;
+
+    switch (dwPanelId) {
+    case 4:
+        sub_5DB200(pSprite);
+        break;
+    case 6:
+        UpdateSpecializationPanel(pSprite);
+        break;
+    case 7:
+        UpdateAbilitiesPanel(pSprite);
+        break;
+    case 8:
+        UpdateSpellsPanel(pSprite);
+        break;
+    case 9:
+    case 10:
+    case 50:
+        break;
+    case 11:
+        pPanel = m_cUIManager.GetPanel(11);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 10006
+        UTIL_ASSERT(pPanel != NULL);
+
+        if (m_pCurrentScrollBar == NULL) {
+            m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(3));
+        }
+
+        pButton = static_cast<CUIControlButton*>(pPanel->GetControl(5));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 10015
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetEnabled(IsDoneButtonClickable(pSprite));
+        break;
+    case 12:
+        m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(m_cUIManager.GetPanel(12)->GetControl(1));
+        break;
+    case 13:
+        pPanel = m_cUIManager.GetPanel(13);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 3541
+        UTIL_ASSERT(pPanel != NULL);
+
+        m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(1));
+
+        pButton = static_cast<CUIControlButton*>(pPanel->GetControl(4));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 3547
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetEnabled(IsDoneButtonClickable(pSprite));
+        break;
+    case 16:
+        UpdateHatedRacePanel(pSprite);
+        break;
+    case 17:
+        UpdateCustomizePanel(pSprite);
+        break;
+    case 18:
+        UpdateAppearancePanel(pSprite);
+        break;
+    case 19:
+        UpdateCustomPortraitsPanel(pSprite);
+        break;
+    case 20:
+        pPanel = m_cUIManager.GetPanel(20);
+
+        // NOTE: The original stores the scroll bar before testing the panel.
+        m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(6));
+
+        if (pPanel != NULL) {
+            static_cast<CUIControlButton*>(pPanel->GetControl(7))->SetEnabled(m_nCustomSoundSetIndex >= 0);
+            static_cast<CUIControlButton*>(pPanel->GetControl(10))->SetEnabled(IsDoneButtonClickable(pSprite));
+        }
+        break;
+    case 51:
+        m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(m_cUIManager.GetPanel(51)->GetControl(3));
+        break;
+    case 52:
+        m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(m_cUIManager.GetPanel(52)->GetControl(1));
+        break;
+    case 53:
+        m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(m_cUIManager.GetPanel(53)->GetControl(1));
+        break;
+    case 54:
+        UpdateClassSelectionPanel(pSprite);
+        break;
+    case 55:
+        sub_5F7B00(pSprite);
+        break;
+    case 56:
+        sub_5E87E0(pSprite);
+        break;
+    case 57:
+        sub_5DAF30();
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 6688
+        UTIL_ASSERT(FALSE);
+        break;
+    }
 }
 
 // 0x5E0E50
@@ -5527,6 +5635,12 @@ void CScreenCharacter::UpdateCharacterStatus(LONG nCharacterId)
     }
 }
 
+// 0x5E87E0
+void CScreenCharacter::sub_5E87E0(CGameSprite* pSprite)
+{
+    // TODO: Incomplete.
+}
+
 // 0x5E8B70
 void CScreenCharacter::UpdateClassSelectionPanel(CGameSprite* pSprite)
 {
@@ -6244,6 +6358,12 @@ void CScreenCharacter::ResetSkillsPanel(CUIPanel* pPanel, CGameSprite* pSprite, 
 
         nSlot++;
     }
+}
+
+// 0x5F7B00
+void CScreenCharacter::sub_5F7B00(CGameSprite* pSprite)
+{
+    // TODO: Incomplete.
 }
 
 // 0x5F89B0
