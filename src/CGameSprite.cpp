@@ -24193,7 +24193,310 @@ SHORT CGameSprite::Spell(CGameAIBase* pTarget)
         return ACTION_ERROR;
     }
 
-    // TODO: Incomplete. 0x741AF8-0x7427B3 (casting and release).
+    if (!m_bStartedCasting) {
+        sub_755A70(m_curSpell, pAbility, pTarget->GetPos());
+
+        m_bStartedCasting = TRUE;
+
+        CAIObjectType enemyType = GetAIType().GetEnemyOf();
+
+        LONG nNearest = m_pArea->GetNearest(m_id,
+            enemyType,
+            24,
+            GetTerrainTable(),
+            FALSE,
+            GetCanSeeInvisible(),
+            FALSE,
+            FALSE,
+            FALSE);
+
+        if (nNearest != CGameObjectArray::INVALID_INDEX) {
+            INT nLevel = m_curSpell->GetLevel();
+
+            if (field_9D15 != 1) {
+                if (field_9D14 == 0) {
+                    field_9D14 = 1;
+
+                    INT nBonus = 0;
+                    if (GetFeatValue(CGAMESPRITE_FEAT_COMBAT_CASTING)) {
+                        nBonus = 4;
+                    }
+
+                    INT nDC = nLevel + 10;
+                    INT nRoll = CUtil::UtilRandInt(20, m_derivedStats.m_nLuck) + 1;
+
+                    // NOTE: The skill is sign extended.
+                    INT nSkill = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_CONCENTRATION]);
+                    if ((m_baseStats.field_2FB & 0x1) != 0) {
+                        nSkill += 10;
+                    }
+
+                    FeedBack(0x53, nRoll, nSkill - nBonus, nBonus, 0x9BA2, 0, nLevel);
+
+                    field_9D15 = nSkill + nRoll < nDC;
+                }
+            }
+
+            if (field_9D15 == 1) {
+                FeedBack(0x54, 0, 0, 0, -1, 0, 0);
+                m_curSpell->Release();
+                return ACTION_DONE;
+            }
+        }
+
+        if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) == -1) {
+            CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+            INT nCount = pGame->m_nCharacters;
+
+            for (INT nIndex = 0; nIndex < nCount; nIndex++) {
+                // NOTE: Uninline.
+                LONG nCharacterId = pGame->GetCharacterId(static_cast<SHORT>(nIndex));
+
+                CGameSprite* pMember;
+                BYTE rc;
+                do {
+                    rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pMember),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    // NOTE: The skill is sign extended.
+                    INT nSpellcraft = static_cast<char>(pMember->m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_SPELLCRAFT]);
+                    INT nSpellcraftBonus = pMember->GetSkillBonus(CGAMESPRITE_SKILL_SPELLCRAFT);
+                    DWORD dwState = pMember->m_derivedStats.m_generalState & (STATE_SLEEPING | STATE_HELPLESS | STATE_DEAD);
+
+                    CPoint& ptMember = pMember->GetPos();
+                    LONG nMemberX = ptMember.x;
+                    LONG nMemberY = ptMember.y;
+
+                    // NOTE: Releases the share of the nearest enemy, not the
+                    // party member that was acquired above.
+                    pGame->GetObjectArray()->ReleaseShare(nNearest,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+
+                    INT nVisualRange = GetVisualRange();
+                    nVisualRange *= GetVisualRange();
+
+                    CPoint& ptMe = GetPos();
+                    INT dx = nMemberX - ptMe.x;
+                    INT dy = nMemberY - ptMe.y;
+                    INT nDistanceSq = dx * dx + dy * dy;
+
+                    if (dwState == 0 && nSpellcraft > 0 && nVisualRange >= nDistanceSq) {
+                        INT nRand = rand() % 20;
+
+                        // NOTE: The original adds 15 to the spell level without
+                        // sign extending it here.
+                        FeedBack(0x53,
+                            nSpellcraft + nRand + 1,
+                            m_curSpell->GetLevel() + 15,
+                            nSpellcraftBonus,
+                            0x998A,
+                            0,
+                            0);
+
+                        if (nSpellcraft + nRand + 1 >= m_curSpell->GetLevel() + 15) {
+                            if (nSpellType == 4) {
+                                FeedBack(CGameSprite::FEEDBACK_SPELL, 0, 0, 0, m_curSpell->GetGenericName(), 0, 0);
+                            } else {
+                                FeedBack(CGameSprite::FEEDBACK_SPELL, 1, 0, 0, m_curSpell->GetGenericName(), 0, 0);
+                            }
+
+                            CMessage* message = new CMessageFloatText(m_id, m_id, m_curSpell->GetGenericName(), TRUE);
+                            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    INT nMentalSpeed = m_derivedStats.m_nMentalSpeed;
+
+    INT nAbilitySpeed = pAbility->speedFactor - nMentalSpeed;
+    if (nAbilitySpeed < 0) {
+        nAbilitySpeed = 0;
+    }
+
+    INT nSpeed = m_speedFactor - nMentalSpeed;
+    if (nSpeed < 0) {
+        nSpeed = 0;
+    }
+
+    m_speedFactor = static_cast<SHORT>(nSpeed);
+
+    INT nCastTime = (static_cast<SHORT>(nAbilitySpeed) * 100) / 10;
+
+    if (m_castCounter < nCastTime) {
+        if (field_9D15 == 1
+            || (field_5582 != 0 && m_curSpell->GetCasterType() != 4)) {
+            INT nDisrupt = field_5582;
+            INT nLevel = m_curSpell->GetLevel();
+
+            if (field_9D15 != 1) {
+                if (field_9D14 == 0) {
+                    field_9D14 = 1;
+
+                    INT nBonus = 0;
+                    if (GetFeatValue(CGAMESPRITE_FEAT_COMBAT_CASTING)) {
+                        nBonus = 4;
+                    }
+
+                    INT nDC = nLevel + nDisrupt + 10;
+                    INT nRoll = CUtil::UtilRandInt(20, m_derivedStats.m_nLuck) + 1;
+
+                    // NOTE: The skill is sign extended.
+                    INT nSkill = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_CONCENTRATION]);
+                    if ((m_baseStats.field_2FB & 0x1) != 0) {
+                        nSkill += 10;
+                    }
+
+                    FeedBack(0x53, nRoll, nSkill - nBonus, nBonus, 0x9BA2, nDisrupt, nLevel);
+
+                    field_9D15 = nSkill + nRoll < nDC;
+                }
+            }
+
+            if (field_9D15 == 1) {
+                FeedBack(0x37, 0, 0, 0, -1, 0, 0);
+                m_curSpell->Release();
+                return ACTION_DONE;
+            }
+        } else {
+            if (nSequence != CGameSprite::SEQ_CONJURE && m_castCounter < nCastTime - 4) {
+                CMessage* message = new CMessageSetSequence(CGameSprite::SEQ_CONJURE, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            } else if (nSequence != CGameSprite::SEQ_CAST && m_castCounter >= nCastTime - 4) {
+                CMessage* message = new CMessageSetSequence(CGameSprite::SEQ_CAST, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                ApplyCastingEffectPost(m_curSpell, pAbility);
+            }
+        }
+
+        m_curSpell->Release();
+        return ACTION_NORMAL;
+    }
+
+    INT nFailRoll = rand() % 100;
+    BOOL bFailed = FALSE;
+
+    nSpellType = m_curSpell->GetCasterType();
+    if (nSpellType != 4) {
+        switch (nClass) {
+        case CAIOBJECTTYPE_C_CLERIC:
+        case CAIOBJECTTYPE_C_DRUID:
+        case CAIOBJECTTYPE_C_PALADIN:
+        case CAIOBJECTTYPE_C_RANGER:
+            nSpellType = 2;
+            if (CheckDivineFailure(nFailRoll)) {
+                FeedBack(0x3D, 0, 0, 0, -1, 0, 0);
+                bFailed = TRUE;
+            }
+            break;
+        default:
+            nSpellType = 1;
+            if (CheckAranceFailure(nFailRoll)) {
+                FeedBack(0x3D, 0, 0, 0, -1, 0, 0);
+                bFailed = TRUE;
+            }
+            break;
+        }
+    }
+
+    if ((m_curSpell->GetItemFlags() & 0x2000) != 0
+        && (m_pArea->GetHeader()->m_areaType & 0x1) == 0) {
+        FeedBack(0x16, 0, 0, 0, -1, 0, 0);
+        bFailed = TRUE;
+    }
+
+    if (field_9D15 == 1
+        || (field_5582 != 0 && m_curSpell->GetCasterType() != 4)) {
+        INT nDisrupt = field_5582;
+        INT nLevel = m_curSpell->GetLevel();
+
+        if (field_9D15 != 1) {
+            if (field_9D14 == 0) {
+                field_9D14 = 1;
+
+                INT nBonus = 0;
+                if (GetFeatValue(CGAMESPRITE_FEAT_COMBAT_CASTING)) {
+                    nBonus = 4;
+                }
+
+                INT nDC = nLevel + nDisrupt + 10;
+                INT nRoll = CUtil::UtilRandInt(20, m_derivedStats.m_nLuck) + 1;
+
+                // NOTE: The skill is sign extended.
+                INT nSkill = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_CONCENTRATION]);
+                if ((m_baseStats.field_2FB & 0x1) != 0) {
+                    nSkill += 10;
+                }
+
+                FeedBack(0x53, nRoll, nSkill - nBonus, nBonus, 0x9BA2, nDisrupt, nLevel);
+
+                field_9D15 = nSkill + nRoll < nDC;
+            }
+        }
+
+        if (field_9D15 == 1) {
+            FeedBack(0x37, 0, 0, 0, -1, 0, 0);
+            m_curSpell->Release();
+            return ACTION_DONE;
+        }
+    }
+
+    if (bFailed) {
+        m_curSpell->Release();
+        return ACTION_DONE;
+    }
+
+    if (m_derivedStats.m_spellStates[SPLSTATE_WEB]
+        && m_curSpell->GetCasterType() != 4) {
+        INT nDisrupt = field_5582;
+        INT nLevel = m_curSpell->GetLevel();
+
+        INT nBonus = 0;
+        if (GetFeatValue(CGAMESPRITE_FEAT_COMBAT_CASTING)) {
+            nBonus = 4;
+        }
+
+        INT nDC = nLevel + nDisrupt + 10;
+        INT nRoll = CUtil::UtilRandInt(20, m_derivedStats.m_nLuck) + 1;
+
+        // NOTE: The skill is sign extended.
+        INT nSkill = static_cast<char>(m_derivedStats.m_nSkills[CGAMESPRITE_SKILL_CONCENTRATION]);
+        if ((m_baseStats.field_2FB & 0x1) != 0) {
+            nSkill += 10;
+        }
+
+        FeedBack(0x53, nRoll, nSkill - nBonus, nBonus, 0x9BA2, nDisrupt, nLevel);
+
+        // NOTE: Unlike the checks above, the spell is disrupted when the roll
+        // is not below the DC.
+        if (nSkill + nRoll >= nDC) {
+            FeedBack(0x37, 0, 0, 0, -1, 0, 0);
+            m_curSpell->Release();
+            return ACTION_DONE;
+        }
+    }
+
+    if ((m_curSpell->GetItemFlags() & 0x2000) != 0
+        && (m_pArea->GetHeader()->m_areaType & 0x1) == 0) {
+        FeedBack(0x16, 0, 0, 0, -1, 0, 0);
+
+        m_curSpell->Release();
+        AutoPause(0x40);
+        AutoPause(0x400);
+        return ACTION_DONE;
+    }
+
+    // TODO: Incomplete. 0x742423-0x7427B3 (release).
 
     return ACTION_ERROR;
 }
