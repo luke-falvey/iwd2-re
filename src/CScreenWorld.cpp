@@ -29,6 +29,9 @@
 // 0x85A1EC
 const LONG CScreenWorld::BORED_TIME = 3000;
 
+// 0x85A240
+const ULONG CScreenWorld::LEAVE_AREA_LUA_PANIC_DELAY = 90;
+
 // 0x8F85B8
 BOOL CScreenWorld::dword_8F85B8;
 

@@ -22,6 +22,7 @@ class CUIControlTextDisplay;
 class CScreenWorld : public CBaldurEngine {
 public:
     static const LONG BORED_TIME;
+    static const ULONG LEAVE_AREA_LUA_PANIC_DELAY;
     static BOOL dword_8F85B8;
     static int dword_8F85BC;
 

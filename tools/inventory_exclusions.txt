@@ -173,3 +173,19 @@
 # Deleting-destructor thunk of the same iostream (this-0x58 adjustor): calls 0x582BA0, 0x582780,
 # operator_delete on flag bit 0.
 0x583500
+# CResHelper<CStoreFile, 1014>::SetResRef (the repo template in CRes.h; resource
+# type 0x3F6 passed to CDimm::GetResObject, same body as the CResCell instance).
+0x43E190
+
+# CMessageMoveGlobal scalar deleting destructor (implicit): calls the implicit
+# destructor 0x4670C0 (destroys the CString at +0xC) and deletes this when the
+# flag argument has bit 0 set. Slot 0 of the vtable at 0x848CAC.
+0x4670A0
+
+# CMessageAnimationChange scalar deleting destructor (implicit): calls ~CMessageAnimationChange
+# (0x40A100) and deletes this when the flag argument has bit 0 set.
+0x4B2340
+
+# std::bitset<N> range check (library): builds the exception object for
+# "invalid bitset<N> position" and throws it with __CxxThrowException.
+0x4C5790
