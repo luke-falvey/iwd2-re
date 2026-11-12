@@ -8458,9 +8458,1533 @@ void CScreenCharacter::sub_5EFCC0(FILE* pFile, CItem* pItem, BYTE a3, BYTE a4)
 // 0x5EFFD0
 CString CScreenCharacter::sub_5EFFD0(BOOLEAN& bFlag)
 {
-    // TODO: Incomplete.
-    bFlag = FALSE;
-    return CString();
+    // 0x5EFFD0 - 0x5F0391: Prologue, character lookup, file name, file open.
+    LONG nCharacterId = g_pBaldurChitin->m_pObjectGame->GetCharacterId(m_nSelectedCharacter);
+
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->m_pObjectGame->m_cObjectArray.GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        bFlag = FALSE;
+        return CString();
+    }
+
+    CCreatureFileHeader* pBStats = pSprite->GetBaseStats();
+    CAIObjectType* pTypeAI = &pSprite->m_startTypeAI;
+    CDerivedStats* pDStats = pSprite->GetDerivedStats();
+    CInfGame* pGame = g_pBaldurChitin->m_pObjectGame;
+    const CRuleTables& rule = pGame->GetRuleTables();
+
+    CString sName(pSprite->GetName());
+
+    if (pBStats->m_name != 0xFFFFFFFF) {
+        sName = FetchString(pBStats->m_name);
+    }
+
+    for (INT nIndex = 0; nIndex < sName.GetLength(); nIndex++) {
+        char ch = sName[nIndex];
+        if (ch == '\\'
+            || ch == '/'
+            || ch == ':'
+            || ch == '*'
+            || ch == '?'
+            || ch == '<'
+            || ch == '>'
+            || ch == '|') {
+            sName.SetAt(nIndex, '_');
+        }
+    }
+
+    FILE* pFile = fopen(g_pBaldurChitin->m_pObjectGame->GetDirSaveRoot() + SAVE_NAME + "\\" + sName + ".txt",
+        "wt");
+
+    CString sResult = CString("...\\") + SAVE_NAME + "\\" + sName + ".txt ";
+
+    if (pFile == NULL) {
+        bFlag = FALSE;
+        g_pBaldurChitin->m_pObjectGame->m_cObjectArray.ReleaseShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return sResult;
+    }
+
+    // 0x5F0391 - 0x5F0454: Name.
+    sub_5EF920(pFile, FetchString(1047), sName, 0);
+
+    fputs("\n", pFile);
+
+    // 0x5F0454 - 0x5F057D: Gender.
+    DWORD nGenderStrRef;
+    switch (pTypeAI->m_nGender) {
+    case 1:
+        nGenderStrRef = 1050;
+        break;
+    case 2:
+        nGenderStrRef = 1051;
+        break;
+    case 3:
+        nGenderStrRef = 8260;
+        break;
+    case 4:
+        nGenderStrRef = 8261;
+        break;
+    case 5:
+        nGenderStrRef = 8262;
+        break;
+    default:
+        nGenderStrRef = -1;
+        break;
+    }
+
+    sub_5EF920(pFile, FetchString(12135), FetchString(nGenderStrRef), 0);
+
+    // 0x5F057D - 0x5F0653: Race.
+    CString sRace;
+    rule.GetRaceStringMixed(pTypeAI->m_nRace, sRace, pTypeAI->m_nSubRace);
+
+    sub_5EF920(pFile, FetchString(1048), sRace, 0);
+
+    // 0x5F0653 - 0x5F07A4: Alignment.
+    DWORD nAlignmentStrRef;
+    switch (pTypeAI->m_nAlignment) {
+    case 0:
+        nAlignmentStrRef = -1;
+        break;
+    case CAIOBJECTTYPE_LAWFUL_GOOD:
+        nAlignmentStrRef = 1102;
+        break;
+    case CAIOBJECTTYPE_LAWFUL_NEUTRAL:
+        nAlignmentStrRef = 1104;
+        break;
+    case CAIOBJECTTYPE_LAWFUL_EVIL:
+        nAlignmentStrRef = 1103;
+        break;
+    case CAIOBJECTTYPE_NEUTRAL_GOOD:
+        nAlignmentStrRef = 1105;
+        break;
+    case CAIOBJECTTYPE_NEUTRAL:
+        nAlignmentStrRef = 1106;
+        break;
+    case CAIOBJECTTYPE_NEUTRAL_EVIL:
+        nAlignmentStrRef = 1107;
+        break;
+    case CAIOBJECTTYPE_CHAOTIC_GOOD:
+        nAlignmentStrRef = 1108;
+        break;
+    case CAIOBJECTTYPE_CHAOTIC_NEUTRAL:
+        nAlignmentStrRef = 1109;
+        break;
+    case CAIOBJECTTYPE_CHAOTIC_EVIL:
+        nAlignmentStrRef = 1110;
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 15582
+        UTIL_ASSERT(FALSE);
+
+        // NOTE: `nAlignmentStrRef` is left uninitialized on this path.
+        break;
+    }
+
+    sub_5EF920(pFile, FetchString(1049), FetchString(nAlignmentStrRef), 0);
+
+    // 0x5F07A4 - 0x5F0BB9: Ability scores.
+    fputs("\n", pFile);
+
+    fprintf(pFile, "%s:\n", (LPCSTR)FetchString(17088));
+
+    sub_5EF9E0(pFile, FetchString(1145), pDStats->m_nSTR, 1);
+    sub_5EF9E0(pFile, FetchString(1151), pDStats->m_nDEX, 1);
+    sub_5EF9E0(pFile, FetchString(1178), pDStats->m_nCON, 1);
+    sub_5EF9E0(pFile, FetchString(1179), pDStats->m_nINT, 1);
+    sub_5EF9E0(pFile, FetchString(1180), pDStats->m_nWIS, 1);
+    sub_5EF9E0(pFile, FetchString(1181), pDStats->m_nCHR, 1);
+
+    fputs("\n", pFile);
+
+    // 0x5F0BB9 - 0x5F0C73: Armor class.
+    sub_5EF9E0(pFile, FetchString(10339), pSprite->GetAC(), 0);
+
+    // 0x5F0C73 - 0x5F0D21: Hit points.
+    //
+    // NOTE: Inlined helper (same shape as `sub_5EF920`) with a two value
+    // format.
+    {
+        SHORT nMaxHitPoints = pDStats->m_nMaxHitPoints;
+        SHORT nHitPoints = pBStats->m_hitPoints;
+
+        CString sNameText;
+        CString sValueText;
+
+        sNameText.Format("%s", (LPCSTR)FetchString(30977));
+        sValueText.Format("%d/%d", nHitPoints, nMaxHitPoints);
+
+        fputs(sub_5EF760(sNameText, sValueText, 0), pFile);
+    }
+
+    // 0x5F0D21 - 0x5F0DC9: Current effects and dead state.
+    if (pSprite->m_portraitIcons.GetCount() > 0) {
+        CString sDescription;
+
+        POSITION pos = pSprite->m_portraitIcons.GetHeadPosition();
+        while (pos != NULL) {
+            INT nState = reinterpret_cast<int>(pSprite->m_portraitIcons.GetAt(pos));
+            rule.GetCharacterStateDescription(nState, sDescription);
+            fprintf(pFile, "%s- %s\n", szLineIndent, (LPCSTR)sDescription);
+            pSprite->m_portraitIcons.GetNext(pos);
+        }
+    }
+
+    if ((pDStats->m_generalState & STATE_DEAD) != 0) {
+        fprintf(pFile, "%s- %s\n", szLineIndent, (LPCSTR)FetchString(11829)); // "DEAD"
+    }
+
+    // 0x5F0DC9 - 0x5F1074: Active feats.
+    fputs("\n", pFile);
+
+    BOOLEAN bHasActiveFeats = FALSE;
+
+    if (pSprite->sub_763150(CGAMESPRITE_FEAT_ARTERIAL_STRIKE)
+        && pDStats->m_spellStates[SPLSTATE_FEAT_ARTERIAL_STRIKE]) {
+        bHasActiveFeats = TRUE;
+        fprintf(pFile,
+            "%s: %s",
+            (LPCSTR)FetchString(39823),
+            (LPCSTR)FetchString(35774)); // "Arterial Strike"
+    }
+
+    if (pSprite->sub_763150(CGAMESPRITE_FEAT_EXPERTISE)
+        && pSprite->sub_726270(CGAMESPRITE_FEAT_EXPERTISE) > 0) {
+        bHasActiveFeats = TRUE;
+        fprintf(pFile,
+            "%s: %s %d",
+            (LPCSTR)FetchString(39823),
+            (LPCSTR)FetchString(35785), // "Expertise"
+            pSprite->sub_726270(CGAMESPRITE_FEAT_EXPERTISE));
+    }
+
+    if (pSprite->sub_763150(CGAMESPRITE_FEAT_HAMSTRING)
+        && pDStats->m_spellStates[SPLSTATE_FEAT_HAMSTRING]) {
+        bHasActiveFeats = TRUE;
+        fprintf(pFile,
+            "%s: %s",
+            (LPCSTR)FetchString(39823),
+            (LPCSTR)FetchString(35787)); // "Hamstring"
+    }
+
+    if (pSprite->sub_763150(CGAMESPRITE_FEAT_POWER_ATTACK)
+        && pSprite->sub_726270(CGAMESPRITE_FEAT_POWER_ATTACK) > 0) {
+        bHasActiveFeats = TRUE;
+        fprintf(pFile,
+            "%s: %s %d",
+            (LPCSTR)FetchString(39823),
+            (LPCSTR)FetchString(35794), // "Power Attack"
+            pSprite->sub_726270(CGAMESPRITE_FEAT_POWER_ATTACK));
+    }
+
+    if (pSprite->sub_763150(CGAMESPRITE_FEAT_RAPID_SHOT)
+        && pDStats->m_spellStates[SPLSTATE_FEAT_RAPID_SHOT]) {
+        bHasActiveFeats = TRUE;
+        fprintf(pFile,
+            "%s: %s",
+            (LPCSTR)FetchString(39823),
+            (LPCSTR)FetchString(35796)); // "Rapid Shot"
+    }
+
+    if (bHasActiveFeats == TRUE) {
+        fputs("\n", pFile);
+    }
+
+    // 0x5F1074 - 0x5F12C6: Class levels.
+    INT aClasses[CAIOBJECT_CLASS_MAX];
+    INT nClasses = 0;
+
+    for (INT iClassType = 1; iClassType <= CAIOBJECT_CLASS_MAX; iClassType++) {
+        if (pDStats->GetClassLevel(iClassType) != 0) {
+            aClasses[nClasses++] = iClassType;
+        }
+    }
+
+    if (nClasses > 1) {
+        fprintf(pFile, "%s:\n", (LPCSTR)FetchString(19721));
+    } else {
+        fprintf(pFile, "%s:\n", (LPCSTR)FetchString(12136));
+    }
+
+    for (INT nIndex = 0; nIndex < nClasses; nIndex++) {
+        INT nClass = aClasses[nIndex];
+        INT nLevel = pDStats->GetClassLevel(nClass);
+
+        CString sClass;
+        rule.GetClassStringMixed(nClass,
+            pBStats->m_specialization,
+            pBStats->m_flags,
+            sClass,
+            pTypeAI->m_nGender != 2);
+
+        sub_5EF920(pFile, FetchString(12136), sClass, 1);
+        sub_5EF9E0(pFile, FetchString(17090), nLevel, 1);
+    }
+
+    // 0x5F12C6 - 0x5F1370: Experience.
+    sub_5EF9E0(pFile, FetchString(17089), pDStats->GetXP(), 1);
+
+    // 0x5F1370 - 0x5F2518: Attack bonuses.
+    fputs("\n", pFile);
+
+    INT nBaseAttackBonus;
+    INT nAttacks;
+    INT nStep;
+    rule.sub_546B60(pSprite, nBaseAttackBonus, nAttacks, nStep, TRUE);
+
+    CItem* curWeapon = NULL;
+    CItem* curWeaponSecond = NULL;
+    const ITEM_ABILITY* curAttackSecond = NULL;
+
+    if (&pSprite->m_equipment != NULL) {
+        curWeapon = pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon];
+        curWeaponSecond = pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())];
+
+        if (pSprite->m_equipment.m_selectedWeapon == 42
+            || (curWeaponSecond != NULL
+                && (curWeaponSecond->GetItemType() == 47
+                    || curWeaponSecond->GetItemType() == 53
+                    || curWeaponSecond->GetItemType() == 49
+                    || curWeaponSecond->GetItemType() == 41))) {
+            curWeaponSecond = NULL;
+        }
+
+        if (curWeapon == NULL) {
+            pSprite->SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 0, 1);
+
+            curWeapon = pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon];
+        }
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 16140
+    UTIL_ASSERT(curWeapon != NULL);
+
+    SHORT nOffA = 0;
+    SHORT nOffB = 0;
+    SHORT nOffC = 0;
+
+    INT n7240A0 = pSprite->sub_7240A0();
+    INT n724170 = pSprite->sub_724170();
+
+    if (curWeapon != NULL) {
+        curWeapon->Demand();
+    }
+
+    const ITEM_ABILITY* curAttack = curWeapon->GetAbility(pSprite->m_equipment.m_selectedWeaponAbility);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 16160
+    UTIL_ASSERT(curAttack != NULL);
+
+    SHORT nMainA = pSprite->sub_73CA20(curWeapon, curAttack);
+    nMainA += pSprite->sub_73CAE0(curWeapon, curAttack);
+    nMainA += pSprite->sub_73CC40(curWeapon, curAttack);
+
+    SHORT nMainB = pSprite->sub_73CF10(curWeapon, curAttack);
+    nMainB += pSprite->sub_73D080(FALSE);
+
+    SHORT nMainC = pSprite->sub_73CB10(curWeapon, curAttack);
+
+    if (curWeaponSecond != NULL) {
+        curWeaponSecond->Demand();
+
+        // NOTE: Uninline.
+        CButtonData buttonData;
+
+        pSprite->GetQuickWeapon(static_cast<BYTE>(pSprite->sub_726800() - 0x2B), buttonData);
+
+        curAttackSecond = curWeaponSecond->GetAbility(buttonData.m_abilityId.m_abilityNum);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 16187
+        UTIL_ASSERT(curAttackSecond != NULL);
+
+        nOffA = pSprite->sub_73CA20(curWeaponSecond, curAttackSecond);
+        nOffA += pSprite->sub_73CAE0(curWeaponSecond, curAttackSecond);
+        nOffA += pSprite->sub_73CC40(curWeaponSecond, curAttackSecond);
+
+        nOffB = pSprite->sub_73CF10(curWeaponSecond, curAttackSecond);
+        nOffB += pSprite->sub_73D080(TRUE);
+
+        nOffC = pSprite->sub_73CB10(curWeaponSecond, curAttackSecond);
+    }
+
+    if (curWeapon != NULL) {
+        curWeapon->Release();
+    }
+
+    SHORT nGeneralBonus = pSprite->sub_73C7E0();
+    nGeneralBonus += pSprite->sub_73CAD0();
+
+    CString sLine;
+    CString sValue;
+
+    fprintf(pFile, "%s:\n", (LPCSTR)FetchString(9457));
+
+    SHORT launcherSlot;
+    BOOLEAN bRanged = FALSE;
+    CItem* pLauncher = pSprite->GetLauncher(curAttack, launcherSlot);
+    if (pLauncher != NULL) {
+        pLauncher->Demand();
+        if (pLauncher->GetAbility(0) != NULL) {
+            bRanged = TRUE;
+        }
+    }
+
+    if (bRanged == FALSE) {
+        // NOTE: Only the low byte of `type` is compared.
+        if (static_cast<BYTE>(curAttack->type) == 2) {
+            bRanged = TRUE;
+        }
+    }
+
+    if (pLauncher != NULL) {
+        pLauncher->Release();
+    }
+
+    UINT nRuleAttacks = nAttacks;
+
+    if (curWeapon != NULL
+        && curWeaponSecond != NULL
+        && curWeapon != curWeaponSecond
+        && curWeaponSecond->GetItemType() != 47
+        && curWeaponSecond->GetItemType() != 53
+        && curWeaponSecond->GetItemType() != 49
+        && curWeaponSecond->GetItemType() != 41) {
+        nAttacks = pDStats->m_nNumberOfAttacks - 1;
+    } else {
+        nAttacks = pDStats->m_nNumberOfAttacks;
+    }
+
+    sLine = "";
+
+    for (INT i = 0; i < nAttacks; i++) {
+        INT nBase = nBaseAttackBonus;
+        if (pDStats->m_spellStates[SPLSTATE_FEAT_RAPID_SHOT] && bRanged == TRUE && i == 0) {
+            nBase += -5;
+        }
+
+        SHORT nAttackBonus = rule.sub_547020(nBase, nStep, i)
+            + n724170
+            + n7240A0
+            + nGeneralBonus
+            + nMainC
+            + nMainB
+            + nMainA;
+
+        if (pDStats->m_spellStates[SPLSTATE_FEAT_RAPID_SHOT] && bRanged == TRUE) {
+            nAttackBonus -= 2;
+        }
+
+        sValue.Format("%+d", nAttackBonus);
+        sLine += sValue;
+
+        if (i + 1 < nAttacks) {
+            sLine += "/";
+        }
+    }
+
+    sub_5EF920(pFile, FetchString(734), sLine, 1);
+
+    sLine = "";
+
+    for (UINT i = 0; static_cast<INT>(i) < nAttacks; i++) {
+        sValue.Format("%+d", rule.sub_547020(nBaseAttackBonus, nStep, i));
+        sLine += sValue;
+
+        if (i + 1 < nRuleAttacks) {
+            sLine += "/";
+        }
+    }
+
+    sub_5EF920(pFile, FetchString(31353), sLine, 1);
+
+    if (curWeapon != curWeaponSecond) {
+        if (nMainA != 0) {
+            sLine.Format("%+d", nMainA);
+            sub_5EF920(pFile, FetchString(32560), sLine, 1);
+        }
+
+        if (nMainB != 0) {
+            sLine.Format("%+d", nMainB);
+            sub_5EF920(pFile, FetchString(32561), sLine, 1);
+        }
+
+        if (nMainC != 0) {
+            sLine.Format("%+d", nMainC);
+            sub_5EF920(pFile, FetchString(33547), sLine, 1);
+        }
+
+        if (n7240A0 != 0) {
+            sLine.Format("%+d", n7240A0);
+            sub_5EF920(pFile, FetchString(39816), sLine, 1);
+        }
+
+        if (n724170 != 0) {
+            sLine.Format("%+d", n724170);
+            sub_5EF920(pFile, FetchString(39822), sLine, 1);
+        }
+    }
+
+    if (curWeaponSecond != NULL) {
+        if (curWeapon != curWeaponSecond) {
+            fputs("\n", pFile);
+        }
+
+        SHORT nOffhandBonus = nBaseAttackBonus
+            + n724170
+            + n7240A0
+            + nGeneralBonus
+            + nOffC
+            + nOffB
+            + nOffA;
+
+        sLine.Format("%+d", nOffhandBonus);
+        sub_5EF920(pFile, FetchString(733), sLine, 1);
+
+        sLine = "";
+
+        sValue.Format("%+d", nBaseAttackBonus);
+        sLine += sValue;
+
+        sub_5EF920(pFile, FetchString(31353), sLine, 1);
+
+        if (nOffA != 0) {
+            sLine.Format("%+d", nOffA);
+            sub_5EF920(pFile, FetchString(32560), sLine, 1);
+        }
+
+        if (nOffB != 0) {
+            sLine.Format("%+d", nOffB);
+            sub_5EF920(pFile, FetchString(32561), sLine, 1);
+        }
+
+        if (nOffC != 0) {
+            sLine.Format("%+d", nOffC);
+            sub_5EF920(pFile, FetchString(33547), sLine, 1);
+        }
+
+        if (n7240A0 != 0) {
+            sLine.Format("%+d", n7240A0);
+            sub_5EF920(pFile, FetchString(39816), sLine, 1);
+        }
+
+        if (n724170 != 0) {
+            sLine.Format("%+d", n724170);
+            sub_5EF920(pFile, FetchString(39822), sLine, 1);
+        }
+
+        curWeaponSecond->Release();
+    }
+
+    fputs("\n", pFile);
+
+    if (nGeneralBonus != 0) {
+        sLine.Format("%+d", nGeneralBonus);
+        sub_5EF920(pFile, FetchString(33548), sLine, 1);
+    }
+
+    // 0x5F2518 - 0x5F26D3: Attacks per round.
+    fputs("\n", pFile);
+
+    CString sAttacksPerRound;
+
+    if (curWeapon == curWeaponSecond) {
+        sAttacksPerRound.Format("%d", 1);
+    } else if (pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())] != NULL
+        && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 47
+        && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 53
+        && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 49
+        && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 41) {
+        sAttacksPerRound.Format("%d+%d", pDStats->m_nNumberOfAttacks - 1, 1);
+    } else {
+        sAttacksPerRound.Format("%d", pDStats->m_nNumberOfAttacks);
+    }
+
+    // NOTE: Uninline.
+    sub_5EF920(pFile, FetchString(9458), sAttacksPerRound, 1);
+
+    // 0x5F26D3 - 0x5F2AC7: Armor class.
+    fputs("\n", pFile);
+
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile, FetchString(33553), pSprite->GetAC(), 0);
+
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile, FetchString(11997), pDStats->field_6, 1);
+
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile, FetchString(33551), pDStats->field_8, 1);
+
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile, FetchString(12006), pDStats->field_A, 1);
+
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile, FetchString(33552), pDStats->field_C, 1);
+
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile, FetchString(1151), pSprite->sub_723EA0(), 1);
+
+    // 0x5F2AC7 - 0x5F2C20: Skills.
+    fputs("\n", pFile);
+
+    // NOTE: Uninline. The skill bytes are sign extended.
+    sub_5EF9E0(pFile,
+        FetchString(37275),
+        static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_ALCHEMY]),
+        1);
+
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile,
+        FetchString(37590),
+        static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_KNOWLEDGE_ARCANA]),
+        1);
+
+    // 0x5F2C20 - 0x5F31BB: Rogue skills.
+    if (pTypeAI->IsClassValid(CAIObjectType::C_ROGUE)) {
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(9460),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_OPEN_LOCK]),
+            1);
+
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(9461),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_MOVE_SILENTLY]),
+            1);
+
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(34120),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_HIDE]),
+            1);
+
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(9462),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_SEARCH]),
+            1);
+
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(9463),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_PICK_POCKET]),
+            1);
+
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(24113),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE]),
+            1);
+
+        CString sSneakAttack;
+        sSneakAttack.Format("%dd%d",
+            IcewindMisc::GetSneakAttackRolls(pSprite),
+            IcewindMisc::GetSneakAttackDice());
+
+        // NOTE: Uninline.
+        sub_5EF920(pFile, FetchString(24898), sSneakAttack, 1);
+
+        // NOTE: The original calls a cdecl function at 0x7ABB90 with `pSprite`
+        // that always returns 0 (unknown name); its result is inlined here.
+        //
+        // NOTE: Uninline.
+        sub_5EF9E0(pFile, FetchString(24897), 0, 1);
+    }
+
+    // 0x5F31BB - 0x5F3620: Bard, ranger, paladin and cleric lines.
+    if (pTypeAI->IsClassValid(CAIObjectType::C_BARD)) {
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(9463),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_PICK_POCKET]),
+            1);
+
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(24113),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE]),
+            1);
+    }
+
+    if (pTypeAI->IsClassValid(CAIObjectType::C_RANGER)) {
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(34137),
+            "%d%%",
+            rule.Average(static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_MOVE_SILENTLY]),
+                static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_HIDE])),
+            1);
+    }
+
+    if (pTypeAI->IsClassValid(CAIObjectType::C_PALADIN)) {
+        // NOTE: Uninline.
+        sub_5EF9E0(pFile, FetchString(12126), pDStats->m_nTurnUndeadLevel, 1);
+
+        // NOTE: Uninline.
+        sub_5EF9E0(pFile, FetchString(12127), pDStats->m_nLayOnHandsAmount, 1);
+    }
+
+    if (pTypeAI->IsClassValid(CAIObjectType::C_CLERIC)) {
+        // NOTE: Uninline.
+        sub_5EF9E0(pFile, FetchString(12126), pDStats->m_nTurnUndeadLevel, 1);
+    }
+
+    // 0x5F3620 - 0x5F37C9: Special script.
+    if (pSprite->m_special2Script == NULL) {
+        // NOTE: Uninline.
+        sub_5EF920(pFile, FetchString(2078), FetchString(17093), 1);
+    } else {
+        CString sSpecialScript;
+
+        CResRef cSpecialScript = pSprite->m_special2Script->m_cResRef;
+        cSpecialScript.CopyToString(sSpecialScript);
+
+        // NOTE: Uninline.
+        sub_5EF920(pFile, FetchString(2078), sSpecialScript, 1);
+    }
+
+    // 0x5F37C9 - 0x5F391A: Favored enemies.
+    fputs("\n", pFile);
+
+    if (pTypeAI->IsClassValid(CAIObjectType::C_RANGER)) {
+        fprintf(pFile, "%s:\n", (LPCSTR)FetchString(15982));
+
+        for (INT nIndex = 0; nIndex < MAX_HATED_RACES; nIndex++) {
+            BYTE& nRace = pBStats->m_favoredEnemies[nIndex];
+            if (nRace != CAIObjectType::R_NO_RACE) {
+                STRREF strRace;
+                switch (nRace) {
+                case CAIOBJECTTYPE_R_OGRE:
+                    strRace = 15975; // "Ogres"
+                    break;
+                case CAIOBJECTTYPE_R_WYVERN:
+                    strRace = 37617; // "Wyverns"
+                    break;
+                case CAIOBJECTTYPE_R_GIANT:
+                    strRace = 61; // "Giants"
+                    break;
+                case CAIOBJECTTYPE_R_GOBLIN:
+                    strRace = 29518; // "Goblins"
+                    break;
+                case CAIOBJECTTYPE_R_LIZARDMAN:
+                    strRace = 3275; // "Lizard Men"
+                    break;
+                case CAIOBJECTTYPE_R_ORC:
+                    strRace = 3271; // "Orcs"
+                    break;
+                case CAIOBJECTTYPE_R_SALAMANDER:
+                    strRace = 3272; // "Salamanders"
+                    break;
+                case CAIOBJECTTYPE_R_TROLL:
+                    strRace = 3276; // "Trolls"
+                    break;
+                case CAIOBJECTTYPE_R_UMBERHULK:
+                    strRace = 3277; // "Umber Hulks"
+                    break;
+                case CAIOBJECTTYPE_R_UNDEAD:
+                    strRace = 3278; // "Undead"
+                    break;
+                case CAIOBJECTTYPE_R_YUANTI:
+                    strRace = 30849; // "Yuan-ti"
+                    break;
+                case CAIOBJECTTYPE_R_HARPY:
+                    strRace = 37616; // "Harpies"
+                    break;
+                case CAIOBJECTTYPE_R_BUGBEAR:
+                    strRace = 28366; // "Bugbear"
+                    break;
+                case CAIOBJECTTYPE_R_HOOK_HORROR:
+                    strRace = 37606; // "Hook Horrors"
+                    break;
+                case CAIOBJECTTYPE_R_DRIDER:
+                    strRace = 37607; // "Driders"
+                    break;
+                case CAIOBJECTTYPE_R_SHAPESHIFTER:
+                    strRace = 37605; // "Shapeshifters"
+                    break;
+                default:
+                    strRace = -1;
+                    break;
+                }
+
+                fprintf(pFile, "   %s\n", (LPCSTR)FetchString(strRace));
+            }
+        }
+
+        fputs("\n", pFile);
+    }
+
+    // 0x5F391A - 0x5F3A36: Saving throws.
+    fprintf(pFile, "%s:\n", (LPCSTR)FetchString(17379));
+
+    sub_5EF9E0(pFile, FetchString(17380), pDStats->m_nSaveVSFortitude, 1);
+    sub_5EF9E0(pFile, FetchString(17381), pDStats->m_nSaveVSReflex, 1);
+    sub_5EF9E0(pFile, FetchString(17382), pDStats->m_nSaveVSWill, 1);
+
+    INT nTrapSenseBonus = rule.GetTrapSenseBonus(*pDStats);
+    if (nTrapSenseBonus != 0) {
+        // NOTE: The reflex save is shown with the trap sense bonus added.
+        sub_5EF9E0(pFile, FetchString(39802), pDStats->m_nSaveVSReflex + nTrapSenseBonus, 1);
+    }
+
+    // 0x5F3A36 - 0x5F44FD: Proficiencies.
+    fputs("\n", pFile);
+
+    fprintf(pFile, "%s:\n", (LPCSTR)FetchString(9466));
+
+    {
+        // NOTE: The argument is the byte at 0x85BC08 (value 0).
+        INT nBonus = pSprite->sub_75E930(0);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(8733), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC09 (value 1).
+        INT nBonus = pSprite->sub_75E930(1);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16033), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC0A (value 2).
+        INT nBonus = pSprite->sub_75E930(2);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(9403), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC0B (value 3).
+        INT nBonus = pSprite->sub_75E930(3);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(9402), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC0C (value 4).
+        INT nBonus = pSprite->sub_75E930(4);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16017), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC0D (value 5).
+        INT nBonus = pSprite->sub_75E930(5);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16013), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC0E (value 6).
+        INT nBonus = pSprite->sub_75E930(6);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16020), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC0F (value 7).
+        INT nBonus = pSprite->sub_75E930(7);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16015), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC10 (value 8).
+        INT nBonus = pSprite->sub_75E930(8);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16022), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC11 (value 9).
+        INT nBonus = pSprite->sub_75E930(9);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16031), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC12 (value 10).
+        INT nBonus = pSprite->sub_75E930(10);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16011), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC13 (value 11).
+        INT nBonus = pSprite->sub_75E930(11);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(8668), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC14 (value 12).
+        INT nBonus = pSprite->sub_75E930(12);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(8732), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC15 (value 13).
+        INT nBonus = pSprite->sub_75E930(13);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(31138), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC16 (value 14).
+        INT nBonus = pSprite->sub_75E930(14);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(31135), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC17 (value 15).
+        INT nBonus = pSprite->sub_75E930(15);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(31136), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC18 (value 16).
+        INT nBonus = pSprite->sub_75E930(16);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(31137), sPlus, 1);
+        }
+    }
+
+    // 0x5F44FD - 0x5F4825: Armor class modifiers.
+    fputs("\n", pFile);
+
+    if (pDStats->m_nACCrushingMod != 0
+        || pDStats->m_nACMissileMod != 0
+        || pDStats->m_nACPiercingMod != 0
+        || pDStats->m_nACSlashingMod != 0) {
+        fprintf(pFile, "%s:\n", (LPCSTR)FetchString(11766));
+
+        if (pDStats->m_nACCrushingMod != 0) {
+            // NOTE: Uninline.
+            sub_5EFAA0(pFile, FetchString(11770), "%+d", pDStats->m_nACCrushingMod, 0);
+        }
+
+        if (pDStats->m_nACMissileMod != 0) {
+            // NOTE: Uninline.
+            sub_5EFAA0(pFile, FetchString(11767), "%+d", pDStats->m_nACMissileMod, 0);
+        }
+
+        if (pDStats->m_nACPiercingMod != 0) {
+            // NOTE: Uninline.
+            sub_5EFAA0(pFile, FetchString(11769), "%+d", pDStats->m_nACPiercingMod, 0);
+        }
+
+        if (pDStats->m_nACSlashingMod != 0) {
+            // NOTE: Uninline.
+            sub_5EFAA0(pFile, FetchString(11768), "%+d", pDStats->m_nACSlashingMod, 0);
+        }
+
+        fputs("\n", pFile);
+    }
+
+    // 0x5F4825 - 0x5F4DFC: Ability statistics.
+    fprintf(pFile, "%s:\n", (LPCSTR)FetchString(10315));
+
+    {
+        // NOTE: Uninline (`C2DArray::GetAt`). Column constant at 0x84EA58.
+        INT nValue = atol(rule.m_tStrengthMod.GetAt(CPoint(0, pDStats->m_nSTR)));
+        if (nValue != 0) {
+            sub_5EFAA0(pFile, FetchString(10332), "%+d", nValue, 1);
+        } else {
+            sub_5EF9E0(pFile, FetchString(10332), 0, 1);
+        }
+    }
+
+    if (pSprite->GetCriticalHitBonus() != 0) {
+        INT nValue = pSprite->GetCriticalHitBonus();
+        if (nValue != 0) {
+            sub_5EFAA0(pFile, FetchString(16462), "%+d", nValue, 1);
+        } else {
+            sub_5EF9E0(pFile, FetchString(16462), 0, 1);
+        }
+    }
+
+    {
+        SHORT nPhysicalSpeed = pDStats->m_nPhysicalSpeed;
+        if (nPhysicalSpeed != 0) {
+            INT nValue = nPhysicalSpeed;
+            if (nValue != 0) {
+                sub_5EFAA0(pFile, FetchString(28357), "%+d", nValue, 1);
+            } else {
+                sub_5EF9E0(pFile, FetchString(28357), 0, 1);
+            }
+        }
+    }
+
+    {
+        SHORT nValue6 = pDStats->field_6;
+        if (nValue6 != 0) {
+            INT nValue = nValue6;
+            if (nValue != 0) {
+                sub_5EFAA0(pFile, FetchString(28373), "%+d", nValue, 1);
+            } else {
+                sub_5EF9E0(pFile, FetchString(28373), 0, 1);
+            }
+        }
+    }
+
+    {
+        // NOTE: Uninline (`C2DArray::GetAt`). Column constant at 0x84EA5A.
+        INT nValue = atol(rule.m_tStrengthMod.GetAt(CPoint(1, pDStats->m_nSTR)));
+        if (nValue != 0) {
+            sub_5EFAA0(pFile, FetchString(10336), "%+d", nValue, 1);
+        } else {
+            sub_5EF9E0(pFile, FetchString(10336), 0, 1);
+        }
+    }
+
+    {
+        // NOTE: Uninline (`C2DArray::GetAt`). Column constant at 0x84EA5E.
+        INT nStrengthWeight = atol(rule.m_tStrengthMod.GetAt(CPoint(3, pDStats->m_nSTR)));
+        INT nWeight = static_cast<INT>(static_cast<float>(rule.GetEncumbranceMod(pSprite)) / 100.0f
+            * static_cast<float>(nStrengthWeight));
+
+        if (nWeight != 0) {
+            // NOTE: Uninline (`sub_5EFAA0`).
+            sub_5EFAA0(pFile, FetchString(10338), "%+d", nWeight, 1);
+        } else {
+            sub_5EF9E0(pFile, FetchString(10338), 0, 1);
+        }
+    }
+
+    {
+        INT nResult;
+        INT nFlag;
+        rule.sub_542EC0(pTypeAI->m_nClass, static_cast<BYTE>(pDStats->m_nCON), &nResult, &nFlag);
+
+        if (nResult != 0) {
+            // NOTE: Uninline (`sub_5EFAA0`).
+            sub_5EFAA0(pFile, FetchString(10342), "%+d", nResult, 1);
+        } else {
+            sub_5EF9E0(pFile, FetchString(10342), 0, 1);
+        }
+    }
+
+    // 0x5F4DFC - 0x5F523A: Bonus spells and spells known.
+    if (pTypeAI->IsClassValid(CAIObjectType::C_WIZARD)) {
+        // NOTE: Uninline (`C2DArray::GetAt`). Column constant at 0x84EA6A.
+        INT nValue = atol(rule.m_tIntelligenceMod.GetAt(CPoint(0, pDStats->m_nINT)));
+
+        // NOTE: Uninline (`sub_5EFAA0`).
+        sub_5EFAA0(pFile, FetchString(10343), "%d%%", nValue, 1);
+    }
+
+    if (pTypeAI->IsClassValid(CAIObjectType::C_BARD)
+        || pTypeAI->IsClassValid(CAIObjectType::C_CLERIC)
+        || pTypeAI->IsClassValid(CAIObjectType::C_DRUID)
+        || pTypeAI->IsClassValid(CAIObjectType::C_PALADIN)
+        || pTypeAI->IsClassValid(CAIObjectType::C_RANGER)
+        || pTypeAI->IsClassValid(CAIObjectType::C_SORCERER)
+        || pTypeAI->IsClassValid(CAIObjectType::C_WIZARD)) {
+        for (UINT nIndex = 0; nIndex < 7; nIndex++) {
+            BYTE nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nIndex);
+
+            // NOTE: Inlined `CInfGame::GetSpellcasterClassMask` (without the
+            // assertion).
+            DWORD dwClassMask = 0;
+            switch (nIndex) {
+            case 0:
+                dwClassMask = CLASSMASK_BARD;
+                break;
+            case 1:
+                dwClassMask = CLASSMASK_CLERIC;
+                break;
+            case 2:
+                dwClassMask = CLASSMASK_DRUID;
+                break;
+            case 3:
+                dwClassMask = CLASSMASK_PALADIN;
+                break;
+            case 4:
+                dwClassMask = CLASSMASK_RANGER;
+                break;
+            case 5:
+                dwClassMask = CLASSMASK_SORCERER;
+                break;
+            case 6:
+                dwClassMask = CLASSMASK_WIZARD;
+                break;
+            }
+
+            if ((pTypeAI->m_nClassMask & dwClassMask) != 0) {
+                INT nBonus;
+                rule.GetMaxKnownSpells(nClass,
+                    *pTypeAI,
+                    *pDStats,
+                    pBStats->m_specialization,
+                    1,
+                    nBonus);
+
+                if (nBonus > 0) {
+                    CString sClass;
+                    rule.GetClassStringMixed(nClass,
+                        pBStats->m_specialization,
+                        pBStats->m_flags,
+                        sClass,
+                        pTypeAI->m_nGender != 2);
+
+                    fprintf(pFile,
+                        "   %s: %s\n",
+                        (LPCSTR)FetchString(10344),
+                        (LPCSTR)sClass);
+
+                    INT nSpellLevel = 1;
+                    while (nSpellLevel <= 9 && nBonus > 0) {
+                        sValue.Format("%d", nSpellLevel);
+                        g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_SPELLLEVEL, sValue);
+
+                        INT nValue = nBonus;
+                        if (nValue != 0) {
+                            // NOTE: Uninline (`sub_5EFAA0`).
+                            sub_5EFAA0(pFile, FetchString(10345), "%+d", nValue, 1);
+                        } else {
+                            sub_5EF9E0(pFile, FetchString(10345), 0, 1);
+                        }
+
+                        // NOTE: The class argument is a copy of the class of
+                        // the character's type instead of `nClass`.
+                        BYTE nTypeClass = pTypeAI->m_nClass;
+
+                        nSpellLevel++;
+                        rule.GetMaxKnownSpells(nTypeClass,
+                            *pTypeAI,
+                            *pDStats,
+                            pBStats->m_specialization,
+                            nSpellLevel,
+                            nBonus);
+                    }
+                }
+            }
+        }
+    }
+
+    // 0x5F523A - 0x5F594A: Resistances.
+    fputs("\n", pFile);
+
+    fprintf(pFile, "%s:\n", (LPCSTR)FetchString(15544));
+
+    // NOTE: Uninline (`sub_5EF9E0`) for each line.
+    sub_5EF9E0(pFile, FetchString(15581), pDStats->m_nResistMagic, 1);
+    sub_5EF9E0(pFile, FetchString(11770), pDStats->m_nResistCrushing, 1);
+    sub_5EF9E0(pFile, FetchString(11769), pDStats->m_nResistPiercing, 1);
+    sub_5EF9E0(pFile, FetchString(11768), pDStats->m_nResistSlashing, 1);
+    sub_5EF9E0(pFile, FetchString(15578), pDStats->m_nResistAcid, 1);
+    sub_5EF9E0(pFile, FetchString(15546), pDStats->m_nResistCold, 1);
+    sub_5EF9E0(pFile, FetchString(15577), pDStats->m_nResistElectricity, 1);
+    sub_5EF9E0(pFile, FetchString(15545), pDStats->m_nResistFire, 1);
+    sub_5EF9E0(pFile, FetchString(11767), pDStats->m_nResistMissile, 1);
+    sub_5EF9E0(pFile, FetchString(38135), pDStats->m_nResistPoison, 1);
+
+    // 0x5F594A - 0x5F5C2D: Spell lists.
+    fputs("\n", pFile);
+    fputs("\n", pFile);
+
+    for (UINT nClassIndex = 0; nClassIndex < CSPELLLIST_NUM_CLASSES; nClassIndex++) {
+        // NOTE: `GetSpells` takes a reference to `BYTE` and the original
+        // passes a temporary copy of the index.
+        if (pSprite->GetSpells(nClassIndex)->m_nHighestLevel > 0) {
+            fprintf(pFile,
+                "%s Spells:\n",
+                (LPCSTR)rule.GetClassString(g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nClassIndex), 0));
+
+            for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+                // NOTE: Uninline.
+                if (pSprite->GetSpells(nClassIndex)->GetSpellsAtLevel(nLevel)->m_List.size() > 0) {
+                    // NOTE: The level is printed zero-based.
+                    fprintf(pFile, "Level: %1d\n", nLevel);
+
+                    // NOTE: Uninline.
+                    for (UINT nIndex = 0; nIndex < pSprite->GetSpells(nClassIndex)->GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+                        // NOTE: Uninline.
+                        CGameSpriteSpellListEntry* pEntry = pSprite->GetSpells(nClassIndex)->GetSpellsAtLevel(nLevel)->Get(nIndex);
+                        UINT nSpellId = pEntry->m_nID;
+
+                        // NOTE: Uninline.
+                        CResRef resRef = g_pBaldurChitin->GetObjectGame()->m_spells.Get(nSpellId);
+
+                        fprintf(pFile,
+                            "    %.*s (%3d/%3d)\n",
+                            RESREF_SIZE,
+                            resRef.GetResRef(),
+                            pEntry->field_8,
+                            pEntry->field_4);
+                    }
+                }
+            }
+        }
+    }
+
+    // 0x5F5C2D - 0x5F5E5E: Domain spells.
+    if (pSprite->m_domainSpells.m_nHighestLevel > 0) {
+        fprintf(pFile, "Domain Spells:\n");
+
+        for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+            // NOTE: Uninline.
+            if (pSprite->m_domainSpells.GetSpellsAtLevel(nLevel)->m_List.size() > 0) {
+                // NOTE: The level is printed zero-based.
+                fprintf(pFile, "Level: %1d\n", nLevel);
+
+                // NOTE: Uninline.
+                for (UINT nIndex = 0; nIndex < pSprite->m_domainSpells.GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+                    // NOTE: Uninline.
+                    CGameSpriteSpellListEntry* pEntry = pSprite->m_domainSpells.GetSpellsAtLevel(nLevel)->Get(nIndex);
+                    UINT nSpellId = pEntry->m_nID;
+
+                    // NOTE: Uninline.
+                    CResRef resRef = g_pBaldurChitin->GetObjectGame()->m_spells.Get(nSpellId);
+
+                    fprintf(pFile,
+                        "    %.*s (%3d/%3d)\n",
+                        RESREF_SIZE,
+                        resRef.GetResRef(),
+                        pEntry->field_8,
+                        pEntry->field_4);
+                }
+            }
+        }
+    }
+
+    // 0x5F5E5E - 0x5F5F35: Innate spells.
+    if (pSprite->m_innateSpells.m_List.size() > 0) {
+        for (UINT nIndex = 0; nIndex < pSprite->GetInnateSpells()->m_List.size(); nIndex++) {
+            CGameSpriteSpellListEntry* pEntry = pSprite->GetInnateSpells()->Get(nIndex);
+            UINT nSpellId = pEntry->m_nID;
+
+            CResRef resRef = g_pBaldurChitin->GetObjectGame()->GetInnateSpells()->Get(nSpellId);
+
+            fprintf(pFile,
+                "    %.*s (%3d/%3d)\n",
+                RESREF_SIZE,
+                resRef.GetResRef(),
+                pEntry->field_8,
+                pEntry->field_4);
+        }
+    }
+
+    // 0x5F5F35 - 0x5F6001: Songs.
+    if (pSprite->GetSongs()->m_List.size() > 0) {
+        for (UINT nIndex = 0; nIndex < pSprite->GetSongs()->m_List.size(); nIndex++) {
+            CGameSpriteSpellListEntry* pEntry = pSprite->GetSongs()->Get(nIndex);
+            UINT nSpellId = pEntry->m_nID;
+
+            CResRef resRef = g_pBaldurChitin->GetObjectGame()->GetMasterSongLookup().Get(nSpellId);
+
+            fprintf(pFile,
+                "    %.*s (%3d/%3d)\n",
+                RESREF_SIZE,
+                resRef.GetResRef(),
+                pEntry->field_8,
+                pEntry->field_4);
+        }
+    }
+
+    // 0x5F6001 - 0x5F60D1: Shapeshifts.
+    if (pSprite->GetShapeshifts()->m_List.size() > 0) {
+        for (UINT nIndex = 0; nIndex < pSprite->GetShapeshifts()->m_List.size(); nIndex++) {
+            CGameSpriteSpellListEntry* pEntry = pSprite->GetShapeshifts()->Get(nIndex);
+            UINT nSpellId = pEntry->m_nID;
+
+            CResRef resRef = g_pBaldurChitin->GetObjectGame()->GetShapeshifts()->Get(nSpellId);
+
+            fprintf(pFile,
+                "    %.*s (%3d/%3d)\n",
+                RESREF_SIZE,
+                resRef.GetResRef(),
+                pEntry->field_8,
+                pEntry->field_4);
+        }
+    }
+
+    // 0x5F60D1 - 0x5F60F2
+    fputs("\n", pFile);
+    fputs("\n", pFile);
+    fputs("\n", pFile);
+
+    // 0x5F60F2 - 0x5F62CD: Equipment.
+    //
+    // NOTE: The file name is the result of the virtual call at `CChitin` +0xA0
+    // (`GetIniFileName`); `GetPrivateProfileIntA` is the import at 0x847310.
+    BYTE bFull = GetPrivateProfileIntA("Game Options",
+                     "Output Full Detailed Description",
+                     0,
+                     g_pBaldurChitin->GetIniFileName())
+        != 0;
+
+    CGameSpriteEquipment* pEquipment = pSprite->GetEquipment();
+
+    BYTE aSlotDone[51] = { 0 };
+
+    fputs("--------------------------------------------------\n", pFile);
+
+    fprintf(pFile, "--  %s:\n", (LPCSTR)FetchString(11292));
+
+    fputs("--------------------------------------------------\n\n", pFile);
+
+    if (pEquipment->m_items[6] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[6], 1, bFull);
+        aSlotDone[6] = TRUE;
+    }
+
+    if (pEquipment->m_items[0] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[0], 1, bFull);
+        aSlotDone[0] = TRUE;
+    }
+
+    if (pEquipment->m_items[1] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[1], 1, bFull);
+        aSlotDone[1] = TRUE;
+    }
+
+    if (pEquipment->m_items[4] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[4], 1, bFull);
+        aSlotDone[4] = TRUE;
+    }
+
+    if (pEquipment->m_items[pSprite->sub_726800() & 0xFF] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[pSprite->sub_726800() & 0xFF], 1, bFull);
+        aSlotDone[pSprite->sub_726800() & 0xFF] = TRUE;
+    }
+
+    if (pEquipment->m_items[5] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[5], 1, bFull);
+        aSlotDone[5] = TRUE;
+    }
+
+    if (pEquipment->m_items[8] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[8], 1, bFull);
+        aSlotDone[8] = TRUE;
+    }
+
+    if (pEquipment->m_items[7] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[7], 1, bFull);
+        aSlotDone[7] = TRUE;
+    }
+
+    if (pEquipment->m_items[2] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[2], 1, bFull);
+        aSlotDone[2] = TRUE;
+    }
+
+    if (pEquipment->m_items[3] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[3], 1, bFull);
+        aSlotDone[3] = TRUE;
+    }
+
+    // 0x5F62CD - 0x5F6462: Inventory.
+    fputs("\n", pFile);
+
+    for (INT nIndex = 0; nIndex < 8; nIndex++) {
+        CItem* pItem = pEquipment->m_items[nIndex + 43];
+        if (pItem != NULL) {
+            pItem->Demand();
+
+            sub_5EFCC0(pFile,
+                pItem,
+                pEquipment->m_selectedWeapon == nIndex + 43 ? 1 : 0,
+                bFull);
+
+            aSlotDone[nIndex + 43] = TRUE;
+
+            // NOTE: The original tests `pItem` again.
+            if (pItem != NULL) {
+                pItem->Release();
+            }
+        }
+    }
+
+    fputs("\n", pFile);
+
+    for (INT nIndex = 0; nIndex < 4; nIndex++) {
+        CItem* pItem = pEquipment->m_items[nIndex + 11];
+        if (pItem != NULL) {
+            pItem->Demand();
+
+            sub_5EFCC0(pFile,
+                pItem,
+                pEquipment->m_selectedWeapon == nIndex + 11 ? 1 : 0,
+                bFull);
+
+            aSlotDone[nIndex + 11] = TRUE;
+
+            // NOTE: The original tests `pItem` again.
+            if (pItem != NULL) {
+                pItem->Release();
+            }
+        }
+    }
+
+    fputs("\n", pFile);
+
+    for (INT nSlot = 15; nSlot < 18; nSlot++) {
+        if (pEquipment->m_items[nSlot] != NULL) {
+            pEquipment->m_items[nSlot]->Demand();
+
+            sub_5EFCC0(pFile, pEquipment->m_items[nSlot], 1, bFull);
+
+            pEquipment->m_items[nSlot]->Release();
+
+            aSlotDone[nSlot] = TRUE;
+        }
+    }
+
+    fputs("\n", pFile);
+
+    for (INT nSlot = 0; nSlot < 51; nSlot++) {
+        if (nSlot != CGameSpriteEquipment::SLOT_FIST) {
+            CItem* pItem = pEquipment->m_items[nSlot];
+            if (pItem != NULL) {
+                pItem->Demand();
+
+                if (!aSlotDone[nSlot]) {
+                    sub_5EFCC0(pFile, pItem, 0, bFull);
+                }
+
+                pItem->Release();
+            }
+        }
+    }
+
+    // 0x5F6462 - 0x5F65BB: Epilogue.
+    fclose(pFile);
+
+    bFlag = TRUE;
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return sResult;
 }
 
 // 0x5F7850

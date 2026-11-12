@@ -532,3 +532,7 @@
 # std::string (MSVC 6, refcounted) copy constructor basic_string(const basic_string&, pos, n): shares the
 # buffer (refcount byte at [data-1], 0xFE limit, empty string 0x8485BC) or _Grow + memcpy.
 0x765FA0
+# Out-of-line copies of tiny inline getters (`mov eax,[ecx]` / `mov eax,[ecx+4]`); used on
+# CGameSpriteSpellListEntry by CScreenCharacter::sub_5EFFD0 (m_nID, field_4).
+0x45B240
+0x45B210
