@@ -128,7 +128,7 @@ public:
     /* 02AE */ LONG field_2AE;
     /* 02B2 */ CAIObjectType field_2B2;
     /* 02EE */ LONG field_2EE;
-    /* 02F2 */ SHORT field_2F2;
+    /* 02F2 */ WORD field_2F2;
     /* 02F4 */ LONG field_2F4;
     /* 02F8 */ SHORT field_2F8;
 };

@@ -716,7 +716,183 @@ CProjectileBAM84E7B0::~CProjectileBAM84E7B0()
 // 0x534140
 void CProjectileBAM84E7B0::AIUpdate()
 {
-    // TODO: Incomplete.
+    CGameObject* pObject;
+    BYTE rc;
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    if (field_2AE == 0) {
+        return;
+    }
+
+    if (field_2F8 > 0) {
+        field_2F8--;
+        return;
+    }
+
+    // NOTE: The original compares as a signed word.
+    if (static_cast<SHORT>(field_2A0) > 0) {
+        field_2AA->m_callBackProjectile = m_id;
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pObject,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            RemoveSelf();
+            return;
+        }
+
+        if (field_EA != pObject->m_pArea) {
+            LONG target = m_targetId;
+            RemoveSelf();
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(target,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            return;
+        }
+
+        LONG nNearest;
+        if (pObject->GetVertListType() == CGameObject::LIST_FRONT) {
+            nNearest = field_EA->GetNearest(m_targetId,
+                field_2B2,
+                field_EA->m_visibility.field_E << 5,
+                CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE,
+                field_2F4,
+                1,
+                0,
+                0,
+                0);
+        } else {
+            const CPoint& pt = pObject->GetPos();
+            nNearest = field_EA->sub_46DAE0(pt.x,
+                pt.y,
+                field_2B2,
+                field_EA->m_visibility.field_E << 5,
+                CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE,
+                field_2F4,
+                1,
+                0,
+                0);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        if (nNearest != CGameObjectArray::INVALID_INDEX) {
+            if (field_2A4 == 0) {
+                m_sourceId = m_targetId;
+            }
+
+            m_targetId = nNearest;
+
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pObject,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                return;
+            }
+
+            m_posDest = pObject->GetPos();
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            POSITION pos = m_effectList.GetHeadPosition();
+            while (pos != NULL) {
+                CGameEffect* pEffect = m_effectList.GetNext(pos);
+                // NOTE: Inlined AddEffect.
+                field_2AA->AddEffect(pEffect->Copy());
+            }
+
+            field_2AE = 0;
+            field_2AA->Fire(field_EA, m_sourceId, m_targetId, m_posDest, field_2EE, field_2F2);
+
+            field_2AA = CProjectile::DecodeProjectile(field_2A8 + 1, NULL, FALSE);
+            field_2AA->field_186 = field_186;
+            field_2AA->field_18A = field_18A;
+
+            field_2F8 = field_2A2;
+            field_2A0--;
+            return;
+        }
+
+        if (m_callBackProjectile != CGameObjectArray::INVALID_INDEX) {
+            CProjectile* pProjectile;
+
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_callBackProjectile,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pProjectile),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                return;
+            }
+
+            pProjectile->CallBack();
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_callBackProjectile,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+
+        RemoveFromArea();
+
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+            CGameObjectArray::THREAD_ASYNCH,
+            NULL,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            delete this;
+        }
+
+        return;
+    }
+
+    if (m_callBackProjectile != CGameObjectArray::INVALID_INDEX) {
+        CProjectile* pProjectile;
+
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_callBackProjectile,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pProjectile),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            return;
+        }
+
+        pProjectile->CallBack();
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_callBackProjectile,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    RemoveFromArea();
+
+    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+        CGameObjectArray::THREAD_ASYNCH,
+        NULL,
+        INFINITE);
+    if (rc == CGameObjectArray::SUCCESS) {
+        delete this;
+    }
 }
 
 // 0x78E750
