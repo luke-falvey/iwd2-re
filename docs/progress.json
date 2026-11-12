@@ -4,16 +4,15 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 9703,
-  "functions_done": 7801,
-  "functions_complete": 7685,
-  "incomplete_markers": 134,
+  "functions_total": 9701,
+  "functions_done": 7802,
+  "functions_complete": 7691,
+  "incomplete_markers": 129,
   "incomplete_by_file": {
     "src/CScreenCharacter.cpp": 10,
     "src/CProjectilePart2.cpp": 9,
     "src/CGameSprite.cpp": 8,
     "src/CBaldurProjector.cpp": 7,
-    "src/CInfGame.cpp": 6,
     "src/CParticle.cpp": 6,
     "src/CScreenCreateChar.cpp": 6,
     "src/CVidPoly.cpp": 6,
@@ -42,6 +41,7 @@
     "src/CGameAnimationTypeMonsterAnkheg.cpp": 1,
     "src/CGameAnimationTypeMonsterLayeredSpell.cpp": 1,
     "src/CGameSpawning.cpp": 1,
+    "src/CInfGame.cpp": 1,
     "src/CInfinity.cpp": 1,
     "src/CMessage.cpp": 1,
     "src/CMoveList.cpp": 1,
@@ -57,7 +57,7 @@
     "src/CWarp.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10399,
+  "annotations_total": 10400,
   "annotations_not_function_start": 2576,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -3846,9 +3846,9 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3826486,
-  "bytes_done": 3541567,
-  "bytes_complete": 3295118,
+  "bytes_total": 3826394,
+  "bytes_done": 3541786,
+  "bytes_complete": 3302819,
   "largest_stubs": [
     {
       "addr": "0x5EFFD0",
@@ -3946,11 +3946,6 @@
       "size": 3502
     },
     {
-      "addr": "0x5A69B0",
-      "name": "FUN_005a69b0",
-      "size": 3457
-    },
-    {
       "addr": "0x407280",
       "name": "FUN_00407280",
       "size": 3385
@@ -4001,11 +3996,6 @@
       "size": 2811
     },
     {
-      "addr": "0x5C1350",
-      "name": "CInfGame_RestPartyPrivate",
-      "size": 2771
-    },
-    {
       "addr": "0x5FB3E0",
       "name": "CScreenConnection_TimerAsynchronousUpdate",
       "size": 2702
@@ -4049,6 +4039,16 @@
       "addr": "0x77C670",
       "name": "FUN_0077c670",
       "size": 1728
+    },
+    {
+      "addr": "0x613310",
+      "name": "FUN_00613310",
+      "size": 1701
+    },
+    {
+      "addr": "0x407FC0",
+      "name": "CAIGroup_GroupDrawMove",
+      "size": 1686
     }
   ],
   "next": [

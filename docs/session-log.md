@@ -2,6 +2,34 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-12 (late night): S6, the party walks, batches 34–46, packed build
+
+**Play test S6 (walk the party off the ship).** New test: drag-select the party, click on the dock, compare after 20 s. It passes on the original and found, on the rebuild:
+- The party did not walk. `CAIGroup::GroupSetTarget` and friends were stubs (batch 39), and then ten separate errors in older path-finding code: `CGameSprite::MoveToPoint` and `AIUpdateWalk`, `SearchThreadMain`, four `CPathSearch` functions, two `CSearchBitmap` snapshot stubs, `CMessageSetPath`. A follow-up audit of the rest of that subsystem by verifiers found seven more differences (`GetLOSCost`, `GetCost`, `AddObject`/`RemoveObject` clamping, `SetPath`, the `CPathSearch` constructor, two swapped members). All fixed.
+- Fog of war drew fully fogged tiles as triangles (`CVidInf::LoadFogOWarSurfaces` used frame 2 for the fourth quadrant).
+- World-screen portraits lacked the button background (`CUIControlPortraitWorld::Render` did not call the base Render).
+- A red ring on an NPC: `CGameSprite::SetCurrAction` (0x7338E0) was missing. Added; its spell set-up block (0x7340BD–0x73452E) is still a TODO.
+S6 now passes about one run in three on the rebuild. Remaining: one character sometimes stops short of its formation spot (world view lands at 3.0–3.4% against a 3.0% limit), and occasionally the whole world is drawn about 30% darker.
+
+**Batches merged:** 34–46 (chunk classes and `Shatter`, leave-area-by-name, `CMessageSpriteUpdate::Run`, `CProjectilePart1/6`, group movement, death-effect shatter, `CGameSprite` quick buttons, character screen panels and level-up sequence, world-map travel handler, rest party, record converters). Verifier findings confirmed and fixed along the way: terrain table choice in six projectile/chunk constructors, `RemoveFromArea` returning after its assert, a mirrored formation direction (−360.0 constant), reversed list order in a projectile helper, byte-wide reads of the local player slot.
+
+**Packed build.** The game itself was being built with default struct packing; only the layout test used `/Zp2`. The Windows SDK refuses `/Zp2`, so `src/pack_prefix.h` is now force-included: system headers first, then `#pragma pack(2)`. S1–S6 pass on it (same S6 caveats).
+
+**Progress:** 7,685 of 9,703 counted functions without TODO (79.2%), 86.1% of bytes, before batch 46.
+
+**Process notes**
+- Older hand-written translations are a bigger source of runtime bugs than missing code. Auditing a subsystem with verifiers (read-only, about 60–150k tokens per file) before debugging it at runtime is cheap and found real errors every time.
+- `tools/inventory_exclusions.txt` uses a union merge so parallel batches can both append.
+- Play test goldens of animated world views need limits taken from original-versus-original runs; 3% is tight for S6.
+
+**Open**
+- S6 items above; S5 dialogue-step flake not seen again.
+- `CScreenWorld::m_bHardPaused` / `m_bPaused` should be `BOOLEAN` (the original reads one byte; about 26 uses).
+- `CGameSprite::SetResRef(const CResRef&)` at 0x42FDC0 has the wrong signature (it takes a CString by value); a correct overload was added, callers in `CGameArea.cpp` still use the old one.
+- `CGameArea::CheckRestEncounter` (0x46FEA0) sits at the end of `CInfGame.cpp`; move it to `CGameArea.cpp`.
+- `CCreatureFile::ReleaseData` takes one stack argument in the original.
+- Stubs added: `CBaldurMessage::sub_435C30`, `CScreenCharacter::sub_5E87E0`, `sub_5F7B00`, `sub_5EFFD0` (26 KB), `LevelUp` (0x5E56F0), `CVisualEffect::SetAllDelete` (class missing).
+
 ## 2026-11-12 (night): batches 23–33
 
 **Merged.** Every batch went translator → verifier(s) → fixes confirmed against the listing → merge → `tools\check.ps1` → S1–S5.
