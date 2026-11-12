@@ -229,11 +229,16 @@ BOOL CResCache::CopyFile(UINT nIndex, const CString& sName, const CString& sSrcF
 
     field_118 = 0;
 
+    if (m_nCacheSize < nSize) {
+        input.Close();
+        return FALSE;
+    }
+
     if (GetUnusedSize() < nSize) {
         FlushCache(nSize);
         if (GetUnusedSize() < nSize) {
             int v1 = nSize - GetUnusedSize();
-            m_nCacheSize += v1 + m_nAvailableCacheSize;
+            m_nCacheSize += v1;
             m_nAvailableCacheSize += v1;
             if (GetUnusedSize() < nSize) {
                 m_nCacheSize -= v1;
@@ -315,7 +320,7 @@ BOOL CResCache::CopyFile(UINT nIndex, const CString& sName, const CString& sSrcF
 
                     nCompressedBufferSize = max(nCompressedChunkSize, 1024);
                     pCompressedBuffer = new BYTE[nCompressedBufferSize];
-                    if (pBuffer == NULL) {
+                    if (pCompressedBuffer == NULL) {
                         delete pBuffer;
                         return FALSE;
                     }
@@ -336,8 +341,10 @@ BOOL CResCache::CopyFile(UINT nIndex, const CString& sName, const CString& sSrcF
                 if (nBytesRead != nCompressedChunkSize) {
                     field_118 = 1;
 
-                    delete pCompressedBuffer;
-                    delete pBuffer;
+                    // NOTE: Original leaks `pBuffer` here.
+                    if (pCompressedBuffer != NULL) {
+                        delete pCompressedBuffer;
+                    }
 
                     return FALSE;
                 }
@@ -364,7 +371,6 @@ BOOL CResCache::CopyFile(UINT nIndex, const CString& sName, const CString& sSrcF
 
         if (field_118 == 1) {
             nTotalBytesRead = nTotalBytesToRead;
-            g_pChitin->cProgressBar.m_nActionProgress = nTotalBytesRead;
         } else {
             nTotalBytesRead += nBytesRead;
             g_pChitin->cProgressBar.m_nActionProgress += nBytesRead;
@@ -383,6 +389,9 @@ BOOL CResCache::CopyFile(UINT nIndex, const CString& sName, const CString& sSrcF
     }
 
     field_114 = 0;
+
+    // NOTE: Result is unused.
+    GetTickCount();
 
     input.Close();
     output.Close();

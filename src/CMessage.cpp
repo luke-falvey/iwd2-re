@@ -16913,7 +16913,7 @@ BYTE CMessageEnterDialog::GetMsgType()
     return CBaldurMessage::MSG_TYPE_CMESSAGE;
 }
 
-// 0x43E170
+// 0x483B60
 BYTE CMessageEnterDialog::GetMsgSubType()
 {
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_ENTER_DIALOG;
@@ -23821,7 +23821,7 @@ BYTE CMessageStartScroll::GetMsgType()
     return CBaldurMessage::MSG_TYPE_CMESSAGE;
 }
 
-// 0x40A0F0
+// 0x45F550
 BYTE CMessageStartScroll::GetMsgSubType()
 {
     return CBaldurMessage::MSG_SUBTYPE_CMESSAGE_START_SCROLL;

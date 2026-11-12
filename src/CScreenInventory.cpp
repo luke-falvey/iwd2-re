@@ -7379,8 +7379,8 @@ BOOL CUIControlButtonInventoryHistoryIcon::Render(BOOL bForce)
         rClip.IntersectRect(rFrame, m_rDirty);
 
         vcIcon.Render(0,
-            ptCenter.x + (m_size.cx - frameSize.cx) / 2,
-            ptCenter.y + (m_size.cy - frameSize.cy) / 2,
+            x + ptCenter.x + (m_size.cx - frameSize.cx) / 2,
+            y + ptCenter.y + (m_size.cy - frameSize.cy) / 2,
             rClip,
             NULL,
             0,

@@ -349,7 +349,7 @@ BOOLEAN CTlkFileOverrideHeader::Unmarshal()
         }
     }
 
-    return FALSE;
+    return TRUE;
 }
 
 // 0x7B6070

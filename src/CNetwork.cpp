@@ -2378,7 +2378,7 @@ static BOOL CALLBACK CNetworkEnumSessionsCallback(LPCDPSESSIONDESC2 lpSessionDes
         return FALSE;
     }
 
-    sSessionName = lpSessionDesc->lpszPasswordA;
+    sSessionName = lpSessionDesc->lpszSessionNameA;
 
     CNetwork* pNetwork = &(g_pChitin->cNetwork);
     if (pNetwork->m_nTotalSessions < CNETWORK_MAX_SESSIONS) {
