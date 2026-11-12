@@ -58,12 +58,19 @@ std::list<LONG> CProjectileHelper84EEA8::sub_55A890(const std::set<DWORD>& targe
     std::list<LONG> result;
 
     for (std::set<DWORD>::const_iterator it = targets.begin(); it != targets.end(); it++) {
-        // NOTE: Inlined `std::map::operator[]`.
-        CPoint& entry = field_8[*it];
+        // NOTE: Inlined `std::map::operator[]`. A new entry starts as (0, 0);
+        // `CPoint`'s default constructor would leave it uninitialised.
+        std::map<LONG, CPoint>::iterator itEntry = field_8.find(*it);
+        if (itEntry == field_8.end()) {
+            itEntry = field_8.insert(std::make_pair(static_cast<LONG>(*it), CPoint(0, 0))).first;
+        }
+        CPoint& entry = itEntry->second;
 
         if (entry.y < field_24) {
             if (entry.x % field_20 == 0) {
-                result.push_back(*it);
+                // NOTE: Original inserts at the front, so the ids come out in
+                // reverse set order.
+                result.push_front(*it);
                 entry.y++;
             }
         }
