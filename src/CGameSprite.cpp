@@ -23941,6 +23941,260 @@ SHORT CGameSprite::Spell(CGameAIBase* pTarget)
 {
     // TODO: Incomplete.
 
+    SHORT nSequence = m_nSequence;
+    CString sSpell("");
+
+    if (m_typeAI.m_nGeneral == CAIObjectType::G_DEAD) {
+        return ACTION_DONE;
+    }
+
+    if (m_actionCount == 0) {
+        if (m_curProjectile != NULL) {
+            delete m_curProjectile;
+            m_curProjectile = NULL;
+        }
+
+        if (m_derivedStats.m_bAuraCleansing != 0) {
+            if (m_castCounter != -1) {
+                FeedBack(0x29, 0, 0, 0, -1, 0, 0);
+                m_castCounter = -1;
+            }
+        }
+    }
+
+    if (pTarget == NULL) {
+        return ACTION_ERROR;
+    }
+
+    if (pTarget->GetObjectType() == CGameObject::TYPE_SPRITE && pTarget != this) {
+        CGameSprite* pTargetSprite = static_cast<CGameSprite*>(pTarget);
+        if (!pTargetSprite->IsVisibleToCaller(GetCanSeeInvisible())
+            || pTargetSprite->m_derivedStats.m_spellStates[SPLSTATE_SANCTUARY]) {
+            AutoPause(0x20);
+
+            CAITrigger trigger(CAITRIGGER_TARGETUNREACHABLE, m_curAction.m_acteeID, 0);
+
+            CMessage* message = new CMessageSetTrigger(trigger, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+            // NOTE: Releases a share of the target that this function never
+            // acquired.
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(pTarget->m_id,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            return ACTION_ERROR;
+        }
+    }
+
+    SHORT nDirection = m_nDirection;
+    if (nDirection != GetDirection(pTarget->GetPos()) && pTarget != this) {
+        CMessage* message = new CMessageSetDirection(pTarget->GetPos(), m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        return ACTION_NORMAL;
+    }
+
+    if (!m_derivedStats.m_spellStates[SPLSTATE_VOCALIZE]
+        && (m_derivedStats.m_generalState & STATE_SILENCED) != 0
+        && !sub_763150(CGAMESPRITE_FEAT_SUBVOCAL_CASTING)) {
+        if (strcmp(m_curAction.GetString1(), "") == 0) {
+            DecodeSpell(m_curAction.m_specificID, sSpell);
+            if (strcmp(sSpell, "") == 0) {
+                return ACTION_ERROR;
+            }
+        } else {
+            sSpell = m_curAction.GetString1();
+        }
+
+        CResRef resSilenced(sSpell);
+
+        BYTE nSilencedType = g_pBaldurChitin->GetObjectGame()->GetSpellType(resSilenced);
+        if (nSilencedType == 1 || nSilencedType == 3) {
+            if (strcmp(sSpell, "SPWI219") != 0) {
+                return ACTION_ERROR;
+            }
+        }
+    }
+
+    BYTE nClass = static_cast<BYTE>(m_curAction.m_specificID2);
+    BYTE nSpecIndex = static_cast<BYTE>(m_curAction.m_specificID2 >> 8);
+    DWORD nSpecialization = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetSpecializationMask(nClass, nSpecIndex);
+    BYTE nSpellLevel = static_cast<BYTE>(m_curAction.m_specificID3);
+
+    BOOL bTempSpell = FALSE;
+
+    if (!m_bStartedCasting) {
+        CSpell* pSpell = m_curSpell;
+        if (pSpell == NULL) {
+            if (strcmp(m_curAction.GetString1(), "") == 0) {
+                DecodeSpell(m_curAction.m_specificID, sSpell);
+                if (strcmp(sSpell, "") == 0) {
+                    return ACTION_ERROR;
+                }
+            } else {
+                sSpell = m_curAction.GetString1();
+            }
+
+            pSpell = new CSpell(CResRef(sSpell));
+            if (pSpell == NULL) {
+                return ACTION_ERROR;
+            }
+
+            bTempSpell = TRUE;
+        } else {
+            bTempSpell = FALSE;
+        }
+
+        if (!CheckAppropriateTarget(pSpell, pTarget)) {
+            if (bTempSpell) {
+                delete pSpell;
+            }
+
+            return ACTION_ERROR;
+        }
+
+        if (pSpell->GetGenericName() != 0x64A5
+            && pSpell->GetGenericName() != 0x7E89
+            && pSpell->GetGenericName() != 0x2F55) {
+            BOOL bCheckLOS = ((~pSpell->GetItemFlags()) >> 11) & 1;
+
+            BOOL bMove;
+            if (sub_7567F0(pSpell, pTarget->GetPos(), nClass, nSpecialization)) {
+                if (!m_pArea->CheckLOS(m_pos, pTarget->GetPos(), m_visibleTerrainTable, FALSE) && bCheckLOS) {
+                    bMove = TRUE;
+                } else {
+                    CMessage* message = new CMessageDropPath(m_id, m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                    bMove = FALSE;
+                }
+            } else {
+                bMove = TRUE;
+            }
+
+            if (bMove) {
+                SHORT rc = MoveToObject(pTarget);
+                if (rc != ACTION_DONE) {
+                    if (bTempSpell) {
+                        delete pSpell;
+                    }
+
+                    return rc;
+                }
+            }
+        }
+
+        if (bTempSpell) {
+            delete pSpell;
+        }
+
+        if (m_castCounter == -1) {
+            m_castCounter = 0;
+            m_bInCasting = TRUE;
+        }
+    }
+
+    // NOTE: The original shares this stack slot between `bTempSpell` and the
+    // spell's caster type.
+    SHORT nSpellType = static_cast<SHORT>(bTempSpell);
+
+    if (m_castCounter == 0) {
+        if (m_curAction.m_actionID == CAIAction::SPELLNODEC) {
+            if (!IsVisibleToCaller(FALSE)) {
+                ITEM_EFFECT effect;
+                CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_FORCEVISIBLE);
+                // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+                effect.durationType = 1;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    m_pos,
+                    m_id,
+                    CPoint(-1, -1));
+
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            if (strcmp(m_curAction.GetString1(), "") == 0) {
+                DecodeSpell(m_curAction.m_specificID, sSpell);
+                if (strcmp(sSpell, "") == 0) {
+                    return ACTION_ERROR;
+                }
+            } else {
+                sSpell = m_curAction.GetString1();
+            }
+
+            if (m_derivedStats.m_spellStates[SPLSTATE_SANCTUARY]) {
+                ITEM_EFFECT effect;
+                CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_DISPELSANCTUARY);
+                // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+                effect.durationType = 1;
+
+                CGameEffect* pEffect = CGameEffect::DecodeEffect(&effect,
+                    m_pos,
+                    m_id,
+                    CPoint(-1, -1));
+
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+
+            if (m_curSpell != NULL) {
+                delete m_curSpell;
+                m_curSpell = NULL;
+            }
+
+            m_curSpell = new CSpell(CResRef(sSpell));
+
+            CResRef resSpell(sSpell);
+            m_cGameStats.RecordSpellUse(resSpell);
+
+            if (m_curSpell == NULL) {
+                return ACTION_ERROR;
+            }
+
+            nSpellType = m_curSpell->GetCasterType();
+        } else {
+            // NOTE: The original tests `m_castCounter == 0` a second time.
+            // TODO: Incomplete. 0x740D61-0x741A3E (spell consumption).
+        }
+    }
+
+    if (m_curSpell == NULL) {
+        if (m_typeAI.m_nEnemyAlly > CAIObjectType::EA_GOODCUTOFF) {
+            return ACTION_NORMAL;
+        }
+
+        return ACTION_INTERRUPTABLE;
+    }
+
+    m_curSpell->Demand();
+
+    SHORT nCasterLevel = GetCasterLevel(m_curSpell, nClass, nSpecialization);
+
+    SPELL_ABILITY* pAbility = NULL;
+    INT nAbilityIdx = 0;
+    if (m_curSpell->GetAbilityCount() > 0) {
+        do {
+            if (m_curSpell->GetAbility(nAbilityIdx)->minCasterLevel > nCasterLevel) {
+                break;
+            }
+
+            pAbility = m_curSpell->GetAbility(nAbilityIdx);
+            nAbilityIdx++;
+        } while (nAbilityIdx < m_curSpell->GetAbilityCount());
+    }
+
+    INT nAbility = nAbilityIdx - 1;
+
+    if (pAbility == NULL) {
+        m_curSpell->Release();
+        return ACTION_ERROR;
+    }
+
+    // TODO: Incomplete. 0x741AF8-0x7427B3 (casting and release).
+
     return ACTION_ERROR;
 }
 
