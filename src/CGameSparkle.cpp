@@ -7,6 +7,9 @@
 #include "CWarp.h"
 #include "CVidMode.h"
 
+// 0x84D604
+const WORD CGameSparkle::TYPE_EXPLOSION = 4;
+
 // NOTE: Uninlined. The original reads each color from `SPARKLE.2DA` with the
 // `C2DArray::GetAt` bounds check and `sscanf` inlined in every case.
 static COLORREF GetSparkleColor(const C2DArray& table, SHORT x, SHORT y)
@@ -122,6 +125,16 @@ CGameSparkle::CGameSparkle(SHORT nSparkleType, WORD wType, WORD a3)
         UTIL_ASSERT(FALSE);
         break;
     }
+}
+
+// NOTE: Inlined in `CGameEffectSparkle::ApplyEffect` (name is a guess).
+void CGameSparkle::SetExplosionVelocity(const CPoint& velocity)
+{
+    // __FILE__: .\Include\CParticle.h
+    // __LINE__: 511
+    UTIL_ASSERT(m_wType & TYPE_EXPLOSION);
+
+    m_velocity = velocity;
 }
 
 // 0x51C310

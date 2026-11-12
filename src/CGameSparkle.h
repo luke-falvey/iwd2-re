@@ -14,11 +14,15 @@ class CVidMode;
 // (size 0xCA, vtable 0x84D624, colors from `SPARKLE.2DA`).
 class CGameSparkle : public CGameObject {
 public:
+    static const WORD TYPE_EXPLOSION;
+
     CGameSparkle(SHORT nSparkleType, WORD wType, WORD a3);
     /* 0000 */ ~CGameSparkle() override;
     /* 0008 */ void AddToArea(CGameArea* pNewArea, const CPoint& pos, LONG posZ, BYTE listType) override;
     /* 000C */ void AIUpdate() override;
     /* 004C */ void Render(CGameArea* pArea, CVidMode* pVidMode, int a3) override;
+
+    void SetExplosionVelocity(const CPoint& velocity);
 
     /* 006E */ CVidMode* m_pVidMode;
     /* 0072 */ CTypedPtrList<CPtrList, CParticle*> m_particleList;
@@ -31,7 +35,7 @@ public:
     /* 00B6 */ WORD m_wType;
     /* 00B8 */ LONG field_B8;
     /* 00BC */ WORD field_BC;
-    /* 00BE */ CPoint field_BE;
+    /* 00BE */ CPoint m_velocity;
     /* 00C6 */ LONG field_C6;
 };
 

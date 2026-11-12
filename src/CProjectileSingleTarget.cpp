@@ -8,6 +8,7 @@
 #include "CInfinity.h"
 #include "CParticle.h"
 #include "CPathSearch.h"
+#include "CGameSparkle.h"
 #include "CUtil.h"
 
 // 0x577E40
@@ -222,10 +223,8 @@ void CProjectileSingleTarget::AIUpdate()
     }
 
     if (field_E2 != 0) {
-        // TODO: Incomplete. Creates an object (size 0xCA, constructor
-        // 0x51AE40, vtable 0x84D618) from `field_9A`, the word at 0x84D600
-        // and the word at 0x84D5F0, then calls its `AddToArea(field_EA,
-        // m_pos, m_posZ, CGameObject::LIST_FRONT)`.
+        CGameSparkle* pSparkle = new CGameSparkle(field_9A, 1 /* 0x84D600 */, 25 /* 0x84D5F0 */);
+        pSparkle->AddToArea(field_EA, m_pos, m_posZ, CGameObject::LIST_FRONT);
     }
 
     m_sound.SetCoordinates(m_pos.x, m_pos.y, m_posZ);
