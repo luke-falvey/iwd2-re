@@ -539,3 +539,8 @@
 # CTypedPtrArray<CPtrArray, CScreenSaveGameSlot*>::ElementAt (`lea eax,[m_pData+idx*4]`), called by
 # CScreenSave::RefreshGameSlots.
 0x65F8F0
+
+# Not a function start: the tail of CGameSprite::sub_720B50 (0x720B50, size 223), which Ghidra split
+# at 0x720C2F. The whole function ends at 0x72208F (RET 0x8). The repo body of sub_720B50 covers it
+# (the att1..fall blocks that parse the comma lists and AddTail onto field_72F0..field_73EC).
+0x720C2F

@@ -14333,6 +14333,70 @@ LONG CGameSprite::GetLevel()
     return m_derivedStats.GetAtOffset(STAT_CLASSLEVELSUM);
 }
 
+// 0x7238C0
+BOOLEAN CGameSprite::DoAIUpdate(BOOLEAN active, LONG counter)
+{
+    // NOTE: `active` is unused.
+    if ((m_AISpeed & counter) != (m_AISpeed & m_id)) {
+        return FALSE;
+    }
+
+    if ((m_baseStats.m_flags & 0x200000) == 0) {
+        m_AIInhibitor = (m_AIInhibitor + 1) % 3;
+    } else {
+        if (m_AIInhibitor == 0) {
+            return TRUE;
+        }
+
+        m_AIInhibitor = 0;
+    }
+
+    if (m_AIInhibitor == 0) {
+        return TRUE;
+    }
+
+    if (m_pArea != NULL
+        && g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_mode != 0x142
+        && !GetActiveStats()->m_bPreventAISlowDown) {
+        BOOL bNotEvil = !(GetAIType().m_nEnemyAlly < CAIObjectType::EA_EVILCUTOFF);
+        if (bNotEvil == FALSE
+            && GetAIType().m_nEnemyAlly > CAIObjectType::EA_CONTROLCUTOFF
+            && g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) == -1) {
+            BOOL bVisible = TRUE;
+            if (g_pChitin->cNetwork.m_bConnectionEstablished != TRUE) {
+                CGameArea* pArea = m_pArea;
+
+                CRect rFx;
+                CPoint ptReference;
+                m_animation.m_animation->CalculateFxRectMax(rFx,
+                    ptReference,
+                    pArea->GetHeightOffset(m_pos, m_listType));
+
+                int nHeight = pArea->GetHeightOffset(m_pos, m_listType);
+
+                CRect rBounds(m_pos.x - ptReference.x,
+                    m_pos.y + nHeight - ptReference.y,
+                    m_pos.x + (rFx.right - ptReference.x - rFx.left),
+                    m_pos.y + nHeight + (rFx.bottom - rFx.top - ptReference.y));
+
+                CRect rView(pArea->m_cInfinity.nCurrentX,
+                    pArea->m_cInfinity.nCurrentY,
+                    pArea->m_cInfinity.rViewPort.right - pArea->m_cInfinity.rViewPort.left + pArea->m_cInfinity.nCurrentX,
+                    pArea->m_cInfinity.rViewPort.bottom - pArea->m_cInfinity.rViewPort.top + pArea->m_cInfinity.nCurrentY);
+
+                bVisible = !(rBounds & rView).IsRectEmpty();
+            }
+
+            if (m_canBeSeen == 0 || !bVisible) {
+                return TRUE;
+            }
+        }
+    }
+
+    m_AIInhibitor = 0;
+    return TRUE;
+}
+
 // NOTE: Inlined in `CGameSprite::CGameSprite`.
 CGameSpriteLastUpdate::CGameSpriteLastUpdate()
 {
@@ -14342,7 +14406,8 @@ CGameSpriteLastUpdate::CGameSpriteLastUpdate()
     Initialize(FALSE);
 }
 
-// NOTE: Inlined in `CGameSprite::~CGameSprite`.
+// 0x723AF0
+// NOTE: Also inlined in `CGameSprite::~CGameSprite`.
 CGameSpriteLastUpdate::~CGameSpriteLastUpdate()
 {
     if (m_pPath != NULL) {
@@ -15149,6 +15214,165 @@ BOOL CGameSprite::Animate()
 DWORD CGameSprite::GetSpecialization()
 {
     return m_baseStats.m_specialization;
+}
+
+// 0x728580
+void CGameSprite::ApplyTriggers()
+{
+    CGameAIBase::ApplyTriggers();
+
+    POSITION pos = m_pendingTriggers.GetHeadPosition();
+
+    CAIObjectType typeCause;
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+    // __LINE__: 543
+    UTIL_ASSERT(pGame != NULL);
+
+    BYTE nMorale;
+
+    while (pos != NULL) {
+        CAITrigger* pTrigger = m_pendingTriggers.GetNext(pos);
+        if ((pTrigger->m_flags & 0x2) == 0) {
+            pTrigger->m_flags |= 0x2;
+
+            switch (pTrigger->m_triggerID) {
+            case CAITRIGGER_ATTACKEDBY:
+                m_dialogWait = 0;
+                m_dialogWaitTarget = CGameObjectArray::INVALID_INDEX;
+
+                if ((m_derivedStats.m_generalState & 0x2000) != 0) {
+                    CGameObject* pTarget = GetTargetShareType(pTrigger->m_triggerCause, CGameObject::TYPE_SPRITE);
+                    if (pTarget != NULL) {
+                        if (m_typeAI.m_nEnemyAlly <= CAIObjectType::EA_GOODCUTOFF
+                            && pTarget->m_typeAI.m_nEnemyAlly <= CAIObjectType::EA_GOODCUTOFF
+                            && pGame->GetCharacterPortraitNum(m_id) == -1) {
+                            Enemy();
+                            m_equipedEffectList.RemoveAllOfType(this, 5, NULL, -1);
+                            m_timedEffectList.RemoveAllOfType(this, 5, NULL, -1);
+                        }
+
+                        pGame->GetObjectArray()->ReleaseShare(pTarget->m_id,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                    }
+                }
+                break;
+            case CAITRIGGER_HITBY:
+                m_dialogWait = 0;
+                m_dialogWaitTarget = CGameObjectArray::INVALID_INDEX;
+
+                if (m_derivedStats.m_nMaxHitPoints != 0) {
+                    SHORT nHitPoints = m_baseStats.m_hitPoints;
+                    int nMaxHitPoints = m_derivedStats.m_nMaxHitPoints;
+                    int nPercent = nHitPoints * 100 / nMaxHitPoints;
+                    if (nPercent < 50 && field_7110 * 100 / nMaxHitPoints >= 50) {
+                        // NOTE: Morale constant at 0x85BC7A (-2). Morale is clamped to [0, 20] with two stores.
+                        m_baseStats.m_morale += static_cast<BYTE>(-2);
+                        nMorale = m_baseStats.m_morale < 20 ? m_baseStats.m_morale : 20;
+                        m_baseStats.m_morale = nMorale;
+                        nMorale = nMorale > 0 ? nMorale : 0;
+                        m_baseStats.m_morale = nMorale;
+
+                        if (nPercent < 25 && field_7110 * 100 / nMaxHitPoints >= 25) {
+                            m_baseStats.m_morale += static_cast<BYTE>(-2);
+                            nMorale = m_baseStats.m_morale < 20 ? m_baseStats.m_morale : 20;
+                            m_baseStats.m_morale = nMorale;
+                            nMorale = nMorale > 0 ? nMorale : 0;
+                            m_baseStats.m_morale = nMorale;
+                        }
+
+                        field_7110 = nHitPoints;
+                    } else if (nPercent < 25 && field_7110 * 100 / nMaxHitPoints >= 25) {
+                        m_baseStats.m_morale += static_cast<BYTE>(-2);
+                        nMorale = m_baseStats.m_morale < 20 ? m_baseStats.m_morale : 20;
+                        m_baseStats.m_morale = nMorale;
+                        nMorale = nMorale > 0 ? nMorale : 0;
+                        m_baseStats.m_morale = nMorale;
+
+                        field_7110 = nHitPoints;
+                    }
+                }
+                break;
+            case CAITRIGGER_DIED:
+                typeCause.Set(pTrigger->m_triggerCause);
+                typeCause.m_sName = CString("");
+
+                // NOTE: Morale constants at 0x85BC76 (-1) and 0x85BC78 (2).
+                if (m_typeAI.OfType(typeCause, FALSE, FALSE)) {
+                    m_baseStats.m_morale += static_cast<BYTE>(-1);
+                } else if (m_typeAI.m_nEnemyAlly == CAIObjectType::EA_PC
+                    && typeCause.m_nEnemyAlly == CAIObjectType::EA_PC) {
+                    m_baseStats.m_morale += static_cast<BYTE>(-1);
+                } else if (m_typeAI.IsEnemyOf(typeCause)) {
+                    m_baseStats.m_morale += static_cast<BYTE>(2);
+                } else {
+                    break;
+                }
+
+                nMorale = m_baseStats.m_morale < 20 ? m_baseStats.m_morale : 20;
+                m_baseStats.m_morale = nMorale;
+                nMorale = nMorale > 0 ? nMorale : 0;
+                m_baseStats.m_morale = nMorale;
+                break;
+            case CAITRIGGER_KILLED:
+                // NOTE: Morale constant at 0x85BC7C (3).
+                m_baseStats.m_morale += static_cast<BYTE>(3);
+                nMorale = m_baseStats.m_morale < 20 ? m_baseStats.m_morale : 20;
+                m_baseStats.m_morale = nMorale;
+                nMorale = nMorale > 0 ? nMorale : 0;
+                m_baseStats.m_morale = nMorale;
+
+                if (m_typeAI.m_nEnemyAlly <= CAIObjectType::EA_GOODCUTOFF) {
+                    // NOTE: The class is compared with the constants at 0x847CE6 (0x9B) and 0x847CE7 (0x9C).
+                    if (pTrigger->m_triggerCause.m_nClass == 0x9B) {
+                        pGame->ChangeReputation(CInfGame::KILL_INNOCENT);
+                    }
+
+                    if (pTrigger->m_triggerCause.m_nClass == 0x9C) {
+                        pGame->ChangeReputation(CInfGame::KILL_FIST);
+                    }
+
+                    LONG nKilledId = pTrigger->m_triggerCause.m_nInstance;
+
+                    CGameSprite* pKilled;
+                    BYTE rc = pGame->GetObjectArray()->GetShare(nKilledId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pKilled),
+                        INFINITE);
+                    if (rc == CGameObjectArray::SUCCESS) {
+                        if (strcmp(pKilled->m_baseStats.field_2C2, "Kill_Innocent") == 0) {
+                            pGame->ChangeReputation(CInfGame::KILL_INNOCENT);
+                        }
+
+                        if (pGame->GetCharacterPortraitNum(nKilledId) < 0) {
+                            if (pKilled->m_typeAI.m_nEnemyAlly > CAIObjectType::EA_EVILCUTOFF) {
+                                pKilled->m_derivedStats.m_nXPValue = pGame->AddPartyXP(pKilled->m_baseStats.field_252,
+                                    TRUE,
+                                    TRUE);
+                            }
+                        }
+
+                        m_cGameStats.RecordKill(pKilled);
+
+                        pGame->GetObjectArray()->ReleaseShare(nKilledId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                    } else if (rc == CGameObjectArray::DELETED) {
+                        if (pGame->GetCharacterPortraitNum(nKilledId) < 0) {
+                            DWORD nXP = pTrigger->m_triggerCause.m_nEnemyAlly >= CAIObjectType::EA_EVILCUTOFF
+                                ? pTrigger->m_specificID
+                                : 0;
+                            pGame->AddPartyXP(nXP, TRUE, FALSE);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
 }
 
 // 0x728B70

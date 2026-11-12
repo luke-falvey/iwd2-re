@@ -468,6 +468,7 @@ public:
     /* 0044 */ void OnFormationButton(const CPoint& pt) override;
     /* 0048 */ void RemoveFromArea() override;
     /* 004C */ void Render(CGameArea* pArea, CVidMode* pVidMode, INT nSurface) override;
+    /* 0050 */ BOOLEAN DoAIUpdate(BOOLEAN active, LONG counter) override;
     /* 0058 */ void SetCursor(LONG nToolTip) override;
     /* 0064 */ BOOL EvaluateStatusTrigger(const CAITrigger& trigger) override;
     /* 0070 */ void UpdateTarget(CGameObject* pTarget) override;
@@ -479,6 +480,7 @@ public:
     /* 0094 */ void SetScript(SHORT level, CAIScript* script) override;
     /* 009C */ const BYTE* GetVisibleTerrainTable() override;
     /* 00A0 */ const BYTE* GetTerrainTable() override;
+    /* 00AC */ void ApplyTriggers() override;
     /* 00B0 */ void AutoPause(DWORD type) override;
     /* 00B4 */ BOOL GetCanSeeInvisible() override;
     /* 00B8 */ virtual void SetTarget(const CPoint& target, BOOL collisionPath);
