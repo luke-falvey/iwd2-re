@@ -341,9 +341,15 @@ def main() -> int:
             cls = max(set(owners), key=owners.count) if owners else "(unknown class)"
             vtables.append("%s is the VTABLE of %s: %s" % (key(c), cls, " | ".join(slots[:5])))
             continue
-        text = raw.split(b"\0")[0]
-        string = text.decode("latin-1") if len(text) >= 3 and all(32 <= b < 127 for b in text) else ""
-        print(key(c), "|", " ;; ".join(d[1] for d in defs.get(key(c), [])) or "-", "|", string[:60])
+        try:
+            text = read(exe, sections, c, 96).split(b"\0")[0]
+        except SystemExit:
+            text = raw.split(b"\0")[0]
+        # Shown as a Python literal so "\n", "\r\n" and leading or trailing
+        # spaces are visible. Short strings ("%s", "\\") are shown too.
+        printable = len(text) >= 1 and all(32 <= b < 127 or b in (9, 10, 13) for b in text)
+        string = repr(text.decode("latin-1")) if printable else ""
+        print(key(c), "|", " ;; ".join(d[1] for d in defs.get(key(c), [])) or "-", "|", string[:100])
 
     print("=== VTABLES stored by this function")
     for v in vtables:
