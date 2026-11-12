@@ -37,6 +37,7 @@
 #include "CUtil.h"
 #include "CVariableHash.h"
 #include "CVidInf.h"
+#include "CVisualEffect.h"
 #include "Icewind586B70.h"
 #include "IcewindCGameEffects.h"
 #include "IcewindCVisualEffect.h"
@@ -19266,8 +19267,7 @@ BOOL CGameSprite::HandleEffects()
         } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
 
         if (rc == CGameObjectArray::SUCCESS) {
-            // TODO: Incomplete. Calls `CVisualEffect::SetAllDelete` (0x555200)
-            // on `pVisualEffect` (`CVisualEffect` is not yet defined).
+            static_cast<CVisualEffect*>(pVisualEffect)->SetAllDelete();
 
             g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(field_72E2,
                 CGameObjectArray::THREAD_ASYNCH,
