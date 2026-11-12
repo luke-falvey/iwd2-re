@@ -1,8 +1,15 @@
 #include "CSpawn.h"
 
 #include "CGameAIBase.h"
+#include "CAIScript.h"
+#include "CBaldurChitin.h"
+#include "CCreatureFile.h"
 #include "CGameArea.h"
+#include "CGameSprite.h"
+#include "CInfinity.h"
+#include "CInfGame.h"
 #include "CMemINI.h"
+#include "CTimerWorld.h"
 #include "CUtil.h"
 
 template <class Thing>
@@ -393,9 +400,9 @@ BOOL CSpawnFile::GetINIKey(CMemINISection* pSection, const CString& sKey, CStrin
 CSpawnList::CSpawnList(CMemINI* pMemINI, const CString& sSection)
 {
     mInterval = INT_MAX;
-    field_20 = 0;
-    field_24 = 0;
-    field_28 = 0;
+    mTimerInitialized = 0;
+    mLastTime = 0;
+    mLastDay = 0;
     CheckSpawnTimes = 0;
     SpawnTimeOfDay = 0;
     pControlVar = NULL;
@@ -478,9 +485,9 @@ CSpawnList::~CSpawnList()
     }
 
     pControlVar = NULL;
-    field_20 = 0;
-    field_24 = 0;
-    field_28 = 0;
+    mTimerInitialized = 0;
+    mLastTime = 0;
+    mLastDay = 0;
 }
 
 // 0x768D50
@@ -516,9 +523,113 @@ int CSpawnList::ParseData(const CString& sData, CStringArray& Sections)
 // 0x768FA0
 int CSpawnList::Execute(CGameArea* pArea, BOOL bForce)
 {
-    // TODO: Incomplete.
+    if (m_nCount < 1) {
+        return 0;
+    }
 
-    return 0;
+    if (pControlVar != NULL) {
+        CVariable* pControl = CGameAIBase::GetGlobalVariable(pControlVar->mScope, pControlVar->mLabel, 0);
+        if (pControl == NULL || pControl->m_intValue == 0) {
+            return 0;
+        }
+    }
+
+    if (CheckSpawnTimes != 0) {
+        ULONG nHour = g_pBaldurChitin->GetObjectGame()->m_worldTime.m_gameTime % CTimerWorld::TIMESCALE_MSEC_PER_DAY
+            / CTimerWorld::TIMESCALE_MSEC_PER_SEC
+            / CTimerWorld::TIMESCALE_SEC_PER_MIN
+            / CTimerWorld::TIMESCALE_MIN_PER_HOUR;
+        if (((SpawnTimeOfDay >> nHour) & 0x1) == 0) {
+            return 0;
+        }
+    }
+
+    CVariable var;
+
+    CString sTimerName = pArea->m_resRef.GetResRefStr() + mSectionAlias + "_TIMER";
+    CString sDayName = pArea->m_resRef.GetResRefStr() + mSectionAlias + "_DAY";
+
+    CVariable* pTimerVar = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sTimerName);
+    CVariable* pDayVar = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sDayName);
+
+    ULONG nTime = g_pBaldurChitin->GetObjectGame()->m_worldTime.m_gameTime;
+    ULONG nDay = static_cast<WORD>(nTime / CTimerWorld::TIMESCALE_MSEC_PER_DAY + 1);
+
+    BOOL bReady;
+    if (mTimerInitialized == 0) {
+        if (pTimerVar != NULL) {
+            if (pDayVar == NULL) {
+                var.SetName(sDayName);
+                var.m_intValue = nDay;
+                g_pBaldurChitin->GetObjectGame()->GetVariables()->AddKey(var);
+
+                pDayVar = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sDayName);
+            }
+
+            if ((nDay - pDayVar->m_intValue) * CTimerWorld::TIMESCALE_MSEC_PER_DAY - pTimerVar->m_intValue + nTime >= mInterval) {
+                bReady = TRUE;
+            } else {
+                bReady = bForce;
+            }
+
+            mLastTime = nTime;
+            pTimerVar->m_intValue = nTime;
+            mLastDay = nDay;
+            pDayVar->m_intValue = nDay;
+        } else {
+            bReady = TRUE;
+            mLastTime = nTime;
+
+            var.SetName(sTimerName);
+            var.m_intValue = mLastTime;
+            g_pBaldurChitin->GetObjectGame()->GetVariables()->AddKey(var);
+
+            mLastDay = nDay;
+
+            var.SetName(sDayName);
+            var.m_intValue = mLastDay;
+            g_pBaldurChitin->GetObjectGame()->GetVariables()->AddKey(var);
+        }
+
+        mTimerInitialized = 1;
+
+        if (!bReady) {
+            return 0;
+        }
+    } else {
+        bReady = bForce;
+    }
+
+    int nSpawned = 0;
+
+    if (!bReady) {
+        // NOTE: The constant 1296000 is 15 * 60 * 60 * 24, which differs from
+        // `CTimerWorld::TIMESCALE_MSEC_PER_DAY` used above.
+        if (nDay * 1296000 - mLastDay * 1296000 - mLastTime + nTime < mInterval) {
+            return 0;
+        }
+    }
+
+    mLastTime = nTime;
+    mLastDay = nDay;
+
+    if (pTimerVar != NULL) {
+        pTimerVar->m_intValue = nTime;
+    }
+
+    if (pDayVar != NULL) {
+        pDayVar->m_intValue = mLastDay;
+    }
+
+    POSITION pos = GetHeadPosition();
+    while (pos != NULL) {
+        CSpawn* pSpawn = GetNext(pos);
+        if (pSpawn != NULL) {
+            nSpawned += pSpawn->ExecuteSpawn(pArea);
+        }
+    }
+
+    return nSpawned;
 }
 
 // NOTE: Inlined.
@@ -1240,9 +1351,273 @@ BOOL CSpawn::SelectSpawnPoint(CGameArea* pArea, const CRect& rect, int a3)
 // 0x76B160
 int CSpawn::ExecuteSpawn(CGameArea* pArea)
 {
-    // TODO: Incomplete.
+    CVariable creatureName;
+    int nCreated = 0;
 
-    return 0;
+    if (pArea->m_header.m_nPartyLevel < pArea->m_header.m_nDifficultyLevel2) {
+        if (field_13F != 1) {
+            return 0;
+        }
+    } else if (pArea->m_header.m_nPartyLevel < pArea->m_header.m_nDifficultyLevel3) {
+        if (field_140 != 1) {
+            return 0;
+        }
+    } else {
+        if (field_141 != 1) {
+            return 0;
+        }
+    }
+
+    if ((SpawnFlags & SPAWN_KEY_CONTROLLED) != 0 && mpSearchKeyVar != NULL) {
+        if (field_132 == 0) {
+            CVariable* pVar = CGameAIBase::GetGlobalVariable(mpSearchKeyVar->mScope, mpSearchKeyVar->mLabel, 0);
+            int nValue = pVar != NULL ? pVar->m_intValue : 0;
+            if (nValue <= field_136) {
+                return 0;
+            }
+        } else if (field_132 == 1) {
+            CVariable* pVar = CGameAIBase::GetGlobalVariable(mpSearchKeyVar->mScope, mpSearchKeyVar->mLabel, 0);
+            int nValue = pVar != NULL ? pVar->m_intValue : 0;
+            if (nValue >= field_136) {
+                return 0;
+            }
+        } else if (field_132 == 2) {
+            CVariable* pVar = CGameAIBase::GetGlobalVariable(mpSearchKeyVar->mScope, mpSearchKeyVar->mLabel, 0);
+            int nValue = pVar != NULL ? pVar->m_intValue : 0;
+            if (nValue != field_136) {
+                return 0;
+            }
+        } else {
+            CVariable* pVar = CGameAIBase::GetGlobalVariable(mpSearchKeyVar->mScope, mpSearchKeyVar->mLabel, 0);
+            int nValue = pVar != NULL ? pVar->m_intValue : 0;
+            if (nValue == field_136) {
+                return 0;
+            }
+        }
+    }
+
+    int nSearchQty = mSearchQty;
+
+    if ((SpawnFlags & SPAWN_SEARCH_QTY_GLOBAL) != 0) {
+        if (mpSearchQtyVar == NULL) {
+            return 0;
+        }
+
+        CVariable* pVar = CGameAIBase::GetGlobalVariable(mpSearchQtyVar->mScope, mpSearchQtyVar->mLabel, 0);
+        if (pVar == NULL || pVar->m_intValue < 1) {
+            return 0;
+        }
+    }
+
+    int nCount = 0;
+    if (field_13E == 1) {
+        if ((SpawnFlags & SPAWN_SEARCH_RADIUS) != 0) {
+            CPoint ptCenter(mSearchRegion[0], mSearchRegion[1]);
+            nCount = pArea->GetCountInRange(ptCenter, mSearchRegion[2], field_14);
+        } else if ((SpawnFlags & SPAWN_SEARCH_REGION) != 0) {
+            CRect rSearch(mSearchRegion[0], mSearchRegion[1], mSearchRegion[2], mSearchRegion[3]);
+            nCount = pArea->GetCountInPoly(rSearch, field_14);
+        } else {
+            // NOTE: The original reads the low words of `nAreaX` and `nAreaY`.
+            CRect rSearch(0,
+                0,
+                static_cast<SHORT>(pArea->m_cInfinity.nAreaX),
+                static_cast<SHORT>(pArea->m_cInfinity.nAreaY));
+            nCount = pArea->GetCountInPoly(rSearch, field_14);
+        }
+    }
+
+    if (nCount >= nSearchQty) {
+        return 0;
+    }
+
+    int nCreateQty = mCreateQty;
+
+    if ((SpawnFlags & SPAWN_CREATE_SEARCH_QTY) != 0) {
+        nCreateQty = nSearchQty - nCount;
+    } else if ((SpawnFlags & SPAWN_QTY_GLOBAL) != 0) {
+        nCreateQty = CGameAIBase::GetGlobalVariable(*mpCreateQtyScope, *mpCreateQtyLabel, 0)->m_intValue;
+        if (nCreateQty < 1) {
+            return 0;
+        }
+    }
+
+    CInfinity* pInfinity = &pArea->m_cInfinity;
+    CRect rViewPort(pInfinity->nCurrentX,
+        pInfinity->nCurrentY,
+        pInfinity->rViewPort.right - pInfinity->rViewPort.left + pInfinity->nCurrentX,
+        pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + pInfinity->nCurrentY);
+
+    if (SelectSpawnPoint(pArea, rViewPort, 0) <= 0) {
+        return -1;
+    }
+
+    if (mpSpawnPointStorage != NULL) {
+        CVariable* pVar = CGameAIBase::GetGlobalVariable(mpSpawnPointStorage->mScope, mpSpawnPointStorage->mLabel, 0);
+        if (pVar != NULL) {
+            pVar->m_intValue = (mSpelectedPoint.GetLocation().x << 16) | (mSpelectedPoint.GetLocation().y & 0xFFFF);
+        }
+    }
+
+    if ((SpawnFlags & SPAWN_DO_NOTHING) != 0) {
+        return 0;
+    }
+
+    mSequentialStartValue = 0;
+
+    for (int nIndex = 0; nIndex < nCreateQty; nIndex++) {
+        CPoint ptSpawn = mSpelectedPoint.GetLocation();
+        int nFacing = mSpelectedPoint.GetFacing();
+
+        CCreatureFile creatureData;
+
+        if (mCREFiles.GetUpperBound() > 0) {
+            int nPick;
+            if (mCREFiles.GetSize() != 0) {
+                nPick = rand() % mCREFiles.GetSize();
+            } else {
+                nPick = 0;
+            }
+
+            // NOTE: Inlined `CResHelper::SetResRef`.
+            creatureData.SetResRef(CResRef(mCREFiles[nPick]), TRUE, TRUE);
+        } else {
+            // NOTE: Inlined `CResHelper::SetResRef`.
+            creatureData.SetResRef(CResRef(mCREFiles[0]), TRUE, TRUE);
+        }
+
+        CGameSprite* pSprite = new CGameSprite(creatureData.GetData(),
+            creatureData.GetDataSize(),
+            0,
+            0,
+            -1,
+            0,
+            0,
+            0x7FFFFFFF,
+            ptSpawn,
+            nFacing);
+
+        pSprite->SetResRef(creatureData.GetResRef().GetResRefStr());
+
+        creatureData.ReleaseData();
+
+        if (pSprite == NULL) {
+            break;
+        }
+
+        CAIObjectType typeAI(pSprite->GetAIType());
+
+        if (mEA != 0) {
+            typeAI.m_nEnemyAlly = mEA;
+        }
+
+        if (mGeneral != 0) {
+            typeAI.m_nGeneral = mGeneral;
+        }
+
+        if (mRace != 0) {
+            typeAI.m_nRace = mRace;
+        }
+
+        if (mClass != 0) {
+            typeAI.m_nClass = mClass;
+        }
+
+        if (mGender != 0) {
+            typeAI.m_nGender = mGender;
+        }
+
+        if (mSpecifics != 0) {
+            typeAI.m_nSpecific = mSpecifics;
+        }
+
+        if (mAlignment != 0) {
+            typeAI.m_nAlignment = mAlignment;
+        }
+
+        if (mpScriptName != NULL) {
+            typeAI.m_sName = *mpScriptName;
+            strncpy(reinterpret_cast<char*>(pSprite->m_scriptName), *mpScriptName, SCRIPTNAME_SIZE);
+            pSprite->m_scriptName[SCRIPTNAME_SIZE - 1] = '\0';
+        }
+
+        pSprite->SetAIType(typeAI, TRUE, FALSE);
+        pSprite->m_liveTypeAI.Set(typeAI);
+        pSprite->m_startTypeAI.Set(typeAI);
+
+        // NOTE: Script levels are constants at 0x8485D2 (0), 0x8485D4 (1),
+        // 0x8485D6 (2), 0x8485D8 (3), 0x8485DA (4), 0x8485DC (5) and
+        // 0x8485DE (6).
+        if (mpOverrideScript != NULL) {
+            pSprite->SetScript(0, new CAIScript(CResRef(*mpOverrideScript)));
+        }
+
+        if (mpSpecial2Script != NULL) {
+            pSprite->SetScript(3, new CAIScript(CResRef(*mpSpecial2Script)));
+        }
+
+        if (mpCombatScript != NULL) {
+            pSprite->SetScript(4, new CAIScript(CResRef(*mpCombatScript)));
+        }
+
+        if (mpSpecial3Script != NULL) {
+            pSprite->SetScript(5, new CAIScript(CResRef(*mpSpecial3Script)));
+        }
+
+        if (mpMovementScript != NULL) {
+            pSprite->SetScript(6, new CAIScript(CResRef(*mpMovementScript)));
+        }
+
+        if (mpSpecial1Script != NULL) {
+            pSprite->SetScript(1, new CAIScript(CResRef(*mpSpecial1Script)));
+        }
+
+        if (mpTeamScript != NULL) {
+            pSprite->SetScript(2, new CAIScript(CResRef(*mpTeamScript)));
+        }
+
+        if (mDialogFiles.GetUpperBound() >= 0) {
+            if (mDialogFiles.GetUpperBound() > 0) {
+                int nPick;
+                if (mDialogFiles.GetSize() != 0) {
+                    nPick = rand() % mDialogFiles.GetSize();
+                } else {
+                    nPick = 0;
+                }
+
+                pSprite->m_dialog = CResRef(mDialogFiles[nPick]);
+            } else {
+                pSprite->m_dialog = CResRef(mDialogFiles[0]);
+            }
+        }
+
+        pSprite->AddToArea(pArea, ptSpawn, 0, pSprite->m_animation.GetListType());
+
+        creatureName.SetName(CString(pSprite->GetScriptName()));
+        creatureName.m_intValue = pSprite->m_id;
+        pArea->m_namedCreatures.AddKey(creatureName);
+
+        pSprite->JumpToPoint(ptSpawn, TRUE);
+
+        if (mpSearchKeyVar != NULL) {
+            CVariable* pVar = CGameAIBase::GetGlobalVariable(mpSearchKeyVar->mScope, mpSearchKeyVar->mLabel, 0);
+            int nValue = pVar != NULL ? pVar->m_intValue : 0;
+            int nNewValue = field_13A + nValue;
+
+            pVar = CGameAIBase::GetGlobalVariable(mpSearchKeyVar->mScope, mpSearchKeyVar->mLabel, 0);
+            if (pVar != NULL) {
+                pVar->m_intValue = nNewValue;
+            }
+        }
+
+        nCreated++;
+
+        if ((SpawnFlags & SPAWN_HOLD_SELECTED_POINT) == 0) {
+            SelectSpawnPoint(pArea, rViewPort, 0);
+        }
+    }
+
+    return nCreated;
 }
 
 // NOTE: Inlined.
