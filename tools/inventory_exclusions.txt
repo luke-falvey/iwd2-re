@@ -1301,3 +1301,7 @@
 0x453541
 # Static initializer thunk: MOV ECX,global; JMP CMessageSpriteEquipment constructor.
 0x4F6FB0
+# Inline destructor of an unknown class (CString at +4, list at +0x10, CStringArray at +0x24): member destruction only, reached from an unwind funclet (0x842E91).
+0x4EDA50
+# Inline CVariableHashBase destructor body (stores the base vtable 0x84ECD4), reached from unwind funclets.
+0x54FAC0
