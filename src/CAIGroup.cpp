@@ -1225,7 +1225,9 @@ void CAIGroup::GroupSetTarget(CPoint target, BOOL additive, SHORT formationType,
                 angle = 6.283185307 - angle;
             }
 
-            SHORT direction = static_cast<SHORT>(90 - static_cast<LONG>(angle * 360.0 / 6.283185307)) % 360;
+            // NOTE: The multiplier at 0x847B88 is -360.0, so this is
+            // 90 + degrees.
+            SHORT direction = static_cast<SHORT>(90 - static_cast<LONG>(angle * -360.0 / 6.283185307)) % 360;
 
             pOffsets = GetOffsets(formationType, direction, FALSE);
             pFacings = GetFacings(formationType, direction);
