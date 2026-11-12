@@ -480,6 +480,7 @@ public:
     BOOLEAN sub_435470(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_4355F0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_4358B0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_435C30(CString sArea, DWORD nCurrentWorldLink, CString sText, WORD wArg3, BYTE nArg4, DWORD dwArg5);
     BOOLEAN sub_435E00(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_4361D0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_436440(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);

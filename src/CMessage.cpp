@@ -6632,6 +6632,14 @@ BOOLEAN CBaldurMessage::sub_4358B0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
     return TRUE;
 }
 
+// 0x435C30
+BOOLEAN CBaldurMessage::sub_435C30(CString sArea, DWORD nCurrentWorldLink, CString sText, WORD wArg3, BYTE nArg4, DWORD dwArg5)
+{
+    // TODO: Incomplete.
+
+    return FALSE;
+}
+
 // 0x435E00
 BOOLEAN CBaldurMessage::sub_435E00(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
