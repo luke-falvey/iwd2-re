@@ -3684,7 +3684,115 @@ void CScreenCharacter::ResetPopupPanel(DWORD dwPanelId, CGameSprite* pSprite, in
 // 0x5E0B20
 void CScreenCharacter::UpdatePopupPanel(DWORD dwPanelId, CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
+    CUIPanel* pPanel;
+    CUIControlButton* pButton;
+
+    switch (dwPanelId) {
+    case 4:
+        sub_5DB200(pSprite);
+        break;
+    case 6:
+        UpdateSpecializationPanel(pSprite);
+        break;
+    case 7:
+        UpdateAbilitiesPanel(pSprite);
+        break;
+    case 8:
+        UpdateSpellsPanel(pSprite);
+        break;
+    case 9:
+    case 10:
+    case 50:
+        break;
+    case 11:
+        pPanel = m_cUIManager.GetPanel(11);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 10006
+        UTIL_ASSERT(pPanel != NULL);
+
+        if (m_pCurrentScrollBar == NULL) {
+            m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(3));
+        }
+
+        pButton = static_cast<CUIControlButton*>(pPanel->GetControl(5));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 10015
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetEnabled(IsDoneButtonClickable(pSprite));
+        break;
+    case 12:
+        m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(m_cUIManager.GetPanel(12)->GetControl(1));
+        break;
+    case 13:
+        pPanel = m_cUIManager.GetPanel(13);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 3541
+        UTIL_ASSERT(pPanel != NULL);
+
+        m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(1));
+
+        pButton = static_cast<CUIControlButton*>(pPanel->GetControl(4));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 3547
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetEnabled(IsDoneButtonClickable(pSprite));
+        break;
+    case 16:
+        UpdateHatedRacePanel(pSprite);
+        break;
+    case 17:
+        UpdateCustomizePanel(pSprite);
+        break;
+    case 18:
+        UpdateAppearancePanel(pSprite);
+        break;
+    case 19:
+        UpdateCustomPortraitsPanel(pSprite);
+        break;
+    case 20:
+        pPanel = m_cUIManager.GetPanel(20);
+
+        // NOTE: The original stores the scroll bar before testing the panel.
+        m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(6));
+
+        if (pPanel != NULL) {
+            static_cast<CUIControlButton*>(pPanel->GetControl(7))->SetEnabled(m_nCustomSoundSetIndex >= 0);
+            static_cast<CUIControlButton*>(pPanel->GetControl(10))->SetEnabled(IsDoneButtonClickable(pSprite));
+        }
+        break;
+    case 51:
+        m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(m_cUIManager.GetPanel(51)->GetControl(3));
+        break;
+    case 52:
+        m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(m_cUIManager.GetPanel(52)->GetControl(1));
+        break;
+    case 53:
+        m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(m_cUIManager.GetPanel(53)->GetControl(1));
+        break;
+    case 54:
+        UpdateClassSelectionPanel(pSprite);
+        break;
+    case 55:
+        sub_5F7B00(pSprite);
+        break;
+    case 56:
+        sub_5E87E0(pSprite);
+        break;
+    case 57:
+        sub_5DAF30();
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 6688
+        UTIL_ASSERT(FALSE);
+        break;
+    }
 }
 
 // 0x5E0E50
@@ -3758,6 +3866,406 @@ void CScreenCharacter::SummonPopup(DWORD dwPopupId, CGameSprite* pSprite, int a3
     EnablePopupPanel(pPanel->m_nID, TRUE);
 
     UpdatePopupPanel(pPanel->m_nID, pSprite);
+}
+
+// 0x5E0FD0
+BOOL CScreenCharacter::sub_5E0FD0(DWORD dwPopupId, CGameSprite* pSprite)
+{
+    switch (dwPopupId) {
+    case 6:
+        if (m_nClass == CAIOBJECTTYPE_C_WIZARD
+            || m_nClass == CAIOBJECTTYPE_C_MONK
+            || m_nClass == CAIOBJECTTYPE_C_PALADIN
+            || m_nClass == CAIOBJECTTYPE_C_CLERIC) {
+            if (m_pBeforeLevelUpDerivedStats->GetClassLevel(m_nClass) == 0) {
+                return TRUE;
+            }
+        }
+        return FALSE;
+    case 7:
+        return (pSprite->m_derivedStats.m_nLevel >> 2) - (m_pTempDerivedStats->m_nLevel >> 2) > 0;
+    case 8:
+        if (m_nClass != CAIOBJECTTYPE_C_BARD && m_nClass != CAIOBJECTTYPE_C_SORCERER) {
+            return FALSE;
+        }
+
+        // NOTE: The original increments a single byte.
+        field_1776 = static_cast<BYTE>(static_cast<BYTE>(field_1776) + 1);
+        if (static_cast<BYTE>(field_1776) > 9) {
+            return FALSE;
+        }
+
+        while (1) {
+            CInfGame* pGame;
+
+            if (m_nClass == CAIOBJECTTYPE_C_BARD) {
+                pGame = g_pBaldurChitin->GetObjectGame();
+
+                INT nTempSpells = atoi(pGame->GetRuleTables().m_tKnownSpellsBard.GetAt(CPoint(static_cast<BYTE>(field_1776) - 1,
+                    m_pTempDerivedStats->GetClassLevel(CAIObjectType::C_BARD) - 1)));
+
+                pGame = g_pBaldurChitin->GetObjectGame();
+
+                INT nSpells = atoi(pGame->GetRuleTables().m_tKnownSpellsBard.GetAt(CPoint(static_cast<BYTE>(field_1776) - 1,
+                    pSprite->m_derivedStats.GetClassLevel(CAIObjectType::C_BARD) - 1)));
+
+                m_nExtraMageSpells = nSpells - nTempSpells;
+            } else if (m_nClass == CAIOBJECTTYPE_C_SORCERER) {
+                pGame = g_pBaldurChitin->GetObjectGame();
+
+                INT nTempSpells = atoi(pGame->GetRuleTables().m_tKnownSpellsSorcerer.GetAt(CPoint(static_cast<BYTE>(field_1776) - 1,
+                    m_pTempDerivedStats->GetClassLevel(CAIObjectType::C_SORCERER) - 1)));
+
+                pGame = g_pBaldurChitin->GetObjectGame();
+
+                INT nSpells = atoi(pGame->GetRuleTables().m_tKnownSpellsSorcerer.GetAt(CPoint(static_cast<BYTE>(field_1776) - 1,
+                    pSprite->m_derivedStats.GetClassLevel(CAIObjectType::C_SORCERER) - 1)));
+
+                m_nExtraMageSpells = nSpells - nTempSpells;
+            }
+
+            if (m_nExtraMageSpells > 0) {
+                pGame = g_pBaldurChitin->GetObjectGame();
+
+                UINT nLevel = static_cast<BYTE>(field_1776) - 1;
+                UINT nClassIndex = pGame->GetSpellcasterIndex(m_nClass);
+
+                // __FILE__: .\Include\InfGame.h
+                // __LINE__: 772
+                UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+                UINT nSpellsAtLevel = pGame->m_spellsByClass[nClassIndex].m_lists[nLevel].m_nCount;
+                INT nEnabled = 0;
+                UINT nIndex = 0;
+                CResRef resRef;
+
+                for (UINT nCounter = 0; nCounter <= 29; nCounter++) {
+                    while (nIndex < nSpellsAtLevel) {
+                        pGame = g_pBaldurChitin->GetObjectGame();
+                        nLevel = static_cast<BYTE>(field_1776) - 1;
+                        nClassIndex = pGame->GetSpellcasterIndex(m_nClass);
+
+                        // __FILE__: .\Include\InfGame.h
+                        // __LINE__: 772
+                        UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+                        // NOTE: Inlined.
+                        UINT nID = pGame->m_spellsByClass[nClassIndex].m_lists[nLevel].Get(nIndex);
+
+                        pGame = g_pBaldurChitin->GetObjectGame();
+
+                        // NOTE: Inlined.
+                        resRef = pGame->m_spells.Get(nID);
+
+                        CSpell cSpell;
+                        cSpell.SetResRef(resRef, TRUE, TRUE);
+
+                        if (cSpell.pRes != NULL) {
+                            break;
+                        }
+
+                        nIndex++;
+                    }
+
+                    if (nIndex < nSpellsAtLevel) {
+                        CSpell cSpell;
+                        cSpell.SetResRef(resRef, TRUE, TRUE);
+
+                        // NOTE: Result unused.
+                        cSpell.Demand();
+
+                        BYTE nClass = m_nClass;
+                        DWORD dwClassMask = g_pBaldurChitin->GetObjectGame()->GetClassMask(nClass);
+
+                        if (cSpell.pRes != NULL
+                            && cSpell.CheckUsableBy(pSprite) == TRUE
+                            && !pSprite->sub_725330(resRef, dwClassMask, static_cast<BYTE>(field_1776) - 1, FALSE)) {
+                            nEnabled++;
+                        }
+
+                        cSpell.Release();
+
+                        nIndex++;
+                    } else {
+                        break;
+                    }
+                }
+
+                m_nExtraMageSpells = min(m_nExtraMageSpells, nEnabled);
+            }
+
+            if (m_nExtraMageSpells > 0) {
+                return TRUE;
+            }
+
+            // NOTE: The original increments a single byte.
+            field_1776 = static_cast<BYTE>(static_cast<BYTE>(field_1776) + 1);
+            if (static_cast<BYTE>(field_1776) > 9) {
+                return FALSE;
+            }
+        }
+    case 16:
+        if (m_nClass == CAIOBJECTTYPE_C_RANGER) {
+            // NOTE: The divisor is a global at 0x84EA54 (value 5).
+            INT nSlots = pSprite->m_derivedStats.GetClassLevel(CAIObjectType::C_RANGER) / 5 + 1;
+            nSlots -= pSprite->GetNextHatedRacesSlot();
+            if (nSlots > 0 && pSprite->GetNextHatedRacesSlot() < 8) {
+                return TRUE;
+            }
+        }
+        return FALSE;
+    case 0x36:
+        return TRUE;
+    case 0x37:
+        return field_2BC > 0;
+    case 0x38: {
+        CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+        if (m_nClass == CAIOBJECTTYPE_C_CLERIC
+            && m_pBeforeLevelUpDerivedStats->GetClassLevel(CAIOBJECTTYPE_C_CLERIC) == 0) {
+            INT nDomain;
+            switch (pSprite->GetSpecialization() & 0xFF8000) {
+            case 0x8000:
+                nDomain = 0;
+                break;
+            case 0x10000:
+                nDomain = 1;
+                break;
+            case 0x20000:
+                nDomain = 2;
+                break;
+            case 0x40000:
+                nDomain = 3;
+                break;
+            case 0x80000:
+                nDomain = 4;
+                break;
+            case 0x100000:
+                nDomain = 5;
+                break;
+            case 0x200000:
+                nDomain = 6;
+                break;
+            case 0x400000:
+                nDomain = 7;
+                break;
+            case 0x800000:
+                nDomain = 8;
+                break;
+            default:
+                // NOTE: The original reloads the `pSprite` argument here.
+                nDomain = reinterpret_cast<INT>(pSprite);
+                break;
+            }
+
+            for (INT nFeat = 0; nFeat < pGame->GetRuleTables().m_tFeats.GetHeight(); nFeat++) {
+                INT nValue = atol(pGame->GetRuleTables().m_tFeats.GetAt(CPoint(nDomain + 14, nFeat)));
+                INT nCurrent = pSprite->GetFeatValue(nFeat);
+                if (nValue > 0) {
+                    if (nValue > nCurrent) {
+                        nCurrent = nValue;
+                    }
+                    pSprite->SetFeatValue(nFeat, nCurrent);
+                }
+            }
+        }
+
+        for (INT nFeat = 0; nFeat < 75; nFeat++) {
+            INT nValue = atol(pGame->GetRuleTables().m_tFeats.GetAt(CPoint(m_nClass + 2, nFeat)));
+            if (nValue > pSprite->GetFeatValue(nFeat)) {
+                pSprite->SetFeatValue(nFeat, nValue);
+            }
+        }
+
+        return field_64C > 0;
+    }
+    default:
+        return FALSE;
+    }
+}
+
+// 0x5E1910
+BOOL CScreenCharacter::sub_5E1910(DWORD dwPopupId, CGameSprite* pSprite)
+{
+    // NOTE: Initial value is the `pSprite` argument slot (never a valid popup
+    // id); it is only observable when the assertion below fails.
+    DWORD dwNextPopupId = reinterpret_cast<DWORD>(pSprite);
+
+    while (1) {
+        switch (dwPopupId) {
+        case 2:
+            dwNextPopupId = 0x36;
+            break;
+        case 6:
+            dwNextPopupId = 7;
+            break;
+        case 7:
+            dwNextPopupId = 0x37;
+            break;
+        case 8:
+            dwNextPopupId = 0x10;
+            break;
+        case 16:
+            dwNextPopupId = 2;
+            break;
+        case 0x36:
+            dwNextPopupId = 6;
+            break;
+        case 0x37:
+            dwNextPopupId = 0x38;
+            break;
+        case 0x38:
+            dwNextPopupId = 8;
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+            // __LINE__: 7076
+            UTIL_ASSERT(FALSE);
+            break;
+        }
+
+        if (sub_5E0FD0(dwNextPopupId, pSprite)) {
+            SummonPopup(dwNextPopupId, pSprite, 1);
+            return TRUE;
+        }
+
+        if (dwNextPopupId == 2) {
+            break;
+        }
+
+        dwPopupId = dwNextPopupId;
+    }
+
+    LevelUp(pSprite);
+
+    while (m_lPopupStack.GetTailPosition() != NULL) {
+        DismissPopup(pSprite);
+    }
+
+    if (!g_pChitin->cNetwork.m_bIsHost
+        && g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+        CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 7102
+        UTIL_ASSERT(pGame != NULL);
+
+        // NOTE: Uninline.
+        LONG nCharacterId = pGame->GetCharacterId(m_nSelectedCharacter);
+
+        CMessage120* pMessage = new CMessage120(g_pChitin->cNetwork.m_idLocalPlayer,
+            FALSE,
+            nCharacterId,
+            nCharacterId);
+
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+    } else if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        g_pBaldurChitin->GetObjectGame()->GetMultiplayerSettings()->sub_518660(g_pChitin->cNetwork.m_idLocalPlayer, FALSE);
+    }
+
+    return FALSE;
+}
+
+// 0x5E1B20
+BOOL CScreenCharacter::sub_5E1B20(DWORD dwPopupId, CGameSprite* pSprite)
+{
+    // NOTE: Initial value is the `pSprite` argument slot (never a valid popup
+    // id); it is only observable when the assertion below fails.
+    DWORD dwNextPopupId = reinterpret_cast<DWORD>(pSprite);
+
+    while (1) {
+        switch (dwPopupId) {
+        case 6: {
+            BOOL bDead = (pSprite->m_derivedStats.m_generalState >> 11) & 1;
+
+            pSprite->m_baseStats = *m_pTempBaseStats;
+            pSprite->m_derivedStats = *m_pTempDerivedStats;
+            pSprite->m_nHPCONBonusTotalOld = field_866;
+
+            SHORT nMaxHitPoints = pSprite->m_derivedStats.m_nMaxHitPoints;
+            WORD nMaxHitPointsBase = pSprite->m_baseStats.m_maxHitPointsBase;
+            SHORT nHitPoints = pSprite->m_baseStats.m_hitPoints;
+
+            pSprite->field_562C = 1;
+
+            pSprite->ProcessEffectList();
+
+            pSprite->m_baseStats.m_hitPoints = nHitPoints;
+            pSprite->m_derivedStats.m_nMaxHitPoints = nMaxHitPoints;
+            pSprite->m_baseStats.m_maxHitPointsBase = nMaxHitPointsBase;
+            pSprite->m_nHPCONBonusTotalOld = field_866;
+
+            if (bDead) {
+                pSprite->m_baseStats.m_generalState |= STATE_DEAD;
+                pSprite->m_derivedStats.m_generalState |= STATE_DEAD;
+            }
+
+            dwNextPopupId = 0x36;
+            break;
+        }
+        case 7:
+            dwNextPopupId = 6;
+            break;
+        case 8:
+            dwNextPopupId = 0x38;
+            break;
+        case 16:
+            dwNextPopupId = 8;
+            break;
+        case 0x36:
+            dwNextPopupId = 2;
+            break;
+        case 0x37:
+            dwNextPopupId = 7;
+            break;
+        case 0x38:
+            dwNextPopupId = 0x37;
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+            // __LINE__: 7177
+            UTIL_ASSERT(FALSE);
+            break;
+        }
+
+        if (sub_5E0FD0(dwNextPopupId, pSprite)) {
+            SummonPopup(dwNextPopupId, pSprite, 0);
+            return TRUE;
+        }
+
+        if (dwNextPopupId == 2) {
+            break;
+        }
+
+        dwPopupId = dwNextPopupId;
+    }
+
+    while (m_lPopupStack.GetTailPosition() != NULL) {
+        DismissPopup(pSprite);
+    }
+
+    if (!g_pChitin->cNetwork.m_bIsHost
+        && g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+        CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 7200
+        UTIL_ASSERT(pGame != NULL);
+
+        // NOTE: Uninline.
+        LONG nCharacterId = pGame->GetCharacterId(m_nSelectedCharacter);
+
+        CMessage120* pMessage = new CMessage120(g_pChitin->cNetwork.m_idLocalPlayer,
+            FALSE,
+            nCharacterId,
+            nCharacterId);
+
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+    } else if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        g_pBaldurChitin->GetObjectGame()->GetMultiplayerSettings()->sub_518660(g_pChitin->cNetwork.m_idLocalPlayer, FALSE);
+    }
+
+    return FALSE;
 }
 
 // 0x5E1DF0
@@ -3899,13 +4407,8 @@ BOOL CScreenCharacter::OnCancelButtonClick()
 // 0x5E4560
 void CScreenCharacter::sub_5E4560()
 {
-    // NOTE: Returned by value from `FUN_005effd0` (hidden return pointer plus
-    // one `BOOLEAN&` argument).
-    CString sName;
-    BOOLEAN bFlag = FALSE;
-
-    // TODO: Incomplete. `sName = FUN_005effd0(bFlag)` (0x5EFFD0, 26092 bytes,
-    // RET 0x8, thiscall on `this`) is not translated.
+    BOOLEAN bFlag;
+    CString sName = sub_5EFFD0(bFlag);
 
     STR_RES strRes;
 
@@ -4186,10 +4689,114 @@ void CScreenCharacter::OnExportButtonClick()
     renderLock.Unlock();
 }
 
+// 0x5E4E80
+BOOL CScreenCharacter::sub_5E4E80(CGameSprite* pSprite)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    BOOL bLevelUp = FALSE;
+
+    if (m_bMultiPlayerViewable
+        && (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
+            || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID)) {
+        CDerivedStats DStats;
+        DStats = pSprite->m_derivedStats;
+
+        pGame->GetRuleTables().GetNextLevel(pSprite->m_startTypeAI.m_nClass, DStats, pSprite);
+
+        bLevelUp = DStats.m_nLevel != pSprite->m_derivedStats.m_nLevel;
+        if ((pSprite->m_derivedStats.m_generalState & STATE_DEAD) != 0) {
+            bLevelUp = FALSE;
+        }
+    }
+
+    return bLevelUp;
+}
+
 // 0x5E5330
 void CScreenCharacter::OnLevelUpButtonClick()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 8835
+    UTIL_ASSERT(pGame != NULL);
+
+    CSingleLock renderLock(&(m_cUIManager.field_36), FALSE);
+    renderLock.Lock(INFINITE);
+
+    // NOTE: Uninline.
+    LONG nCharacterId = pGame->GetCharacterId(GetSelectedCharacter());
+
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = pGame->GetObjectArray()->GetDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (sub_5E4E80(pSprite)) {
+            CMessageStopActions* pStopMessage = new CMessageStopActions(pSprite->m_id,
+                pSprite->m_id,
+                pSprite);
+
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pStopMessage, FALSE);
+
+            if (!g_pChitin->cNetwork.m_bIsHost
+                && g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+                // NOTE: Uninline.
+                LONG nSelectedId = pGame->GetCharacterId(m_nSelectedCharacter);
+
+                CMessage120* pMessage = new CMessage120(g_pChitin->cNetwork.m_idLocalPlayer,
+                    TRUE,
+                    nSelectedId,
+                    nSelectedId);
+
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+            } else if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+                g_pBaldurChitin->GetObjectGame()->GetMultiplayerSettings()->sub_518660(g_pChitin->cNetwork.m_idLocalPlayer, TRUE);
+            }
+
+            pSprite->field_562C = 1;
+
+            pSprite->ProcessEffectList();
+
+            m_typeAI.Set(pSprite->m_startTypeAI);
+
+            field_77C = pSprite->m_baseStats.m_specialization;
+            m_nSpecialization = pSprite->m_baseStats.m_specialization;
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+            // __LINE__: 8893
+            UTIL_ASSERT((m_pTempBaseStats == NULL) && (m_pTempDerivedStats == NULL));
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+            // __LINE__: 8894
+            UTIL_ASSERT(m_pBeforeLevelUpDerivedStats == NULL);
+
+            m_pTempBaseStats = new CCreatureFileHeader();
+            *m_pTempBaseStats = pSprite->m_baseStats;
+
+            m_pTempDerivedStats = new CDerivedStats();
+            *m_pTempDerivedStats = pSprite->m_derivedStats;
+
+            m_pBeforeLevelUpDerivedStats = new CDerivedStats();
+            *m_pBeforeLevelUpDerivedStats = pSprite->m_derivedStats;
+
+            field_866 = pSprite->m_nHPCONBonusTotalOld;
+
+            sub_5E1910(2, pSprite);
+        }
+
+        pGame->GetObjectArray()->ReleaseDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    renderLock.Unlock();
 }
 
 // 0x5E56F0
@@ -5125,6 +5732,12 @@ void CScreenCharacter::UpdateCharacterStatus(LONG nCharacterId)
     }
 }
 
+// 0x5E87E0
+void CScreenCharacter::sub_5E87E0(CGameSprite* pSprite)
+{
+    // TODO: Incomplete.
+}
+
 // 0x5E8B70
 void CScreenCharacter::UpdateClassSelectionPanel(CGameSprite* pSprite)
 {
@@ -5768,6 +6381,14 @@ void CScreenCharacter::ResetCustomizeBiographyPanel(CUIPanel* pPanel, CGameSprit
     pButton->SetEnabled(g_pBaldurChitin->GetTlkTable().m_override.Fetch(strBiography, strRes));
 }
 
+// 0x5EFFD0
+CString CScreenCharacter::sub_5EFFD0(BOOLEAN& bFlag)
+{
+    // TODO: Incomplete.
+    bFlag = FALSE;
+    return CString();
+}
+
 // 0x5F7850
 void CScreenCharacter::ResetSkillsPanel(CUIPanel* pPanel, CGameSprite* pSprite, int a3)
 {
@@ -5842,6 +6463,12 @@ void CScreenCharacter::ResetSkillsPanel(CUIPanel* pPanel, CGameSprite* pSprite, 
 
         nSlot++;
     }
+}
+
+// 0x5F7B00
+void CScreenCharacter::sub_5F7B00(CGameSprite* pSprite)
+{
+    // TODO: Incomplete.
 }
 
 // 0x5F89B0
@@ -7215,7 +7842,34 @@ CUIControlButtonCharacter5EBC60::~CUIControlButtonCharacter5EBC60()
 // 0x5EBDD0
 void CUIControlButtonCharacter5EBC60::sub_5EBDD0(CResRef cResRef)
 {
-    // TODO: Incomplete.
+    if (field_676 != cResRef) {
+        field_676 = cResRef;
+        field_66E = "";
+
+        if (field_676 != "") {
+            CSpell cSpell;
+            cSpell.SetResRef(field_676, TRUE, TRUE);
+            cSpell.Demand();
+
+            if (cSpell.pRes != NULL) {
+                BYTE icon[RESREF_SIZE];
+                cSpell.GetIcon(icon);
+
+                field_66E = icon;
+
+                CString sResRef;
+                field_66E.CopyToString(sResRef);
+                sResRef.SetAt(sResRef.GetLength() - 1, 'B');
+                field_66E = sResRef;
+            }
+
+            SetToolTipStrRef(cSpell.GetGenericName(), -1, -1);
+
+            cSpell.Release();
+        } else {
+            SetToolTipStrRef(-1, -1, -1);
+        }
+    }
 }
 
 // 0x5EBFA0

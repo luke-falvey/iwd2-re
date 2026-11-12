@@ -1508,8 +1508,32 @@ LONG CDamageReduction::Absorb(LONG nDamage)
 // 0x447CD0
 BOOLEAN CDamageReduction::sub_447CD0()
 {
-    // TODO: Incomplete.
-    return FALSE;
+    if (m_damageTypes.empty()) {
+        return TRUE;
+    }
+
+    // NOTE: The size is not compared with 6; only membership is tested.
+    if (m_damageTypes.find(0) == m_damageTypes.end()) {
+        return FALSE;
+    }
+
+    if (m_damageTypes.find(0x100000) == m_damageTypes.end()) {
+        return FALSE;
+    }
+
+    if (m_damageTypes.find(0x1000000) == m_damageTypes.end()) {
+        return FALSE;
+    }
+
+    if (m_damageTypes.find(0x2000000) == m_damageTypes.end()) {
+        return FALSE;
+    }
+
+    if (m_damageTypes.find(0x4000000) == m_damageTypes.end()) {
+        return FALSE;
+    }
+
+    return m_damageTypes.find(0x8000000) != m_damageTypes.end();
 }
 
 // 0x447E30

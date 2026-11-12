@@ -116,7 +116,14 @@ public:
     BOOL IsDoneButtonClickable(CGameSprite* pSprite);
     void OnDoneButtonClick();
     BOOL OnCancelButtonClick();
+    void sub_5E87E0(CGameSprite* pSprite);
+    void sub_5F7B00(CGameSprite* pSprite);
+    CString sub_5EFFD0(BOOLEAN& bFlag);
     void sub_5E4560();
+    BOOL sub_5E4E80(CGameSprite* pSprite);
+    BOOL sub_5E0FD0(DWORD dwPopupId, CGameSprite* pSprite);
+    BOOL sub_5E1910(DWORD dwPopupId, CGameSprite* pSprite);
+    BOOL sub_5E1B20(DWORD dwPopupId, CGameSprite* pSprite);
     void OnInformationButtonClick();
     void OnBiographyButtonClick();
     void OnCustomizeBiographyButtonClick();
@@ -178,7 +185,7 @@ public:
     /* 064A */ SHORT m_nTopFeat;
     /* 064C */ INT field_64C;
     /* 0650 */ INT m_storedFeats[75];
-    /* 077C */ WORD field_77C;
+    /* 077C */ DWORD field_77C;
     /* 0780 */ int field_780;
     /* 0798 */ INT m_nExtraSkillPoints;
     /* 079C */ int field_79C;
