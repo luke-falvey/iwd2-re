@@ -1877,7 +1877,7 @@ void CScreenWorldMap::sub_69D0F0(CResRef& cResArea, CString sText, SHORT nFacing
                             if (pSprite->Animate()
                                 && pSprite->GetArea() != NULL
                                 && pSprite->GetArea() != pArea
-                                && nPlayerSlot != g_pChitin->cNetwork.m_nLocalPlayer) {
+                                && nPlayerSlot != static_cast<BYTE>(g_pChitin->cNetwork.m_nLocalPlayer)) {
                                 // NOTE: Unused.
                                 CString sPlayerName;
 
@@ -1965,7 +1965,7 @@ void CScreenWorldMap::sub_69D0F0(CResRef& cResArea, CString sText, SHORT nFacing
                         if (pSprite->Animate()
                             && pSprite->GetArea() != NULL
                             && pSprite->GetArea() != pArea
-                            && pGame->m_multiplayerSettings.GetCharacterControlledByPlayer(nSlot) == g_pChitin->cNetwork.m_nLocalPlayer) {
+                            && pGame->m_multiplayerSettings.GetCharacterControlledByPlayer(nSlot) == static_cast<BYTE>(g_pChitin->cNetwork.m_nLocalPlayer)) {
                             if (g_pChitin->cNetwork.m_nServiceProvider != CNetwork::SERV_PROV_NULL) {
                                 bOwned = g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID;
                             } else {
@@ -1982,7 +1982,7 @@ void CScreenWorldMap::sub_69D0F0(CResRef& cResArea, CString sText, SHORT nFacing
                         if (bOutside == TRUE) {
                             if (!bOwned) {
                                 g_pBaldurChitin->GetObjectGame()->m_multiplayerSettings.SetCharacterControlledByPlayer(nSlot,
-                                    g_pChitin->cNetwork.m_nLocalPlayer,
+                                    static_cast<BYTE>(g_pChitin->cNetwork.m_nLocalPlayer),
                                     TRUE,
                                     TRUE);
                             }
@@ -2235,7 +2235,7 @@ void CScreenWorldMap::sub_69D0F0(CResRef& cResArea, CString sText, SHORT nFacing
                 if (bUnassigned == TRUE) {
                     if (!bOwned) {
                         g_pBaldurChitin->GetObjectGame()->m_multiplayerSettings.SetCharacterControlledByPlayer(nSlot,
-                            g_pChitin->cNetwork.m_nLocalPlayer,
+                            static_cast<BYTE>(g_pChitin->cNetwork.m_nLocalPlayer),
                             TRUE,
                             TRUE);
                     }
