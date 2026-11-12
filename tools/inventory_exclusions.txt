@@ -2316,3 +2316,89 @@
 0x4F4F30 CCreatureFileItem::CCreatureFileItem (inline in FileFormat.h), emitted copy
 0x7A9DA0 MFC CObList::GetNext (afxcoll.inl inline), emitted copy called by CSound::Play
 0x41E160 MFC CString::GetLength (afx.inl inline), emitted copy
+
+# Batch 107 (list7_A): library, template and compiler-emitted code.
+# std::deque<INT> internals (library, CInfButtonArray::m_stateStack): 0x596250 pop_front, 0x5962E0 erase(first, last),
+# 0x596600 iterator::operator-(n), 0x596670 pop_back-and-erase helper, 0x5967A0 _Growmap, 0x596810 iterator::operator+(n),
+# 0x596870 iterator difference, 0x596950 iterator constructor, 0x596980 iterator::operator+=, 0x5969F0 copy_backward,
+# 0x596A80 copy.
+0x596250
+0x5962E0
+0x596600
+0x596670
+0x5967A0
+0x596810
+0x596870
+0x596950
+0x596980
+0x5969F0
+0x596A80
+# MFC inlines emitted out of line: 0x45B200 CPtrList::GetCount, 0x403310 CString::CString(), 0x452B00 CPoint(DWORD),
+# 0x452B20 CPoint::operator!=, 0x4D35D0 CPoint::operator-() (unary), 0x4D35F0 CRect::CRect(l, t, r, b),
+# 0x51DE20 CPoint::CPoint(int, int), 0x45B220 CString::operator=(const unsigned char*), 0x45B250 CString compare
+# wrapper (CRT 0x7E8182 on m_pchData), 0x45B270 operator==(const CString&, LPCTSTR), 0x45B290 operator!=(const CString&,
+# LPCTSTR), 0x45B1E0 strcmp wrapper (CRT 0x7E7A54), 0x547880 ConstructElements<T> (zero-fills n dwords, CList::NewNode).
+0x45B200
+0x403310
+0x452B00
+0x452B20
+0x4D35D0
+0x4D35F0
+0x51DE20
+0x45B220
+0x45B250
+0x45B270
+0x45B290
+0x45B1E0
+0x547880
+# MFC library: 0x793D80 CFile::SetFilePath (m_strFileName = lpszNewName; slot 0x1C of the CFile vtable 0x85FADC and
+# of CTlkFile's 0x85DD78). CTypedPtrList<CPtrList, T*> constructors (CPtrList::CPtrList 0x7FB239, then the instance
+# vtable): 0x40FA70 (0x847D4C, CAIScript::Read), 0x40FAB0 (0x847D70, CAIScript::Find), 0x6A1530 (0x85AA0C, CMemINI).
+0x793D80
+0x40FA70
+0x40FAB0
+0x6A1530
+# Compiler-emitted: 0x402A50 CString[] vector deleting destructor (`eh vector destructor iterator` with
+# CString::~CString); 0x452C10 inline CCreatureFileHeader::CCreatureFileHeader (memset 0x37C bytes, FileFormat.h);
+# 0x4537F0 implicit STR_RES constructor (CString + CSound); 0x45B370 inline CAIObjectType::operator= (calls
+# CAIObjectType::Set 0x40B6E0, returns *this; the repo calls Set).
+0x402A50
+0x452C10
+0x4537F0
+0x45B370
+# Template helpers: 0x45EA80 min<LONG>, 0x45EAA0 min<BYTE>, 0x45EAC0 max<LONG> (by value from two references);
+# std::bitset<256> 0x45E380 operator[] (reference constructor), 0x45E390 reference::operator bool (range check
+# 0x45E3D0).
+0x45EA80
+0x45EAA0
+0x45EAC0
+0x45E380
+0x45E390
+# STL (library): 0x57AB40 std::vector destructor body (delete _First, zero _First/_Last/_End; Icewind586B70::mEntries
+# and others); 0x587660 std::vector<Icewind586B70::Entry>::vector(n, val) (10-byte elements); 0x5876D0
+# std::vector<int>::insert(it, n, val) (Icewind586B70::sub_587510 push_back); 0x587650 equality predicate on the first
+# dword of an Icewind586B70::Entry (std::find in Icewind586B70::sub_5872C0; the repo writes the loop);
+# 0x537010 / 0x5370C0 std::set constructor / destructor (nil node 0x8D48B4, CProjectile); 0x449800 / 0x44ADC0
+# std::map lower_bound helpers (nil node 0x8D13F4, CDerivedStats); 0x727C90 uninitialized_fill_n, 0x728050 fill,
+# 0x728090 copy_backward (16-byte CGameSpriteSpellListEntry vector, CGameSpriteSpells).
+0x57AB40
+0x587660
+0x5876D0
+0x587650
+0x537010
+0x5370C0
+0x449800
+0x44ADC0
+0x727C90
+0x728050
+0x728090
+# CResHelper<CResMosaic, 1004>::SetResRef (the repo template in CRes.h).
+0x442A80
+# zlib 1.1.2 (library): 0x7C8830 compress2, 0x7C88E0 uncompress (z_stream 0x38, version 0x8BDD80).
+0x7C8830
+0x7C88E0
+# Fragments of functions already translated: 0x7B623C CTlkFileOverrideHeader::Marshal (0x7B6190) header write
+# (repo body covers it); 0x7B3FF8 the inline-assembly non-transparent path of CVidBitmap::BltBmp24To16Tint (0x7B3B70),
+# now written out in the repo body (pairs of pixels as DWORDs).
+0x7B623C
+0x7B3FF8

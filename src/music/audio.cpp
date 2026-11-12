@@ -198,6 +198,7 @@ char* audio_fgets(char* buf, int maxCount, FILE* stream)
     return buf;
 }
 
+// 0x7D9850
 int defaultCompressionFunc(char* fname)
 {
     char* extension = strrchr(fname, '.');

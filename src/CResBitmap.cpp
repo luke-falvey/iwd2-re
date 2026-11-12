@@ -247,6 +247,7 @@ BYTE CResBitmap::GetPixelValue(int x, int y, BOOL bDoubleSize)
 // 0x77F190
 int CResBitmap::Release()
 {
+    // NOTE: Uninline.
     int rc = CRes::Release();
     if (GetDemands() <= 0) {
         bParsed = FALSE;
