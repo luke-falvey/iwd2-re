@@ -1378,7 +1378,207 @@ void CAIGroup::GroupProtectPoint(CPoint target, SHORT formationType, CPoint curs
 // 0x407FC0
 void CAIGroup::GroupDrawMove(CPoint target, SHORT formationType, CPoint cursor)
 {
-    // TODO: Incomplete.
+    if (formationType == FORMATION_FOLLOW) {
+        if (m_memberList.GetCount() == 0) {
+            return;
+        }
+
+        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetHead());
+
+        CGameSprite* pSprite;
+
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(memberId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            return;
+        }
+
+        pSprite->m_targetPoint = target;
+        pSprite->m_groupMove = TRUE;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(memberId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        return;
+    }
+
+    if (abs(target.x - cursor.x) < 12 && abs(target.y - cursor.y) < 9) {
+        cursor.x = -1;
+        cursor.y = -1;
+    }
+
+    BOOL bFirst = TRUE;
+
+    if (m_memberList.GetCount() == 0) {
+        return;
+    }
+
+    RemoveFromSearch(&g_pBaldurChitin->GetObjectGame()->m_gameAreas[g_pBaldurChitin->GetObjectGame()->m_visibleArea]->m_search);
+
+    // NOTE: Uninitialized in the original; only read after the first member
+    // was obtained.
+    CPoint* pOffsets = NULL;
+    int index = 0;
+
+    POSITION pos = m_memberList.GetHeadPosition();
+    while (pos != NULL) {
+        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+
+        CGameSprite* pSprite;
+
+        if (bFirst) {
+            BYTE rc;
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(memberId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc != CGameObjectArray::SUCCESS) {
+                continue;
+            }
+
+            bFirst = FALSE;
+
+            LONG originX;
+            LONG originY;
+            if (cursor.x == -1 && cursor.y == -1) {
+                CPoint& ptPos = pSprite->GetPos();
+                originX = ptPos.x;
+                originY = ptPos.y;
+            } else {
+                originX = cursor.x;
+                originY = cursor.y;
+            }
+
+            LONG dx = target.x - originX;
+            LONG dy = target.y - originY;
+
+            double distance = sqrt(static_cast<double>(dx * dx + dy * dy));
+            double angle = acos(static_cast<double>(abs(dx)) / distance);
+
+            if (dx < 0) {
+                if (dy < 0) {
+                    angle = angle + 3.1415926535;
+                } else {
+                    angle = 3.1415926535 - angle;
+                }
+            } else if (dy < 0) {
+                angle = 6.283185307 - angle;
+            }
+
+            // NOTE: The multiplier at 0x847B88 is -360.0, so this is
+            // 90 + degrees.
+            SHORT direction = static_cast<SHORT>(90 - static_cast<LONG>(angle * -360.0 / 6.283185307)) % 360;
+
+            pOffsets = GetOffsets(formationType, direction, FALSE);
+
+            LONG nTargetX = target.x;
+            LONG nTargetY = target.y;
+
+            target.x /= CPathSearch::GRID_SQUARE_SIZEX;
+            target.y /= CPathSearch::GRID_SQUARE_SIZEY;
+
+            CPoint& ptLeader = pSprite->GetPos();
+            LONG nLeaderGridX = ptLeader.x / CPathSearch::GRID_SQUARE_SIZEX;
+            LONG nLeaderGridY = ptLeader.y / CPathSearch::GRID_SQUARE_SIZEY;
+
+            if (nLeaderGridX != target.x || nLeaderGridY != target.y) {
+                BYTE nPersonalSpace = pSprite->GetAnimation()->GetPersonalSpace();
+                if (!pSprite->m_pArea->AdjustTarget(CPoint(nLeaderGridX, nLeaderGridY),
+                        &target,
+                        nPersonalSpace,
+                        10)) {
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(memberId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+
+                    AddToSearch(&g_pBaldurChitin->GetObjectGame()->m_gameAreas[g_pBaldurChitin->GetObjectGame()->m_visibleArea]->m_search);
+
+                    if (pOffsets != NULL) {
+                        delete[] pOffsets;
+                    }
+
+                    return;
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(memberId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            if (nTargetX / CPathSearch::GRID_SQUARE_SIZEX == target.x
+                && nTargetY / CPathSearch::GRID_SQUARE_SIZEY == target.y) {
+                target.x = nTargetX;
+                target.y = nTargetY;
+            } else {
+                target.x = CPathSearch::GRID_SQUARE_SIZEX * target.x;
+                target.y = CPathSearch::GRID_SQUARE_SIZEY * target.y;
+            }
+        }
+
+        LONG nOffsetX = (CPathSearch::GRID_SQUARE_SIZEX * pOffsets[index].x) / OFFSET_MULTIPLIER;
+        LONG nOffsetY = (CPathSearch::GRID_SQUARE_SIZEY * pOffsets[index].y) / OFFSET_MULTIPLIER;
+
+        LONG nDestGridX = (target.x + nOffsetX) / CPathSearch::GRID_SQUARE_SIZEX;
+        LONG nDestGridY = (target.y + nOffsetY) / CPathSearch::GRID_SQUARE_SIZEY;
+
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(memberId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            continue;
+        }
+
+        CPoint& ptPos = pSprite->GetPos();
+        LONG nGridX = ptPos.x / CPathSearch::GRID_SQUARE_SIZEX;
+        LONG nGridY = ptPos.y / CPathSearch::GRID_SQUARE_SIZEY;
+
+        CPoint dest(nDestGridX, nDestGridY);
+        if (nGridX == nDestGridX && nGridY == nDestGridY) {
+            dest.x = target.x + nOffsetX;
+            dest.y = target.y + nOffsetY;
+        } else {
+            BYTE nPersonalSpace = pSprite->GetAnimation()->GetPersonalSpace();
+            if (!pSprite->m_pArea->AdjustTarget(CPoint(nGridX, nGridY),
+                    &dest,
+                    nPersonalSpace,
+                    10)) {
+                dest.x = target.x;
+                dest.y = target.y;
+            } else {
+                // NOTE: The adjusted target is overwritten.
+                dest.x = target.x + nOffsetX;
+                dest.y = target.y + nOffsetY;
+            }
+        }
+
+        pSprite->m_targetPoint = dest;
+        pSprite->m_groupMove = TRUE;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(memberId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        index++;
+    }
+
+    AddToSearch(&g_pBaldurChitin->GetObjectGame()->m_gameAreas[g_pBaldurChitin->GetObjectGame()->m_visibleArea]->m_search);
+
+    delete[] pOffsets;
 }
 
 // 0x408660
