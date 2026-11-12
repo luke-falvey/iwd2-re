@@ -1883,3 +1883,6 @@
 0x53CAE0
 0x59C2F0
 0x78E1E0
+# Compiler-generated dynamic initializer of CGameEffect::EFFECT_NAME (0x8D45F0, CGameEffect.cpp):
+# one CString constructor per entry, 170 entries, plain RET.
+0x48B8E0
