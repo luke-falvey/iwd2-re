@@ -4,16 +4,14 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 8099,
-  "functions_done": 8003,
-  "functions_complete": 8001,
-  "incomplete_markers": 3,
+  "functions_total": 8020,
+  "functions_done": 8018,
+  "functions_complete": 8018,
+  "incomplete_markers": 1,
   "incomplete_by_file": {
-    "src/BalDataTypes.h": 1,
-    "src/CScreenChapter.cpp": 1,
-    "src/Icewind586B70.cpp": 1
+    "src/BalDataTypes.h": 1
   },
-  "annotations_total": 10634,
+  "annotations_total": 10649,
   "annotations_not_function_start": 2608,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -521,10 +519,6 @@
       "src/CImmunities.cpp",
       "src/CImmunities.cpp"
     ],
-    "0x5CEDE0": [
-      "src/CInfinity.cpp",
-      "src/CVideo3d.cpp"
-    ],
     "0x84CF11": [
       "src/CMessage.cpp",
       "src/CMessage.cpp"
@@ -824,10 +818,6 @@
       "src/CResSpell.cpp",
       "src/CResUI.cpp"
     ],
-    "0x780340": [
-      "src/CResMosaic.cpp",
-      "src/CResMosaic.cpp"
-    ],
     "0x66F4B0": [
       "src/CScreenChapter.cpp",
       "src/CScreenJournal.cpp",
@@ -1106,10 +1096,6 @@
       "src/CScreenMultiPlayer.cpp",
       "src/CScreenOptions.cpp"
     ],
-    "0x658A60": [
-      "src/CScreenOptions.cpp",
-      "src/CScreenOptions.cpp"
-    ],
     "0x66F230": [
       "src/CScreenStart.cpp",
       "src/CScreenWorld.cpp"
@@ -1143,10 +1129,6 @@
       "src/CUIControlFactory.cpp"
     ],
     "0x77B800": [
-      "src/CUIControlFactory.cpp",
-      "src/CUIControlFactory.cpp"
-    ],
-    "0x77A710": [
       "src/CUIControlFactory.cpp",
       "src/CUIControlFactory.cpp"
     ],
@@ -3778,321 +3760,22 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3711706,
-  "bytes_done": 3698474,
-  "bytes_complete": 3697645,
-  "largest_stubs": [
-    {
-      "addr": "0x5D4190",
-      "name": "FUN_005d4190",
-      "size": 486
-    },
-    {
-      "addr": "0x586DC0",
-      "name": "CSummonLimitStruct_Unsummon",
-      "size": 343
-    }
-  ],
+  "bytes_total": 3704626,
+  "bytes_done": 3704376,
+  "bytes_complete": 3704376,
+  "largest_stubs": [],
   "next": [
     {
-      "addr": "0x40F940",
-      "name": "CResRef_operator_equ-equ",
-      "translated_callers": 76,
-      "size": 31
+      "addr": "0x6E6F63",
+      "name": "FUN_006e6f63",
+      "translated_callers": 0,
+      "size": 169
     },
     {
-      "addr": "0x442990",
-      "name": "CResHelper_CResUnknown_SetResRef",
-      "translated_callers": 69,
-      "size": 228
-    },
-    {
-      "addr": "0x402A50",
-      "name": "FUN_00402a50",
-      "translated_callers": 12,
-      "size": 84
-    },
-    {
-      "addr": "0x7B3190",
-      "name": "CVidBitmap_Render",
-      "translated_callers": 12,
-      "size": 1545
-    },
-    {
-      "addr": "0x51DE20",
-      "name": "FUN_0051de20",
-      "translated_callers": 9,
-      "size": 18
-    },
-    {
-      "addr": "0x403530",
-      "name": "FUN_00403530",
-      "translated_callers": 6,
-      "size": 32
-    },
-    {
-      "addr": "0x442A80",
-      "name": "FUN_00442a80",
-      "translated_callers": 6,
-      "size": 228
-    },
-    {
-      "addr": "0x780770",
-      "name": "CResTile_GetTileData",
-      "translated_callers": 4,
-      "size": 14
-    },
-    {
-      "addr": "0x403310",
-      "name": "FUN_00403310",
-      "translated_callers": 3,
-      "size": 11
-    },
-    {
-      "addr": "0x403320",
-      "name": "FUN_00403320",
-      "translated_callers": 3,
-      "size": 32
-    },
-    {
-      "addr": "0x40FA50",
-      "name": "FUN_0040fa50",
-      "translated_callers": 3,
-      "size": 25
-    },
-    {
-      "addr": "0x41E160",
-      "name": "Get_CString_Length",
-      "translated_callers": 3,
-      "size": 6
-    },
-    {
-      "addr": "0x4537F0",
-      "name": "FUN_004537f0",
-      "translated_callers": 3,
-      "size": 70
-    },
-    {
-      "addr": "0x45B200",
-      "name": "CPtrList_GetCount",
-      "translated_callers": 3,
-      "size": 4
-    },
-    {
-      "addr": "0x4D3D90",
-      "name": "FUN_004d3d90",
-      "translated_callers": 3,
-      "size": 75
-    },
-    {
-      "addr": "0x4EC030",
-      "name": "CResHelper_CResHelperItem_SetResRef",
-      "translated_callers": 3,
-      "size": 228
-    },
-    {
-      "addr": "0x57AB40",
-      "name": "CSummonLimitStruct_Destruct",
-      "translated_callers": 3,
-      "size": 34
-    },
-    {
-      "addr": "0x780370",
-      "name": "CVidMosaic_GetTilePixelDimension",
-      "translated_callers": 3,
-      "size": 34
-    },
-    {
-      "addr": "0x799F80",
-      "name": "CVidMode_GetNumSurfaces",
-      "translated_callers": 3,
-      "size": 7
-    },
-    {
-      "addr": "0x40FA90",
-      "name": "FUN_0040fa90",
-      "translated_callers": 2,
-      "size": 25
-    },
-    {
-      "addr": "0x45E380",
-      "name": "Construct_bitset_Struct",
-      "translated_callers": 2,
-      "size": 16
-    },
-    {
-      "addr": "0x45E390",
-      "name": "bitset",
-      "translated_callers": 2,
-      "size": 51
-    },
-    {
-      "addr": "0x45EA80",
-      "name": "FUN_0045ea80",
-      "translated_callers": 2,
-      "size": 19
-    },
-    {
-      "addr": "0x547880",
-      "name": "FUN_00547880",
-      "translated_callers": 2,
-      "size": 17
-    },
-    {
-      "addr": "0x596250",
-      "name": "FUN_00596250",
-      "translated_callers": 2,
-      "size": 139
-    },
-    {
-      "addr": "0x40FA70",
-      "name": "FUN_0040fa70",
-      "translated_callers": 1,
-      "size": 25
-    },
-    {
-      "addr": "0x40FAB0",
-      "name": "FUN_0040fab0",
-      "translated_callers": 1,
-      "size": 25
-    },
-    {
-      "addr": "0x426500",
-      "name": "FUN_00426500",
-      "translated_callers": 1,
-      "size": 246
-    },
-    {
-      "addr": "0x449800",
-      "name": "FUN_00449800",
-      "translated_callers": 1,
-      "size": 60
-    },
-    {
-      "addr": "0x44ADC0",
-      "name": "FUN_0044adc0",
-      "translated_callers": 1,
-      "size": 45
-    },
-    {
-      "addr": "0x452B00",
-      "name": "FUN_00452b00",
-      "translated_callers": 1,
-      "size": 23
-    },
-    {
-      "addr": "0x452B20",
-      "name": "FUN_00452b20",
-      "translated_callers": 1,
-      "size": 30
-    },
-    {
-      "addr": "0x452C10",
-      "name": "zero_0x37C_byes_at_ecx",
-      "translated_callers": 1,
-      "size": 18
-    },
-    {
-      "addr": "0x453070",
-      "name": "FUN_00453070",
-      "translated_callers": 1,
-      "size": 7
-    },
-    {
-      "addr": "0x45B1E0",
-      "name": "FUN_0045b1e0",
-      "translated_callers": 1,
-      "size": 19
-    },
-    {
-      "addr": "0x45B220",
-      "name": "FUN_0045b220",
-      "translated_callers": 1,
-      "size": 19
-    },
-    {
-      "addr": "0x45B250",
-      "name": "FUN_0045b250",
-      "translated_callers": 1,
-      "size": 19
-    },
-    {
-      "addr": "0x45B270",
-      "name": "CString_operator==",
-      "translated_callers": 1,
-      "size": 28
-    },
-    {
-      "addr": "0x45B290",
-      "name": "FUN_0045b290",
-      "translated_callers": 1,
-      "size": 29
-    },
-    {
-      "addr": "0x45B370",
-      "name": "CAIObjectType_SetAndReturn",
-      "translated_callers": 1,
-      "size": 19
-    },
-    {
-      "addr": "0x45EAA0",
-      "name": "FUN_0045eaa0",
-      "translated_callers": 1,
-      "size": 19
-    },
-    {
-      "addr": "0x45EAC0",
-      "name": "FUN_0045eac0",
-      "translated_callers": 1,
-      "size": 19
-    },
-    {
-      "addr": "0x47A5A0",
-      "name": "FUN_0047a5a0",
-      "translated_callers": 1,
-      "size": 25
-    },
-    {
-      "addr": "0x4D35D0",
-      "name": "CPoint_Negate",
-      "translated_callers": 1,
-      "size": 21
-    },
-    {
-      "addr": "0x4D35F0",
-      "name": "CRect::CRect_Construct",
-      "translated_callers": 1,
-      "size": 32
-    },
-    {
-      "addr": "0x4F4F30",
-      "name": "FUN_004f4f30",
-      "translated_callers": 1,
-      "size": 21
-    },
-    {
-      "addr": "0x51D480",
-      "name": "FUN_0051d480",
-      "translated_callers": 1,
-      "size": 25
-    },
-    {
-      "addr": "0x537010",
-      "name": "FUN_00537010",
-      "translated_callers": 1,
-      "size": 161
-    },
-    {
-      "addr": "0x5370C0",
-      "name": "FUN_005370c0",
-      "translated_callers": 1,
-      "size": 217
-    },
-    {
-      "addr": "0x5402E0",
-      "name": "FUN_005402e0",
-      "translated_callers": 1,
-      "size": 77
+      "addr": "0x6E7553",
+      "name": "FUN_006e7553",
+      "translated_callers": 0,
+      "size": 81
     }
   ]
 }
