@@ -84,6 +84,7 @@ public:
     void ResetBiographyPanel(CGameSprite* pSprite);
     void ResetClassDescriptionPanel(CGameSprite* pSprite);
     void sub_5D8B50(CGameSprite* pSprite);
+    void sub_5D8EA0(CGameSprite* pSprite);
     BOOL ResetAbility(CGameSprite* pSprite, const CString& sMin, const CString& sMax, const CString& sMod, BYTE& nAbility, BYTE& nMin, BYTE& nMax, INT& nMod);
     void ResetAbilitiesPanel(CGameSprite* pSprite, int a2);
     void ResetSpellsPanel(CGameSprite* pSprite, int a2);
@@ -368,6 +369,7 @@ class CUIControlButtonCharacter5EBC60 : public CUIControlButton3State {
 public:
     CUIControlButtonCharacter5EBC60(CUIPanel* panel, UI_CONTROL_BUTTON* controlInfo);
     ~CUIControlButtonCharacter5EBC60() override;
+    void sub_5EBDD0(CResRef cResRef);
     BOOL Render(BOOL bForce) override;
     void OnLButtonClick(CPoint pt) override;
 
