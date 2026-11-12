@@ -58,15 +58,27 @@ def test_s6_walk_off_ship(game, golden_dir):
     new_game_to_opening_dialog(game, golden_dir)
     finish_hedron_dialog(game)
 
+    # Every checkpoint is taken even if an earlier one differs, so that one
+    # run on the rebuild shows all the differences. They are reported together.
+    failures = []
+
+    def check(fn, name, **kw):
+        try:
+            fn(game, golden_dir, name, **kw)
+        except AssertionError as e:
+            failures.append(str(e).splitlines()[0])
+
     game.drag(*BOX_FROM, *BOX_TO)
     time.sleep(1.0)
-    checkpoint(game, golden_dir, "selected-action-bar", region=ACTION_BAR_REGION, settle=1.0)
-    checkpoint(game, golden_dir, "selected-portraits", region=PORTRAITS_REGION, settle=1.0, max_diff=0.004)
+    check(checkpoint, "selected-action-bar", region=ACTION_BAR_REGION, settle=1.0)
+    check(checkpoint, "selected-portraits", region=PORTRAITS_REGION, settle=1.0, max_diff=0.004)
 
     game.click(*DOCK_SPOT)
     time.sleep(20.0)
-    checkpoint(game, golden_dir, "walked-action-bar", region=ACTION_BAR_REGION, settle=1.0)
-    checkpoint(game, golden_dir, "walked-portraits", region=PORTRAITS_REGION, settle=1.0, max_diff=0.004)
-    checkpoint(game, golden_dir, "walked-messages", region=MESSAGE_REGION, settle=1.0)
-    unsettled_checkpoint(game, golden_dir, "walked-dock", region=DOCK_REGION, max_diff=0.03)
-    unsettled_checkpoint(game, golden_dir, "walked-world", region=WORLD_REGION, max_diff=0.03)
+    check(checkpoint, "walked-action-bar", region=ACTION_BAR_REGION, settle=1.0)
+    check(checkpoint, "walked-portraits", region=PORTRAITS_REGION, settle=1.0, max_diff=0.004)
+    check(checkpoint, "walked-messages", region=MESSAGE_REGION, settle=1.0)
+    check(unsettled_checkpoint, "walked-dock", region=DOCK_REGION, max_diff=0.03)
+    check(unsettled_checkpoint, "walked-world", region=WORLD_REGION, max_diff=0.03)
+
+    assert not failures, "; ".join(failures)
