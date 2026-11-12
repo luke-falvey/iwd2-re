@@ -6,6 +6,7 @@
 #include "CRes.h"
 #include "CResFile.h"
 #include "CUtil.h"
+#include "CVidMode.h"
 
 // #binary-identical
 // 0x781E60
@@ -318,9 +319,396 @@ BOOL CDimm::CDScan(USHORT a2)
 // 0x7828D0
 WORD CDimm::CDSwitch(WORD drive, CString& sDrive, BOOLEAN a3)
 {
-    // TODO: Incomplete.
+    CString sText;
+    CString sDriveName;
+    CString sInDrive;
+    CString sPlaceCD;
+    CString sMediaRemoved;
+    CString sDriveLetter;
+    WORD nDrive;
+    int nIndex;
+    BYTE i;
 
-    return 0;
+    DWORD* nSavedRefCount = new DWORD[m_nResFiles];
+
+    // __FILE__: C:\Projects\Icewind2\src\chitin\ChDimm.cpp
+    // __LINE__: 512
+    UTIL_ASSERT(nSavedRefCount != 0);
+
+    EnterCriticalSection(&(g_pChitin->field_35C));
+
+    while (cResCache.field_110 == 1) {
+        LeaveCriticalSection(&(g_pChitin->field_35C));
+        while (cResCache.field_110 == 1) {
+            SleepEx(50, FALSE);
+        }
+        EnterCriticalSection(&(g_pChitin->field_35C));
+    }
+
+    for (WORD nResFile = 0; nResFile < m_nResFiles; nResFile++) {
+        nSavedRefCount[nResFile] = m_ppResFiles[nResFile]->m_nRefCount;
+        if (m_ppResFiles[nResFile]->m_nRefCount > 0 && m_ppResFiles[nResFile]->field_38 == TRUE) {
+            m_ppResFiles[nResFile]->CloseFile();
+            m_ppResFiles[nResFile]->m_nRefCount = 0;
+        }
+    }
+
+    nIndex = -1;
+    for (i = 0; i < 8 && nIndex == -1; i++) {
+        USHORT v1;
+        switch (i) {
+        case 0:
+            v1 = 2;
+            break;
+        case 1:
+            v1 = 4;
+            break;
+        case 2:
+            v1 = 8;
+            break;
+        case 3:
+            v1 = 16;
+            break;
+        default:
+            v1 = 0;
+            break;
+        }
+
+        if ((v1 & drive) != 0) {
+            CString sResolved;
+
+            nIndex = i;
+
+            USHORT v2;
+            switch (i) {
+            case 0:
+                v2 = 2;
+                break;
+            case 1:
+                v2 = 4;
+                break;
+            case 2:
+                v2 = 8;
+                break;
+            case 3:
+                v2 = 16;
+                break;
+            default:
+                v2 = 0;
+                break;
+            }
+
+            nDrive = v2 & drive;
+
+            sDriveName.Format("cd%01d:\\", i);
+            if (g_pChitin->lAliases.ResolveFileName(sDriveName, sResolved) == TRUE) {
+                sDriveLetter = sResolved.Left(2);
+            } else {
+                sDriveLetter = "";
+            }
+        }
+    }
+
+    field_297 = static_cast<BYTE>(nIndex);
+    field_295 = static_cast<BOOLEAN>(g_pChitin->field_1C4C);
+    m_sCDSwitchDriveLetter = sDriveLetter;
+    m_bCDSwitchActivated = TRUE;
+
+    if (!a3) {
+        g_pChitin->GetPanicCDStrings(sMediaRemoved, sPlaceCD, sInDrive);
+
+        if (!g_pChitin->cVideo.m_bIs3dAccelerated) {
+            CString sMessage;
+            sMessage.Format("Unable to Open BIF:%s ", (LPCSTR)sDrive);
+
+            // __FILE__: C:\Projects\Icewind2\src\chitin\ChDimm.cpp
+            // __LINE__: 605
+            // NOTE: Uninline.
+            UTIL_ASSERT_MSG(g_pChitin->GetCurrentVideoMode(), sMessage);
+
+            // NOTE: Uninline.
+            g_pChitin->GetCurrentVideoMode()->EraseScreen(1, 0xFF0000);
+            // NOTE: Uninline.
+            g_pChitin->GetCurrentVideoMode()->EraseScreen(0, 0xFF0000);
+
+            sText.Format("%s", (LPCSTR)sMediaRemoved);
+
+            if (!g_pChitin->m_bFullscreen) {
+                RECT rc = g_pChitin->field_E8;
+                // NOTE: Uninline.
+                g_pChitin->GetCurrentVideoMode()->DoTextOut(1,
+                    sText,
+                    rc.left + (CVideo::SCREENWIDTH >> 1) - 255,
+                    rc.top + (CVideo::SCREENHEIGHT >> 1) - 30,
+                    0xFFFFFF);
+            } else {
+                // NOTE: Uninline.
+                g_pChitin->GetCurrentVideoMode()->DoTextOut(1,
+                    sText,
+                    (CVideo::SCREENWIDTH >> 1) - 255,
+                    (CVideo::SCREENHEIGHT >> 1) - 30,
+                    0xFFFFFF);
+            }
+
+            // NOTE: Uninline.
+            g_pChitin->GetCurrentVideoMode()->DoTextOut(0,
+                sText,
+                (CVideo::SCREENWIDTH >> 1) - 255,
+                (CVideo::SCREENHEIGHT >> 1) - 30,
+                0xFFFFFF);
+
+            if (g_pChitin->field_1C4C != 0) {
+                sText.Format("%s %s", (LPCSTR)sPlaceCD, (LPCSTR)sInDrive);
+            } else {
+                sText.Format("%s %01d %s", (LPCSTR)sPlaceCD, nIndex, (LPCSTR)sInDrive);
+            }
+
+            if (!g_pChitin->m_bFullscreen) {
+                RECT rc = g_pChitin->field_E8;
+                // NOTE: Uninline.
+                g_pChitin->GetCurrentVideoMode()->DoTextOut(1,
+                    sText,
+                    rc.left + (CVideo::SCREENWIDTH >> 1) - 250,
+                    rc.top + (CVideo::SCREENHEIGHT >> 1),
+                    0xFFFFFF);
+            } else {
+                // NOTE: Uninline.
+                g_pChitin->GetCurrentVideoMode()->DoTextOut(1,
+                    sText,
+                    (CVideo::SCREENWIDTH >> 1) - 250,
+                    CVideo::SCREENHEIGHT >> 1,
+                    0xFFFFFF);
+            }
+
+            // NOTE: Uninline.
+            g_pChitin->GetCurrentVideoMode()->DoTextOut(0,
+                sText,
+                (CVideo::SCREENWIDTH >> 1) - 250,
+                CVideo::SCREENHEIGHT >> 1,
+                0xFFFFFF);
+        }
+    } else {
+        while (g_pChitin->m_bInSynchronousUpdate == 1 || g_pChitin->m_bDisplayStale == 1) {
+            LeaveCriticalSection(&(g_pChitin->field_35C));
+            SleepEx(5, FALSE);
+            EnterCriticalSection(&(g_pChitin->field_35C));
+        }
+
+        if (nDrive != 0) {
+            CString sSearch = sDriveName + "\\*.*";
+            CString sResolved;
+            CString sRoot;
+            CFileFind fileFind;
+
+            if (!g_pChitin->lAliases.ResolveFileName(sSearch, sResolved)) {
+                sResolved = sSearch;
+            }
+
+            sRoot = sResolved.Left(2) + "\\";
+
+            UINT uPrevErrorMode = SetErrorMode(1);
+            BOOLEAN bDisc = GetVolumeInformationA(sRoot.GetBuffer(sRoot.GetLength()), 0, 0, 0, 0, 0, 0, 0) != 0;
+            SetErrorMode(uPrevErrorMode);
+
+            sRoot += "*.*";
+
+            i = bDisc;
+            if (bDisc == TRUE) {
+                bDisc = fileFind.FindFile(sRoot, 0) != 0;
+                i = bDisc;
+                fileFind.Close();
+            }
+
+            field_2A4 = bDisc;
+        }
+
+        CString sEmpty("");
+        g_pChitin->SetCDSwitchStatus(1, 0, 0, sEmpty, 0, 0, i);
+    }
+
+    BOOLEAN bFound = FALSE;
+
+    do {
+        g_pChitin->m_bDisplayStale = 1;
+
+        if (!a3) {
+            if (g_pChitin->cVideo.m_bIs3dAccelerated) {
+                sText.Format("%s\n%s%01d %s", (LPCSTR)sMediaRemoved, (LPCSTR)sPlaceCD, nIndex, (LPCSTR)sInDrive);
+                MessageBoxA(NULL, sText, CChitin::m_sGameName, MB_SYSTEMMODAL);
+            } else {
+                CString sMessage;
+                sMessage.Format("Unable to Open BIF:%s", (LPCSTR)sDrive);
+
+                // __FILE__: C:\Projects\Icewind2\src\chitin\ChDimm.cpp
+                // __LINE__: 743
+                // NOTE: Uninline.
+                UTIL_ASSERT_MSG(g_pChitin->GetCurrentVideoMode(), sMessage);
+
+                // NOTE: Uninline.
+                g_pChitin->GetCurrentVideoMode()->EraseScreen(1, 0xFF0000);
+                // NOTE: Uninline.
+                g_pChitin->GetCurrentVideoMode()->EraseScreen(0, 0xFF0000);
+
+                sText.Format("%s", (LPCSTR)sMediaRemoved);
+
+                if (!g_pChitin->m_bFullscreen) {
+                    RECT rc = g_pChitin->field_E8;
+                    // NOTE: Uninline.
+                    g_pChitin->GetCurrentVideoMode()->DoTextOut(1,
+                        sText,
+                        rc.left + (CVideo::SCREENWIDTH >> 1) - 255,
+                        rc.top + (CVideo::SCREENHEIGHT >> 1) - 30,
+                        0xFFFFFF);
+                } else {
+                    // NOTE: Uninline.
+                    g_pChitin->GetCurrentVideoMode()->DoTextOut(1,
+                        sText,
+                        (CVideo::SCREENWIDTH >> 1) - 255,
+                        (CVideo::SCREENHEIGHT >> 1) - 30,
+                        0xFFFFFF);
+                }
+
+                // NOTE: Uninline.
+                g_pChitin->GetCurrentVideoMode()->DoTextOut(0,
+                    sText,
+                    (CVideo::SCREENWIDTH >> 1) - 255,
+                    (CVideo::SCREENHEIGHT >> 1) - 30,
+                    0xFFFFFF);
+
+                sText.Format("%s%01d %s", (LPCSTR)sPlaceCD, nIndex, (LPCSTR)sInDrive);
+
+                if (!g_pChitin->m_bFullscreen) {
+                    RECT rc = g_pChitin->field_E8;
+                    // NOTE: Uninline.
+                    g_pChitin->GetCurrentVideoMode()->DoTextOut(1,
+                        sText,
+                        rc.left + (CVideo::SCREENWIDTH >> 1) - 250,
+                        rc.top + (CVideo::SCREENHEIGHT >> 1),
+                        0xFFFFFF);
+                } else {
+                    // NOTE: Uninline.
+                    g_pChitin->GetCurrentVideoMode()->DoTextOut(1,
+                        sText,
+                        (CVideo::SCREENWIDTH >> 1) - 250,
+                        CVideo::SCREENHEIGHT >> 1,
+                        0xFFFFFF);
+                }
+
+                // NOTE: Uninline.
+                g_pChitin->GetCurrentVideoMode()->DoTextOut(0,
+                    sText,
+                    (CVideo::SCREENWIDTH >> 1) - 250,
+                    CVideo::SCREENHEIGHT >> 1,
+                    0xFFFFFF);
+            }
+        }
+
+        i = 0;
+        do {
+            if (field_2A0 != 0) {
+                g_pChitin->SuspendThreads();
+                g_pChitin->ShutDown(-1, NULL, NULL);
+                // NOTE: The original falls into abort() if ShutDown returns.
+                abort();
+            }
+
+            LeaveCriticalSection(&(g_pChitin->field_35C));
+            SleepEx(200, FALSE);
+            EnterCriticalSection(&(g_pChitin->field_35C));
+
+            i++;
+        } while (i < 6);
+
+        switch (nDrive) {
+        case 2:
+            sDriveName = "cd0:";
+            break;
+        case 4:
+            sDriveName = "cd1:";
+            break;
+        case 8:
+            sDriveName = "cd2:";
+            break;
+        case 16:
+            sDriveName = "cd3:";
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\chitin\ChDimm.cpp
+            // __LINE__: 856
+            UTIL_ASSERT(FALSE);
+            break;
+        }
+
+        if (nDrive != 0) {
+            CString sSearch = sDriveName + "\\*.*";
+            CString sResolved;
+            CString sRoot;
+            CFileFind fileFind;
+
+            if (!g_pChitin->lAliases.ResolveFileName(sSearch, sResolved)) {
+                sResolved = sSearch;
+            }
+
+            sRoot = sResolved.Left(2) + "\\";
+
+            UINT uPrevErrorMode = SetErrorMode(1);
+            BOOLEAN bDisc = GetVolumeInformationA(sRoot.GetBuffer(sRoot.GetLength()), 0, 0, 0, 0, 0, 0, 0) != 0;
+            SetErrorMode(uPrevErrorMode);
+
+            sRoot += "*.*";
+
+            if (bDisc == TRUE) {
+                bDisc = fileFind.FindFile(sRoot, 0) != 0;
+                fileFind.Close();
+            }
+
+            field_2A4 = bDisc;
+
+            if (bDisc == TRUE) {
+                sSearch = sDriveName + "\\" + sDrive;
+
+                if (!g_pChitin->lAliases.ResolveFileName(sSearch, sResolved)) {
+                    sResolved = sSearch;
+                }
+
+                if (fileFind.FindFile(sResolved, 0)) {
+                    bFound = TRUE;
+                }
+
+                CString sCompressed(sResolved);
+                int nDot = sCompressed.Find('.');
+                sCompressed.SetAt(nDot + 1, 'c');
+                sCompressed.SetAt(nDot + 2, 'b');
+                sCompressed.SetAt(nDot + 3, 'f');
+
+                if (fileFind.FindFile(sCompressed, 0)) {
+                    bFound = TRUE;
+                }
+
+                fileFind.Close();
+            }
+        }
+    } while (!bFound);
+
+    if (a3 == 1) {
+        CString sEmpty("");
+        g_pChitin->SetCDSwitchStatus(0, 0, 0, sEmpty, 0, 0, 0);
+    }
+
+    m_bCDSwitchActivated = FALSE;
+    field_295 = FALSE;
+    field_297 = 0;
+    m_sCDSwitchDriveLetter = "";
+
+    // NOTE: Empty loop in the original.
+    for (WORD nResFile = 0; nResFile < m_nResFiles; nResFile++) {
+    }
+
+    delete[] nSavedRefCount;
+
+    LeaveCriticalSection(&(g_pChitin->field_35C));
+
+    return nDrive;
 }
 
 // 0x783920
