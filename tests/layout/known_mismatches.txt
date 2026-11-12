@@ -1395,7 +1395,7 @@ CProjectileBAM84E030::field_2A0
 CProjectileBAM84E030::field_2A2
 CProjectileBAM84E030::field_2BE
 CProjectileBAM84E614::field_2A0
-CProjectileBAM84E69C::field_2A0
+CProjectileBAM84E69CBase::field_2A0
 CProjectileBAM84E7B0::field_2A0
 CProjectileBAM84E7B0::field_2A2
 CProjectileBAM84E7B0::field_2A4

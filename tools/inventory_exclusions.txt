@@ -379,3 +379,11 @@
 # this->m_pchData, then calls CString::operator= (0x7FCD57) with the source. Called to
 # build by-value CString arguments in 0x5A7E40 and 0x60BA30.
 0x5A9660
+
+# CResHelper<CResWave, 4>::SetResRef(const CResRef&, BOOL bSetAutoRequest, BOOL bWarningIfMissing)
+# instantiation (RET 0xC): compares the new resref with the member at +8; releases/cancels the
+# old resource, requests the new one with nType 4 via g_pChitin->cDimm.GetResObject (0x786DF0),
+# sets pRes/bLoading and assigns cResRef. Same body as the inline template in CRes.h. Called
+# as m_sound.SetResRef(resRef, TRUE, TRUE) by the inlined CProjectile::PlaySound sequence in
+# 0x532F00 and 0x533F40.
+0x4EBF40
