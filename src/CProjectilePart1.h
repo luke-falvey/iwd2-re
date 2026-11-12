@@ -4,6 +4,25 @@
 #include "CAIObjectType.h"
 #include "CProjectileBAM.h"
 
+// NOTE: Scaffold. The class name is a guess (vtable 0x85BFE8, size 0x210, base
+// constructor 0x4C7B30). Created by `CProjectileBAM84DBDC::AIUpdate` and
+// `CProjectileBAM84DC68::Virtual88`; the layout is not known.
+class CGame85BFE8 : public CGameObject {
+public:
+    CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const CPoint& pos, WORD a5, BYTE a6, BYTE a7, WORD a8);
+
+    /* 006E */ BYTE field_6E[0x1A2];
+};
+
+// NOTE: Scaffold. The class name is a guess (vtable 0x85BF7C, size 0x104).
+// Created by `CProjectileBAM84DC68::AIUpdate`; the layout is not known.
+class CGame85BF7C : public CGameObject {
+public:
+    CGame85BF7C(DWORD a1, const BYTE* pColors, const CString& a3, CGameArea* pArea, const CPoint& pos, LONG nPosZ, const CPoint& a7, LONG a8, LONG a9, BYTE a10);
+
+    /* 006E */ BYTE field_6E[0x96];
+};
+
 class CProjectileBAM84DA4C : public CProjectileBAM {
 public:
     CProjectileBAM84DA4C(CResRef resRef);
