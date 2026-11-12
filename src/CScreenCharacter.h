@@ -174,6 +174,15 @@ public:
     // NOTE: Seen in `OnErrorButtonClick` assertion.
     int GetNumErrorButtons() { return m_nNumErrorButtons; }
 
+    // NOTE: Seen in `OnDoneButtonClick` assertion.
+    INT GetPortraitSmallIndex() { return m_nPortraitSmallIndex; }
+
+    // NOTE: Seen in `OnDoneButtonClick` assertion.
+    INT GetPortraitLargeIndex() { return m_nPortraitLargeIndex; }
+
+    // NOTE: Seen in `OnDoneButtonClick` assertion.
+    INT GetCustomSoundSetIndex() { return m_nCustomSoundSetIndex; }
+
     /* 0106 */ BYTE m_nClass;
     /* 012C */ CAIObjectType m_typeAI;
     /* 01B0 */ BOOL m_bShiftKeyDown;
