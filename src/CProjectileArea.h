@@ -8,7 +8,11 @@
 #include <vector>
 
 #include "CAIObjectType.h"
+#include "CGameObject.h"
 #include "CProjectileSingleTarget.h"
+#include "CSound.h"
+#include "CVidCell.h"
+#include "CVidPalette.h"
 
 // NOTE: Original layout uses MSVC 6 `std::string` (16 bytes).
 class CProjectileAreaVisual {
@@ -51,6 +55,40 @@ public:
     /* 003C */ LONG field_3C;
     /* 0040 */ LONG field_40;
     /* 0044 */ BOOLEAN field_44;
+};
+
+// vtable 0x84F0DC, sizeof 0x2A2
+// NOTE: Created by `CProjectileArea::OnArrival`. The original class name is
+// not known.
+class CProjectileArea84F0DC : public CGameObject {
+public:
+    CProjectileArea84F0DC(const CProjectileAreaVisual* a1, const CProjectileAreaVisual2* a2, const CProjectileAreaVisual3* a3, CGameArea* pArea, const CPoint* pos, SHORT a6, BYTE a7, BYTE a8, WORD a9);
+
+    /* 006E */ BYTE m_terrainTable[16];
+    /* 007E */ SHORT field_7E;
+    /* 0080 */ SHORT field_80;
+    /* 0082 */ BYTE field_82[8];
+    /* 008A */ CVidCell field_8A;
+    /* 0164 */ CVidPalette field_164;
+    /* 0188 */ WORD field_188;
+    /* 018A */ BYTE field_18A;
+    /* 018B */ BYTE field_18B;
+    /* 018C */ LONG field_18C;
+    /* 0190 */ LONG field_190;
+    /* 0194 */ BYTE* field_194;
+    /* 0198 */ LONG field_198;
+    /* 019C */ LONG field_19C;
+    /* 01A0 */ void* field_1A0;
+    /* 01A4 */ BYTE* field_1A4;
+    /* 01A8 */ CSound field_1A8;
+    /* 020C */ CString field_20C;
+    /* 0210 */ CProjectileAreaVisual2 field_210;
+    /* 0242 */ CProjectileAreaVisual3 field_242;
+    /* 0288 */ LONG field_288;
+    /* 028C */ LONG field_28C;
+    /* 0290 */ IcewindCVisualEffect field_290;
+    /* 029C */ LONG field_29C;
+    /* 02A0 */ BOOLEAN field_2A0;
 };
 
 class CProjectileArea : public CProjectileSingleTarget {

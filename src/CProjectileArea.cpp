@@ -57,6 +57,47 @@ CProjectileArea::CProjectileArea(SHORT a1)
     field_4DC = 10;
 }
 
+// 0x56BF30
+CProjectileArea84F0DC::CProjectileArea84F0DC(const CProjectileAreaVisual* a1, const CProjectileAreaVisual2* a2, const CProjectileAreaVisual3* a3, CGameArea* pArea, const CPoint* pos, SHORT a6, BYTE a7, BYTE a8, WORD a9)
+    : field_164(CVidPalette::TYPE_RANGE)
+{
+    // TODO: Incomplete. Translated up to 0x56C638. The remaining part (from
+    // 0x56C638) allocates the lookup buffers `field_194`, `field_1A0` and
+    // `field_1A4`, fills them, copies the terrain table, adds the object to
+    // the object array and to the area.
+
+    field_29C = 0;
+    field_2A0 = FALSE;
+    field_28C = 0;
+    field_188 = a9;
+    field_288 = 0;
+    field_18A = (a6 - 1) / a7 + 1;
+    field_18B = a8;
+
+    if (a1->field_0.length() != 0) {
+        CString sName(a1->field_0.c_str());
+        CResRef resRef(sName);
+
+        // NOTE: Uninline.
+        field_8A.SetResRef(resRef, FALSE, TRUE, TRUE);
+
+        field_2A0 = TRUE;
+    } else {
+        field_2A0 = FALSE;
+    }
+
+    field_290 = a1->field_20;
+    field_210 = *a2;
+    field_242 = *a3;
+
+    field_8A.SequenceSet(0);
+    field_8A.FrameSet(0);
+
+    field_7E = 0;
+    field_80 = 0;
+    field_1A0 = NULL;
+}
+
 // 0x5703F0
 void CProjectileArea::sub_5703F0(CGameAIBase* pSource)
 {
@@ -92,8 +133,6 @@ void CProjectileArea::sub_5704E0(CGameAIBase* pSource)
 // 0x56FAF0
 void CProjectileArea::AIUpdate()
 {
-    // TODO: Incomplete.
-
     CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
     if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
@@ -248,8 +287,6 @@ void CProjectileArea::Fire(CGameArea* pArea, LONG source, LONG target, CPoint ta
 // 0x56F410
 void CProjectileArea::OnArrival()
 {
-    // TODO: Incomplete.
-
     if (m_callBackProjectile != CGameObjectArray::INVALID_INDEX) {
         CProjectile* pProjectile;
         BYTE rc;
@@ -284,10 +321,16 @@ void CProjectileArea::OnArrival()
     if (field_50E.field_0.length() != 0
         || field_540.field_0.length() != 0
         || field_4E2.field_0.length() != 0) {
-        // TODO: Incomplete. Creates an object of 0x2A2 bytes with constructor
-        // 0x56BF30 (args `&field_4E2`, `&field_50E`, `&field_540`, `field_EA`,
-        // `&m_pos`, `(WORD)field_2AE`, `(BYTE)m_speed`, `1`,
-        // `(WORD)field_4C0`). The result is not stored.
+        // NOTE: The object is not kept.
+        new CProjectileArea84F0DC(&field_4E2,
+            &field_50E,
+            &field_540,
+            field_EA,
+            &m_pos,
+            field_2AE,
+            static_cast<BYTE>(m_speed),
+            1 /* 0x85BD6D */,
+            static_cast<WORD>(field_4C0));
     }
 
     if (field_4E2.field_10.length() != 0) {

@@ -387,3 +387,11 @@
 # as m_sound.SetResRef(resRef, TRUE, TRUE) by the inlined CProjectile::PlaySound sequence in
 # 0x532F00 and 0x533F40.
 0x4EBF40
+
+# std::set<LONG>::set() default constructor instance (MSVC 6 STL, thiscall, no args): lazily
+# creates the shared _Nil node (0x18-byte node, color byte at +0x14 = red) under the STL lock
+# (0x7F9A11/0x7F9AAD) into the global [0x8E3E38] with use count [0x8E3E34], then allocates the
+# 0x18-byte header node (_Left/_Right/_Parent bookkeeping, color black), sets size (+0xC) to 0
+# and the head pointer (+0x4). Called from the inlined CProjectileArea::field_64E construction
+# (0x56BF30).
+0x570D50

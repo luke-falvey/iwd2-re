@@ -1326,6 +1326,12 @@ CProjectileArea850384::field_66E
 CProjectileArea85072C::field_65E
 CProjectileArea85099C::field_65E
 CProjectileArea85099C::field_660
+CProjectileArea84F0DC::field_242
+CProjectileArea84F0DC::field_288
+CProjectileArea84F0DC::field_28C
+CProjectileArea84F0DC::field_290
+CProjectileArea84F0DC::field_29C
+CProjectileArea84F0DC::field_2A0
 CProjectileArea::field_2AE
 CProjectileArea::field_2B0
 CProjectileArea::field_2B2
