@@ -1,10 +1,20 @@
 #include "CProjectilePart5.h"
 
+#include <stdlib.h>
+
 #include "CBaldurChitin.h"
 #include "CGameArea.h"
+#include "CGameEffect.h"
 #include "CGameSprite.h"
+#include "CGameStatic.h"
 #include "CInfGame.h"
+#include "CMessage.h"
+#include "CProjectilePart3.h"
 #include "CUtil.h"
+#include "IcewindMisc.h"
+
+// 0x577380
+static void sub_577380(std::list<LONG>& list);
 
 // 0x574140
 CProjectileArea84FE08::CProjectileArea84FE08()
@@ -44,7 +54,33 @@ CProjectileArea84FEA4::CProjectileArea84FEA4()
 // 0x574430
 void CProjectileArea84FEA4::Virtual94(std::list<LONG>& targets)
 {
-    // TODO: Incomplete.
+    std::list<LONG> filtered;
+
+    int nBudget = rand() % 4 + rand() % 4 + 2;
+
+    for (std::list<LONG>::iterator it = targets.begin(); it != targets.end(); ++it) {
+        CGameObject* pObject;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(*it,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                int nLevel = static_cast<CGameSprite*>(pObject)->GetDerivedStats()->GetLevel();
+                if (nLevel <= 4 && nBudget - nLevel >= 0) {
+                    nBudget -= nLevel;
+                    filtered.push_back(*it);
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(*it,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    CProjectileArea::Virtual94(filtered);
 }
 
 // 0x5745E0
@@ -107,7 +143,28 @@ CProjectileArea850078::CProjectileArea850078()
 // 0x5749A0
 void CProjectileArea850078::Virtual94(std::list<LONG>& targets)
 {
-    // TODO: Incomplete.
+    if (targets.begin() != targets.end()) {
+        Virtual98(*targets.begin());
+        return;
+    }
+
+    CGameObject* pObject;
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE)
+        == CGameObjectArray::SUCCESS) {
+        if (pObject->GetObjectType() == 0x31) {
+            // NOTE: Sprite effect `2` and intensity `0` are BYTE constants at
+            // `0x85BB4B` and `0x85BB4E`.
+            static_cast<CGameSprite*>(pObject)->StartSpriteEffect(2, 0, 30, FALSE);
+            static_cast<CGameSprite*>(pObject)->FeedBack(CGameSprite::FEEDBACK_STATICCHARGEEND, 0, 0, 0, -1, 0, 0);
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
 }
 
 // 0x574A70
@@ -193,7 +250,16 @@ CProjectileArea85024C::CProjectileArea85024C()
 // 0x574DA0
 void CProjectileArea85024C::OnArrival()
 {
-    // TODO: Incomplete.
+    CProjectile8512BC* pProjectile = new CProjectile8512BC(CString("SunrayX"),
+        CString(""),
+        0xFF,
+        1,
+        0,
+        0x145);
+
+    pProjectile->Fire(field_EA, m_sourceId, m_targetId, m_pos, 0, 0);
+
+    CProjectileArea::OnArrival();
 }
 
 // 0x574EB0
@@ -227,7 +293,116 @@ CProjectileArea850384::CProjectileArea850384()
 // 0x5752E0
 void CProjectileArea850384::AIUpdate()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    field_66E++;
+
+    if (field_66E % 100 == 1) {
+        CTypedPtrList<CPtrList, LONG*> targets(10);
+        CGameObject* pObject;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            return;
+        }
+
+        m_pos = pObject->GetPos();
+
+        CGameSprite* pSprite = NULL;
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+            pSprite = static_cast<CGameSprite*>(pObject);
+        }
+
+        // NOTE: `pSprite` can be `NULL`.
+        if (IcewindMisc::IsDead(pSprite) == TRUE) {
+            LONG nSourceId = m_sourceId;
+            RemoveSelf();
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nSourceId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            return;
+        }
+
+        field_EA->GetAllInRange(m_posVertList,
+            m_pos,
+            field_2BE,
+            field_2AE,
+            m_terrainTable,
+            targets,
+            TRUE,
+            field_300);
+        field_EA->GetAllInRangeBack(m_pos,
+            field_2BE,
+            field_2AE,
+            m_terrainTable,
+            targets,
+            TRUE,
+            FALSE,
+            field_300);
+
+        POSITION pos = targets.GetHeadPosition();
+        while (pos != NULL) {
+            DWORD nId = reinterpret_cast<DWORD>(targets.GetNext(pos));
+            if (nId != m_sourceId) {
+                rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pObject,
+                    INFINITE);
+                if (rc != CGameObjectArray::SUCCESS) {
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    return;
+                }
+
+                if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+
+                    if (field_65E.find(nId) == field_65E.end()) {
+                        field_65E.insert(nId);
+                        Virtual98(nId);
+                    }
+                } else {
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                }
+            }
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    CGameObject* pObject;
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pObject,
+        INFINITE);
+    LONG nSourceId = m_sourceId;
+    if (rc == CGameObjectArray::SUCCESS) {
+        if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE
+            && IcewindMisc::IsDead(static_cast<CGameSprite*>(pObject)) == TRUE) {
+            RemoveSelf();
+        }
+    } else {
+        RemoveSelf();
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nSourceId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x5756C0
@@ -240,7 +415,142 @@ CProjectileArea850420::CProjectileArea850420()
 // 0x575720
 void CProjectileArea850420::AIUpdate()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    if (field_2B6 == 0 && !field_4E0) {
+        m_pos.x = m_posDest.x;
+        m_pos.y = m_posDest.y;
+        OnArrival();
+        return;
+    }
+
+    CTypedPtrList<CPtrList, LONG*> targets(10);
+
+    m_pArea->GetAllInRange(m_posVertList,
+        m_pos,
+        field_2BE,
+        field_2AE,
+        m_terrainTable,
+        targets,
+        FALSE,
+        TRUE);
+    m_pArea->GetAllInRangeBack(m_pos,
+        field_2BE,
+        field_2AE,
+        m_terrainTable,
+        targets,
+        FALSE,
+        FALSE,
+        TRUE);
+
+    POSITION pos = targets.GetHeadPosition();
+    while (pos != NULL) {
+        LONG nId = reinterpret_cast<LONG>(targets.GetNext(pos));
+        CGameObject* pObject;
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            return;
+        }
+
+        if (pObject->GetObjectType() == CGameObject::TYPE_STATIC) {
+            CGameStatic* pStatic = static_cast<CGameStatic*>(pObject);
+            if (strcmp(pStatic->m_vidCell.cResRef.GetResRefStr(), "1105MS1") == 0) {
+                // NOTE: The original switches on the word zero-extended.
+                switch (static_cast<WORD>(pStatic->m_vidCell.m_nCurrentSequence)) {
+                case 0:
+                    pStatic->m_vidCell.SequenceSet(4);
+                    break;
+                case 1:
+                    pStatic->m_vidCell.SequenceSet(5);
+                    break;
+                case 2:
+                    pStatic->m_vidCell.SequenceSet(6);
+                    break;
+                case 3:
+                    pStatic->m_vidCell.SequenceSet(7);
+                    break;
+                case 4:
+                    pStatic->m_vidCell.SequenceSet(0);
+                    break;
+                case 5:
+                    pStatic->m_vidCell.SequenceSet(1);
+                    break;
+                case 6:
+                    pStatic->m_vidCell.SequenceSet(2);
+                    break;
+                case 7:
+                    pStatic->m_vidCell.SequenceSet(3);
+                    break;
+                default:
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCProjectileAreas.cpp
+                    // __LINE__: 2939
+                    UTIL_ASSERT(FALSE);
+                    break;
+                }
+            }
+        }
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+
+    // NOTE: Locals are not initialised in the original.
+    LONG nX;
+    LONG nY;
+    WORD nProjectileType;
+    for (int nIndex = 0; nIndex < 5; nIndex++) {
+        switch (nIndex) {
+        case 0:
+            nX = 0x240;
+            nY = 0x140;
+            nProjectileType = 0x47;
+            break;
+        case 1:
+            nX = 0x25F;
+            nY = 0x15F;
+            nProjectileType = 0x47;
+            break;
+        case 2:
+            nX = 0x229;
+            nY = 0x155;
+            nProjectileType = 0x47;
+            break;
+        case 3:
+            nX = 0x21F;
+            nY = 0x12C;
+            nProjectileType = 0x47;
+            break;
+        case 4:
+            nX = 0x269;
+            nY = 0x127;
+            nProjectileType = 0x47;
+            break;
+        }
+
+        CProjectile* pProjectile = CProjectile::sub_560310(nProjectileType, NULL, FALSE);
+
+        CMessage* message = new CMessageFireProjectile(nProjectileType + 0x1000,
+            m_id,
+            CPoint(nX, nY),
+            0,
+            m_id,
+            m_id,
+            0);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        pProjectile->Fire(m_pArea, m_id, m_id, CPoint(nX, nY), 0, 0);
+    }
+
+    RemoveSelf();
 }
 
 // 0x575B00
@@ -255,6 +565,13 @@ void CProjectileArea8504BC::Virtual94(std::list<LONG>& targets)
     // TODO: Incomplete.
 }
 
+// 0x5705D0
+void CProjectileArea::sub_5705D0(LONG nSourceId)
+{
+    CMessage* message = new CMessageScreenShake(30, 10, -20, FALSE, nSourceId, nSourceId);
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, TRUE);
+}
+
 // 0x575B90
 CProjectileArea850558::CProjectileArea850558()
     : CProjectileArea(256)
@@ -266,7 +583,9 @@ CProjectileArea850558::CProjectileArea850558()
 // 0x575C90
 void CProjectileArea850558::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    sub_5705D0(source);
+
+    CProjectileArea::Fire(pArea, source, target, targetPos, nHeight, nType);
 }
 
 // 0x575CD0
