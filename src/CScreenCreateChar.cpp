@@ -11645,3 +11645,4 @@ BOOL CUIControlButtonCharGenFeatsCircle::Render(BOOL bForce)
         INFINITE);
 
     return TRUE;
+}
