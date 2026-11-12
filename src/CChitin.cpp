@@ -580,7 +580,158 @@ void CChitin::OnDisplayChange()
 // 0x7917F0
 void CChitin::ParseCommandLine()
 {
-    // TODO: Incomplete.
+    CString sResult;
+    CString sAddress;
+    CString sToken;
+    CString sPort;
+    CString sRemaining(m_sCommandLine);
+
+    sRemaining.TrimLeft();
+
+    while (sRemaining.GetLength() != 0) {
+        sToken = sRemaining.SpanExcluding(" ");
+        sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+
+        if (strcmp(sToken, "+host") == 0) {
+            sRemaining.TrimLeft();
+            if (sRemaining[0] == '"') {
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                sToken = sRemaining.SpanExcluding("\"");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (sRemaining[0] == '"') {
+                    sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                    if (!m_bStartUpConnect) {
+                        field_110 = 1;
+                        field_11C = sToken;
+                    }
+                }
+            } else {
+                sToken = sRemaining.SpanExcluding(" ");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (!m_bStartUpConnect) {
+                    field_110 = 1;
+                    field_11C = sToken;
+                }
+            }
+        } else if (strcmp(sToken, "+connect") == 0) {
+            sRemaining.TrimLeft();
+            if (sRemaining[0] == '"') {
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                sToken = sRemaining.SpanExcluding("\"");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (sRemaining[0] == '"') {
+                    sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                    sAddress = sToken.SpanExcluding(":");
+                    sPort = sToken.Right(sToken.GetLength() - sAddress.GetLength() - 1);
+                    if (!field_110) {
+                        m_bStartUpConnect = TRUE;
+                        m_sStartUpAddress = sAddress;
+                        field_11C = sPort;
+                    }
+                }
+            } else {
+                sToken = sRemaining.SpanExcluding(" ");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                sAddress = sToken.SpanExcluding(":");
+                sPort = sToken.Right(sToken.GetLength() - sAddress.GetLength() - 1);
+                if (!field_110) {
+                    m_bStartUpConnect = TRUE;
+                    m_sStartUpAddress = sAddress;
+                    field_11C = sPort;
+                }
+            }
+        } else if (strcmp(sToken, "+name") == 0) {
+            sRemaining.TrimLeft();
+            if (sRemaining[0] == '"') {
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                sToken = sRemaining.SpanExcluding("\"");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (sRemaining[0] == '"') {
+                    sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                    m_sStartUpPlayer = sToken;
+                }
+            } else {
+                sToken = sRemaining.SpanExcluding(" ");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                m_sStartUpPlayer = sToken;
+            }
+        } else if (strcmp(sToken, "+newgame") == 0) {
+            if (!field_128) {
+                field_124 = 1;
+            }
+        } else if (strcmp(sToken, "+loadgame") == 0) {
+            if (!field_124) {
+                field_128 = 1;
+            }
+        } else if (strcmp(sToken, "+hostname") == 0) {
+            sRemaining.TrimLeft();
+            if (sRemaining[0] == '"') {
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                sToken = sRemaining.SpanExcluding("\"");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (sRemaining[0] == '"') {
+                    sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                    if (field_110) {
+                        m_sStartUpSession = sToken;
+                    }
+                }
+            } else {
+                sToken = sRemaining.SpanExcluding(" ");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (field_110) {
+                    m_sStartUpSession = sToken;
+                }
+            }
+        } else if (strcmp(sToken, "+location") == 0) {
+            sRemaining.TrimLeft();
+            if (sRemaining[0] == '"') {
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                sToken = sRemaining.SpanExcluding("\"");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (sRemaining[0] == '"') {
+                    sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                    field_131 = 1;
+                    m_sStartUpGameSpyLocation = sToken;
+                }
+            } else {
+                sToken = sRemaining.SpanExcluding(" ");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                field_131 = 1;
+                m_sStartUpGameSpyLocation = sToken;
+            }
+        } else if (strcmp(sToken, "+maxclients") == 0) {
+            sRemaining.TrimLeft();
+            BOOL bParsed = FALSE;
+            if (sRemaining[0] == '"') {
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                sToken = sRemaining.SpanExcluding("\"");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (sRemaining[0] == '"') {
+                    sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                    bParsed = TRUE;
+                }
+            } else {
+                sToken = sRemaining.SpanExcluding(" ");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                bParsed = TRUE;
+            }
+
+            if (bParsed) {
+                int nMaxClients = atol(sToken.GetBuffer(128));
+                // NOTE: The original tests 'nMaxClients >= 1 || nMaxClients <= 6',
+                // which is true for every value.
+                if (nMaxClients >= 1 || nMaxClients <= 6) {
+                    field_136 = nMaxClients;
+                }
+            }
+        } else {
+            sResult = sResult + " " + sToken;
+        }
+
+        sRemaining.TrimLeft();
+    }
+
+    m_sCommandLine = sResult;
 }
 
 // 0x7926B0
