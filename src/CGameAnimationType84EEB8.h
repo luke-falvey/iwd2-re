@@ -1,6 +1,8 @@
 #ifndef CGAMEANIMATIONTYPE84EEB8_H_
 #define CGAMEANIMATIONTYPE84EEB8_H_
 
+#include <string>
+
 #include "CGameAnimationType.h"
 
 class CProjectileAreaVisual2;
@@ -15,7 +17,12 @@ public:
     CGameAnimationType84EEB8(const CProjectileAreaVisual3* a1, BYTE nDirection);
     CGameAnimationType84EEB8(const CProjectileAreaVisual2* a1, BYTE nDirection);
 
-    /* 03FE */ BYTE field_3FE[0x208];
+    // NOTE: Sets the BAM to play from its resource name.
+    void sub_55DBD0(const char* pName);
+
+    /* 03FE */ BYTE field_3FE[0x1F8];
+    // NOTE: Original layout uses MSVC 6 `std::string` (16 bytes).
+    /* 05F6 */ std::string field_5F6;
 };
 
 #endif /* CGAMEANIMATIONTYPE84EEB8_H_ */

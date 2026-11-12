@@ -1037,7 +1037,111 @@ CProjectileArea84F14C::~CProjectileArea84F14C()
 // 0x56E650
 void CProjectileArea84F14C::AIUpdate()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    field_10E++;
+
+    if (m_nTicksLeft == 0) {
+        if (m_animation.IsEndOfSequence()) {
+            RemoveFromArea();
+            return;
+        }
+    } else {
+        m_nTicksLeft--;
+        if (m_nTicksLeft == 0) {
+            RemoveFromArea();
+            return;
+        }
+    }
+
+    CPoint ptGrid(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX, m_pos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    m_ptFixedPos.x += m_ptVelocity.x;
+    m_ptFixedPos.y += m_ptVelocity.y;
+    m_pos.x = m_ptFixedPos.x >> CGameSprite::EXACT_SCALE;
+    m_pos.y = m_ptFixedPos.y >> CGameSprite::EXACT_SCALE;
+
+    CPoint ptNewGrid(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX, m_pos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    if (ptGrid.x != ptNewGrid.x || ptGrid.y != ptNewGrid.y) {
+        SHORT nTableIndex;
+        if (m_pArea->m_search.GetLOSCost(ptNewGrid, m_terrainTable, nTableIndex, FALSE) == CPathSearch::COST_IMPASSABLE) {
+            if (m_nMode == 1) {
+                RemoveFromArea();
+                return;
+            }
+
+            if (m_nMode == 0) {
+                CPoint ptOld = m_ptFixedPos;
+
+                if (ptGrid.x != ptNewGrid.x) {
+                    m_ptFixedPos.x += -m_ptVelocity.x * 2;
+                    m_pos.x = m_ptFixedPos.x >> CGameSprite::EXACT_SCALE;
+                    m_ptVelocity.x = -m_ptVelocity.x;
+                }
+
+                if (ptGrid.y != ptNewGrid.y) {
+                    m_ptFixedPos.y += -m_ptVelocity.y * 2;
+                    m_pos.y = m_ptFixedPos.y >> CGameSprite::EXACT_SCALE;
+                    m_ptVelocity.y = -m_ptVelocity.y;
+                }
+
+                SHORT nDirection = CGameSprite::GetDirection(ptOld, m_ptFixedPos);
+                m_animation.ChangeDirection(nDirection);
+            } else {
+                m_bVisible = 0;
+            }
+        } else {
+            m_bVisible = 1;
+        }
+    }
+
+    if (field_10D == 1) {
+        CGameAnimationType84EEB8* pAnimation = static_cast<CGameAnimationType84EEB8*>(m_animation.m_animation);
+
+        if (m_animation.IsEndOfSequence()) {
+            if (pAnimation->field_5F6 == "ICloudB") {
+                pAnimation->sub_55DBD0("ICloudA");
+            }
+        }
+
+        // NOTE: The divisor is a global at 0x84F260 (100).
+        if (field_10E != 0 && field_10E % 100 == 0) {
+            pAnimation->sub_55DBD0("ICloudB");
+        }
+    }
+
+    if (field_10C == 1) {
+        if (m_animation.IsEndOfSequence()) {
+            LONG nIndex;
+            do {
+                LONG nSize = field_104->field_0.size();
+                LONG nOffset;
+                if (nSize == 0) {
+                    nOffset = 0;
+                } else {
+                    LONG nLimit = rand() % nSize;
+                    nOffset = nLimit != 0 ? rand() % nLimit : 0;
+                }
+
+                nIndex = nSize - nOffset - 1;
+            } while (field_104->field_0[nIndex].field_8 == 1);
+
+            field_104->field_0[nIndex].field_8 = 1;
+            field_104->field_0[field_108].field_8 = 0;
+            field_108 = nIndex;
+
+            m_ptFixedPos.x = field_104->field_0[nIndex].field_0;
+            m_ptFixedPos.y = field_104->field_0[nIndex].field_4;
+            m_pos.x = m_ptFixedPos.x >> CGameSprite::EXACT_SCALE;
+            m_pos.y = m_ptFixedPos.y >> CGameSprite::EXACT_SCALE;
+        }
+    }
+
+    m_animation.IncrementFrame();
 }
 
 // 0x56ECF0
@@ -1062,5 +1166,68 @@ void CProjectileArea84F14C::RemoveFromArea()
 // 0x56EA90
 void CProjectileArea84F14C::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
 {
-    // TODO: Incomplete.
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameTemporal.cpp
+    // __LINE__: 354
+    UTIL_ASSERT(pVidMode != NULL);
+
+    BYTE bFadeOut = FALSE;
+    CInfinity* pInfinity = &m_pArea->m_cInfinity;
+
+    if (m_bVisible == 0) {
+        return;
+    }
+
+    if (m_pos.x < 0 || m_pos.y < 0 || m_pos.x > 0x1400 || m_pos.y > 0xF00) {
+        return;
+    }
+
+    // NOTE: Uninline.
+    if (!m_pArea->m_visibility.IsTileVisible(m_pArea->m_visibility.PointToTile(m_pos))) {
+        return;
+    }
+
+    if (static_cast<SHORT>(m_nTicksLeft) < m_nFadeTicks) {
+        bFadeOut = TRUE;
+    }
+
+    CRect rView(pInfinity->nCurrentX,
+        pInfinity->nCurrentY,
+        pInfinity->rViewPort.right - pInfinity->rViewPort.left + pInfinity->nCurrentX,
+        pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + pInfinity->nCurrentY);
+
+    CRect rFx;
+    CPoint ptReference;
+    m_animation.CalculateFxRect(rFx, ptReference, m_posZ);
+
+    CPoint pos = m_pos;
+    pos.y += m_pArea->GetHeightOffset(m_pos, CGameObject::LIST_BACK);
+
+    CRect rGCBounds;
+    m_animation.CalculateGCBoundsRect(rGCBounds,
+        pos,
+        ptReference,
+        m_posZ,
+        rFx.right - rFx.left,
+        rFx.bottom - rFx.top);
+
+    if (!IntersectRect(&rView, &rGCBounds, &rView)) {
+        return;
+    }
+
+    CPoint ptTint(pos.x, pos.y + m_posZ);
+    COLORREF rgbTint = m_pArea->GetTintColor(ptTint, m_listType);
+
+    m_animation.Render(pInfinity,
+        pVidMode,
+        a3,
+        rFx,
+        pos,
+        ptReference,
+        0x20000,
+        rgbTint,
+        rGCBounds,
+        FALSE,
+        bFadeOut,
+        m_posZ,
+        0);
 }

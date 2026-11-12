@@ -13,3 +13,9 @@ CGameAnimationType84EEB8::CGameAnimationType84EEB8(const CProjectileAreaVisual2*
 {
     // TODO: Incomplete.
 }
+
+// 0x55DBD0
+void CGameAnimationType84EEB8::sub_55DBD0(const char* pName)
+{
+    // TODO: Incomplete.
+}

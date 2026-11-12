@@ -240,6 +240,7 @@ CGameAnimationType::m_castFrame
 CGameAnimationType::m_personalSpace
 CGameAnimationType::m_walkRef
 CGameAnimationType84EEB8::field_3FE
+CGameAnimationType84EEB8::field_5F6
 CGameAnimationTypeAmbient::m_bInvulnerable
 CGameAnimationTypeAmbient::m_charPalette
 CGameAnimationTypeAmbient::m_currentBamDirection
