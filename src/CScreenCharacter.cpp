@@ -8459,8 +8459,680 @@ void CScreenCharacter::sub_5EFCC0(FILE* pFile, CItem* pItem, BYTE a3, BYTE a4)
 CString CScreenCharacter::sub_5EFFD0(BOOLEAN& bFlag)
 {
     // TODO: Incomplete.
-    bFlag = FALSE;
-    return CString();
+
+    // 0x5EFFD0 - 0x5F0391: Prologue, character lookup, file name, file open.
+    LONG nCharacterId = g_pBaldurChitin->m_pObjectGame->GetCharacterId(m_nSelectedCharacter);
+
+    CGameSprite* pSprite;
+
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->m_pObjectGame->m_cObjectArray.GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        bFlag = FALSE;
+        return CString();
+    }
+
+    CCreatureFileHeader* pBStats = pSprite->GetBaseStats();
+    CAIObjectType* pTypeAI = &pSprite->m_startTypeAI;
+    CDerivedStats* pDStats = pSprite->GetDerivedStats();
+    CInfGame* pGame = g_pBaldurChitin->m_pObjectGame;
+    const CRuleTables& rule = pGame->GetRuleTables();
+
+    CString sName(pSprite->GetName());
+
+    if (pBStats->m_name != 0xFFFFFFFF) {
+        sName = FetchString(pBStats->m_name);
+    }
+
+    for (INT nIndex = 0; nIndex < sName.GetLength(); nIndex++) {
+        char ch = sName[nIndex];
+        if (ch == '\\'
+            || ch == '/'
+            || ch == ':'
+            || ch == '*'
+            || ch == '?'
+            || ch == '<'
+            || ch == '>'
+            || ch == '|') {
+            sName.SetAt(nIndex, '_');
+        }
+    }
+
+    FILE* pFile = fopen(g_pBaldurChitin->m_pObjectGame->GetDirSaveRoot() + SAVE_NAME + "\\" + sName + ".txt",
+        "wt");
+
+    CString sResult = CString("...\\") + SAVE_NAME + "\\" + sName + ".txt ";
+
+    if (pFile == NULL) {
+        bFlag = FALSE;
+        g_pBaldurChitin->m_pObjectGame->m_cObjectArray.ReleaseShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        return sResult;
+    }
+
+    // 0x5F0391 - 0x5F0454: Name.
+    sub_5EF920(pFile, FetchString(1047), sName, 0);
+
+    fputs("\n", pFile);
+
+    // 0x5F0454 - 0x5F057D: Gender.
+    DWORD nGenderStrRef;
+    switch (pTypeAI->m_nGender) {
+    case 1:
+        nGenderStrRef = 1050;
+        break;
+    case 2:
+        nGenderStrRef = 1051;
+        break;
+    case 3:
+        nGenderStrRef = 8260;
+        break;
+    case 4:
+        nGenderStrRef = 8261;
+        break;
+    case 5:
+        nGenderStrRef = 8262;
+        break;
+    default:
+        nGenderStrRef = -1;
+        break;
+    }
+
+    sub_5EF920(pFile, FetchString(12135), FetchString(nGenderStrRef), 0);
+
+    // 0x5F057D - 0x5F0653: Race.
+    CString sRace;
+    rule.GetRaceStringMixed(pTypeAI->m_nRace, sRace, pTypeAI->m_nSubRace);
+
+    sub_5EF920(pFile, FetchString(1048), sRace, 0);
+
+    // 0x5F0653 - 0x5F07A4: Alignment.
+    DWORD nAlignmentStrRef;
+    switch (pTypeAI->m_nAlignment) {
+    case 0:
+        nAlignmentStrRef = -1;
+        break;
+    case CAIOBJECTTYPE_LAWFUL_GOOD:
+        nAlignmentStrRef = 1102;
+        break;
+    case CAIOBJECTTYPE_LAWFUL_NEUTRAL:
+        nAlignmentStrRef = 1104;
+        break;
+    case CAIOBJECTTYPE_LAWFUL_EVIL:
+        nAlignmentStrRef = 1103;
+        break;
+    case CAIOBJECTTYPE_NEUTRAL_GOOD:
+        nAlignmentStrRef = 1105;
+        break;
+    case CAIOBJECTTYPE_NEUTRAL:
+        nAlignmentStrRef = 1106;
+        break;
+    case CAIOBJECTTYPE_NEUTRAL_EVIL:
+        nAlignmentStrRef = 1107;
+        break;
+    case CAIOBJECTTYPE_CHAOTIC_GOOD:
+        nAlignmentStrRef = 1108;
+        break;
+    case CAIOBJECTTYPE_CHAOTIC_NEUTRAL:
+        nAlignmentStrRef = 1109;
+        break;
+    case CAIOBJECTTYPE_CHAOTIC_EVIL:
+        nAlignmentStrRef = 1110;
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 15582
+        UTIL_ASSERT(FALSE);
+
+        // NOTE: `nAlignmentStrRef` is left uninitialized on this path.
+        break;
+    }
+
+    sub_5EF920(pFile, FetchString(1049), FetchString(nAlignmentStrRef), 0);
+
+    // 0x5F07A4 - 0x5F0BB9: Ability scores.
+    fputs("\n", pFile);
+
+    fprintf(pFile, "%s:\n", (LPCSTR)FetchString(17088));
+
+    sub_5EF9E0(pFile, FetchString(1145), pDStats->m_nSTR, 1);
+    sub_5EF9E0(pFile, FetchString(1151), pDStats->m_nDEX, 1);
+    sub_5EF9E0(pFile, FetchString(1178), pDStats->m_nCON, 1);
+    sub_5EF9E0(pFile, FetchString(1179), pDStats->m_nINT, 1);
+    sub_5EF9E0(pFile, FetchString(1180), pDStats->m_nWIS, 1);
+    sub_5EF9E0(pFile, FetchString(1181), pDStats->m_nCHR, 1);
+
+    fputs("\n", pFile);
+
+    // 0x5F0BB9 - 0x5F0C73: Armor class.
+    sub_5EF9E0(pFile, FetchString(10339), pSprite->GetAC(), 0);
+
+    // 0x5F0C73 - 0x5F0D21: Hit points.
+    //
+    // NOTE: Inlined helper (same shape as `sub_5EF920`) with a two value
+    // format.
+    {
+        SHORT nMaxHitPoints = pDStats->m_nMaxHitPoints;
+        SHORT nHitPoints = pBStats->m_hitPoints;
+
+        CString sNameText;
+        CString sValueText;
+
+        sNameText.Format("%s", (LPCSTR)FetchString(30977));
+        sValueText.Format("%d/%d", nHitPoints, nMaxHitPoints);
+
+        fputs(sub_5EF760(sNameText, sValueText, 0), pFile);
+    }
+
+    // 0x5F0D21 - 0x5F0DC9: Current effects and dead state.
+    if (pSprite->m_portraitIcons.GetCount() > 0) {
+        CString sDescription;
+
+        POSITION pos = pSprite->m_portraitIcons.GetHeadPosition();
+        while (pos != NULL) {
+            INT nState = reinterpret_cast<int>(pSprite->m_portraitIcons.GetAt(pos));
+            rule.GetCharacterStateDescription(nState, sDescription);
+            fprintf(pFile, "%s- %s\n", szLineIndent, (LPCSTR)sDescription);
+            pSprite->m_portraitIcons.GetNext(pos);
+        }
+    }
+
+    if ((pDStats->m_generalState & STATE_DEAD) != 0) {
+        fprintf(pFile, "%s- %s\n", szLineIndent, (LPCSTR)FetchString(11829)); // "DEAD"
+    }
+
+    // 0x5F0DC9 - 0x5F1074: Active feats.
+    fputs("\n", pFile);
+
+    BOOLEAN bHasActiveFeats = FALSE;
+
+    if (pSprite->sub_763150(CGAMESPRITE_FEAT_ARTERIAL_STRIKE)
+        && pDStats->m_spellStates[SPLSTATE_FEAT_ARTERIAL_STRIKE]) {
+        bHasActiveFeats = TRUE;
+        fprintf(pFile,
+            "%s: %s",
+            (LPCSTR)FetchString(39823),
+            (LPCSTR)FetchString(35774)); // "Arterial Strike"
+    }
+
+    if (pSprite->sub_763150(CGAMESPRITE_FEAT_EXPERTISE)
+        && pSprite->sub_726270(CGAMESPRITE_FEAT_EXPERTISE) > 0) {
+        bHasActiveFeats = TRUE;
+        fprintf(pFile,
+            "%s: %s %d",
+            (LPCSTR)FetchString(39823),
+            (LPCSTR)FetchString(35785), // "Expertise"
+            pSprite->sub_726270(CGAMESPRITE_FEAT_EXPERTISE));
+    }
+
+    if (pSprite->sub_763150(CGAMESPRITE_FEAT_HAMSTRING)
+        && pDStats->m_spellStates[SPLSTATE_FEAT_HAMSTRING]) {
+        bHasActiveFeats = TRUE;
+        fprintf(pFile,
+            "%s: %s",
+            (LPCSTR)FetchString(39823),
+            (LPCSTR)FetchString(35787)); // "Hamstring"
+    }
+
+    if (pSprite->sub_763150(CGAMESPRITE_FEAT_POWER_ATTACK)
+        && pSprite->sub_726270(CGAMESPRITE_FEAT_POWER_ATTACK) > 0) {
+        bHasActiveFeats = TRUE;
+        fprintf(pFile,
+            "%s: %s %d",
+            (LPCSTR)FetchString(39823),
+            (LPCSTR)FetchString(35794), // "Power Attack"
+            pSprite->sub_726270(CGAMESPRITE_FEAT_POWER_ATTACK));
+    }
+
+    if (pSprite->sub_763150(CGAMESPRITE_FEAT_RAPID_SHOT)
+        && pDStats->m_spellStates[SPLSTATE_FEAT_RAPID_SHOT]) {
+        bHasActiveFeats = TRUE;
+        fprintf(pFile,
+            "%s: %s",
+            (LPCSTR)FetchString(39823),
+            (LPCSTR)FetchString(35796)); // "Rapid Shot"
+    }
+
+    if (bHasActiveFeats == TRUE) {
+        fputs("\n", pFile);
+    }
+
+    // 0x5F1074 - 0x5F12C6: Class levels.
+    INT aClasses[CAIOBJECT_CLASS_MAX];
+    INT nClasses = 0;
+
+    for (INT iClassType = 1; iClassType <= CAIOBJECT_CLASS_MAX; iClassType++) {
+        if (pDStats->GetClassLevel(iClassType) != 0) {
+            aClasses[nClasses++] = iClassType;
+        }
+    }
+
+    if (nClasses > 1) {
+        fprintf(pFile, "%s:\n", (LPCSTR)FetchString(19721));
+    } else {
+        fprintf(pFile, "%s:\n", (LPCSTR)FetchString(12136));
+    }
+
+    for (INT nIndex = 0; nIndex < nClasses; nIndex++) {
+        INT nClass = aClasses[nIndex];
+        INT nLevel = pDStats->GetClassLevel(nClass);
+
+        CString sClass;
+        rule.GetClassStringMixed(nClass,
+            pBStats->m_specialization,
+            pBStats->m_flags,
+            sClass,
+            pTypeAI->m_nGender != 2);
+
+        sub_5EF920(pFile, FetchString(12136), sClass, 1);
+        sub_5EF9E0(pFile, FetchString(17090), nLevel, 1);
+    }
+
+    // 0x5F12C6 - 0x5F1370: Experience.
+    sub_5EF9E0(pFile, FetchString(17089), pDStats->GetXP(), 1);
+
+    // 0x5F1370 - 0x5F2518: Attack bonuses.
+    fputs("\n", pFile);
+
+    INT nBaseAttackBonus;
+    INT nAttacks;
+    INT nStep;
+    rule.sub_546B60(pSprite, nBaseAttackBonus, nAttacks, nStep, TRUE);
+
+    CItem* curWeapon = NULL;
+    CItem* curWeaponSecond = NULL;
+    const ITEM_ABILITY* curAttackSecond = NULL;
+
+    if (&pSprite->m_equipment != NULL) {
+        curWeapon = pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon];
+        curWeaponSecond = pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())];
+
+        if (pSprite->m_equipment.m_selectedWeapon == 42
+            || (curWeaponSecond != NULL
+                && (curWeaponSecond->GetItemType() == 47
+                    || curWeaponSecond->GetItemType() == 53
+                    || curWeaponSecond->GetItemType() == 49
+                    || curWeaponSecond->GetItemType() == 41))) {
+            curWeaponSecond = NULL;
+        }
+
+        if (curWeapon == NULL) {
+            pSprite->SelectWeaponAbility(CGameSpriteEquipment::SLOT_FIST, 0, 0, 1);
+
+            curWeapon = pSprite->m_equipment.m_items[pSprite->m_equipment.m_selectedWeapon];
+        }
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 16140
+    UTIL_ASSERT(curWeapon != NULL);
+
+    SHORT nOffA = 0;
+    SHORT nOffB = 0;
+    SHORT nOffC = 0;
+
+    INT n7240A0 = pSprite->sub_7240A0();
+    INT n724170 = pSprite->sub_724170();
+
+    if (curWeapon != NULL) {
+        curWeapon->Demand();
+    }
+
+    const ITEM_ABILITY* curAttack = curWeapon->GetAbility(pSprite->m_equipment.m_selectedWeaponAbility);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 16160
+    UTIL_ASSERT(curAttack != NULL);
+
+    SHORT nMainA = pSprite->sub_73CA20(curWeapon, curAttack);
+    nMainA += pSprite->sub_73CAE0(curWeapon, curAttack);
+    nMainA += pSprite->sub_73CC40(curWeapon, curAttack);
+
+    SHORT nMainB = pSprite->sub_73CF10(curWeapon, curAttack);
+    nMainB += pSprite->sub_73D080(FALSE);
+
+    SHORT nMainC = pSprite->sub_73CB10(curWeapon, curAttack);
+
+    if (curWeaponSecond != NULL) {
+        curWeaponSecond->Demand();
+
+        // NOTE: Uninline.
+        CButtonData buttonData;
+
+        pSprite->GetQuickWeapon(static_cast<BYTE>(pSprite->sub_726800() - 0x2B), buttonData);
+
+        curAttackSecond = curWeaponSecond->GetAbility(buttonData.m_abilityId.m_abilityNum);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 16187
+        UTIL_ASSERT(curAttackSecond != NULL);
+
+        nOffA = pSprite->sub_73CA20(curWeaponSecond, curAttackSecond);
+        nOffA += pSprite->sub_73CAE0(curWeaponSecond, curAttackSecond);
+        nOffA += pSprite->sub_73CC40(curWeaponSecond, curAttackSecond);
+
+        nOffB = pSprite->sub_73CF10(curWeaponSecond, curAttackSecond);
+        nOffB += pSprite->sub_73D080(TRUE);
+
+        nOffC = pSprite->sub_73CB10(curWeaponSecond, curAttackSecond);
+    }
+
+    if (curWeapon != NULL) {
+        curWeapon->Release();
+    }
+
+    SHORT nGeneralBonus = pSprite->sub_73C7E0();
+    nGeneralBonus += pSprite->sub_73CAD0();
+
+    CString sLine;
+    CString sValue;
+
+    fprintf(pFile, "%s:\n", (LPCSTR)FetchString(9457));
+
+    SHORT launcherSlot;
+    BOOLEAN bRanged = FALSE;
+    CItem* pLauncher = pSprite->GetLauncher(curAttack, launcherSlot);
+    if (pLauncher != NULL) {
+        pLauncher->Demand();
+        if (pLauncher->GetAbility(0) != NULL) {
+            bRanged = TRUE;
+        }
+    }
+
+    if (bRanged == FALSE) {
+        // NOTE: Only the low byte of `type` is compared.
+        if (static_cast<BYTE>(curAttack->type) == 2) {
+            bRanged = TRUE;
+        }
+    }
+
+    if (pLauncher != NULL) {
+        pLauncher->Release();
+    }
+
+    UINT nRuleAttacks = nAttacks;
+
+    if (curWeapon != NULL
+        && curWeaponSecond != NULL
+        && curWeapon != curWeaponSecond
+        && curWeaponSecond->GetItemType() != 47
+        && curWeaponSecond->GetItemType() != 53
+        && curWeaponSecond->GetItemType() != 49
+        && curWeaponSecond->GetItemType() != 41) {
+        nAttacks = pDStats->m_nNumberOfAttacks - 1;
+    } else {
+        nAttacks = pDStats->m_nNumberOfAttacks;
+    }
+
+    sLine = "";
+
+    for (INT i = 0; i < nAttacks; i++) {
+        INT nBase = nBaseAttackBonus;
+        if (pDStats->m_spellStates[SPLSTATE_FEAT_RAPID_SHOT] && bRanged == TRUE && i == 0) {
+            nBase += -5;
+        }
+
+        SHORT nAttackBonus = rule.sub_547020(nBase, nStep, i)
+            + n724170
+            + n7240A0
+            + nGeneralBonus
+            + nMainC
+            + nMainB
+            + nMainA;
+
+        if (pDStats->m_spellStates[SPLSTATE_FEAT_RAPID_SHOT] && bRanged == TRUE) {
+            nAttackBonus -= 2;
+        }
+
+        sValue.Format("%+d", nAttackBonus);
+        sLine += sValue;
+
+        if (i + 1 < nAttacks) {
+            sLine += "/";
+        }
+    }
+
+    sub_5EF920(pFile, FetchString(734), sLine, 1);
+
+    sLine = "";
+
+    for (UINT i = 0; static_cast<INT>(i) < nAttacks; i++) {
+        sValue.Format("%+d", rule.sub_547020(nBaseAttackBonus, nStep, i));
+        sLine += sValue;
+
+        if (i + 1 < nRuleAttacks) {
+            sLine += "/";
+        }
+    }
+
+    sub_5EF920(pFile, FetchString(31353), sLine, 1);
+
+    if (curWeapon != curWeaponSecond) {
+        if (nMainA != 0) {
+            sLine.Format("%+d", nMainA);
+            sub_5EF920(pFile, FetchString(32560), sLine, 1);
+        }
+
+        if (nMainB != 0) {
+            sLine.Format("%+d", nMainB);
+            sub_5EF920(pFile, FetchString(32561), sLine, 1);
+        }
+
+        if (nMainC != 0) {
+            sLine.Format("%+d", nMainC);
+            sub_5EF920(pFile, FetchString(33547), sLine, 1);
+        }
+
+        if (n7240A0 != 0) {
+            sLine.Format("%+d", n7240A0);
+            sub_5EF920(pFile, FetchString(39816), sLine, 1);
+        }
+
+        if (n724170 != 0) {
+            sLine.Format("%+d", n724170);
+            sub_5EF920(pFile, FetchString(39822), sLine, 1);
+        }
+    }
+
+    if (curWeaponSecond != NULL) {
+        if (curWeapon != curWeaponSecond) {
+            fputs("\n", pFile);
+        }
+
+        SHORT nOffhandBonus = nBaseAttackBonus
+            + n724170
+            + n7240A0
+            + nGeneralBonus
+            + nOffC
+            + nOffB
+            + nOffA;
+
+        sLine.Format("%+d", nOffhandBonus);
+        sub_5EF920(pFile, FetchString(733), sLine, 1);
+
+        sLine = "";
+
+        sValue.Format("%+d", nBaseAttackBonus);
+        sLine += sValue;
+
+        sub_5EF920(pFile, FetchString(31353), sLine, 1);
+
+        if (nOffA != 0) {
+            sLine.Format("%+d", nOffA);
+            sub_5EF920(pFile, FetchString(32560), sLine, 1);
+        }
+
+        if (nOffB != 0) {
+            sLine.Format("%+d", nOffB);
+            sub_5EF920(pFile, FetchString(32561), sLine, 1);
+        }
+
+        if (nOffC != 0) {
+            sLine.Format("%+d", nOffC);
+            sub_5EF920(pFile, FetchString(33547), sLine, 1);
+        }
+
+        if (n7240A0 != 0) {
+            sLine.Format("%+d", n7240A0);
+            sub_5EF920(pFile, FetchString(39816), sLine, 1);
+        }
+
+        if (n724170 != 0) {
+            sLine.Format("%+d", n724170);
+            sub_5EF920(pFile, FetchString(39822), sLine, 1);
+        }
+
+        curWeaponSecond->Release();
+    }
+
+    fputs("\n", pFile);
+
+    if (nGeneralBonus != 0) {
+        sLine.Format("%+d", nGeneralBonus);
+        sub_5EF920(pFile, FetchString(33548), sLine, 1);
+    }
+
+    // 0x5F2518 - 0x5F26D4 (0x1BC bytes): Attacks per round.
+    // "\n"; `curWeapon == curWeaponSecond` ? "%d" with 1 : checks the item type of
+    // the off-hand weapon (via `sub_726800`, types 47/53/49/41) for "%d+%d"
+    // (0x8B2DAC) or "%d" (NumberOfAttacks); line strref 9458 (0x24F2), a3 = 1.
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F26D4 - 0x5F2AC8 (0x3F4 bytes): Armor class.
+    // "\n"; `pSprite->GetAC()` (0x723CC0) strref 33553 (0x8311) "%d" a3 = 0;
+    // "%d": 11997 (0x2EDD), 33551 (0x830F), 12006 (0x2EE6), 33552 (0x8310) all
+    // a3 = 1 with each preceded by the expertise style checks
+    // (0x726800/0x4E97E0 item-type tests 47/53/49/41); `sub_723EA0` (0x723EA0)
+    // line strref 1151 (0x47F) "%d" a3 = 1.
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F2AC8 - 0x5F2C2D (0x165 bytes): "\n"; "%d" lines 37275 (0x919B),
+    // 37590 (0x92D6), a3 = 1.
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F2C2D - 0x5F31BB (0x58E bytes): `CAIObjectType::IsClassValid`
+    // (0x40D7E0) gated block: "%d%%" (0x8ABD0C) lines 9460 (0x24F4), 9461
+    // (0x24F5), 34120 (0x8548), 9462 (0x24F6), 9463 (0x24F7), 24113 (0x5E31)
+    // all a3 = 1; `IcewindMisc::GetSneakAttackDice` (0x585D80) /
+    // `GetSneakAttackRolls` (0x585D50) with "%dd%d" (0x8B2E60) line 24898
+    // (0x6142), a3 = 1; 0x7ABB90 value line 24897 (0x6141) "%d".
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F31BB - 0x5F3620 (0x465 bytes): three more `IsClassValid` gated
+    // blocks: 9463 / 24113 "%d%%" (5F31BB), `CRuleTables::Average` (0x5467E0)
+    // + strref 34137 (0x8559) "%d%%" (5F3323), 12126 (0x2F5E) "%d" x2
+    // (5F33F8, 5F3560), all a3 = 1.
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F3620 - 0x5F37CA (0x1AA bytes): `TEST ECX,ECX` gated line strref
+    // 17093 (0x42C5) / `CResRef::CopyToString` (0x78A9F0) and strref 2078
+    // (0x81E) "%s" a3 = 1 (two forms).
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F37CA - 0x5F391A (0x150 bytes): `IsClassValid` gated favored enemy
+    // list: header "%s:\n" strref 15982 (0x3E6E); loop 8 entries with a
+    // jump table at 0x5F6638 (byte index table 0x5F667C, 0x4F entries) and
+    // "   %s\n" (0x8B3300).
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F391A - 0x5F3A37 (0x11D bytes): "\n"; header "%s:\n" 17379 (0x43E3);
+    // `sub_5EF9E0` real calls 17380 (0x43E4), 17381 (0x43E5), 17382 (0x43E6)
+    // a3 = 1; `CRuleTables::GetTrapSenseBonus` (0x5418E0) gated line 39802
+    // (0x9B7A) a3 = 1.
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F3A37 - 0x5F44FE (0xAC7 bytes): "\n"; header "%s:\n" 9466 (0x24FA);
+    // 17 x `CGameSprite::sub_75E930(id)` (0x75E930) guarded by `0 < x < 20`
+    // each followed by `CString` ctor (0x7FCC88) and `sub_5EF920` (real
+    // call) a3 = 1: strrefs 8733 (0x221D), 16033 (0x3EA1), 9403 (0x24BB),
+    // 9402 (0x24BA), 16017 (0x3E91), 16013 (0x3E8D), 16020 (0x3E94), 16015
+    // (0x3E8F), 16022 (0x3E96), 16031 (0x3E9F), 16011 (0x3E8B), 8668
+    // (0x21DC), 8732 (0x221C), 31138 (0x79A2), 31135 (0x799F), 31136
+    // (0x79A0), 31137 (0x79A1).
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F44FE - 0x5F4818 (0x31A bytes): "\n"; if any of the derived AC
+    // modifiers (+0xE/+0x10/+0x12/+0x14 of the derived stats) is non-zero:
+    // header "%s:\n" 11766 (0x2DF6) then `sub_5EFAA0` style "%+d" (0x8ABD14)
+    // lines a3 = 0: 11770 (0x2DFA), 11767 (0x2DF7), 11769 (0x2DF9), 11768
+    // (0x2DF8).
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F4818 - 0x5F4DFC (0x5E4 bytes): "\n"; header "%s:\n" 10315
+    // (0x284B); lines through `sub_5EFAA0`/`sub_5EF9E0`: 10332 (0x285C),
+    // 16462 (0x404E, `GetCriticalHitBonus`), 28357 (0x6EC5), 28373 (0x6ED5),
+    // 10336 (0x2860), 10338 (0x2862, `GetEncumbranceMod` 0x546AA0 with
+    // `__ftol` and 2DA `atol` 0x7E7B03), 10342 (0x2866, `sub_542EC0` 0x542EC0).
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F4DFC - 0x5F523B (0x43F bytes): seven `IsClassValid` tests and the
+    // spellcaster class loop (`GetSpellcasterClass` 0x5CA730, jump table at
+    // 0x5F66CC, `GetMaxKnownSpells` 0x5431E0, `GetClassStringMixed`
+    // 0x544120, "   %s: %s\n" 0x8B32F4, 2DA lookup 0x7FC1A5): lines 10343
+    // (0x2867) "%d%%", 10344 (0x2868), 10345 (0x2869).
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F523B - 0x5F594B (0x710 bytes): "\n"; header "%s:\n" 15544 (0x3CB8);
+    // `sub_5EF9E0` lines (a3 = 1) 15581 (0x3CDD), 11770 (0x2DFA), 11769
+    // (0x2DF9), 11768 (0x2DF8), 15578 (0x3CDA), 15546 (0x3CBA), 15577
+    // (0x3CD9), 15545 (0x3CB9), 11767 (0x2DF7), 38135 (0x94F7).
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F594B - 0x5F5C15 (0x2CA bytes): "\n" x2; spell lists:
+    // `CGameSprite::GetSpells` (0x724730), `GetSpellcasterClass`, class name
+    // (0x541DA0), "%s Spells:\n" (0x8B32E8), "Level: %1d\n" (0x8B32DC),
+    // "    %.*s (%3d/%3d)\n" (0x8B32C8) with asserts at FileFormat.h lines
+    // 0x9D9/0x985/0x986 (CSPELLLIST_MAX_LEVELS) and InfGame.h 0x28C/0x28D.
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F5C15 - 0x5F5E5E (0x249 bytes): "Domain Spells:\n" (0x8B32B8) with
+    // the same per-level loop over `m_domainSpells`.
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F5E5E - 0x5F6001 (0x1A3 bytes): innate spells: `GetInnateSpells`
+    // (0x5F6810), `CSpellListArray::GetSize` (0x5F66F0), Get (0x5F6710,
+    // 0x5F6790), `CSpell` resource blocks (0x45B240/0x45B210), 0x799E80,
+    // `CResRef::GetResRef`, "    %.*s (%3d/%3d)\n".
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F6001 - 0x5F60D2 (0xD1 bytes): songs (`GetSongs` 0x5F6820) and
+    // `GetMasterSongLookup` (0x58FEC0).
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F60D2 - 0x5F6100 (0x2E bytes): shapeshifts (`GetShapeshifts`
+    // 0x58FED0 / 0x5F6800) and three "\n" `fputs`.
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F6100 - 0x5F6345 (0x245 bytes): `CALL [EDX + 0xA0]` then the
+    // function pointer at 0x847310 with ("Game Options", "Output Full Detailed
+    // Description"); `GetEquipment` (0x45B740); "--  %s:\n" (0x8B3254) strref
+    // 11292 (0x2C1C); separators (0x8B3260, 0x8B321C); `sub_5EFCC0` item
+    // calls for the equipment slots (a3/a4 = 1 and 0), `sub_726800`
+    // selected weapon.
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F6345 - 0x5F6463 (0x11E bytes): inventory loops (slot ranges 0..8,
+    // 8..12, 12..18, 18.., 15..18, 0xA/0x33) with `Demand`/`Release` and
+    // `sub_5EFCC0`.
+    // SECTION NOT TRANSLATED.
+
+    // 0x5F6462 - 0x5F65BB: Epilogue.
+    fclose(pFile);
+
+    bFlag = TRUE;
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return sResult;
 }
 
 // 0x5F7850
