@@ -81,4 +81,62 @@ public:
     /* 0008 */ CNamedCreatureVariableHashEntry** m_hashEntries;
 };
 
+// NOTE: Name is invented. This class holds the cheat console commands that
+// `CLUAConsole` calls on an object embedded in itself at +0x38 (Ghidra calls
+// them `CtrlAltDelete_*`). The class has no data and `this` is never used. It
+// has no file of its own yet, so it lives with `CVariableHash`.
+class CCtrlAltDelete {
+public:
+    // 0x4EC1C0
+    void DisplayText(CString sText);
+
+    // 0x4EC250
+    void MoveToArea(CString sAreaName);
+
+    // 0x4EC350
+    void EnableCheatKeys(int a1);
+
+    // 0x4EC370
+    void SetCurrentXP(DWORD dwCurrentXP);
+
+    // 0x4EC390
+    void CreateCreature(CString sName);
+
+    // 0x4EC870
+    void AddItem(CString sName, WORD nUseCount1, WORD nUseCount2, WORD nUseCount3);
+
+    // 0x4ECA80
+    void SetAreaExplored();
+
+    // 0x4ECAB0
+    void AddGold(DWORD dwGold);
+
+    // 0x4ECAD0
+    void SetVariable(CString sName, CString sScope, LONG nValue);
+
+    // 0x4ED230
+    void AddGold500();
+
+    // 0x4ED250
+    void AddTestItems();
+
+    // 0x4ED2C0
+    void JumpPartyToPointer();
+
+    // 0x4ED500
+    void AddItem2(CString sName, WORD nUseCount1, WORD nUseCount2, WORD nUseCount3);
+
+    // 0x4ED730
+    void CheckVar(CString sName, CString sScope);
+
+    // 0x4ECC70
+    void AddSpell(CString sName, UINT nAmount);
+
+    // 0x4EDAB0
+    void AddProtagonistAction161(LONG nValue);
+
+    // 0x4EDCA0
+    void AddAllSpellsOfClass(const BYTE& nClass, UINT nAmount);
+};
+
 #endif /* CVARIABLEHASH_H_ */

@@ -1,9 +1,16 @@
 #include "CVariableHash.h"
 
 #include "CBaldurChitin.h"
+#include "CCreatureFile.h"
+#include "CGameArea.h"
 #include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
+#include "CPathSearch.h"
+#include "CScreenInventory.h"
+#include "CScreenWorld.h"
+#include "CSpell.h"
+#include "CUtil.h"
 
 // 0x84EC4C
 int CVariableHashBase::PRIME[] = {
@@ -673,4 +680,535 @@ void CNamedCreatureVariableHash::Marshal(CVariable** pList, WORD* pCount)
 // 0x4A51D0
 void CNamedCreatureVariableHash::MarshalToCharacter(CGameSprite* pSprite)
 {
+}
+
+// -----------------------------------------------------------------------------
+
+// 0x4EC1C0
+void CCtrlAltDelete::DisplayText(CString sText)
+{
+    // NOTE: Original reads the marker from a constant at 0x84C960 (-1).
+    g_pBaldurChitin->m_pEngineWorld->DisplayText(CString(""), sText, -1, FALSE);
+}
+
+// 0x4EC250
+void CCtrlAltDelete::MoveToArea(CString sAreaName)
+{
+    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(CResRef(sAreaName), 0x3F2, TRUE) == NULL) {
+        DisplayText("Error File " + sAreaName + "");
+    } else {
+        g_pBaldurChitin->GetScreenWorld()->MoveToArea(sAreaName);
+    }
+}
+
+// 0x4EC350
+void CCtrlAltDelete::EnableCheatKeys(int a1)
+{
+    g_pBaldurChitin->m_pEngineWorld->field_156 = a1;
+}
+
+// 0x4EC370
+void CCtrlAltDelete::SetCurrentXP(DWORD dwCurrentXP)
+{
+    g_pBaldurChitin->m_pEngineWorld->SetCurrentXP(dwCurrentXP);
+}
+
+// 0x4EC390
+void CCtrlAltDelete::CreateCreature(CString sName)
+{
+    CResRef resRef(sName);
+
+    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(resRef, 0x3F1, TRUE) == NULL) {
+        DisplayText("Error File " + sName + "");
+        return;
+    }
+
+    CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetVisibleArea();
+
+    INT x;
+    INT y;
+    pArea->GetInfinity()->GetViewPosition(x, y);
+
+    CRect rViewPort;
+    rViewPort.CopyRect(pArea->GetInfinity()->rViewPort);
+
+    x += (rViewPort.right - rViewPort.left) >> 1;
+    y += (rViewPort.bottom - rViewPort.top) >> 1;
+    y /= CPathSearch::GRID_SQUARE_SIZEY;
+    x /= CPathSearch::GRID_SQUARE_SIZEX;
+
+    CCreatureFile cre;
+    cre.SetResRef(CResRef(sName), TRUE, TRUE);
+
+    CGameSprite* pSprite = new CGameSprite(cre.GetData(),
+        cre.GetDataSize(),
+        0,
+        0,
+        -1,
+        0,
+        0,
+        0x7FFFFFFF,
+        CPoint(-1, -1),
+        0);
+
+    pSprite->SetResRef(cre.GetResRef().GetResRefStr());
+
+    // NOTE: Original passes an unused argument.
+    cre.ReleaseData();
+
+    if (pSprite != NULL) {
+        pSprite->SetResRef(sName);
+
+        CVariable var;
+
+        CString sScriptName(pSprite->m_scriptName);
+        sScriptName.TrimLeft();
+
+        if (strcmp(sScriptName, "") != 0) {
+            var.SetName(pSprite->GetScriptName());
+            var.m_intValue = pSprite->m_id;
+
+            // NOTE: Uninline.
+            g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_namedCreatures.AddKey(var);
+        }
+
+        BYTE personalSpace = pSprite->m_animation.GetPersonalSpace();
+
+        // NOTE: Uninline.
+        CPoint pt = g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_search.GetNearestOpenSquare(CPoint(x, y),
+            CGameObject::DEFAULT_TERRAIN_TABLE,
+            personalSpace,
+            -1);
+        x = pt.x;
+        y = pt.y;
+
+        BYTE listType = pSprite->m_animation.GetListType();
+
+        CPoint pos(CPathSearch::GRID_SQUARE_SIZEX * x, CPathSearch::GRID_SQUARE_SIZEY * y);
+
+        // NOTE: Uninline.
+        pSprite->AddToArea(g_pBaldurChitin->GetObjectGame()->GetVisibleArea(), pos, 0, listType);
+    }
+}
+
+// 0x4EC870
+void CCtrlAltDelete::AddItem(CString sName, WORD nUseCount1, WORD nUseCount2, WORD nUseCount3)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(CResRef(sName), 0x3ED, TRUE) == NULL) {
+        DisplayText("Error File " + sName + "");
+        return;
+    }
+
+    // NOTE: Uninline.
+    for (SHORT nIndex = 0; nIndex < pGame->m_nCharacters; nIndex++) {
+        LONG nId = pGame->GetCharacterId(nIndex);
+
+        CGameSprite* pSprite;
+        BYTE rc;
+        do {
+            rc = pGame->m_cObjectArray.GetDeny(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            INT nSlot;
+            for (nSlot = 0; nSlot < CScreenInventory::PERSONAL_INVENTORY_SIZE; nSlot++) {
+                if (pSprite->m_equipment.m_items[18 + nSlot] == NULL) {
+                    pSprite->m_equipment.m_items[18 + nSlot] = new CItem(CResRef(sName),
+                        nUseCount1,
+                        nUseCount2,
+                        nUseCount3,
+                        0,
+                        0);
+
+                    pGame->m_cObjectArray.ReleaseDeny(nId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    return;
+                }
+            }
+
+            pGame->m_cObjectArray.ReleaseDeny(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+}
+
+// 0x4ECA80
+void CCtrlAltDelete::SetAreaExplored()
+{
+    // NOTE: Uninline.
+    g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_visibility.SetAreaExplored();
+}
+
+// 0x4ECAB0
+void CCtrlAltDelete::AddGold(DWORD dwGold)
+{
+    g_pBaldurChitin->m_pEngineWorld->AddGold(dwGold);
+}
+
+// 0x4ECAD0
+void CCtrlAltDelete::SetVariable(CString sName, CString sScope, LONG nValue)
+{
+    sScope.MakeUpper();
+    sName.MakeUpper();
+
+    CVariable var;
+
+    if (strcmp(sScope, "GLOBAL") == 0) {
+        CVariable* pVar = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sName);
+        if (pVar != NULL) {
+            pVar->m_intValue = nValue;
+        } else {
+            var.SetName(sName);
+            var.m_intValue = nValue;
+            g_pBaldurChitin->GetObjectGame()->m_variables.AddKey(var);
+        }
+    } else {
+        CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sScope);
+        if (pArea != NULL) {
+            CVariable* pVar = pArea->GetVariables()->FindKey(sName);
+            if (pVar != NULL) {
+                pVar->m_intValue = nValue;
+            } else {
+                var.SetName(sName);
+                var.m_intValue = nValue;
+                pArea->m_variables.AddKey(var);
+            }
+        }
+    }
+}
+
+// 0x4ED230
+void CCtrlAltDelete::AddGold500()
+{
+    g_pBaldurChitin->m_pEngineWorld->AddGold(500);
+}
+
+// 0x4ED250
+void CCtrlAltDelete::AddTestItems()
+{
+    AddItem2("potn08", 5, 0, 0);
+    AddItem2("potn20", 5, 0, 0);
+    AddItem2("scrlpet", 1, 0, 0);
+}
+
+// 0x4ED2C0
+void CCtrlAltDelete::JumpPartyToPointer()
+{
+    // NOTE: Uninline.
+    CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetVisibleArea();
+    CPoint ptWorld = pArea->GetInfinity()->GetWorldCoordinates(g_pChitin->m_ptPointer);
+
+    CAIAction action(CAIAction::JUMPTOPOINT, ptWorld, 0, -1);
+
+    g_pBaldurChitin->GetObjectGame()->GetGroup()->GroupAction(action, TRUE, NULL);
+}
+
+// 0x4ED500
+void CCtrlAltDelete::AddItem2(CString sName, WORD nUseCount1, WORD nUseCount2, WORD nUseCount3)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(CResRef(sName), 0x3ED, TRUE) == NULL) {
+        // NOTE: Uninline.
+        DisplayText("Error File " + sName + "");
+        return;
+    }
+
+    // NOTE: Uninline.
+    for (SHORT nIndex = 0; nIndex < pGame->m_nCharacters; nIndex++) {
+        LONG nId = pGame->GetCharacterId(nIndex);
+
+        CGameSprite* pSprite;
+        BYTE rc;
+        do {
+            rc = pGame->m_cObjectArray.GetDeny(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            INT nSlot;
+            for (nSlot = 0; nSlot < CScreenInventory::PERSONAL_INVENTORY_SIZE; nSlot++) {
+                if (pSprite->m_equipment.m_items[18 + nSlot] == NULL) {
+                    pSprite->m_equipment.m_items[18 + nSlot] = new CItem(CResRef(sName),
+                        nUseCount1,
+                        nUseCount2,
+                        nUseCount3,
+                        0,
+                        0);
+
+                    pGame->m_cObjectArray.ReleaseDeny(nId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    return;
+                }
+            }
+
+            pGame->m_cObjectArray.ReleaseDeny(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+}
+
+// 0x4ED730
+void CCtrlAltDelete::CheckVar(CString sName, CString sScope)
+{
+    sScope.MakeUpper();
+    sName.MakeUpper();
+
+    CString sResult;
+
+    if (strcmp(sScope, "GLOBAL") == 0) {
+        CVariable* pVar = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sName);
+        if (pVar != NULL) {
+            CString sValue;
+            sValue.Format("%d", pVar->m_intValue);
+
+            sResult = "GLOBAL::";
+            sResult += pVar->GetName();
+            sResult += " = ";
+            sResult += sValue;
+        } else {
+            sResult = "No variable called ";
+            sResult += "GLOBAL::";
+            sResult += sName;
+        }
+    } else {
+        CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sScope);
+        if (pArea != NULL) {
+            CVariable* pVar = pArea->GetVariables()->FindKey(sName);
+            if (pVar != NULL) {
+                CString sValue;
+                sValue.Format("%d", pVar->m_intValue);
+
+                sResult = pArea->m_resRef.GetResRefStr();
+                sResult += "::";
+                sResult += pVar->GetName();
+                sResult += " = ";
+                sResult += sValue;
+            } else {
+                sResult = "No variable called ";
+                sResult += sScope;
+                sResult += "::";
+                sResult += sName;
+            }
+        } else {
+            sResult = "Need to be in area specified when checking local!";
+        }
+    }
+
+    DisplayText(sResult);
+}
+
+// 0x4ECC70
+void CCtrlAltDelete::AddSpell(CString sName, UINT nAmount)
+{
+    if (strcmp(sName, "ALL") == 0) {
+        for (UINT nIndex = 0; nIndex < 7; nIndex++) {
+            BYTE nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nIndex);
+            AddAllSpellsOfClass(nClass, nAmount);
+        }
+    } else if (strcmp(sName, "BARD") == 0) {
+        BYTE nClass = CAIOBJECTTYPE_C_BARD;
+        AddAllSpellsOfClass(nClass, nAmount);
+    } else if (strcmp(sName, "CLERIC") == 0) {
+        BYTE nClass = CAIOBJECTTYPE_C_CLERIC;
+        AddAllSpellsOfClass(nClass, nAmount);
+    } else if (strcmp(sName, "DRUID") == 0) {
+        BYTE nClass = CAIOBJECTTYPE_C_DRUID;
+        AddAllSpellsOfClass(nClass, nAmount);
+    } else if (strcmp(sName, "PALADIN") == 0) {
+        BYTE nClass = CAIOBJECTTYPE_C_PALADIN;
+        AddAllSpellsOfClass(nClass, nAmount);
+    } else if (strcmp(sName, "RANGER") == 0) {
+        BYTE nClass = CAIOBJECTTYPE_C_RANGER;
+        AddAllSpellsOfClass(nClass, nAmount);
+    } else if (strcmp(sName, "SORCERER") == 0) {
+        BYTE nClass = CAIOBJECTTYPE_C_SORCERER;
+        AddAllSpellsOfClass(nClass, nAmount);
+    } else if (strcmp(sName, "WIZARD") == 0) {
+        BYTE nClass = CAIOBJECTTYPE_C_WIZARD;
+        AddAllSpellsOfClass(nClass, nAmount);
+    } else {
+        if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(CResRef(sName), 0x3EE, TRUE) == NULL) {
+            DisplayText("Error File " + sName + "");
+            return;
+        }
+
+        CResRef resRef(sName);
+        CResRef resSpell = resRef;
+
+        CSpell spell;
+        spell.SetResRef(resSpell, TRUE, TRUE);
+
+        CGameSprite* pSprite = NULL;
+
+        // NOTE: Uninline.
+        POSITION pos = g_pBaldurChitin->GetObjectGame()->m_group.m_memberList.GetHeadPosition();
+        while (pos != NULL) {
+            LONG nId = reinterpret_cast<LONG>(g_pBaldurChitin->GetObjectGame()->m_group.m_memberList.GetNext(pos));
+
+            BYTE rc;
+            do {
+                rc = g_pBaldurChitin->GetObjectGame()->m_cObjectArray.GetDeny(nId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    reinterpret_cast<CGameObject**>(&pSprite),
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                BYTE nClass = 0;
+                switch (spell.GetCasterType()) {
+                case 1:
+                    nClass = CAIOBJECTTYPE_C_WIZARD;
+                    break;
+                case 2:
+                    nClass = CAIOBJECTTYPE_C_CLERIC;
+                    break;
+                case 4:
+                    nClass = pSprite->GetAIType().m_nClass;
+                    break;
+                }
+
+                switch (g_pBaldurChitin->GetObjectGame()->GetSpellType(resRef)) {
+                case 1: {
+                    INT nLevel = g_pBaldurChitin->GetObjectGame()->GetSpellLevel(resRef, nClass, 0);
+                    if (nLevel < 9) {
+                        UINT nSpellLevel = nLevel;
+                        UINT a4 = nAmount;
+                        UINT a5 = nAmount;
+                        UINT a6 = 0;
+                        pSprite->AddKnownSpell(nClass, nSpellLevel, resRef, a4, a5, a6);
+                    }
+                    break;
+                }
+                case 2: {
+                    UINT a2 = nAmount;
+                    UINT a3 = nAmount;
+                    UINT a4 = 0;
+                    pSprite->AddInnateSpell(resRef, a2, a3, a4);
+                    break;
+                }
+                case 3: {
+                    UINT a2 = nAmount;
+                    UINT a3 = nAmount;
+                    UINT a4 = 0;
+                    pSprite->AddSong(resRef, a2, a3, a4);
+                    break;
+                }
+                case 4: {
+                    UINT a2 = 0;
+                    pSprite->AddShapeshift(resRef, a2);
+
+                    UINT a1 = nAmount;
+                    pSprite->sub_724C40(a1);
+
+                    UINT a1b = nAmount;
+                    BOOLEAN a2b = FALSE;
+                    pSprite->m_shapeshifts.sub_725D30(a1b, a2b);
+                    break;
+                }
+                }
+
+                g_pBaldurChitin->GetObjectGame()->m_cObjectArray.ReleaseDeny(nId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+    }
+}
+
+// 0x4EDAB0
+void CCtrlAltDelete::AddProtagonistAction161(LONG nValue)
+{
+    // NOTE: Original reads action ID from a constant at 0x8478B6.
+    CAIAction action(161, nValue, 1, 0);
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    CGameSprite* pSprite;
+    BYTE rc = pGame->m_cObjectArray.GetShare(pGame->GetProtagonist(),
+        CGameObjectArray::THREAD_ASYNCH,
+        reinterpret_cast<CGameObject**>(&pSprite),
+        INFINITE);
+    if (rc == CGameObjectArray::SUCCESS) {
+        pSprite->AddAction(action);
+
+        pGame = g_pBaldurChitin->GetObjectGame();
+        pGame->m_cObjectArray.ReleaseShare(pGame->GetProtagonist(),
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
+}
+
+// 0x4EDCA0
+void CCtrlAltDelete::AddAllSpellsOfClass(const BYTE& nClass, UINT nAmount)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CGroupedSpellList* pSpells = &(pGame->m_spellsByClass[pGame->GetSpellcasterIndex(nClass)]);
+
+    CGameSprite* pSprite = NULL;
+
+    // NOTE: Uninline.
+    POSITION pos = g_pBaldurChitin->GetObjectGame()->m_group.m_memberList.GetHeadPosition();
+    while (pos != NULL) {
+        LONG nId = reinterpret_cast<LONG>(g_pBaldurChitin->GetObjectGame()->m_group.m_memberList.GetNext(pos));
+
+        BYTE rc;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->m_cObjectArray.GetDeny(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            for (UINT nLevel = 0; nLevel < pSpells->m_nHighestLevel; nLevel++) {
+                for (UINT nIndex = 0;; nIndex++) {
+                    // __FILE__: .\Include\InfGame.h
+                    // __LINE__: 772
+                    UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+                    if (nIndex >= pSpells->m_lists[nLevel].m_nCount) {
+                        break;
+                    }
+
+                    // __FILE__: .\Include\InfGame.h
+                    // __LINE__: 772
+                    UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+                    // NOTE: Uninline.
+                    UINT nID = pSpells->m_lists[nLevel].Get(nIndex);
+
+                    pGame = g_pBaldurChitin->GetObjectGame();
+
+                    UINT a4 = nAmount;
+                    UINT a5 = nAmount;
+                    UINT a6 = 0;
+                    pSprite->AddKnownSpell(nClass, nLevel, pGame->m_spells.Get(nID), a4, a5, a6);
+
+                    if (nClass == CAIOBJECTTYPE_C_BARD || nClass == CAIOBJECTTYPE_C_SORCERER) {
+                        pSprite->GetSpellsAtLevel(nClass, nLevel)->field_14 = pSprite->GetSpellsAtLevel(nClass, nLevel)->field_14 + nAmount;
+
+                        UINT a1 = nAmount;
+                        BOOLEAN a2 = FALSE;
+                        pSprite->GetSpellsAtLevel(nClass, nLevel)->sub_725D30(a1, a2);
+                    }
+                }
+            }
+
+            g_pBaldurChitin->GetObjectGame()->m_cObjectArray.ReleaseDeny(nId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
 }
