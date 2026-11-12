@@ -948,6 +948,328 @@ void CGameAnimationTypeMonsterMulti::Render(CInfinity* pInfinity, CVidMode* pVid
     }
 }
 
+// 0x6B7660
+SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
+{
+    BOOL bRandomFrame = FALSE;
+
+    switch (nSequence) {
+    case 1:
+        m_currentVidCellBase = m_g4VidCellBase;
+        field_44A = &field_67C;
+        m_currentBamSequence = 1;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '1';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g4VidCellBase[quad].SetResRef(CResRef(m_resRef + "4" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g4VidCellBase);
+            }
+        }
+        break;
+    case 2:
+        m_currentVidCellBase = m_g5VidCellBase;
+        field_44A = &field_736;
+        m_currentBamSequence = 1;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '1';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g5VidCellBase[quad].SetResRef(CResRef(m_resRef + "5" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g5VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g5VidCellBase);
+            }
+        }
+        break;
+    case 3:
+        m_currentVidCellBase = m_g2VidCellBase;
+        field_44A = &field_508;
+        m_currentBamSequence = 0;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '0';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g2VidCellBase[quad].SetResRef(CResRef(m_resRef + "2" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g2VidCellBase);
+            }
+        }
+        break;
+    case 4:
+        m_currentVidCellBase = m_g4VidCellBase;
+        field_44A = &field_67C;
+        m_currentBamSequence = 0;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '0';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g4VidCellBase[quad].SetResRef(CResRef(m_resRef + "4" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g4VidCellBase);
+            }
+        }
+        break;
+    case 5:
+        m_currentVidCellBase = m_g4VidCellBase;
+        field_44A = &field_67C;
+        m_currentBamSequence = 1;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '1';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g4VidCellBase[quad].SetResRef(CResRef(m_resRef + "4" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g4VidCellBase);
+            }
+        }
+        break;
+    case 6:
+        if (m_currentBamSequence != 0 || m_currentVidCellBase != m_g2VidCellBase) {
+            bRandomFrame = TRUE;
+        }
+
+        m_currentVidCellBase = m_g2VidCellBase;
+        field_44A = &field_508;
+        m_currentBamSequence = 0;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '0';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g2VidCellBase[quad].SetResRef(CResRef(m_resRef + "2" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g2VidCellBase);
+            }
+        }
+        break;
+    case 14:
+    case 15:
+        nSequence = 7;
+        // FALLTHROUGH
+    case 7:
+        if (m_currentBamSequence != 0 || m_currentVidCellBase != m_g2VidCellBase) {
+            bRandomFrame = TRUE;
+        }
+
+        m_currentVidCellBase = m_g2VidCellBase;
+        field_44A = &field_508;
+        m_currentBamSequence = 0;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '0';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g2VidCellBase[quad].SetResRef(CResRef(m_resRef + "2" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g2VidCellBase);
+            }
+        }
+        break;
+    case 8:
+        m_currentVidCellBase = m_g5VidCellBase;
+        field_44A = &field_736;
+        m_currentBamSequence = 1;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '1';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g5VidCellBase[quad].SetResRef(CResRef(m_resRef + "5" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g5VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g5VidCellBase);
+            }
+        }
+        break;
+    case 9:
+        m_currentVidCellBase = m_g4VidCellBase;
+        field_44A = &field_67C;
+        m_currentBamSequence = 2;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '2';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g4VidCellBase[quad].SetResRef(CResRef(m_resRef + "4" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g4VidCellBase);
+            }
+        }
+        break;
+    case 10:
+        m_currentVidCellBase = m_g1VidCellBase;
+        field_44A = &field_44E;
+        m_currentBamSequence = 0;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '0';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g1VidCellBase[quad].SetResRef(CResRef(m_resRef + "1" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g1VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g1VidCellBase);
+            }
+        }
+        break;
+    case 11:
+        m_currentVidCellBase = m_g3VidCellBase;
+        field_44A = &field_5C2;
+        m_currentBamSequence = 0;
+        nSequence = 0;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '0';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g3VidCellBase[quad].SetResRef(CResRef(m_resRef + "3" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g3VidCellBase);
+            }
+        }
+        break;
+    case 12:
+        m_currentVidCellBase = m_g3VidCellBase;
+        field_44A = &field_5C2;
+        m_currentBamSequence = 0;
+        nSequence = 0;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '0';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g3VidCellBase[quad].SetResRef(CResRef(m_resRef + "3" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g3VidCellBase);
+            }
+        }
+        break;
+    case 13:
+        m_currentVidCellBase = m_g3VidCellBase;
+        field_44A = &field_5C2;
+        m_currentBamSequence = 0;
+        nSequence = 0;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '0';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g3VidCellBase[quad].SetResRef(CResRef(m_resRef + "3" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g3VidCellBase);
+            }
+        }
+        break;
+    case 17:
+        m_currentVidCellBase = m_g4VidCellBase;
+        field_44A = &field_67C;
+        m_currentBamSequence = 1;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '1';
+
+            CString sSuffix;
+            for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+                sSuffix = static_cast<char>(quad + '1');
+
+                // NOTE: Uninline.
+                m_g4VidCellBase[quad].SetResRef(CResRef(m_resRef + "4" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
+
+                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g4VidCellBase);
+            }
+        }
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+        // __LINE__: 11505
+        UTIL_ASSERT(FALSE);
+    }
+
+    ChangeDirection(m_currentBamDirection);
+
+    if (bRandomFrame) {
+        BYTE nSequenceLength = m_currentVidCell->GetSequenceLength(m_currentVidCell->m_nCurrentSequence, FALSE);
+        SHORT nFrame;
+        if (nSequenceLength != 0) {
+            nFrame = rand() % nSequenceLength;
+        } else {
+            nFrame = 0;
+        }
+
+        for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+            m_currentVidCell[quad].FrameSet(nFrame);
+        }
+    } else {
+        for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
+            m_currentVidCell[quad].FrameSet(0);
+        }
+    }
+
+    if (nSequence == 1) {
+        DecrementFrame();
+    }
+
+    field_800 = static_cast<unsigned char>(nSequence);
+
+    return nSequence;
+}
+
 // 0x6B9CA0
 void CGameAnimationTypeMonsterMulti::GetAnimationResRef(CString& resRef, BYTE range)
 {
