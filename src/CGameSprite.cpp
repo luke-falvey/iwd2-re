@@ -14672,7 +14672,7 @@ void CGameSprite::sub_722820()
     CString sRace = pGame->GetRuleTables().GetRaceString(type.m_nRace, type.m_nSubRace);
     CString sFile = pGame->GetRuleTables().m_tRaceSpAb.GetAt(CRuleTables::SPECIAL_ABILITIES_FILE, sRace);
 
-    if (strcmp(sFile, "") != 0) {
+    if (strcmp(sFile, "*") != 0) {
         C2DArray cTable;
         cTable.Load(CResRef(sFile));
 
@@ -14680,7 +14680,7 @@ void CGameSprite::sub_722820()
             // NOTE: Uninline. Columns are read from globals at 0x84EB38 (0) and 0x84EB3C (1).
             CResRef resSpell(cTable.GetAt(CPoint(0, nRow)));
 
-            if (strcmp(resSpell.GetResRefStr(), "") != 0) {
+            if (strcmp(resSpell.GetResRefStr(), "*") != 0) {
                 // NOTE: Uninline.
                 UINT nCount = atol(cTable.GetAt(CPoint(1, nRow)));
 
@@ -35227,9 +35227,336 @@ BOOL CGameSprite::CanTarget(CGameSprite* pTarget, DWORD dwFlags)
 // 0x764880
 BOOL CGameSprite::IsSpellTargetValid(CGameSprite* pTarget, INT nSpellId, DWORD dwFlags)
 {
-    // TODO: Incomplete.
+    if (pTarget == NULL) {
+        CString sCaster(m_scriptName, SCRIPTNAME_SIZE);
 
-    return FALSE;
+        CString sArea;
+        sArea = reinterpret_cast<LPCSTR>(m_pArea->m_header.m_areaName);
+
+        CString sMessage;
+        sMessage.Format("Target is NULL -- Area=%s  Caster=%s  SpellId=%d  Flags=%d",
+            (LPCSTR)sArea,
+            (LPCSTR)sCaster,
+            nSpellId,
+            dwFlags);
+
+        return FALSE;
+    }
+
+    if (nSpellId == 0) {
+        CString sCaster(m_scriptName, SCRIPTNAME_SIZE);
+        CString sTarget(pTarget->m_scriptName, SCRIPTNAME_SIZE);
+
+        CString sArea;
+        sArea = reinterpret_cast<LPCSTR>(m_pArea->m_header.m_areaName);
+
+        CString sMessage;
+        sMessage.Format("Spell Id not found -- Area=%s  Caster=%s  Target=%s  Flags==%d",
+            (LPCSTR)sArea,
+            (LPCSTR)sCaster,
+            (LPCSTR)sTarget,
+            dwFlags);
+
+        return FALSE;
+    }
+
+    BOOL bValid = TRUE;
+
+    if (!m_derivedStats.m_spellStates[SPLSTATE_VOCALIZE]
+        && (m_derivedStats.m_generalState & STATE_SILENCED) != 0
+        && !sub_763150(0x44)
+        && nSpellId != 0x8AB) {
+        return FALSE;
+    }
+
+    CString sSpellName("");
+    DecodeSpell(nSpellId, sSpellName);
+
+    if (strcmp(sSpellName, "") == 0) {
+        return FALSE;
+    }
+
+    CResRef resSpell(sSpellName);
+    CSpell spell(resSpell);
+    if (!spell.Demand()) {
+        return FALSE;
+    }
+
+    BYTE nLevel = static_cast<BYTE>(spell.GetLevel());
+    SHORT nType = spell.GetCasterType();
+
+    if ((spell.GetItemFlags() & 0x2000) != 0
+        && (m_pArea->GetHeader()->m_areaType & 0x1) == 0) {
+        spell.Release();
+        return FALSE;
+    }
+
+    if (m_derivedStats.m_disabledSpellTypes[nType] == 1) {
+        spell.Release();
+        return FALSE;
+    }
+
+    if (nType == 1) {
+        if (m_derivedStats.m_nSpellFailureArcane >= 100) {
+            spell.Release();
+            return FALSE;
+        }
+    } else if (nType == 2) {
+        if (m_derivedStats.m_nSpellFailureDivine >= 100) {
+            spell.Release();
+            return FALSE;
+        }
+    }
+
+    std::string sName(static_cast<LPCSTR>(sSpellName));
+
+    if (pTarget->m_derivedStats.m_spellImmunities.find(sName) != pTarget->m_derivedStats.m_spellImmunities.end()) {
+        spell.Release();
+        return FALSE;
+    }
+
+    if (nLevel < 9 && pTarget->m_derivedStats.m_cImmunitiesSpellLevel.m_levels[nLevel] != 0) {
+        if (nLevel != 1) {
+            spell.Release();
+            return FALSE;
+        }
+
+        CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+        UINT nID = 0;
+
+        if (!pGame->m_innateSpells.Find(CResRef(sSpellName), nID)
+            && !pGame->m_songs.Find(CResRef(sSpellName), nID)
+            && !pGame->m_shapeshifts.Find(CResRef(sSpellName), nID)) {
+            spell.Release();
+            return FALSE;
+        }
+
+        bValid = TRUE;
+    }
+
+    SHORT nCasterLevel = GetCasterLevel(&spell, 0, 0);
+
+    SPELL_ABILITY* pAbility = NULL;
+    for (INT nAbility = 0; nAbility < spell.GetAbilityCount(); nAbility++) {
+        if (spell.GetAbility(nAbility)->minCasterLevel > nCasterLevel) {
+            break;
+        }
+
+        pAbility = spell.GetAbility(nAbility);
+    }
+
+    if (pAbility == NULL) {
+        spell.Release();
+        return FALSE;
+    }
+
+    for (INT nEffect = 0; nEffect < pAbility->effectCount; nEffect++) {
+        CGameEffect* pEffect = spell.DecodeEffect(0, nEffect, this, 0, 0, 0);
+        if (pEffect != NULL) {
+            switch (pEffect->m_effectID) {
+            case 0x03:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_BERSERK) == 0;
+                break;
+            case 0x05:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_CHARMED) == 0;
+                break;
+            case 0x10:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_HASTED) == 0;
+                break;
+            case 0x14:
+                bValid = pTarget->IsVisibleToCaller(FALSE);
+                break;
+            case 0x18:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_PANIC) == 0;
+                break;
+            case 0x19:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_POISONED) == 0;
+                break;
+            case 0x26:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_SILENCED) == 0;
+                break;
+            case 0x27:
+            case 0x1A3:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_SLEEPING) == 0;
+                break;
+            case 0x28:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_SLOWED) == 0;
+                break;
+            case 0x2D:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_STUNNED) == 0;
+                break;
+            case 0x3F:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_INFRAVISION) == 0;
+                break;
+            case 0x41:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_BLUR) == 0;
+                break;
+            case 0x45:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_NONDETECTION) == 0;
+                break;
+            case 0x4A:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_BLIND) == 0;
+                break;
+            case 0x4C:
+            case 0x195:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_FEEBLEMINDED) == 0
+                    && !pTarget->m_derivedStats.m_spellStates[SPLSTATE_ENFEEBLED];
+                break;
+            case 0x4E:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_DISEASED) == 0;
+                break;
+            case 0x50:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_DEAFENED];
+                break;
+            case 0x6D:
+            case 0x1A8:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_HELD];
+                break;
+            case 0x77:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_MIRRORIMAGE) == 0;
+                break;
+            case 0x80:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_CONFUSED) == 0;
+                break;
+            case 0x81:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_AID) == 0;
+                break;
+            case 0x82:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_BLESS) == 0;
+                break;
+            case 0x83:
+                bValid = (pTarget->m_derivedStats.m_generalState & STATE_CHANT) == 0;
+                break;
+            case 0x84:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_DRAW_UPON_HOLY_MIGHT];
+                break;
+            case 0x99:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_SANCTUARY];
+                break;
+            case 0x9A:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_ENTANGLE];
+                break;
+            case 0x9D:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_WEB];
+                break;
+            case 0x9E:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_GREASE];
+                break;
+            case 0xCE:
+            case 0x122:
+                if (pEffect->m_dwFlags != 0) {
+                    // NOTE: `0x4BF140` is declared on `CGameEffectImmunitySpell`
+                    // in the repo, but it is called here on a plain effect.
+                    bValid = static_cast<CGameEffectImmunitySpell*>(pEffect)->Evaluate(pTarget) == 1;
+                }
+                break;
+            case 0xDA:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_STONESKIN];
+                break;
+            case 0xF4:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_BENEFICIAL_PRAYER];
+                break;
+            case 0xF9:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_BENEFICIAL_RECITATION];
+                break;
+            case 0x109:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_CLOAK_OF_FEAR];
+                break;
+            case 0x116:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_SHROUD_OF_FLAME];
+                break;
+            case 0x120:
+                bValid = !pTarget->m_derivedStats.m_spellStates.test(pEffect->m_dwFlags);
+                break;
+            case 0x190:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_HOPELESSNESS];
+                break;
+            case 0x191:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_PROTECTION_FROM_EVIL];
+                break;
+            case 0x193:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_ARMOR_OF_FAITH];
+                break;
+            case 0x194:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_NAUSEA];
+                break;
+            case 0x196:
+                bValid = !pTarget->m_derivedStats.m_spellStates.test((pEffect->m_dwFlags != 0) + 5);
+                break;
+            case 0x197:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_DEATH_WARD];
+                break;
+            case 0x198:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_HOLY_POWER];
+                break;
+            case 0x199:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_ALLIED_RIGHTEOUS_WRATH_OF_THE_FAITHFUL]
+                    && !pTarget->m_derivedStats.m_spellStates[SPLSTATE_ALLIED_AND_SAME_ALIGNMENT_RIGHTEOUS_WRATH_OF_THE_FAITHFUL];
+                break;
+            case 0x19C:
+            case 0x1A9:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_CONTROLLED];
+                break;
+            case 0x19E:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_OTILUKES_RESILIENT_SPHERE];
+                break;
+            case 0x19F:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_BARKSKIN];
+                break;
+            case 0x1A2:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_FREE_ACTION];
+                break;
+            case 0x1A5:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_ENTROPY_SHIELD];
+                break;
+            case 0x1A6:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_STORM_SHELL];
+                break;
+            case 0x1A7:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_PROTECTION_FROM_THE_ELEMENTS];
+                break;
+            case 0x1AA:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_AEGIS];
+                break;
+            case 0x1AB:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_EXECUTIONERS_EYES];
+                break;
+            case 0x1B0:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_TORTOISE_SHELL];
+                break;
+            case 0x1B1:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_BLINK];
+                break;
+            case 0x1BB:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_PROTECTION_FROM_NORMAL_MISSILES];
+                break;
+            case 0x1BC:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_TENSERS_TRANSFORMATION];
+                break;
+            case 0x1C2:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_GLOBE_OF_INVULNERABILITY];
+                break;
+            case 0x1C3:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_LOWER_RESISTANCE];
+                break;
+            case 0x1C4:
+                bValid = !pTarget->m_derivedStats.m_spellStates[SPLSTATE_BANE];
+                break;
+            default:
+                break;
+            }
+
+            delete pEffect;
+
+            if (!bValid) {
+                break;
+            }
+        }
+    }
+
+    spell.Release();
+
+    return bValid;
 }
 
 // 0x765830
