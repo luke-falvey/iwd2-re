@@ -4407,13 +4407,8 @@ BOOL CScreenCharacter::OnCancelButtonClick()
 // 0x5E4560
 void CScreenCharacter::sub_5E4560()
 {
-    // NOTE: Returned by value from `FUN_005effd0` (hidden return pointer plus
-    // one `BOOLEAN&` argument).
-    CString sName;
-    BOOLEAN bFlag = FALSE;
-
-    // TODO: Incomplete. `sName = FUN_005effd0(bFlag)` (0x5EFFD0, 26092 bytes,
-    // RET 0x8, thiscall on `this`) is not translated.
+    BOOLEAN bFlag;
+    CString sName = sub_5EFFD0(bFlag);
 
     STR_RES strRes;
 
@@ -6384,6 +6379,14 @@ void CScreenCharacter::ResetCustomizeBiographyPanel(CUIPanel* pPanel, CGameSprit
 
     CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(6));
     pButton->SetEnabled(g_pBaldurChitin->GetTlkTable().m_override.Fetch(strBiography, strRes));
+}
+
+// 0x5EFFD0
+CString CScreenCharacter::sub_5EFFD0(BOOLEAN& bFlag)
+{
+    // TODO: Incomplete.
+    bFlag = FALSE;
+    return CString();
 }
 
 // 0x5F7850
