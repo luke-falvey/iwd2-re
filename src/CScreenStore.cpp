@@ -4806,7 +4806,7 @@ void CScreenStore::OnBuySpellButtonClick()
     CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
-    // __LINE__: 7001
+    // __LINE__: 6999
     UTIL_ASSERT(pGame != NULL);
 
     LONG nPartyGold = pGame->GetGameSave()->m_nPartyGold;
