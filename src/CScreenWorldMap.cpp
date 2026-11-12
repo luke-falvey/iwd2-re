@@ -746,7 +746,94 @@ void CScreenWorldMap::OnMapMouseMove(const CPoint& ptMousePos)
 // 0x69A9D0
 void CScreenWorldMap::OnMapAsyncUpdate()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenWorldMap.cpp
+    // __LINE__: 1644
+    UTIL_ASSERT(pGame != NULL);
+
+    CString sResArea;
+    pGame->GetVisibleArea()->m_resRef.CopyToString(sResArea);
+
+    CWorldMap* pWorldMap = pGame->GetWorldMap(sResArea);
+
+    CPoint ptMouse(g_pChitin->m_ptPointer.x - m_pMapControl->m_pPanel->m_ptOrigin.x,
+        g_pChitin->m_ptPointer.y - m_pMapControl->m_pPanel->m_ptOrigin.y);
+
+    BOOL bHighlighted = FALSE;
+
+    if (m_pMapControl->IsOver(ptMouse)) {
+        if (m_nEngineState == 1
+            && m_bInControl
+            && !m_bClickedArea
+            && m_nEngineState == 1) {
+            CPoint ptArea(ptMouse.x - m_pMapControl->m_ptOrigin.x,
+                ptMouse.y - m_pMapControl->m_ptOrigin.y);
+            DWORD nHitArea = FindAreaHit(ptArea);
+
+            if (m_nSelectedArea != -1) {
+                BOOL bOverSelectedArea = m_nSelectedArea == nHitArea;
+                if (m_bOverSelectedArea != bOverSelectedArea) {
+                    m_bOverSelectedArea = bOverSelectedArea;
+                    InvalidateArea(m_nSelectedArea);
+                }
+            }
+
+            if (m_nHighlightArea != -1) {
+                InvalidateArea(m_nHighlightArea);
+            }
+
+            if (nHitArea != -1) {
+                CWorldMapArea* pArea = pWorldMap->GetArea(pWorldMap->sub_55A3A0(), nHitArea);
+
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenWorldMap.cpp
+                // __LINE__: 1682
+                UTIL_ASSERT(pArea != NULL);
+
+                if ((pArea->m_dwFlags & 0x1) && (pArea->m_dwFlags & 0x4)) {
+                    bHighlighted = TRUE;
+
+                    if (nHitArea != m_nHighlightArea) {
+                        InvalidateArea(nHitArea);
+                    }
+
+                    m_nHighlightArea = nHitArea;
+                } else {
+                    m_nHighlightArea = -1;
+                }
+            } else {
+                m_nHighlightArea = -1;
+            }
+        }
+
+        if (m_nEngineState != 0
+            && m_bInControl
+            && !m_bClickedArea
+            && m_nEngineState == 1
+            && !m_bMapDragging
+            && (m_nSelectedArea != -1 || bHighlighted)) {
+            m_nToolTip++;
+
+            if (m_nToolTip >= pGame->m_cOptions.m_nTooltips) {
+                CString sText("");
+
+                sText.Format("%d", sub_69B7F0(m_nHighlightArea) / CTimerWorld::TIMESCALE_MSEC_PER_HOUR);
+
+                STRREF toolTipRef = 0x5A2C;
+                g_pBaldurChitin->GetObjectCursor()->SetToolTip(toolTipRef, NULL, sText);
+            } else {
+                pGame->m_tempCursor = 0;
+            }
+        } else {
+            pGame->m_tempCursor = 0x2C;
+        }
+    } else {
+        if (m_bMapDragging) {
+            pGame->m_tempCursor = 0x2C;
+        } else {
+            pGame->m_tempCursor = 0;
+        }
+    }
 }
 
 // 0x69ACF0
