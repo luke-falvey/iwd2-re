@@ -1,6 +1,7 @@
 #include "CMessage.h"
 
 #include "CAIScript.h"
+#include "CAIUtil.h"
 #include "CBaldurChitin.h"
 #include "CCreatureFile.h"
 #include "CGameAIBase.h"
@@ -21576,9 +21577,221 @@ void CMessageSpriteUpdate::Run()
                     }
                 }
 
-                // TODO: Incomplete.
+                if (pSprite->m_pArea != NULL) {
+                    if (pSprite->GetArea()->GetNamedCreatures()->FindKey(pSprite->GetScriptName()) == NULL) {
+                        CVariable variable;
+                        variable.SetName(pSprite->GetScriptName());
+                        variable.m_intValue = pSprite->m_id;
+                        pSprite->m_pArea->m_namedCreatures.AddKey(variable);
+                    }
+
+                    if (m_nSequence != CGameSprite::SEQ_WALK && pSprite->m_nSequence != CGameSprite::SEQ_WALK) {
+                        BYTE nSequence = static_cast<BYTE>(m_nSequence);
+                        pSprite->CheckSequence(nSequence);
+                        pSprite->SetSequence(nSequence);
+
+                        if (m_nHitPoints > 0) {
+                            CPoint ptMessage;
+                            ptMessage.y = m_ptPosition.y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptMessage.x = m_ptPosition.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+                            CPoint ptSprite;
+                            ptSprite.y = pSprite->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptSprite.x = pSprite->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX;
+
+                            if (CAIUtil::CountSquares(ptSprite, ptMessage) >= 2) {
+                                pSprite->JumpToPoint(m_ptPosition, FALSE);
+                            }
+                        }
+
+                        pSprite->SetDirection(m_nFacing);
+                    } else if (m_nSequence != CGameSprite::SEQ_WALK && pSprite->m_nSequence == CGameSprite::SEQ_WALK) {
+                        CPoint ptPathEnd;
+                        if (pSprite->m_nPath > 0 && pSprite->m_pPath != NULL) {
+                            LONG nLast = pSprite->m_pPath[pSprite->m_nPath - 1];
+                            ptPathEnd.y = CPathSearch::GRID_ACTUALY - nLast / CPathSearch::GRID_ACTUALX - 1;
+                            ptPathEnd.x = nLast % CPathSearch::GRID_ACTUALX;
+                        } else {
+                            ptPathEnd.y = pSprite->m_curDest.y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptPathEnd.x = pSprite->m_curDest.x / CPathSearch::GRID_SQUARE_SIZEX;
+                        }
+
+                        if (m_nHitPoints > 0) {
+                            CPoint ptMessage;
+                            ptMessage.y = m_ptPosition.y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptMessage.x = m_ptPosition.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+                            if (CAIUtil::CountSquares(ptPathEnd, ptMessage) >= 2) {
+                                BYTE nSequence = static_cast<BYTE>(m_nSequence);
+                                pSprite->CheckSequence(nSequence);
+                                pSprite->SetSequence(nSequence);
+
+                                pSprite->JumpToPoint(m_ptPosition, FALSE);
+                                pSprite->SetDirection(m_nFacing);
+                            }
+                        }
+                    } else if (m_nSequence == CGameSprite::SEQ_WALK && pSprite->m_nSequence != CGameSprite::SEQ_WALK) {
+                        CPoint ptPathEnd;
+                        if (m_nPath > 0 && m_pPath != NULL) {
+                            LONG nLast = m_pPath[m_nPath - 1];
+                            ptPathEnd.y = CPathSearch::GRID_ACTUALY - nLast / CPathSearch::GRID_ACTUALX - 1;
+                            ptPathEnd.x = nLast % CPathSearch::GRID_ACTUALX;
+                        } else {
+                            ptPathEnd.y = m_ptDest.y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptPathEnd.x = m_ptDest.x / CPathSearch::GRID_SQUARE_SIZEX;
+                        }
+
+                        CPoint ptSprite;
+                        ptSprite.y = pSprite->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY;
+                        ptSprite.x = pSprite->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX;
+
+                        if (CAIUtil::CountSquares(ptSprite, ptPathEnd) >= 2
+                            && m_nHitPoints > 0
+                            && m_pPath != NULL
+                            && m_nPath > 0) {
+                            pSprite->JumpToPoint(m_ptPosition, FALSE);
+
+                            BYTE nSequence = static_cast<BYTE>(m_nSequence);
+                            pSprite->CheckSequence(nSequence);
+                            pSprite->SetSequence(nSequence);
+
+                            pSprite->SetPath(m_pPath, m_nPath);
+                            pSprite->m_currPath = m_currPath;
+                            pSprite->InitializeWalkingSound();
+                            m_pPath = NULL;
+                        }
+                    } else if (m_nSequence == CGameSprite::SEQ_WALK && pSprite->m_nSequence == CGameSprite::SEQ_WALK) {
+                        CPoint ptSpritePathEnd;
+                        if (pSprite->m_nPath > 0 && pSprite->m_pPath != NULL) {
+                            LONG nLast = pSprite->m_pPath[pSprite->m_nPath - 1];
+                            ptSpritePathEnd.y = CPathSearch::GRID_ACTUALY - nLast / CPathSearch::GRID_ACTUALX - 1;
+                            ptSpritePathEnd.x = nLast % CPathSearch::GRID_ACTUALX;
+                        } else {
+                            ptSpritePathEnd.y = pSprite->m_curDest.y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptSpritePathEnd.x = pSprite->m_curDest.x / CPathSearch::GRID_SQUARE_SIZEX;
+                        }
+
+                        CPoint ptPathEnd;
+                        if (m_nPath > 0 && m_pPath != NULL) {
+                            LONG nLast = m_pPath[m_nPath - 1];
+                            ptPathEnd.y = CPathSearch::GRID_ACTUALY - nLast / CPathSearch::GRID_ACTUALX - 1;
+                            ptPathEnd.x = nLast % CPathSearch::GRID_ACTUALX;
+                        } else {
+                            ptPathEnd.y = m_ptDest.y / CPathSearch::GRID_SQUARE_SIZEY;
+                            ptPathEnd.x = m_ptDest.x / CPathSearch::GRID_SQUARE_SIZEX;
+                        }
+
+                        if (CAIUtil::CountSquares(ptSpritePathEnd, ptPathEnd) >= 2
+                            && m_nHitPoints > 0
+                            && m_pPath != NULL
+                            && m_nPath > 0) {
+                            pSprite->JumpToPoint(m_ptPosition, FALSE);
+
+                            BYTE nSequence = static_cast<BYTE>(m_nSequence);
+                            pSprite->CheckSequence(nSequence);
+                            pSprite->SetSequence(nSequence);
+
+                            pSprite->SetPath(m_pPath, m_nPath);
+                            pSprite->m_currPath = m_currPath;
+                            pSprite->InitializeWalkingSound();
+                            m_pPath = NULL;
+                        }
+                    }
+
+                    LONG nDestX = pSprite->m_posDest.x;
+                    LONG nDestY = pSprite->m_posDest.y;
+                    CPoint ptCurrent = pSprite->GetPos();
+
+                    if (m_nMoveScale != pSprite->m_animation.GetMoveScale() && pSprite->m_pPath != NULL) {
+                        pSprite->m_animation.SetMoveScale(m_nMoveScale);
+
+                        LONG dy = nDestY - ptCurrent.y;
+                        LONG dx = nDestX - ptCurrent.x;
+                        LONG nDistance = static_cast<LONG>(sqrt(static_cast<double>(dx * dx + (dy * dy * 16) / 9)) + 0.5);
+                        if (nDistance == 0) {
+                            pSprite->m_posDelta.x = 0;
+                            pSprite->m_posDelta.y = 0;
+                        } else {
+                            pSprite->m_posDelta.x = ((dx << CGameSprite::EXACT_SCALE) * m_nMoveScale) / nDistance;
+                            pSprite->m_posDelta.y = ((((dy * 4) / 3) << CGameSprite::EXACT_SCALE) * m_nMoveScale) / nDistance;
+                        }
+                    }
+                }
+
+                pSprite->m_baseStats.m_hitPoints = m_nHitPoints;
+                pSprite->m_derivedStats.m_nMaxHitPoints = m_nMaxHitPoints;
+                pSprite->m_baseStats.m_flags = field_60;
+
+                if (field_108 & FLAG_AC_MODS) {
+                    pSprite->m_derivedStats.field_6 = field_64;
+                    pSprite->m_derivedStats.field_8 = field_66;
+                    pSprite->m_derivedStats.field_A = field_68;
+                    pSprite->m_derivedStats.field_C = field_6A;
+                    pSprite->m_derivedStats.m_nACCrushingMod = m_nACCrushingMod;
+                    pSprite->m_derivedStats.m_nACMissileMod = m_nACMissileMod;
+                    pSprite->m_derivedStats.m_nACPiercingMod = m_nACPiercingMod;
+                    pSprite->m_derivedStats.m_nACSlashingMod = m_nACSlashingMod;
+                }
+
+                if (field_108 & FLAG_LEVEL_UP) {
+                    pSprite->m_nHPCONBonusTotalOld = m_nHPCONBonusTotalOld;
+                    pSprite->m_bLevelUp = m_bLevelUp;
+                }
+
+                if (field_108 & FLAG_ENEMY_ALLY) {
+                    CAIObjectType typeAI;
+
+                    typeAI.Set(pSprite->GetAIType());
+                    typeAI.m_nEnemyAlly = m_nEnemyAlly;
+                    pSprite->SetAIType(typeAI, FALSE, FALSE);
+
+                    typeAI.Set(pSprite->m_liveTypeAI);
+                    typeAI.m_nEnemyAlly = m_nEnemyAllyLive;
+                    pSprite->m_liveTypeAI.Set(typeAI);
+
+                    typeAI.Set(pSprite->m_startTypeAI);
+                    typeAI.m_nEnemyAlly = m_nEnemyAllyStart;
+                    pSprite->m_startTypeAI.Set(typeAI);
+
+                    pSprite->m_moraleFailure = m_bMoralFailure;
+                }
+
+                if (field_108 & FLAG_FIELD_74) {
+                    SHORT nIcons = field_74;
+                    BOOL bMatches = FALSE;
+
+                    if (pSprite->m_portraitIcons.GetCount() == nIcons) {
+                        bMatches = TRUE;
+
+                        POSITION pos = pSprite->m_portraitIcons.GetHeadPosition();
+                        SHORT nIndex = 0;
+                        while (nIndex < nIcons && pos != NULL) {
+                            if (reinterpret_cast<INT>(pSprite->m_portraitIcons.GetNext(pos)) != reinterpret_cast<LONG*>(field_76)[nIndex]) {
+                                bMatches = FALSE;
+                                break;
+                            }
+                            nIndex++;
+                        }
+                    }
+
+                    if (!bMatches) {
+                        pSprite->m_portraitIcons.RemoveAll();
+
+                        for (SHORT nIndex = 0; nIndex < field_74; nIndex++) {
+                            pSprite->m_portraitIcons.AddTail(reinterpret_cast<int*>(reinterpret_cast<LONG*>(field_76)[nIndex]));
+                        }
+                    }
+                }
+
+                g_pBaldurChitin->GetActiveEngine()->UpdateCharacterStatus(m_targetId);
             }
+
+            g_pBaldurChitin->GetActiveEngine()->UpdatePersonalItemStatus(m_targetId);
         }
+    }
+
+    if (pSprite->GetObjectType() == CGameObject::TYPE_SPRITE) {
+        pSprite->sub_75F3D0((field_85 & 1) ? 1 : 0);
     }
 
     g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
