@@ -4,13 +4,11 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 9652,
-  "functions_done": 7854,
-  "functions_complete": 7784,
-  "incomplete_markers": 80,
+  "functions_total": 9650,
+  "functions_done": 7858,
+  "functions_complete": 7801,
+  "incomplete_markers": 66,
   "incomplete_by_file": {
-    "src/CGameSprite.cpp": 9,
-    "src/CScreenCharacter.cpp": 9,
     "src/CParticle.cpp": 6,
     "src/CVidPoly.cpp": 6,
     "src/CBlood.cpp": 4,
@@ -22,6 +20,8 @@
     "src/CTiledObject.cpp": 3,
     "src/CAIGroup.cpp": 2,
     "src/CGameAIBase.cpp": 2,
+    "src/CGameSprite.cpp": 2,
+    "src/CScreenCharacter.cpp": 2,
     "src/CSpawn.cpp": 2,
     "src/CVidBlitter.cpp": 2,
     "src/BalDataTypes.h": 1,
@@ -44,7 +44,7 @@
     "src/CWarp.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10464,
+  "annotations_total": 10468,
   "annotations_not_function_start": 2588,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -3842,19 +3842,14 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3818114,
-  "bytes_done": 3579203,
-  "bytes_complete": 3433487,
+  "bytes_total": 3817719,
+  "bytes_done": 3579893,
+  "bytes_complete": 3477207,
   "largest_stubs": [
     {
       "addr": "0x5EFFD0",
       "name": "FUN_005effd0",
       "size": 26092
-    },
-    {
-      "addr": "0x740270",
-      "name": "CGameSprite_Spell",
-      "size": 9613
     },
     {
       "addr": "0x728F80",
@@ -3872,44 +3867,14 @@
       "size": 6340
     },
     {
-      "addr": "0x5DC9D0",
-      "name": "CScreenCharacter_Unknown",
-      "size": 6207
-    },
-    {
-      "addr": "0x5DE2C0",
-      "name": "FUN_005de2c0",
-      "size": 5703
-    },
-    {
-      "addr": "0x5E56F0",
-      "name": "CScreenCharacter_LevelUp",
-      "size": 4384
-    },
-    {
-      "addr": "0x746480",
-      "name": "CGameSprite_UseItem",
-      "size": 3889
-    },
-    {
       "addr": "0x407280",
       "name": "FUN_00407280",
       "size": 3385
     },
     {
-      "addr": "0x764880",
-      "name": "CGameSprite_IsSpellTargetValid",
-      "size": 3321
-    },
-    {
       "addr": "0x54D5A0",
       "name": "FUN_0054d5a0",
       "size": 3197
-    },
-    {
-      "addr": "0x7338E0",
-      "name": "CGameSprite_SetCurrAction",
-      "size": 3176
     },
     {
       "addr": "0x76B160",
@@ -3925,11 +3890,6 @@
       "addr": "0x5FB3E0",
       "name": "CScreenConnection_TimerAsynchronousUpdate",
       "size": 2702
-    },
-    {
-      "addr": "0x5E3B80",
-      "name": "CScreenCharacter_OnBackButtonClick",
-      "size": 2402
     },
     {
       "addr": "0x600B50",
@@ -3982,11 +3942,6 @@
       "size": 1392
     },
     {
-      "addr": "0x722820",
-      "name": "CGameSprite_sub_722820",
-      "size": 1296
-    },
-    {
       "addr": "0x643CC0",
       "name": "CUIControlButtonAreaMapMap_Render",
       "size": 1222
@@ -4000,16 +3955,6 @@
       "addr": "0x4681E0",
       "name": "CGameSprite_B3AUTO_004681e0",
       "size": 1210
-    },
-    {
-      "addr": "0x5F7B00",
-      "name": "CScreenCharacter_UpdateSkillsPanel",
-      "size": 1160
-    },
-    {
-      "addr": "0x5EBFA0",
-      "name": "FUN_005ebfa0",
-      "size": 1145
     },
     {
       "addr": "0x52B900",
@@ -4045,6 +3990,61 @@
       "addr": "0x550600",
       "name": "FUN_00550600",
       "size": 795
+    },
+    {
+      "addr": "0x54E5B0",
+      "name": "CTiledObject_CheckTileState",
+      "size": 626
+    },
+    {
+      "addr": "0x7B7280",
+      "name": "FUN_007b7280",
+      "size": 609
+    },
+    {
+      "addr": "0x7B74F0",
+      "name": "FUN_007b74f0",
+      "size": 599
+    },
+    {
+      "addr": "0x51A2A0",
+      "name": "FUN_0051a2a0",
+      "size": 596
+    },
+    {
+      "addr": "0x5D4190",
+      "name": "FUN_005d4190",
+      "size": 486
+    },
+    {
+      "addr": "0x519740",
+      "name": "CBlood_Unknown1",
+      "size": 471
+    },
+    {
+      "addr": "0x435C30",
+      "name": "FUN_00435c30",
+      "size": 453
+    },
+    {
+      "addr": "0x4D2060",
+      "name": "FUN_004d2060",
+      "size": 420
+    },
+    {
+      "addr": "0x4D1EC0",
+      "name": "FUN_004d1ec0",
+      "size": 401
+    },
+    {
+      "addr": "0x517300",
+      "name": "FUN_00517300",
+      "size": 388
+    },
+    {
+      "addr": "0x586DC0",
+      "name": "CSummonLimitStruct_Unsummon",
+      "size": 343
     }
   ],
   "next": [
@@ -4241,18 +4241,6 @@
       "size": 139
     },
     {
-      "addr": "0x723EA0",
-      "name": "CGameSprite_sub_723EA0",
-      "translated_callers": 2,
-      "size": 152
-    },
-    {
-      "addr": "0x7567F0",
-      "name": "CGameSprite_B3AUTO_007567f0",
-      "translated_callers": 2,
-      "size": 312
-    },
-    {
       "addr": "0x79AD20",
       "name": "FUN_0079ad20",
       "translated_callers": 2,
@@ -4347,6 +4335,18 @@
       "name": "FUN_0045b250",
       "translated_callers": 1,
       "size": 19
+    },
+    {
+      "addr": "0x45B270",
+      "name": "CString_operator==",
+      "translated_callers": 1,
+      "size": 28
+    },
+    {
+      "addr": "0x45B290",
+      "name": "FUN_0045b290",
+      "translated_callers": 1,
+      "size": 29
     }
   ]
 }
