@@ -396,7 +396,7 @@ void CGameSparkle::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
     CPoint ptReference(0, 0);
     pInfinity->FXPrep(rFXRect, dwFlags, -1, ptPos, ptReference);
 
-    ptReference.x = m_pos.x - (m_rBounding.right - m_rBounding.left) / 2;
+    ptReference.x = m_pos.x - ((m_rBounding.right - m_rBounding.left) >> 1);
 
     if (m_wType == 2) {
         ptReference.y = m_pos.y - m_posZ - 8;
