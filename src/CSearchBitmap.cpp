@@ -104,16 +104,16 @@ BYTE CSearchBitmap::GetLOSCost(const CPoint& point, const BYTE* terrainTable, SH
         // __LINE__: 225
         UTIL_ASSERT(terrainTable != NULL);
 
-        switch (m_pDynamicCost[nIndex] & 0x81) {
-        case 0x80:
+        // NOTE: The second test is on bit 0 of the whole byte, so 0x81 takes
+        // the second branch.
+        BYTE nDynamicCost = m_pDynamicCost[nIndex];
+        if ((nDynamicCost & 0x81) == 0x80) {
             nTableIndex = bVisbilityOutDoor ? 8 : 0;
             cost = terrainTable[nTableIndex];
-            break;
-        case 0x1:
+        } else if ((nDynamicCost & 0x1) != 0) {
             nTableIndex = 8;
             cost = terrainTable[nTableIndex];
-            break;
-        default:
+        } else {
             if (m_resSearch.GetBitCount(TRUE) == 8) {
                 nTableIndex = m_resSearch.GetPixelValue(point.x, point.y, TRUE) >> 4;
                 cost = terrainTable[nTableIndex];
@@ -121,7 +121,6 @@ BYTE CSearchBitmap::GetLOSCost(const CPoint& point, const BYTE* terrainTable, SH
                 nTableIndex = m_resSearch.GetPixelValue(point.x, point.y, TRUE);
                 cost = terrainTable[nTableIndex];
             }
-            break;
         }
     } else {
         nTableIndex = 8;
@@ -162,7 +161,8 @@ BYTE CSearchBitmap::GetCost(const CPoint& point, const BYTE* terrainTable, BYTE 
         return totalCost;
     }
 
-    int radius = (personalSpace - 2) / 2;
+    // NOTE: Arithmetic shift, so a personal space of 1 gives -1.
+    int radius = static_cast<SHORT>((personalSpace - 2) >> 1);
     int minX = max(point.x - radius, 0);
     int maxX = min(point.x + radius, m_GridSquareDimensions.cx);
     int minY = max(point.y - radius, 0);
@@ -325,10 +325,22 @@ void CSearchBitmap::AddObject(const CPoint& point, BYTE sourceSide, BYTE persona
     if (bOnSearchMap != TRUE) {
         if (point.x >= 0 && point.y >= 0 && point.x < 320 && point.y < 320) {
             int radius = (personalSpaceRange - 1) / 2;
-            int minX = max(point.x - radius, 0);
-            int maxX = min(point.x + radius, m_GridSquareDimensions.cx - 1);
-            int minY = max(point.y - radius, 0);
-            int maxY = min(point.y + radius, m_GridSquareDimensions.cy - 1);
+            // NOTE: Original clamps the far edge only when the near edge did
+            // not need clamping.
+            int minX = point.x - radius;
+            int maxX = point.x + radius;
+            if (minX < 0) {
+                minX = 0;
+            } else if (maxX > m_GridSquareDimensions.cx - 1) {
+                maxX = m_GridSquareDimensions.cx - 1;
+            }
+            int minY = point.y - radius;
+            int maxY = point.y + radius;
+            if (minY < 0) {
+                minY = 0;
+            } else if (maxY > m_GridSquareDimensions.cy - 1) {
+                maxY = m_GridSquareDimensions.cy - 1;
+            }
 
             CSingleLock lock(&m_critSect, FALSE);
             if (lock.Lock(INFINITE)) {
@@ -355,10 +367,22 @@ void CSearchBitmap::RemoveObject(const CPoint& point, BYTE sourceSide, BYTE pers
     if (bOnSearchMap != FALSE) {
         if (point.x >= 0 && point.y >= 0 && point.x < 320 && point.y < 320) {
             int radius = (personalSpaceRange - 1) / 2;
-            int minX = max(point.x - radius, 0);
-            int maxX = min(point.x + radius, m_GridSquareDimensions.cx - 1);
-            int minY = max(point.y - radius, 0);
-            int maxY = min(point.y + radius, m_GridSquareDimensions.cy - 1);
+            // NOTE: Original clamps the far edge only when the near edge did
+            // not need clamping.
+            int minX = point.x - radius;
+            int maxX = point.x + radius;
+            if (minX < 0) {
+                minX = 0;
+            } else if (maxX > m_GridSquareDimensions.cx - 1) {
+                maxX = m_GridSquareDimensions.cx - 1;
+            }
+            int minY = point.y - radius;
+            int maxY = point.y + radius;
+            if (minY < 0) {
+                minY = 0;
+            } else if (maxY > m_GridSquareDimensions.cy - 1) {
+                maxY = m_GridSquareDimensions.cy - 1;
+            }
 
             CSingleLock lock(&m_critSect, FALSE);
             if (lock.Lock(INFINITE)) {

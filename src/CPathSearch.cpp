@@ -94,7 +94,7 @@ CPathSearch::CPathSearch(CPathNode** pListGrid)
     m_pListGrid = pListGrid;
     m_pathBegin = NULL;
     m_nPathNodes = 0;
-    m_pathCurrent = 0;
+    m_pathCurrent = -1;
     m_pathSmooth = TRUE;
 }
 

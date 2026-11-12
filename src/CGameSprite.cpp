@@ -3374,6 +3374,7 @@ void CGameSprite::SetPath(LONG* pPath, SHORT nPath)
     m_nPath = nPath;
     m_pPath = pPath;
     m_currPath = 1;
+    m_walkBackwards = FALSE;
     m_posDest.x = m_pos.x + 4;
     m_posDest.y = m_pos.y + 3;
 
