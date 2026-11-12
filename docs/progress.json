@@ -4,49 +4,48 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 9736,
-  "functions_done": 7777,
-  "functions_complete": 7647,
-  "incomplete_markers": 149,
+  "functions_total": 9705,
+  "functions_done": 7791,
+  "functions_complete": 7670,
+  "incomplete_markers": 139,
   "incomplete_by_file": {
-    "src/CGameSprite.cpp": 11,
     "src/CScreenCharacter.cpp": 11,
     "src/CInfGame.cpp": 9,
     "src/CProjectilePart2.cpp": 9,
+    "src/CGameSprite.cpp": 8,
     "src/CBaldurProjector.cpp": 7,
     "src/CParticle.cpp": 6,
     "src/CScreenCreateChar.cpp": 6,
     "src/CVidPoly.cpp": 6,
-    "src/CAIGroup.cpp": 5,
     "src/CUIControlEdit.cpp": 5,
     "src/CBlood.cpp": 4,
     "src/CGameSpy.cpp": 4,
     "src/CScreenStore.cpp": 4,
-    "src/CScreenWorldMap.cpp": 4,
     "src/CChitin.cpp": 3,
     "src/CProjectileArea.cpp": 3,
     "src/CProjectileBAM.cpp": 3,
     "src/CProjectileSingleTarget.cpp": 3,
     "src/CScreenConnection.cpp": 3,
+    "src/CScreenWorldMap.cpp": 3,
     "src/CSwitchCDStatus.cpp": 3,
     "src/CTiledObject.cpp": 3,
+    "src/CAIGroup.cpp": 2,
     "src/CDimm.cpp": 2,
     "src/CGameAIBase.cpp": 2,
-    "src/CGameEffect.cpp": 2,
     "src/CImm.cpp": 2,
     "src/CScreenMultiPlayer.cpp": 2,
-    "src/CSearchBitmap.cpp": 2,
     "src/CSpawn.cpp": 2,
     "src/CUIControlEditMultiLine.cpp": 2,
     "src/CVidBlitter.cpp": 2,
     "src/BalDataTypes.h": 1,
     "src/CBaldurEngine.cpp": 1,
+    "src/CDerivedStats.cpp": 1,
     "src/CGameAnimationTypeMonsterAnkheg.cpp": 1,
     "src/CGameAnimationTypeMonsterLayeredSpell.cpp": 1,
     "src/CGameSpawning.cpp": 1,
     "src/CInfinity.cpp": 1,
+    "src/CMessage.cpp": 1,
     "src/CMoveList.cpp": 1,
-    "src/CProjectilePart6.cpp": 1,
     "src/CScreenChapter.cpp": 1,
     "src/CScreenMap.cpp": 1,
     "src/CScreenSave.cpp": 1,
@@ -59,7 +58,7 @@
     "src/CWarp.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10372,
+  "annotations_total": 10386,
   "annotations_not_function_start": 2573,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -3845,19 +3844,14 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3830259,
-  "bytes_done": 3493247,
-  "bytes_complete": 3231882,
+  "bytes_total": 3826592,
+  "bytes_done": 3505473,
+  "bytes_complete": 3276497,
   "largest_stubs": [
     {
       "addr": "0x4DB160",
       "name": "FUN_004db160",
       "size": 21176
-    },
-    {
-      "addr": "0x69D0F0",
-      "name": "FUN_0069d0f0",
-      "size": 11776
     },
     {
       "addr": "0x740270",
@@ -3873,11 +3867,6 @@
       "addr": "0x742840",
       "name": "CGameSprite_SpellPoint",
       "size": 7799
-    },
-    {
-      "addr": "0x4AB510",
-      "name": "CGameEffect_opcode_13_2",
-      "size": 7439
     },
     {
       "addr": "0x5A5060",
@@ -3950,11 +3939,6 @@
       "size": 3766
     },
     {
-      "addr": "0x4063E0",
-      "name": "FUN_004063e0",
-      "size": 3732
-    },
-    {
       "addr": "0x64E2C0",
       "name": "FUN_0064e2c0",
       "size": 3502
@@ -3995,6 +3979,11 @@
       "size": 3197
     },
     {
+      "addr": "0x7338E0",
+      "name": "CGameSprite_SetCurrAction",
+      "size": 3176
+    },
+    {
       "addr": "0x76B160",
       "name": "CSpawn_Execute",
       "size": 2927
@@ -4025,11 +4014,6 @@
       "size": 2577
     },
     {
-      "addr": "0x715BD0",
-      "name": "CGameSprite_GetInnateQuickButtons",
-      "size": 2411
-    },
-    {
       "addr": "0x5E3B80",
       "name": "CScreenCharacter_OnBackButtonClick",
       "size": 2402
@@ -4045,9 +4029,24 @@
       "size": 2279
     },
     {
-      "addr": "0x409820",
-      "name": "FUN_00409820",
-      "size": 2214
+      "addr": "0x52C050",
+      "name": "FUN_0052c050",
+      "size": 2145
+    },
+    {
+      "addr": "0x54F1D0",
+      "name": "FUN_0054f1d0",
+      "size": 1944
+    },
+    {
+      "addr": "0x532F00",
+      "name": "FUN_00532f00",
+      "size": 1788
+    },
+    {
+      "addr": "0x4C9CE0",
+      "name": "CGameSprite_B3AUTO_004c9ce0",
+      "size": 1769
     }
   ],
   "next": [
@@ -4064,12 +4063,6 @@
       "size": 228
     },
     {
-      "addr": "0x4699F0",
-      "name": "CResHelper<CResSpell>_SetResRef",
-      "translated_callers": 50,
-      "size": 228
-    },
-    {
       "addr": "0x7B5370",
       "name": "C2DArray_Destruct",
       "translated_callers": 41,
@@ -4082,28 +4075,10 @@
       "size": 96
     },
     {
-      "addr": "0x5F66F0",
-      "name": "CSpellListArray_GetSize",
-      "translated_callers": 18,
-      "size": 19
-    },
-    {
       "addr": "0x4C4BF0",
       "name": "FUN_004c4bf0",
       "translated_callers": 17,
       "size": 52
-    },
-    {
-      "addr": "0x40FAD0",
-      "name": "CResHelper_Construct",
-      "translated_callers": 16,
-      "size": 55
-    },
-    {
-      "addr": "0x409800",
-      "name": "CNode_PopNext",
-      "translated_callers": 14,
-      "size": 16
     },
     {
       "addr": "0x77F190",
@@ -4116,12 +4091,6 @@
       "name": "FUN_0047a5c0",
       "translated_callers": 13,
       "size": 225
-    },
-    {
-      "addr": "0x4C4B70",
-      "name": "FUN_004c4b70",
-      "translated_callers": 12,
-      "size": 22
     },
     {
       "addr": "0x7B3190",
@@ -4150,19 +4119,19 @@
     {
       "addr": "0x5F9870",
       "name": "FUN_005f9870",
-      "translated_callers": 8,
+      "translated_callers": 9,
       "size": 56
     },
     {
       "addr": "0x5F98B0",
       "name": "FUN_005f98b0",
-      "translated_callers": 8,
+      "translated_callers": 9,
       "size": 226
     },
     {
       "addr": "0x5F99A0",
       "name": "FUN_005f99a0",
-      "translated_callers": 8,
+      "translated_callers": 9,
       "size": 217
     },
     {
@@ -4184,12 +4153,6 @@
       "size": 228
     },
     {
-      "addr": "0x40A130",
-      "name": "FUN_0040a130",
-      "translated_callers": 5,
-      "size": 25
-    },
-    {
       "addr": "0x448580",
       "name": "FUN_00448580",
       "translated_callers": 5,
@@ -4202,34 +4165,10 @@
       "size": 572
     },
     {
-      "addr": "0x4C5B20",
-      "name": "FUN_004c5b20",
-      "translated_callers": 5,
-      "size": 15
-    },
-    {
       "addr": "0x5F9810",
       "name": "FUN_005f9810",
       "translated_callers": 5,
       "size": 82
-    },
-    {
-      "addr": "0x727BF0",
-      "name": "FUN_00727bf0",
-      "translated_callers": 5,
-      "size": 25
-    },
-    {
-      "addr": "0x727D50",
-      "name": "FUN_00727d50",
-      "translated_callers": 5,
-      "size": 104
-    },
-    {
-      "addr": "0x727DC0",
-      "name": "Find",
-      "translated_callers": 5,
-      "size": 39
     },
     {
       "addr": "0x4464A0",
@@ -4254,24 +4193,6 @@
       "name": "FUN_0044b180",
       "translated_callers": 4,
       "size": 81
-    },
-    {
-      "addr": "0x45E870",
-      "name": "UnknownContainer_Copy",
-      "translated_callers": 4,
-      "size": 511
-    },
-    {
-      "addr": "0x4C49A0",
-      "name": "FUN_004c49a0",
-      "translated_callers": 4,
-      "size": 235
-    },
-    {
-      "addr": "0x4C4A90",
-      "name": "FUN_004c4a90",
-      "translated_callers": 4,
-      "size": 138
     },
     {
       "addr": "0x65F8F0",
@@ -4350,6 +4271,84 @@
       "name": "CPtrList_GetCount",
       "translated_callers": 3,
       "size": 4
+    },
+    {
+      "addr": "0x45B240",
+      "name": "FUN_0045b240",
+      "translated_callers": 3,
+      "size": 3
+    },
+    {
+      "addr": "0x4D3D90",
+      "name": "FUN_004d3d90",
+      "translated_callers": 3,
+      "size": 75
+    },
+    {
+      "addr": "0x4EC030",
+      "name": "CResHelper_CResHelperItem_SetResRef",
+      "translated_callers": 3,
+      "size": 228
+    },
+    {
+      "addr": "0x547800",
+      "name": "FUN_00547800",
+      "translated_callers": 3,
+      "size": 93
+    },
+    {
+      "addr": "0x57AB40",
+      "name": "CSummonLimitStruct_Destruct",
+      "translated_callers": 3,
+      "size": 34
+    },
+    {
+      "addr": "0x60BB80",
+      "name": "FUN_0060bb80",
+      "translated_callers": 3,
+      "size": 90
+    },
+    {
+      "addr": "0x780370",
+      "name": "CVidMosaic_GetTilePixelDimension",
+      "translated_callers": 3,
+      "size": 34
+    },
+    {
+      "addr": "0x799F80",
+      "name": "CVidMode_GetNumSurfaces",
+      "translated_callers": 3,
+      "size": 7
+    },
+    {
+      "addr": "0x40FA90",
+      "name": "FUN_0040fa90",
+      "translated_callers": 2,
+      "size": 25
+    },
+    {
+      "addr": "0x43F900",
+      "name": "FUN_0043f900",
+      "translated_callers": 2,
+      "size": 164
+    },
+    {
+      "addr": "0x449400",
+      "name": "FUN_00449400",
+      "translated_callers": 2,
+      "size": 1017
+    },
+    {
+      "addr": "0x449840",
+      "name": "FUN_00449840",
+      "translated_callers": 2,
+      "size": 59
+    },
+    {
+      "addr": "0x44B1E0",
+      "name": "FUN_0044b1e0",
+      "translated_callers": 2,
+      "size": 67
     }
   ]
 }
