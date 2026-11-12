@@ -167,7 +167,7 @@ void CPathSearch::SwapOpenListEntries(CPathNode* ancestor, CPathNode* descendant
         if (descendant->m_listOpenLeft != NULL) {
             descendant->m_listOpenLeft->m_listOpenParent = ancestor;
             if (descendant->m_listOpenRight != NULL) {
-                descendant->m_listOpenRight = ancestor;
+                descendant->m_listOpenRight->m_listOpenParent = ancestor;
             }
         }
 
@@ -320,7 +320,7 @@ CPathNode* CPathSearch::PopOpenList()
 
     currentNode = m_openList;
     level = m_openListLevel - 2;
-    while (level > 0) {
+    while (level >= 0) {
         if (((1 << level) & m_nOpenList) != 0) {
             currentNode = currentNode->m_listOpenRight;
         } else {
@@ -360,6 +360,7 @@ CPathNode* CPathSearch::PopOpenList()
                         || currentNode->m_listOpenRight->m_costTotal >= currentNode->m_costTotal) {
                         break;
                     }
+                    childNode = currentNode->m_listOpenRight;
                 }
                 if (childNode == NULL) {
                     break;
@@ -397,61 +398,95 @@ void CPathSearch::SmoothPath(LONG* pivotPoints, LONG* pathSmooth, BYTE actualCos
     SHORT cnt;
     POINT pointA;
     POINT pointC;
-    POINT pointNew;
     LONG stepX;
     LONG stepY;
+    LONG diffX;
+    LONG diffY;
     LONG temp;
+    LONG nSteps;
+    LONG newX;
+    LONG newY;
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CPathSearch.cpp
     // __LINE__: 519
     UTIL_ASSERT(pivotPoints != NULL && pathSmooth != NULL && pSearchBitmap != NULL);
 
-    if (pivotPoints[0] != -1
-        && (pivotPoints[1] - pivotPoints[2] > 3 || pivotPoints[0] - pivotPoints[1] > 3)) {
-        PositionToPoint(m_pathBegin[pivotPoints[0]], &pointA);
-        PositionToPoint(m_pathBegin[pivotPoints[2]], &pointC);
-
-        pointNew = pointA;
-
-        if (pointC.x == pointA.x || pointC.y == pointA.y) {
-            pivotPoints[1] = pivotPoints[0];
-            return;
-        }
-
-        stepX = pointC.x > pointA.x ? 1 : -1;
-        stepY = pointC.y > pointA.y ? 1 : -1;
-
-        if (stepX * (pointC.x - pointA.x) == stepY * (pointC.y - pointA.y)) {
-            pivotPoints[1] = pivotPoints[0];
-            return;
-        }
-
-        if (pointC.x - pointA.x == pivotPoints[0] - pivotPoints[2]
-            && pointA.x - pointC.x == pivotPoints[0] - pivotPoints[2]) {
-            temp = stepX * (pointC.x - pointA.x) * (2 * pointA.y + 1) / 2;
-            for (cnt = static_cast<WORD>(pivotPoints[0]) - 1; cnt > pivotPoints[2]; cnt--) {
-                pointNew.x += stepX;
-                pointNew.y = stepX * ((pointC.y - pointA.y + temp) / (pointC.x - pointA.x));
-                pathSmooth[cnt] = PointToPosition(&pointNew);
-                if (pSearchBitmap->SnapshotGetCost(CPoint(pointNew), bBump) != actualCost) {
-                    break;
-                }
-                pathSmooth[cnt] = -1;
-            }
-        } else if (pointC.y - pointA.y == pivotPoints[0] - pivotPoints[2]
-            && pointA.y - pointC.y == pivotPoints[0] - pivotPoints[2]) {
-            temp = stepY * (pointC.x - pointA.x) * (2 * pointA.y + 1) / 2;
-            for (cnt = static_cast<WORD>(pivotPoints[0]) - 1; cnt > pivotPoints[2]; cnt--) {
-                pointNew.y += stepY;
-                pointNew.x = stepY * ((pointC.x - pointA.x + temp) / (pointC.y - pointA.y));
-                pathSmooth[cnt] = PointToPosition(&pointNew);
-                if (pSearchBitmap->SnapshotGetCost(CPoint(pointNew), bBump) != actualCost) {
-                    break;
-                }
-                pathSmooth[cnt] = -1;
-            }
-        }
+    if (pivotPoints[0] == -1) {
+        return;
     }
+
+    LONG pivotEnd = pivotPoints[2];
+
+    if (pivotPoints[1] - pivotEnd <= 3 && pivotPoints[0] - pivotPoints[1] <= 3) {
+        return;
+    }
+
+    // NOTE: Uninline.
+    PositionToPoint(m_pathBegin[pivotPoints[0]], &pointA);
+
+    // NOTE: Uninline.
+    PositionToPoint(m_pathBegin[pivotEnd], &pointC);
+
+    if (pointC.x == pointA.x || pointC.y == pointA.y) {
+        pivotPoints[1] = pivotPoints[0];
+        return;
+    }
+
+    stepX = pointC.x > pointA.x ? 1 : -1;
+    diffY = pointC.y - pointA.y;
+    diffX = pointC.x - pointA.x;
+    stepY = diffY > 0 ? 1 : -1;
+
+    if (diffX * stepX == diffY * stepY) {
+        pivotPoints[1] = pivotPoints[0];
+        return;
+    }
+
+    nSteps = pivotPoints[0] - pivotEnd;
+
+    newX = pointA.x;
+    newY = pointA.y;
+
+    if (diffX == nSteps || pointA.x - pointC.x == nSteps) {
+        temp = (2 * newY + 1) * diffX * stepX / 2;
+        cnt = static_cast<SHORT>(static_cast<WORD>(pivotPoints[0]) - 1);
+        while (cnt > pivotEnd) {
+            newX += stepX;
+            temp += pointC.y - pointA.y;
+            newY = temp / diffX * stepX;
+            pathSmooth[cnt] = (GRID_ACTUALY - newY - 1) * GRID_ACTUALX + newX;
+            if (pSearchBitmap->SnapshotGetCost(CPoint(newX, newY), bBump) != actualCost) {
+                break;
+            }
+            pathSmooth[cnt] = -1;
+            cnt = static_cast<SHORT>(static_cast<WORD>(cnt) - 1);
+        }
+    } else if (diffY == nSteps || pointA.y - pointC.y == nSteps) {
+        temp = (2 * newX + 1) * diffY * stepY / 2;
+        cnt = static_cast<SHORT>(static_cast<WORD>(pivotPoints[0]) - 1);
+        while (cnt > pivotEnd) {
+            newY += stepY;
+            temp += pointC.x - pointA.x;
+            newX = temp / diffY * stepY;
+            pathSmooth[cnt] = (GRID_ACTUALY - newY - 1) * GRID_ACTUALX + newX;
+            if (pSearchBitmap->SnapshotGetCost(CPoint(newX, newY), bBump) != actualCost) {
+                break;
+            }
+            pathSmooth[cnt] = -1;
+            cnt = static_cast<SHORT>(static_cast<WORD>(cnt) - 1);
+        }
+    } else {
+        return;
+    }
+
+    if (cnt != pivotPoints[2]) {
+        return;
+    }
+
+    memcpy(&(m_pathBegin[pivotPoints[2] + 1]),
+        &(pathSmooth[pivotPoints[2] + 1]),
+        (pivotPoints[0] - pivotPoints[2] - 1) * sizeof(LONG));
+    pivotPoints[1] = pivotPoints[0];
 }
 
 // 0x51DE40
@@ -505,8 +540,8 @@ SHORT CPathSearch::BuildPathList(CPathNode* startNode, CSearchBitmap* pSearchBit
             directionStep = currentNode->m_gridPosition - m_pathBegin[m_nPathNodes - 1];
         }
 
-        for (cnt = 2; cnt < m_nPathNodes; cnt++) {
-            m_pathBegin[m_nPathNodes - cnt] = -currentNode->m_gridPosition;
+        for (cnt = 2; cnt <= m_nPathNodes; cnt++) {
+            m_pathBegin[m_nPathNodes - cnt] = currentNode->m_gridPosition;
             currentNode = currentNode->m_pathNodePrev;
 
             if (m_pathSmooth) {

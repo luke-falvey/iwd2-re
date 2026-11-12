@@ -224,13 +224,99 @@ BYTE CSearchBitmap::GetMobileCost(const CPoint& point, const BYTE* terrainTable,
 // 0x5488C0
 void CSearchBitmap::SnapshotRemoveObject(CPoint point, BYTE personalSpaceRange, BOOL bBumpable)
 {
-    // TODO: Incomplete.
+    if (personalSpaceRange != 0
+        && point.x >= 0
+        && point.y >= 0
+        && point.x < 320
+        && point.y < 320) {
+        int radius = (personalSpaceRange - 1) / 2;
+        int minX = point.x - radius;
+        int maxX = point.x + radius;
+        int minY = point.y - radius;
+        int maxY = point.y + radius;
+
+        // NOTE: Original clamps the maximum only when the minimum did not
+        // need clamping.
+        if (minX < 0) {
+            minX = 0;
+        } else if (maxX > m_GridSquareDimensions.cx - 1) {
+            maxX = m_GridSquareDimensions.cx - 1;
+        }
+
+        if (minY < 0) {
+            minY = 0;
+        } else if (maxY > m_GridSquareDimensions.cy - 1) {
+            maxY = m_GridSquareDimensions.cy - 1;
+        }
+
+        BYTE keepMask;
+        BYTE fieldMask;
+        BYTE decrement;
+        if (bBumpable) {
+            keepMask = 0xF1;
+            fieldMask = 0x0E;
+            decrement = 0x02;
+        } else {
+            keepMask = 0x8F;
+            fieldMask = 0x70;
+            decrement = 0x10;
+        }
+
+        for (int y = minY; y <= maxY; y++) {
+            for (int x = minX; x <= maxX; x++) {
+                BYTE* pCost = &(m_snapshotDynamicCost[m_GridSquareDimensions.cx * y + x]);
+                BYTE cost = *pCost;
+                *pCost = static_cast<BYTE>(((cost - decrement) & fieldMask) | (cost & keepMask));
+            }
+        }
+    }
 }
 
 // 0x5489E0
 void CSearchBitmap::SnapshotAddObjectDiagonals(CPoint point, BYTE personalSpaceRange, BOOL bBumpable)
 {
-    // TODO: Incomplete.
+    if (point.x >= 0
+        && point.y >= 0
+        && point.x < 320
+        && point.y < 320) {
+        BYTE radius = static_cast<BYTE>((personalSpaceRange - 1) / 2);
+
+        // NOTE: The four corners of the personal space square are bumped.
+        int left = point.x - radius;
+        int right = point.x + radius;
+        int top = point.y - radius;
+        int bottom = point.y + radius;
+
+        BYTE* pDynamicCost = m_snapshotDynamicCost;
+        int width = m_GridSquareDimensions.cx;
+        auto addCost = [pDynamicCost, width, bBumpable](int x, int y) {
+            BYTE* pCost = &(pDynamicCost[width * y + x]);
+            BYTE cost = *pCost;
+            if (bBumpable) {
+                *pCost = static_cast<BYTE>(cost ^ ((((cost & 0xFE) + 0x02) ^ cost) & 0x0E));
+            } else {
+                *pCost = static_cast<BYTE>(cost ^ ((((cost & 0xF0) + 0x10) ^ cost) & 0x70));
+            }
+        };
+
+        if (left >= 0) {
+            if (top >= 0) {
+                addCost(left, top);
+            }
+            if (bottom < m_GridSquareDimensions.cy) {
+                addCost(left, bottom);
+            }
+        }
+
+        if (right < m_GridSquareDimensions.cx) {
+            if (top >= 0) {
+                addCost(right, top);
+            }
+            if (bottom < m_GridSquareDimensions.cy) {
+                addCost(right, bottom);
+            }
+        }
+    }
 }
 
 // 0x547E60
@@ -793,7 +879,7 @@ void SearchThreadMain(void* userInfo)
 
         searchShutdown = g_pBaldurChitin->GetObjectGame()->m_searchShutdown;
         while (!g_pBaldurChitin->GetObjectGame()->m_searchRequests.IsEmpty()
-            && !g_pBaldurChitin->GetObjectGame()->m_searchRequestsBack.IsEmpty()) {
+            || !g_pBaldurChitin->GetObjectGame()->m_searchRequestsBack.IsEmpty()) {
             if (g_pBaldurChitin->GetObjectGame()->m_searchRequests.IsEmpty()) {
                 searchRequest = g_pBaldurChitin->GetObjectGame()->m_searchRequestsBack.RemoveHead();
             } else {
@@ -895,6 +981,7 @@ void SearchThreadMain(void* userInfo)
                                         goalBumpable[cnt] = FALSE;
                                         goalRemoveObject[cnt].x = -1;
                                         goalRemoveObject[cnt].y = -1;
+                                        targetIdPresent = TRUE;
                                     }
                                 } else {
                                     if (rc == CGameObjectArray::SUCCESS) {
@@ -938,8 +1025,11 @@ void SearchThreadMain(void* userInfo)
                                             if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
                                                 goalObjectSpaces[cnt + searchRequest->m_nTargetIds] = static_cast<CGameSprite*>(pObject)->GetAnimation()->GetPersonalSpace();
                                                 goalBumpable[cnt + searchRequest->m_nTargetIds] = static_cast<CGameSprite*>(pObject)->field_54A8;
-                                                goalRemoveObject[cnt + searchRequest->m_nTargetIds].x = static_cast<CGameSprite*>(pObject)->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX;
-                                                goalRemoveObject[cnt + searchRequest->m_nTargetIds].y = static_cast<CGameSprite*>(pObject)->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY;
+                                                // NOTE: Original writes index `cnt` here, not
+                                                // `cnt + m_nTargetIds` as the other paths and the
+                                                // later reader use. Probably an original bug.
+                                                goalRemoveObject[cnt].x = static_cast<CGameSprite*>(pObject)->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX;
+                                                goalRemoveObject[cnt].y = static_cast<CGameSprite*>(pObject)->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY;
                                                 isWalking[cnt] = static_cast<CGameSprite*>(pObject)->m_nSequence == CGameSprite::SEQ_WALK
                                                     || static_cast<CGameSprite*>(pObject)->m_curAction.GetActionID() == CAIAction::MOVETOPOINT;
                                             } else {
@@ -987,7 +1077,7 @@ void SearchThreadMain(void* userInfo)
                                             CGameObjectArray::THREAD_SEARCH,
                                             INFINITE);
 
-                                        searchRequest->m_searchBitmap->SnapshotRemoveObject(CPoint(goalPts[cnt]),
+                                        searchRequest->m_searchBitmap->SnapshotRemoveObject(CPoint(goalRemoveObject[cnt]),
                                             goalObjectSpaces[cnt],
                                             goalBumpable[cnt]);
                                     }
@@ -1018,7 +1108,7 @@ void SearchThreadMain(void* userInfo)
                                     if (searchRequest->m_collisionSearch) {
                                         searchRequest->m_searchBitmap->SnapshotAddObjectDiagonals(CPoint(startPt),
                                             objectSpace,
-                                            bBumpable);
+                                            FALSE);
                                     }
                                 }
 
@@ -1029,6 +1119,8 @@ void SearchThreadMain(void* userInfo)
                                             goalPts[cnt].x = -1;
                                             goalPts[cnt].y = -1;
                                         } else {
+                                            goalPts[cnt].x /= CPathSearch::GRID_SQUARE_SIZEX;
+                                            goalPts[cnt].y /= CPathSearch::GRID_SQUARE_SIZEY;
                                             if (pArea->SnapshotAdjustTarget(CPoint(startPt), &(goalPts[cnt]), bBump, 10) == TRUE) {
                                                 targetPointPresent = TRUE;
                                             } else {
@@ -1121,10 +1213,11 @@ void SearchThreadMain(void* userInfo)
                             }
 
                             searchLock.Lock(INFINITE);
-                            if (searchRequest->m_serviceState != CSearchRequest::STATE_STALE) {
+                            if (searchRequest->m_serviceState == CSearchRequest::STATE_STALE) {
+                                delete searchRequest;
+                            } else {
                                 searchRequest->m_serviceState = CSearchRequest::STATE_ERROR;
                             }
-                            delete searchRequest;
                             searchLock.Unlock();
                         }
                     } else {

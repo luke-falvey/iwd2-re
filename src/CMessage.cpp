@@ -19595,6 +19595,7 @@ CMessageSetPath::CMessageSetPath(LONG position, LONG* pPath, SHORT nPath, SHORT 
 
     m_currDest = currDest;
     m_sAreaString = sAreaString;
+    m_position = position;
     if (nPath > 0) {
         m_currPath = currPath;
         m_pPath = new LONG[nPath];
@@ -19603,7 +19604,8 @@ CMessageSetPath::CMessageSetPath(LONG position, LONG* pPath, SHORT nPath, SHORT 
     } else {
         m_currPath = 0;
         m_pPath = NULL;
-        m_nPath = 0;
+        // NOTE: Original stores the count it was given, not zero.
+        m_nPath = nPath;
     }
 }
 

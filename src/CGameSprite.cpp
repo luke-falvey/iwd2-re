@@ -3150,39 +3150,42 @@ void CGameSprite::AIUpdateWalk()
             }
             return;
         }
-    }
 
-    CPoint goal;
-    CPathSearch::PositionToPoint(m_pPath[m_currPath++], &goal);
-    m_posDest.x = goal.x * CPathSearch::GRID_SQUARE_SIZEX + CPathSearch::GRID_SQUARE_SIZEX / 2;
-    m_posDest.y = goal.y * CPathSearch::GRID_SQUARE_SIZEY + CPathSearch::GRID_SQUARE_SIZEY / 2;
+        CPoint goal;
+        CPathSearch::PositionToPoint(m_pPath[m_currPath++], &goal);
+        m_posDest.x = goal.x * CPathSearch::GRID_SQUARE_SIZEX + CPathSearch::GRID_SQUARE_SIZEX / 2;
+        m_posDest.y = goal.y * CPathSearch::GRID_SQUARE_SIZEY + CPathSearch::GRID_SQUARE_SIZEY / 2;
 
-    int scale = static_cast<int>(sqrt((m_posDest.x - m_pos.x) * (m_posDest.x - m_pos.x) + (m_posDest.y - 4 * m_pos.y / 3) * (m_posDest.y - 4 * m_pos.y / 3)) + 0.5);
-    if (scale == 0) {
-        // NOTE: Uninline.
-        DropPath();
+        int scale = static_cast<int>(sqrt((m_posDest.x - m_pos.x) * (m_posDest.x - m_pos.x) + (4 * m_posDest.y / 3 - 4 * m_pos.y / 3) * (4 * m_posDest.y / 3 - 4 * m_pos.y / 3)) + 0.5);
+        if (scale == 0) {
+            // NOTE: Uninline.
+            DropPath();
 
-        // NOTE: Uninline.
-        SetIdleSequence();
+            // NOTE: Uninline.
+            SetIdleSequence();
 
-        return;
-    }
-
-    if (m_animation.GetMoveScale() > 8) {
-        if (scale >= m_animation.GetMoveScale()) {
-            scale = (scale + m_animation.GetMoveScale() / 2) / m_animation.GetMoveScale();
-        } else {
-            scale = 1;
+            return;
         }
 
-        m_posDelta.x = ((m_animation.GetMoveScale() * (m_posDest.x - m_pos.x)) << EXACT_SCALE) / scale;
-        m_posDelta.y = ((m_animation.GetMoveScale() * (m_posDest.y - m_pos.y)) << EXACT_SCALE) / scale;
-    } else {
-        m_posDelta.x = ((m_animation.GetMoveScale() * (m_posDest.x - m_pos.x)) << EXACT_SCALE) / scale;
-        m_posDelta.y = ((m_animation.GetMoveScale() * (m_posDest.y - m_pos.y)) << EXACT_SCALE) / scale;
-    }
+        if (m_animation.GetMoveScale() > 8) {
+            if (scale >= m_animation.GetMoveScale()) {
+                scale = (scale + m_animation.GetMoveScale() / 2) / m_animation.GetMoveScale();
+            } else {
+                scale = 1;
+            }
 
-    SetDirection(m_posDest);
+            // NOTE: `scale` was divided by the move scale above, so there is no
+            // move scale factor here. The y distance is taken in exact
+            // coordinates (4/3 of the screen y), as it is for `scale`.
+            m_posDelta.x = ((m_posDest.x - m_pos.x) << EXACT_SCALE) / scale;
+            m_posDelta.y = ((4 * m_posDest.y / 3 - 4 * m_pos.y / 3) << EXACT_SCALE) / scale;
+        } else {
+            m_posDelta.x = ((m_animation.GetMoveScale() * (m_posDest.x - m_pos.x)) << EXACT_SCALE) / scale;
+            m_posDelta.y = ((m_animation.GetMoveScale() * (4 * m_posDest.y / 3 - 4 * m_pos.y / 3)) << EXACT_SCALE) / scale;
+        }
+
+        SetDirection(m_posDest);
+    }
 
     m_turningAbout = !m_walkBackwards
         && abs(m_nNewDirection - m_nDirection) >= 5
@@ -3247,7 +3250,9 @@ void CGameSprite::AIUpdateWalk()
                     m_animation.GetPersonalSpace(),
                     field_54A8,
                     field_7430);
+            }
 
+            {
                 m_posExact = posExactOld;
                 m_pos = m_posOld;
 
@@ -18751,6 +18756,235 @@ void CGameSprite::ClearAI(BOOLEAN bSetSequence)
     }
 }
 
+// TODO: Incomplete. The spell set-up at the end of the function (0x734104 -
+// 0x734522, reached when the new action is `Spell()`, `SpellPoint()`,
+// `ForceSpell()`, `ForceSpellPoint()`, `ReallyForceSpell()`, `SpellNoDec()` or
+// `SpellPointNoDec()`) is not translated; it loads the `CSpell` into
+// `m_curSpell` and records the spell class and level in the sprite.
+//
+// 0x7338E0
+void CGameSprite::SetCurrAction(const CAIAction& action)
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (action.m_actionID != CAIAction::NO_ACTION
+        && g_pBaldurChitin->m_pEngineWorld->GetActivePanelID() == 8
+        && m_id == pGame->m_iContainerSprite) {
+        g_pBaldurChitin->m_pEngineWorld->StopContainer();
+    }
+
+    BYTE nModalState = m_nModalState;
+
+    m_curDest.x = -1;
+    m_curDest.y = -1;
+    field_7118 = 0;
+    field_5616 = 0;
+    field_711C = 0;
+    m_actionCount = 0;
+    m_bStartedCasting = FALSE;
+    m_interrupt = FALSE;
+    field_5630 = 0;
+    field_5632 = 0;
+    field_5636 = 0;
+    m_moveCount = 0;
+    m_bInCasting = FALSE;
+
+    if (nModalState != 0
+        && action.m_actionID != CAIAction::NO_ACTION
+        && action.m_actionID != CAIAction::MOVETOPOINT
+        && action.m_actionID != 22
+        && action.m_actionID != CAIAction::NO_ACTION
+        && action.m_actionID != CAIAction::FACE
+        && action.m_actionID != 18
+        && action.m_actionID != CAIAction::SMALLWAIT
+        && action.m_actionID != 99
+        && action.m_actionID != 89
+        && action.m_actionID != CAIAction::MOVETOPOINTNORECTICLE
+        && action.m_actionID != 215
+        && action.m_actionID != 13
+        && action.m_actionID != 33
+        && action.m_actionID != 234
+        && action.m_actionID != 273
+        && action.m_actionID != 274
+        && action.m_actionID != 293
+        && action.m_actionID != 183
+        && action.m_actionID != 233
+        && action.m_actionID != 30
+        && action.m_actionID != CAIAction::WAIT
+        && action.m_actionID != 10
+        && action.m_actionID != 257
+        && action.m_actionID != 236
+        && action.m_actionID != 249
+        && action.m_actionID != 252
+        && action.m_actionID != CAIAction::CONTINUE
+        && action.m_actionID != CAIAction::RANDOMWALK) {
+        if (nModalState == 2 || nModalState == 4) {
+            SetModalState(0, TRUE);
+
+            pGame->m_cButtonArray.m_nSelectedButton = 100;
+
+            CBaldurEngine* pEngine = g_pBaldurChitin->GetActiveEngine();
+            SHORT nPortrait = pGame->GetCharacterPortraitNum(m_id);
+            if (pEngine->GetSelectedCharacter() == nPortrait) {
+                INT nState = pGame->m_cButtonArray.m_nState;
+                if (nState != 0x66
+                    && nState != 0x65
+                    && nState != 0x68
+                    && nState != 0x67
+                    && nState != 0x69
+                    && nState != 0x70
+                    && nState != 0x73
+                    && nState != 0x74
+                    && nState != 0x75
+                    && nState != 0x76
+                    && nState != 0x77
+                    && nState != 0x78
+                    && nState != 0x79
+                    && nState != 0x7A
+                    && nState != 0x7B
+                    && nState != 0x6A) {
+                    pGame->m_cButtonArray.ResetState();
+                }
+            }
+        } else {
+            SetModalState(0, TRUE);
+        }
+    }
+
+    if (m_curAction.m_actionID != CAIAction::NO_ACTION
+        || action.m_actionID != CAIAction::NO_ACTION) {
+        ResolveTargetPoint(&action, m_queuedActions.GetHeadPosition());
+    }
+
+    if (action.m_actionID != 92) {
+        m_nTempSelectedWeapon = m_equipment.m_selectedWeapon;
+        // NOTE: The original copies a byte.
+        m_nTempSelectedWeaponAbility = static_cast<BYTE>(m_equipment.m_selectedWeaponAbility);
+    }
+
+    CMessage* message;
+
+    if (action.m_actionID == 28) {
+        message = new CMessage107(1, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    if (m_curAction.m_actionID == 28 && action.m_actionID != 28) {
+        message = new CMessage107(0, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    m_curAction.m_actionID = action.m_actionID;
+    m_curAction.m_specificID = action.m_specificID;
+    m_curAction.m_actorID.Set(action.m_actorID);
+    m_curAction.m_acteeID.Set(action.m_acteeID);
+    m_curAction.m_acteeID2.Set(action.m_acteeID2);
+    m_curAction.m_dest = action.m_dest;
+    m_curAction.m_specificID2 = action.m_specificID2;
+    m_curAction.m_specificID3 = action.m_specificID3;
+    m_curAction.m_string1 = action.m_string1;
+    m_curAction.m_string2 = action.m_string2;
+    m_curAction.m_internalFlags = action.m_internalFlags;
+
+    m_bPlayedEncumberedStopped = FALSE;
+    m_bPlayedEncumberedSlowed = FALSE;
+
+    if (m_currentActionId != action.m_actionID) {
+        if (action.m_actionID == 108
+            || action.m_actionID == CAIAction::ESCAPEAREADESTROY
+            || action.m_actionID == CAIAction::DIALOGUE
+            || action.m_actionID == CAIAction::STARTDIALOG
+            || action.m_actionID == CAIAction::STARTDIALOGUENOSET) {
+            message = new CMessageSetCurrentActionId(action.m_actionID, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        } else if (m_currentActionId != CAIAction::NO_ACTION) {
+            message = new CMessageSetCurrentActionId(CAIAction::NO_ACTION, m_id, m_id);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+    }
+
+    if (m_targetId != CGameObjectArray::INVALID_INDEX) {
+        if (m_bSelected && Orderable(FALSE)) {
+            CGameObject* pTarget;
+            BYTE rc;
+            do {
+                rc = pGame->GetObjectArray()->GetDeny(m_targetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    &pTarget,
+                    INFINITE);
+            } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+            if (rc == CGameObjectArray::SUCCESS) {
+                if (pTarget->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                    static_cast<CGameSprite*>(pTarget)->m_marker.SetType(CMarker::ELLIPSE);
+                }
+
+                pGame->GetObjectArray()->ReleaseDeny(m_targetId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+
+        m_targetId = CGameObjectArray::INVALID_INDEX;
+    }
+
+    if (m_curSpell != NULL) {
+        delete m_curSpell;
+        m_curSpell = NULL;
+    }
+
+    if (m_curItem != NULL) {
+        m_curItem = NULL;
+    }
+
+    if (action.m_actionID == CAIAction::NO_ACTION) {
+        return;
+    }
+
+    field_710C = 0;
+
+    if (m_curProjectile != NULL) {
+        delete m_curProjectile;
+        m_curProjectile = NULL;
+    }
+
+    field_5618 = 0;
+
+    if (pGame->GetRuleTables().m_lNoDecodeList.Find(action.m_actionID) == NULL) {
+        m_curAction.Decode(this);
+    }
+
+    field_5616 = static_cast<SHORT>(CUtil::UtilRandInt(8, -m_derivedStats.m_nLuck));
+    m_noActionCount = 0;
+
+    if (m_nSequence != SEQ_TWITCH
+        && m_nSequence != SEQ_DIE
+        && m_nSequence != SEQ_SLEEP
+        && m_nSequence != SEQ_WALK) {
+        // NOTE: Uninline.
+        SetIdleSequence();
+    }
+
+    if (m_userCommandPause > 5 * CTimerWorld::TIMESCALE_MSEC_PER_SEC - 2) {
+        m_marker.m_nRecticleForceRender = CTimerWorld::TIMESCALE_MSEC_PER_SEC;
+    }
+
+    if (action.m_actionID == CAIAction::MOVETOPOINT
+        || action.m_actionID == 22
+        || action.m_actionID == 89
+        || action.m_actionID == CAIAction::MOVETOPOINTNORECTICLE
+        || action.m_actionID == 27
+        || action.m_actionID == 215) {
+        if (m_derivedStats.m_nEncumberance == 2) {
+            FeedBack(15, 0, 0, 0, -1, 0, 0);
+        } else if (m_derivedStats.m_nEncumberance == 1) {
+            FeedBack(14, 0, 0, 0, -1, 0, 0);
+        }
+    }
+
+    // TODO: Incomplete. Spell actions (see above) are not set up here.
+}
+
 // 0x734550
 BOOL CGameSprite::HandleEffects()
 {
@@ -23307,7 +23541,7 @@ SHORT CGameSprite::MoveToPoint()
         return ACTION_ERROR;
     }
 
-    if (x != m_curDest.x || y != m_bPlayedEncumberedStopped) {
+    if (x != m_curDest.x || y != m_curDest.y) {
         m_curDest.x = x;
         m_curDest.y = y;
 
