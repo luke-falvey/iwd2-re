@@ -3,6 +3,7 @@
 #include "CAIObjectType.h"
 #include "CAIScript.h"
 #include "CBaldurChitin.h"
+#include "CGameAnimationType.h"
 #include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CIcon.h"
@@ -5063,7 +5064,377 @@ void CScreenCharacter::OnLevelUpButtonClick()
 // 0x5E56F0
 void CScreenCharacter::LevelUp(CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 8936
+    UTIL_ASSERT(m_pBeforeLevelUpDerivedStats != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 8937
+    UTIL_ASSERT((m_pTempBaseStats != NULL) && (m_pTempDerivedStats != NULL));
+
+    pSprite->UpdateFeats(m_pTempBaseStats, m_pTempDerivedStats);
+
+    // NOTE: The original calls an empty function (0x71E750, `RET 8`) here with
+    // `m_pTempBaseStats` and `m_pTempDerivedStats`.
+
+    pSprite->m_baseStats.field_2FF = static_cast<BYTE>(m_nExtraSkillPoints);
+
+    pSprite->sub_71E760(*m_pTempDerivedStats, TRUE);
+
+    BYTE nDivineClass;
+
+    nDivineClass = CAIOBJECTTYPE_C_CLERIC;
+    pSprite->AddKnownDivineSpells(nDivineClass);
+
+    nDivineClass = CAIOBJECTTYPE_C_DRUID;
+    pSprite->AddKnownDivineSpells(nDivineClass);
+
+    nDivineClass = CAIOBJECTTYPE_C_PALADIN;
+    pSprite->AddKnownDivineSpells(nDivineClass);
+
+    nDivineClass = CAIOBJECTTYPE_C_RANGER;
+    pSprite->AddKnownDivineSpells(nDivineClass);
+
+    if (m_nClass == CAIOBJECTTYPE_C_SORCERER || m_nClass == CAIOBJECTTYPE_C_BARD) {
+        // NOTE: Constructor is inlined.
+        CAbilityId ab;
+        ab.m_itemType = 1;
+        ab.m_nClass = m_nClass;
+        ab.field_1D = 1;
+
+        INT nBonus1 = 0;
+        INT nBonus2 = 0;
+
+        for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+            INT nMaxSpells1 = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetMaxKnownSpells(m_nClass,
+                pSprite->GetAIType(),
+                pSprite->m_derivedStats,
+                pSprite->m_baseStats.m_specialization,
+                nLevel + 1,
+                nBonus1);
+            nMaxSpells1 += nBonus1;
+
+            INT nMaxSpells2 = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetMaxKnownSpells(m_nClass,
+                pSprite->GetAIType(),
+                *m_pTempDerivedStats,
+                pSprite->m_baseStats.m_specialization,
+                nLevel + 1,
+                nBonus2);
+            nMaxSpells2 += nBonus2;
+
+            // NOTE: Uninline.
+            if (pSprite->GetSpellsAtLevel(m_nClass, nLevel)->m_List.size() != 0) {
+                pSprite->GetSpellsAtLevel(m_nClass, nLevel)->field_14 = nMaxSpells1;
+
+                // NOTE: Uninline.
+                for (UINT nIndex = 0; nIndex < pSprite->GetSpellsAtLevel(m_nClass, nLevel)->m_List.size(); nIndex++) {
+                    // NOTE: Uninline.
+                    UINT nSpellId = pSprite->GetSpellsAtLevel(m_nClass, nLevel)->Get(nIndex)->m_nID;
+
+                    UINT nDiff = nMaxSpells1 - nMaxSpells2;
+                    UINT a4 = 0;
+                    UINT a5 = 0;
+                    pSprite->GetSpells(m_nClass)->Add(nSpellId, nLevel, nDiff, a4, a5);
+
+                    // NOTE: Uninline.
+                    ab.m_res = g_pBaldurChitin->GetObjectGame()->m_spells.Get(nSpellId);
+
+                    pSprite->CheckQuickLists(&ab, static_cast<SHORT>(nMaxSpells1 - nMaxSpells2), FALSE, FALSE);
+                }
+
+                UINT nDiff = nMaxSpells1 - nMaxSpells2;
+                pSprite->GetSpells(m_nClass)->sub_726150(nLevel, nDiff, FALSE);
+            }
+        }
+    }
+
+    if (static_cast<INT>(pSprite->m_derivedStats.GetClassLevel(CAIOBJECTTYPE_C_BARBARIAN)) >= 15) {
+        UINT nSpin236Id = 0;
+        UINT nSpin260Id = 0;
+
+        if (g_pBaldurChitin->GetObjectGame()->m_innateSpells.Find(CGameSprite::SPIN236, nSpin236Id)) {
+            if (g_pBaldurChitin->GetObjectGame()->m_innateSpells.Find(CGameSprite::SPIN260, nSpin260Id)) {
+                UINT nIndex = 0;
+                if (pSprite->m_innateSpells.Find(nSpin236Id, nIndex)) {
+                    // NOTE: Uninline.
+                    CGameSpriteSpellListEntry* pEntry = pSprite->m_innateSpells.Get(nIndex);
+                    UINT nField4 = pEntry->field_4;
+                    UINT nField8 = pEntry->field_8;
+                    UINT nFieldC = pEntry->field_C;
+
+                    UINT nZero = 0;
+                    pSprite->AddInnateSpell(CGameSprite::SPIN260, nField4, nZero, nFieldC);
+
+                    // NOTE: The original passes the address of a zeroed byte as
+                    // the third parameter.
+                    pSprite->sub_725210(CGameSprite::SPIN260, nField8, 0);
+
+                    pSprite->sub_725270(CGameSprite::SPIN236, 0, 1);
+
+                    pSprite->RemoveInnateSpell(CGameSprite::SPIN236, TRUE, 0, 0);
+
+                    nIndex = 0;
+                    if (pSprite->m_innateSpells.Find(nSpin260Id, nIndex)) {
+                        // NOTE: Uninline.
+                        CGameSpriteSpellListEntry entry = *pSprite->m_innateSpells.Get(nIndex);
+
+                        // NOTE: Constructor is inlined.
+                        CButtonData cButtonData;
+
+                        CSpell* curSpell = new CSpell(CGameSprite::SPIN260);
+
+                        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+                        // __LINE__: 9046
+                        UTIL_ASSERT(curSpell != NULL);
+
+                        if (curSpell->Demand()) {
+                            if (curSpell->pRes != NULL) {
+                                SHORT nCasterLevel = pSprite->GetCasterLevel(curSpell, 0, 0);
+                                if (nCasterLevel <= 1) {
+                                    nCasterLevel = 1;
+                                }
+
+                                SPELL_ABILITY* pAbility = NULL;
+                                for (INT nAbility = 0; nAbility < curSpell->GetAbilityCount(); nAbility++) {
+                                    if (curSpell->GetAbility(nAbility)->minCasterLevel > nCasterLevel) {
+                                        break;
+                                    }
+
+                                    pAbility = curSpell->GetAbility(nAbility);
+                                }
+
+                                if (pAbility != NULL && pAbility->quickSlotType == 4) {
+                                    cButtonData.m_icon = CString(pAbility->quickSlotIcon);
+                                    cButtonData.m_name = curSpell->GetGenericName();
+                                    cButtonData.m_abilityId.m_itemType = 1;
+                                    cButtonData.m_abilityId.m_res = CGameSprite::SPIN260;
+                                    cButtonData.m_abilityId.m_targetType = pAbility->actionType;
+                                    cButtonData.m_abilityId.field_10 = curSpell->GetGenericName();
+
+                                    // NOTE: Uninline.
+                                    CDerivedStats* pStats = pSprite->GetActiveStats();
+                                    cButtonData.m_bDisabled = static_cast<BYTE>(pStats->m_disabledSpellTypes[2]);
+                                    cButtonData.m_count = static_cast<SHORT>(entry.field_8);
+                                    if (cButtonData.m_count <= 0) {
+                                        cButtonData.m_bDisabled = TRUE;
+                                    }
+                                }
+                            }
+
+                            curSpell->Release();
+                        }
+
+                        delete curSpell;
+
+                        for (INT nButton = 0; nButton < CGAMESAVECHARACTER_NUM_QUICK_ABILITIES22; nButton++) {
+                            // NOTE: Constructor is inlined.
+                            CButtonData oldButtonData;
+
+                            // NOTE: Uninline.
+                            pSprite->GetQuickAbility(static_cast<BYTE>(nButton), oldButtonData);
+
+                            if (oldButtonData.m_abilityId.m_res == CGameSprite::SPIN236) {
+                                // NOTE: Uninline.
+                                pSprite->SetQuickAbility(static_cast<BYTE>(nButton), cButtonData);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (m_nClass == CAIOBJECTTYPE_C_DRUID) {
+        INT nShapeshifts = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetMaxDruidShapeshifts(pSprite->m_baseStats,
+            pSprite->m_derivedStats.GetClassLevel(CAIOBJECTTYPE_C_DRUID));
+        nShapeshifts -= g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetMaxDruidShapeshifts(*m_pTempBaseStats,
+            m_pTempDerivedStats->GetClassLevel(m_nClass));
+
+        if (nShapeshifts > 0) {
+            UINT nAmount = nShapeshifts;
+            pSprite->sub_724C40(nAmount);
+
+            nAmount = nShapeshifts;
+            pSprite->m_shapeshifts.sub_725D30(nAmount, FALSE);
+        }
+    }
+
+    if (m_nClass == CAIOBJECTTYPE_C_CLERIC
+        && (m_nSpecialization & SPECMASK_CLERIC) == SPECMASK_CLERIC_TALOS
+        && m_pBeforeLevelUpDerivedStats->GetClassLevel(CAIOBJECTTYPE_C_CLERIC) == 0) {
+        pSprite->m_baseStats.m_resistElectricityBase += 5;
+    }
+
+    delete m_pTempBaseStats;
+    m_pTempBaseStats = NULL;
+
+    delete m_pTempDerivedStats;
+    m_pTempDerivedStats = NULL;
+    field_866 = 0;
+    field_86A = 0;
+
+    delete m_pBeforeLevelUpDerivedStats;
+    m_pBeforeLevelUpDerivedStats = NULL;
+
+    CheckDropEquipment();
+
+    pSprite->field_562C = 1;
+    pSprite->ProcessEffectList();
+
+    if (m_nClass == CAIOBJECTTYPE_C_CLERIC) {
+        BYTE nClass = CAIOBJECTTYPE_C_CLERIC;
+        UINT nClericLevel = pSprite->m_derivedStats.GetClassLevel(CAIOBJECTTYPE_C_CLERIC);
+        DWORD nMaxSpellLevel = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetMaxSpellLevel(nClass, nClericLevel);
+
+        DWORD nDomain = m_nSpecialization & SPECMASK_CLERIC;
+        CGroupedSpellList* pDomainSpells = &(g_pBaldurChitin->GetObjectGame()->m_spellsByDomain[g_pBaldurChitin->GetObjectGame()->GetSpellcasterDomainIndex(nDomain)]);
+
+        for (UINT nLevel = 0; nLevel < nMaxSpellLevel; nLevel++) {
+            for (UINT nIndex = 0;; nIndex++) {
+                // NOTE: Inlined `CGroupedSpellList::GetSpellsAtLevel`.
+                //
+                // __FILE__: .\Include\InfGame.h
+                // __LINE__: 772
+                UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+                if (!(nIndex < pDomainSpells->m_lists[nLevel].m_nCount)) {
+                    break;
+                }
+
+                // NOTE: Inlined `CGroupedSpellList::GetSpellsAtLevel`.
+                //
+                // __FILE__: .\Include\InfGame.h
+                // __LINE__: 772
+                UTIL_ASSERT(nLevel < CSPELLLIST_MAX_LEVELS);
+
+                // NOTE: Uninline.
+                UINT nSpellId = pDomainSpells->m_lists[nLevel].Get(nIndex);
+
+                // NOTE: Uninline.
+                const CResRef& resRef = g_pBaldurChitin->GetObjectGame()->m_spells.Get(nSpellId);
+
+                // NOTE: Uninline.
+                CSpell spell(resRef);
+
+                DWORD dwNotUsableBy = spell.GetNotUsableBy();
+
+                BOOL bAdd = TRUE;
+                if (spell.pRes != NULL && (dwNotUsableBy & 0x40000000) == 0) {
+                    if ((dwNotUsableBy & 0x4) && IcewindMisc::IsGood(pSprite)) {
+                        bAdd = FALSE;
+                    } else if ((dwNotUsableBy & 0x2) && IcewindMisc::IsEvil(pSprite)) {
+                        bAdd = FALSE;
+                    } else if ((dwNotUsableBy & 0x8) && !IcewindMisc::IsGood(pSprite) && !IcewindMisc::IsEvil(pSprite)) {
+                        bAdd = FALSE;
+                    } else if ((dwNotUsableBy & 0x10) && IcewindMisc::IsLawful(pSprite)) {
+                        bAdd = FALSE;
+                    } else if ((dwNotUsableBy & 0x1) && IcewindMisc::IsChaotic(pSprite)) {
+                        bAdd = FALSE;
+                    } else if ((dwNotUsableBy & 0x20) && !IcewindMisc::IsLawful(pSprite) && !IcewindMisc::IsChaotic(pSprite)) {
+                        bAdd = FALSE;
+                    }
+                }
+
+                if (bAdd) {
+                    pSprite->AddDomainSpell(nLevel, resRef, 0, 0, 0);
+                }
+            }
+        }
+    }
+
+    if (m_nClass != CAIOBJECTTYPE_C_PALADIN
+        && static_cast<INT>(pSprite->m_derivedStats.GetClassLevel(CAIOBJECTTYPE_C_PALADIN)) > 0
+        && (pSprite->m_baseStats.field_2FB & 0x4) == 0) {
+        switch (pSprite->GetSpecialization() & SPECMASK_PALADIN) {
+        case SPECMASK_PALADIN_ILMATER:
+            if (m_nClass != CAIOBJECTTYPE_C_CLERIC
+                || (pSprite->GetSpecialization() & SPECMASK_CLERIC) != SPECMASK_CLERIC_ILMATER) {
+                pSprite->m_baseStats.field_2FB |= 0x4;
+            }
+            break;
+        case SPECMASK_PALADIN_HELM:
+            if (m_nClass != CAIOBJECTTYPE_C_FIGHTER) {
+                pSprite->m_baseStats.field_2FB |= 0x4;
+            }
+            break;
+        case SPECMASK_PALADIN_MYSTRA:
+            if (m_nClass != CAIOBJECTTYPE_C_WIZARD) {
+                pSprite->m_baseStats.field_2FB |= 0x4;
+            }
+            break;
+        }
+    }
+
+    if (m_nClass != CAIOBJECTTYPE_C_MONK
+        && static_cast<INT>(pSprite->m_derivedStats.GetClassLevel(CAIOBJECTTYPE_C_MONK)) > 0
+        && (pSprite->m_baseStats.field_2FB & 0x8) == 0) {
+        switch (pSprite->GetSpecialization() & SPECMASK_MONK) {
+        case SPECMASK_MONK_OLD_ORDER:
+            if (m_nClass != CAIOBJECTTYPE_C_ROGUE) {
+                pSprite->m_baseStats.field_2FB |= 0x8;
+            }
+            break;
+        case SPECMASK_MONK_BROKEN_ONES:
+            if (m_nClass != CAIOBJECTTYPE_C_CLERIC
+                || (pSprite->GetSpecialization() & SPECMASK_CLERIC) != SPECMASK_CLERIC_ILMATER) {
+                pSprite->m_baseStats.field_2FB |= 0x8;
+            }
+            break;
+        case SPECMASK_MONK_DARK_MOON:
+            if (m_nClass != CAIOBJECTTYPE_C_SORCERER) {
+                pSprite->m_baseStats.field_2FB |= 0x8;
+            }
+            break;
+        }
+    }
+
+    DWORD classID;
+    switch (pSprite->m_derivedStats.GetBestClass()) {
+    case CAIOBJECTTYPE_C_BARBARIAN:
+    case CAIOBJECTTYPE_C_FIGHTER:
+    case CAIOBJECTTYPE_C_MONK:
+    case CAIOBJECTTYPE_C_PALADIN:
+    case CAIOBJECTTYPE_C_RANGER:
+        classID = 0x100;
+        break;
+    case CAIOBJECTTYPE_C_BARD:
+    case CAIOBJECTTYPE_C_ROGUE:
+        classID = 0x300;
+        break;
+    case CAIOBJECTTYPE_C_CLERIC:
+    case CAIOBJECTTYPE_C_DRUID:
+        classID = 0x000;
+        break;
+    case CAIOBJECTTYPE_C_SORCERER:
+    case CAIOBJECTTYPE_C_WIZARD:
+        classID = 0x200;
+        break;
+    default:
+        return;
+    }
+
+    USHORT animationID = static_cast<USHORT>((static_cast<USHORT>(pSprite->m_baseStats.m_animationType) & 0xFCFF) | classID);
+
+    // NOTE: The original compares the DWORD at +0x5C4 (`m_animationType` and
+    // `field_22`).
+    if (pSprite->m_baseStats.m_animationType != static_cast<short>(animationID)
+        || pSprite->m_baseStats.field_22 != 0) {
+        pSprite->UnequipAll(FALSE);
+
+        // NOTE: The original writes a DWORD here, which also clears the
+        // following word.
+        pSprite->m_baseStats.m_animationType = animationID;
+        pSprite->m_baseStats.field_22 = 0;
+
+        if (pSprite->m_animation.m_animation != NULL) {
+            delete pSprite->m_animation.m_animation;
+        }
+        pSprite->m_animation.m_animation = CGameAnimationType::SetAnimationType(animationID,
+            pSprite->m_baseStats.m_colors,
+            0);
+
+        pSprite->EquipAll(FALSE);
+    }
 }
 
 // 0x5E6840
