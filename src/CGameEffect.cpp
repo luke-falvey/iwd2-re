@@ -7,6 +7,7 @@
 #include "CCreatureFile.h"
 #include "CGameAnimationType.h"
 #include "CGameArea.h"
+#include "CGameSparkle.h"
 #include "CGameSprite.h"
 #include "CGameSpriteSpells.h"
 #include "CInfCursor.h"
@@ -8056,9 +8057,6 @@ CGameEffect* CGameEffectSparkle::Copy()
 // 0x4B1700
 BOOL CGameEffectSparkle::ApplyEffect(CGameSprite* pSprite)
 {
-    // TODO: Incomplete. The particle cluster class (0xCA bytes, constructor
-    // 0x51AE40, vtables 0x84D624/0x84D618, `CParticle.h`) is not translated,
-    // so no sparkles are created.
     WORD nType = static_cast<WORD>(m_dwFlags);
 
     CRect rFx;
@@ -8081,20 +8079,18 @@ BOOL CGameEffectSparkle::ApplyEffect(CGameSprite* pSprite)
     }
 
     switch (nType) {
-    case 1:
-        // Creates the particle cluster with (`m_effectAmount`, the word at
-        // 0x84D604 (4), the word at 0x84D5F0 (25)), asserts
-        // `m_wType & TYPE_EXPLOSION`, stores `m_source` at +0xBE and calls
-        // its `AddToArea(pSprite->GetArea(), pos, nHeight, LIST_FRONT)`.
-        break;
-    case 3:
-        // Creates the particle cluster with (`m_effectAmount`, the word at
-        // 0x84D602 (2), `m_duration - m_worldTime.m_gameTime` as WORDs) and calls
-        // its `AddToArea(pSprite->GetArea(), pos, nHeight, LIST_FRONT)`.
+    case 1: {
+        CGameSparkle* pSparkle = new CGameSparkle(static_cast<SHORT>(m_effectAmount), CGameSparkle::TYPE_EXPLOSION /* 0x84D604 */, 25 /* 0x84D5F0 */);
+        pSparkle->SetExplosionVelocity(m_source);
+        pSparkle->AddToArea(pSprite->m_pArea, pos, nHeight, CGameObject::LIST_FRONT);
         break;
     }
-
-    (void)nHeight;
+    case 3: {
+        CGameSparkle* pSparkle = new CGameSparkle(static_cast<SHORT>(m_effectAmount), 2 /* 0x84D602 */, static_cast<WORD>(m_duration - g_pBaldurChitin->GetObjectGame()->m_worldTime.m_gameTime));
+        pSparkle->AddToArea(pSprite->m_pArea, pos, nHeight, CGameObject::LIST_FRONT);
+        break;
+    }
+    }
 
     m_done = TRUE;
 

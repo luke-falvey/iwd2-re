@@ -104,7 +104,11 @@ void CProjectile::AddEffect(CGameEffect* pEffect)
 // 0x51EAB0
 void CProjectile::AddEffect2(CGameEffect* pEffect)
 {
-    // TODO: Incomplete.
+    if ((g_pChitin->cNetwork.m_bConnectionEstablished == TRUE && g_pChitin->cNetwork.m_bIsHost == TRUE)
+        || !g_pChitin->cNetwork.m_bConnectionEstablished) {
+        pEffect->m_projectileType = m_projectileType;
+        m_effectList.AddTail(pEffect);
+    }
 }
 
 // 0x51EAF0

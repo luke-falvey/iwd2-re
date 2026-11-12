@@ -25,6 +25,8 @@ public:
     /* 0070 */ void OnArrival() override;
     /* 0088 */ virtual void Virtual88();
 
+    BOOL sub_52D430(BOOLEAN a1);
+
     /* 02A0 */ SHORT field_2A0;
     /* 02A2 */ SHORT field_2A2;
     /* 02A4 */ SHORT field_2A4;

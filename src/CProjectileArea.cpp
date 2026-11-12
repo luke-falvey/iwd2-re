@@ -3,6 +3,7 @@
 #include "CBaldurChitin.h"
 #include "CGameAIBase.h"
 #include "CGameArea.h"
+#include "CGameSparkle.h"
 #include "CGameSprite.h"
 #include "CGameEffect.h"
 #include "CInfGame.h"
@@ -115,9 +116,8 @@ void CProjectileArea::AIUpdate()
             Virtual84(m_posDest);
 
             if (field_E2 != 0) {
-                // TODO: Incomplete. Creates an object of 0xCA bytes with
-                // constructor 0x51AE40 (args `field_9A`, `1`, `25`) and adds
-                // it to `field_EA` at `m_pos`, `m_posZ`, `LIST_FRONT`.
+                CGameSparkle* pSparkle = new CGameSparkle(field_9A, 1 /* 0x84D600 */, 25 /* 0x84D5F0 */);
+                pSparkle->AddToArea(field_EA, m_pos, m_posZ, CGameObject::LIST_FRONT);
             }
 
             m_sound.SetCoordinates(m_pos.x, m_pos.y, m_posZ);

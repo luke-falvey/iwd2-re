@@ -41,7 +41,8 @@ public:
 
     /* 0036 */ LONG field_36;
     /* 003A */ BOOLEAN field_3A;
-    /* 003B */ unsigned char field_3B[33];
+    /* 003B */ unsigned char field_3B;
+    /* 003C */ CPoint field_3C[4];
 };
 
 // vtable 0x850DDC, sizeof 0x334
