@@ -481,9 +481,83 @@ void CGameAreaNotes::Marshal(BYTE**& pArea, DWORD& cnt)
 // 0x47BBD0
 BOOL CGameAreaNotes::DeleteANote(DWORD id)
 {
-    // TODO: Incomplete.
+    CPoint sq;
 
-    return FALSE;
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameAreaNotes.cpp
+    // __LINE__: 1308
+    UTIL_ASSERT(m_bInitialized);
+
+    if (m_areaNoteList.GetCount() == 0) {
+        return FALSE;
+    }
+
+    POSITION pos = m_areaNoteList.GetHeadPosition();
+    CAreaUserNote* pNote = m_areaNoteList.GetNext(pos);
+    while (pNote->m_id != id) {
+        if (pos == NULL) {
+            return FALSE;
+        }
+
+        pNote = m_areaNoteList.GetNext(pos);
+    }
+
+    if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+        if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+            g_pBaldurChitin->GetBaldurMessage()->sub_43A5C0(m_rArea.GetResRefStr(),
+                pNote->m_startX,
+                pNote->m_startY,
+                CString(""),
+                0,
+                -1);
+        } else if (!g_pBaldurChitin->m_cBaldurMessage.m_bInOnAreaMapNoteAnnounce) {
+            g_pBaldurChitin->GetBaldurMessage()->sub_43A210(m_rArea.GetResRefStr(),
+                pNote->m_startX,
+                pNote->m_startY,
+                CString(""),
+                0,
+                -1);
+            return TRUE;
+        }
+    }
+
+    CUIControlButtonMapAreaMap* pMapControl = static_cast<CUIControlButtonMapAreaMap*>(g_pBaldurChitin->m_pEngineMap->GetManager()->GetPanel(2)->GetControl(2));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameAreaNotes.cpp
+    // __LINE__: 1354
+    UTIL_ASSERT_MSG(pMapControl != NULL, "Invalid map control.");
+
+    pMapControl->RemoveNote(id);
+
+    g_pBaldurChitin->m_pEngineMap->GetManager()->GetPanel(2)->RemoveControl(id);
+
+    g_pBaldurChitin->GetTlkTable().m_override.Remove(pNote->m_note);
+
+    GetGridSquare(CPoint(pNote->m_startX, pNote->m_startY), sq, TRUE);
+
+    m_areaNoteGrid[sq.x][sq.y] = -1;
+
+    // NOTE: The original steps back from the position after the note to the
+    // note itself (or takes the tail when the note was the last one).
+    if (pos == NULL) {
+        delete m_areaNoteList.GetAt(m_areaNoteList.GetTailPosition());
+        m_areaNoteList.RemoveAt(m_areaNoteList.GetTailPosition());
+    } else {
+        POSITION posFound = pos;
+        m_areaNoteList.GetPrev(posFound);
+        delete m_areaNoteList.GetAt(posFound);
+        m_areaNoteList.RemoveAt(posFound);
+    }
+
+    if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE) {
+        if (g_pBaldurChitin->pActiveEngine == g_pBaldurChitin->m_pEngineMap) {
+            if (g_pBaldurChitin->m_pEngineMap->GetTopPopup() == NULL) {
+                pMapControl->field_7BC = TRUE;
+                pMapControl->InvalidateRect();
+            }
+        }
+    }
+
+    return TRUE;
 }
 
 // 0x47BE80

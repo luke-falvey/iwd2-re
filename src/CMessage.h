@@ -1282,6 +1282,24 @@ public:
 
 class CMessageSpriteUpdate : public CMessage {
 public:
+    static const DWORD FLAG_PATH;
+    static const DWORD FLAG_POSITION;
+    static const DWORD FLAG_STATE;
+    static const DWORD FLAG_HITPOINTS;
+    static const DWORD FLAG_AC_MODS;
+    static const DWORD FLAG_FIELD_74;
+    static const DWORD FLAG_ENEMY_ALLY;
+    static const DWORD FLAG_LEVEL_UP;
+    static const DWORD FLAG_SEQUENCE;
+    static const DWORD FLAG_FACING;
+    static const DWORD FLAG_AREA;
+    static const DWORD FLAG_FIELD_60;
+    static const DWORD FLAG_FADE_SPEED;
+    static const DWORD FLAG_VISUAL_EFFECTS;
+    static const DWORD FLAG_TRANSLUCENT;
+    static const DWORD FLAG_SPELL_STATES;
+    static const DWORD FLAG_SKILLS;
+
     CMessageSpriteUpdate(CGameSprite* pSprite, LONG caller, LONG target);
     ~CMessageSpriteUpdate() override;
     SHORT GetCommType() override;
