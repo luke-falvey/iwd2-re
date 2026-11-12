@@ -18935,12 +18935,6 @@ void CGameSprite::ClearAI(BOOLEAN bSetSequence)
     }
 }
 
-// TODO: Incomplete. The spell set-up at the end of the function (0x734104 -
-// 0x734522, reached when the new action is `Spell()`, `SpellPoint()`,
-// `ForceSpell()`, `ForceSpellPoint()`, `ReallyForceSpell()`, `SpellNoDec()` or
-// `SpellPointNoDec()`) is not translated; it loads the `CSpell` into
-// `m_curSpell` and records the spell class and level in the sprite.
-//
 // 0x7338E0
 void CGameSprite::SetCurrAction(const CAIAction& action)
 {
