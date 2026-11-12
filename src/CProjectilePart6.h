@@ -74,7 +74,7 @@ public:
     /* 0316 */ BOOLEAN field_316;
     /* 0317 */ BOOLEAN field_317;
     /* 0318 */ CPoint field_318;
-    /* 0320 */ unsigned char field_320[8];
+    /* 0320 */ CPoint field_320;
     /* 0328 */ LONG field_328;
     /* 032C */ SHORT field_32C;
     /* 032E */ LONG field_32E;
@@ -103,7 +103,7 @@ public:
     /* 02AF */ BYTE field_2AF;
     /* 02B0 */ LONG field_2B0;
     /* 02B4 */ BOOLEAN field_2B4;
-    /* 02B6 */ std::set<LONG> field_2B6;
+    /* 02B6 */ std::set<DWORD> field_2B6;
     /* 02C6 */ LONG field_2C6;
     /* 02CA */ LONG field_2CA;
     /* 02CE */ LONG field_2CE;

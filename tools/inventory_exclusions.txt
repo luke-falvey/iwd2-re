@@ -227,3 +227,8 @@
 0x70F750
 0x70FFE0
 0x711C90
+
+# MSVC 6 std::vector<CPoint>::insert(iterator, size_type, const CPoint&) (library): fill insert
+# used by CProjectileSingleTarget850DDC::Fire (this = vector at +0x2F2, pos = _Last) and by the
+# CProjectileSingleTarget850E84 direction table init (0x57BBC0, vector at 0x8E52D0, size()=0x582210).
+0x57AB70

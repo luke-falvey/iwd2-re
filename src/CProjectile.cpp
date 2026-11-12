@@ -80,6 +80,21 @@ BOOLEAN CProjectile::CompressTime(DWORD deltaTime)
     return FALSE;
 }
 
+// 0x536FC0
+BOOLEAN CProjectile::sub_536FC0(CGameSprite* pSprite)
+{
+    if (pSprite->m_derivedStats.m_cImmunitiesProjectile.OnList(m_projectileType)) {
+        return TRUE;
+    }
+
+    if (static_cast<BYTE>(field_186) < 9
+        && pSprite->m_derivedStats.m_cImmunitiesSpellLevel.m_levels[static_cast<BYTE>(field_186)] != 0) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
 // 0x5551B0
 void CProjectile::RemoveSelf()
 {
