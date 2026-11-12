@@ -6722,7 +6722,142 @@ void CScreenCharacter::ResetSkillsPanel(CUIPanel* pPanel, CGameSprite* pSprite, 
 // 0x5F7B00
 void CScreenCharacter::sub_5F7B00(CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
+    CUIPanel* pPanel = m_cUIManager.GetPanel(55);
+
+    m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(104));
+
+    const CRuleTables& ruleTables = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
+
+    SHORT nMaxHitPoints = pSprite->m_derivedStats.m_nMaxHitPoints;
+    WORD nMaxHitPointsBase = pSprite->m_baseStats.m_maxHitPointsBase;
+    SHORT nHitPointsBase = pSprite->m_baseStats.m_hitPoints;
+    LONG nHPCONBonusTotalOld = pSprite->m_nHPCONBonusTotalOld;
+
+    pSprite->field_562C = 1;
+    pSprite->ProcessEffectList();
+
+    pSprite->m_baseStats.m_hitPoints = nHitPointsBase;
+    pSprite->m_derivedStats.m_nMaxHitPoints = nMaxHitPoints;
+    pSprite->m_baseStats.m_maxHitPointsBase = nMaxHitPointsBase;
+    pSprite->m_nHPCONBonusTotalOld = nHPCONBonusTotalOld;
+
+    HighlightLabel(pPanel,
+        0x1000000C,
+        m_nExtraSkillPoints != 0,
+        COLOR_LABEL_HIGHLIGHT_BONUS);
+    UpdateLabel(pPanel,
+        0x1000000C,
+        "%d",
+        m_nExtraSkillPoints);
+
+    // NOTE: Constant at 0x84EA68. The original loads `m_nTopSkill` as an
+    // unsigned word.
+    m_nTopSkill = max(0, min(static_cast<USHORT>(m_nTopSkill), 16 - 9));
+
+    for (DWORD nButtonID = 14; nButtonID <= 30; nButtonID += 2) {
+        DWORD nIndex = (nButtonID - 14) / 2;
+        UINT nSkillID = ruleTables.GetSkillId(static_cast<USHORT>(m_nTopSkill) + nIndex);
+
+        // FIXME: Why `GetSkillId` second time? It is not present in the code
+        // path below.
+        INT nCost = pSprite->GetSkillCost(ruleTables.GetSkillId(nSkillID), m_nClass);
+
+        CString sName = FetchString(ruleTables.GetSkillName(nSkillID));
+        if (nCost > 0) {
+            UpdateLabel(pPanel,
+                0x10000001 + nIndex,
+                "%s (%d)",
+                (LPCSTR)sName,
+                nCost);
+        } else {
+            UpdateLabel(pPanel,
+                0x10000001 + nIndex,
+                "%s",
+                (LPCSTR)sName);
+        }
+
+        UpdateLabel(pPanel,
+            0x10000069 + nIndex,
+            "");
+    }
+
+    CUIControlButton* pDone = static_cast<CUIControlButton*>(pPanel->GetControl(0));
+    pDone->SetEnabled(IsDoneButtonClickable(pSprite));
+
+    CUIControlScrollBar* pScroll = static_cast<CUIControlScrollBar*>(pPanel->GetControl(104));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 18063
+    UTIL_ASSERT(pScroll != NULL);
+
+    CScreenCharacter* pCharacter = g_pBaldurChitin->m_pEngineCharacter;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 18162
+    UTIL_ASSERT(pCharacter != NULL);
+
+    pScroll->AdjustScrollBar(pCharacter->m_nTopSkill, 16, 9);
+
+    DWORD nIndex = 0;
+    for (INT nButtonID = 15; nButtonID < 33; nButtonID += 2) {
+        INT nCost = pSprite->GetSkillCost(ruleTables.GetSkillId(static_cast<USHORT>(m_nTopSkill) + nIndex), m_nClass);
+
+        BOOL bCanIncrease = nCost != 0 && m_nExtraSkillPoints >= nCost;
+
+        CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButtonID - 1));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 18083
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetActive(bCanIncrease);
+        pButton->SetEnabled(bCanIncrease);
+
+        HighlightLabel(pPanel,
+            0x10000001 + nIndex,
+            bCanIncrease == FALSE,
+            COLOR_LABEL_DISABLE);
+
+        BOOL bCanDecrease = FALSE;
+        if (m_storedSkills[static_cast<USHORT>(m_nTopSkill) + nIndex] < pSprite->GetSkillValue(static_cast<USHORT>(m_nTopSkill) + nIndex)) {
+            bCanDecrease = TRUE;
+        }
+
+        pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButtonID));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 18095
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetActive(bCanDecrease);
+        pButton->SetEnabled(bCanDecrease);
+
+        UpdateLabel(pPanel,
+            0x10000069 + nIndex,
+            "%d",
+            pSprite->GetSkillValue(static_cast<USHORT>(m_nTopSkill) + nIndex));
+
+        if (bCanDecrease) {
+            HighlightLabel(pPanel,
+                0x10000069 + nIndex,
+                TRUE,
+                RGB(0, 255, 255));
+        } else if (!bCanIncrease) {
+            HighlightLabel(pPanel,
+                0x10000069 + nIndex,
+                TRUE,
+                COLOR_LABEL_DISABLE);
+        } else {
+            HighlightLabel(pPanel,
+                0x10000069 + nIndex,
+                TRUE,
+                COLOR_LABEL_NORMAL);
+        }
+
+        nIndex++;
+    }
+
+    pPanel->InvalidateRect(NULL);
 }
 
 // 0x5F89B0
