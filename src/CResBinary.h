@@ -8,6 +8,14 @@ public:
     CResBinary();
     ~CResBinary();
 
+    // 0x402940
+    void* Demand();
+
+    // 0x402980
+    int Release();
+
+    /* 0050 */ void* field_50;
+
     /* 0054 */ int field_54;
 };
 
