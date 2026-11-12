@@ -981,7 +981,72 @@ void CScreenCreateChar::UpdateMainPanel(CGameSprite* pSprite)
 
             pSprite->DisplayFeats(pText);
 
-            // TODO: Incomplete (spells).
+            if (pSprite->GetNumSpells() > 0) {
+                for (UINT nClassIndex = 0; nClassIndex < CSPELLLIST_NUM_CLASSES; nClassIndex++) {
+                    // __FILE__: .\Include\ObjCreature.h
+                    // __LINE__: 1741
+                    UTIL_ASSERT(nClassIndex <= CSPELLLIST_NUM_CLASSES);
+
+                    // NOTE: Uninline.
+                    if (pSprite->m_spells.Get(nClassIndex)->GetNumSpells() > 0) {
+                        STRREF strHeader;
+                        switch (nClassIndex) {
+                        case 0:
+                            strHeader = 39341;
+                            break;
+                        case 1:
+                            strHeader = 11028;
+                            break;
+                        case 2:
+                            strHeader = 39342;
+                            break;
+                        case 3:
+                            strHeader = 39343;
+                            break;
+                        case 4:
+                            strHeader = 39344;
+                            break;
+                        case 5:
+                            strHeader = 39345;
+                            break;
+                        case 6:
+                            strHeader = 11027;
+                            break;
+                        default:
+                            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCreateChar.cpp
+                            // __LINE__: 1519
+                            UTIL_ASSERT(FALSE);
+                        }
+
+                        UpdateText(pText, "");
+
+                        UpdateTextForceColor(pText,
+                            RGB(200, 200, 0),
+                            "%s",
+                            (LPCSTR)FetchString(strHeader));
+
+                        for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+                            // NOTE: Uninline.
+                            for (UINT nIndex = 0; nIndex < pSprite->m_spells.GetSpellsAtLevel(nClassIndex, nLevel)->m_List.size(); nIndex++) {
+                                // NOTE: Uninline.
+                                UINT nSpellId = pSprite->m_spells.GetSpellsAtLevel(nClassIndex, nLevel)->Get(nIndex)->m_nID;
+
+                                // NOTE: Uninline.
+                                CSpell spell(g_pBaldurChitin->GetObjectGame()->m_spells.Get(nSpellId));
+                                if (spell.pRes != NULL) {
+                                    spell.Demand();
+                                    STRREF strSpellName = spell.GetGenericName();
+                                    spell.Release();
+
+                                    UpdateText(pText,
+                                        "%s",
+                                        (LPCSTR)FetchString(strSpellName));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         pText->SetTopString(pText->m_plstStrings->FindIndex(0));
