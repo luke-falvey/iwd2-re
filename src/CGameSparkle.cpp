@@ -4,6 +4,7 @@
 
 #include "CBaldurChitin.h"
 #include "CGameArea.h"
+#include "CGameSprite.h"
 #include "CInfinity.h"
 #include "CVidInf.h"
 #include "CInfGame.h"
@@ -157,7 +158,210 @@ CGameSparkle::~CGameSparkle()
 // 0x51CE50
 void CGameSparkle::sub_51CE50()
 {
-    // TODO: Incomplete.
+    LONG nGravity = 50;
+    SHORT nDirection;
+    LONG dx;
+    LONG dy;
+
+    // NOTE: Inlined eight-direction test from `m_pos` towards `m_velocity`
+    // (the explosion target).
+    if (m_velocity.y >= m_pos.y) {
+        if (m_velocity.x >= m_pos.x) {
+            nDirection = CGameSprite::DIR_E;
+            dx = m_velocity.x - m_pos.x;
+            dy = m_velocity.y - m_pos.y;
+            if (27 * dy > 16 * dx) {
+                nDirection = CGameSprite::DIR_SE;
+                if (7 * dy > 38 * dx) {
+                    nDirection = CGameSprite::DIR_S;
+                }
+            }
+        } else {
+            nDirection = CGameSprite::DIR_W;
+            dx = m_pos.x - m_velocity.x;
+            dy = m_velocity.y - m_pos.y;
+            if (27 * dy > 16 * dx) {
+                nDirection = CGameSprite::DIR_SW;
+                if (7 * dy > 38 * dx) {
+                    nDirection = CGameSprite::DIR_S;
+                }
+            }
+        }
+    } else {
+        if (m_velocity.x >= m_pos.x) {
+            nDirection = CGameSprite::DIR_E;
+            dy = m_pos.y - m_velocity.y;
+            dx = m_velocity.x - m_pos.x;
+            if (27 * dy > 16 * dx) {
+                nDirection = CGameSprite::DIR_NE;
+                if (7 * dy > 38 * dx) {
+                    nDirection = CGameSprite::DIR_N;
+                }
+            }
+        } else {
+            nDirection = CGameSprite::DIR_W;
+            dy = m_pos.y - m_velocity.y;
+            dx = m_pos.x - m_velocity.x;
+            if (27 * dy > 16 * dx) {
+                nDirection = CGameSprite::DIR_NW;
+                if (7 * dy > 38 * dx) {
+                    nDirection = CGameSprite::DIR_N;
+                }
+            }
+        }
+    }
+
+    m_rBounding.SetRect(max(m_pos.x - 50, 0),
+        max(m_pos.y - m_posZ - 50, 0),
+        m_pos.x + 50,
+        m_pos.y - m_posZ + 50);
+
+    LONG nVelX1;
+    LONG nVelY1;
+    LONG nVelX2;
+    LONG nVelY2;
+    LONG nVelX3;
+    LONG nVelY3;
+
+    // NOTE: The original's jump table has a default case that reads
+    // uninitialised locals; it is unreachable.
+    switch (nDirection) {
+    case 0: // CGameSprite::DIR_S
+        nVelX1 = 700;
+        nVelY1 = 700;
+        nVelX2 = 0;
+        nVelY2 = 1000;
+        nVelX3 = -700;
+        nVelY3 = 700;
+        break;
+    case 2: // CGameSprite::DIR_SW
+        nVelX1 = 0;
+        nVelY1 = 1000;
+        nVelX2 = -700;
+        nVelY2 = 700;
+        nVelX3 = -1000;
+        nVelY3 = 0;
+        break;
+    case 4: // CGameSprite::DIR_W
+        nVelX1 = -700;
+        nVelY1 = 700;
+        nVelX2 = -1000;
+        nVelY2 = 0;
+        nVelX3 = -700;
+        nVelY3 = -700;
+        break;
+    case 6: // CGameSprite::DIR_NW
+        nVelX1 = -1000;
+        nVelY1 = 0;
+        nVelX2 = -700;
+        nVelY2 = -700;
+        nVelX3 = 0;
+        nVelY3 = -1000;
+        break;
+    case 8: // CGameSprite::DIR_N
+        nVelX1 = -700;
+        nVelY1 = -700;
+        nVelX2 = 0;
+        nVelY2 = -1000;
+        nVelX3 = 700;
+        nVelY3 = -700;
+        break;
+    case 10: // CGameSprite::DIR_NE
+        nVelX1 = 0;
+        nVelY1 = -1000;
+        nVelX2 = 700;
+        nVelY2 = -700;
+        nVelX3 = 1000;
+        nVelY3 = 0;
+        break;
+    case 12: // CGameSprite::DIR_E
+        nVelX1 = 700;
+        nVelY1 = -700;
+        nVelX2 = 1000;
+        nVelY2 = 0;
+        nVelX3 = 700;
+        nVelY3 = 700;
+        break;
+    case 14: // CGameSprite::DIR_SE
+        nVelX1 = 1000;
+        nVelY1 = 0;
+        nVelX2 = 700;
+        nVelY2 = 700;
+        nVelX3 = 0;
+        nVelY3 = 1000;
+        break;
+    }
+
+    LONG nBaseY = m_pos.y - 10;
+    LONG nPosZ = m_posZ << CParticle::RESOLUTION_INC;
+    LONG nBaseX = m_pos.x - 10;
+    COLORREF rgbColor = g_pChitin->GetCurrentVideoMode()->ApplyBrightnessContrast(g_pChitin->GetCurrentVideoMode()->ApplyFadeAmount(m_aColors[0]));
+
+    // NOTE: The velocities are truncated to a SHORT.
+    for (INT k = 0; k < 14; k++) {
+        LONG r1 = rand() % 10;
+        LONG r2 = rand() % 10;
+
+        LONG nPosX = (r1 * 2 + nBaseX) << CParticle::RESOLUTION_INC;
+        LONG nPosY = ((r2 * 2 + nBaseY) * 4 / 3) << CParticle::RESOLUTION_INC;
+
+        m_particleList.AddTail(new CParticle(nPosX,
+            nPosY,
+            nPosZ,
+            static_cast<SHORT>(nVelX1),
+            static_cast<SHORT>(nVelY1),
+            1000,
+            rgbColor,
+            0,
+            nGravity,
+            CParticle::CONSTANT_VELOCITY));
+
+        nGravity += 10;
+    }
+
+    nGravity = 50;
+    for (INT k = 0; k < 14; k++) {
+        LONG r1 = rand() % 10;
+        LONG r2 = rand() % 10;
+
+        LONG nPosX = (r1 * 2 + nBaseX) << CParticle::RESOLUTION_INC;
+        LONG nPosY = ((r2 * 2 + nBaseY) * 4 / 3) << CParticle::RESOLUTION_INC;
+
+        m_particleList.AddTail(new CParticle(nPosX,
+            nPosY,
+            nPosZ,
+            static_cast<SHORT>(nVelX2),
+            static_cast<SHORT>(nVelY2),
+            1000,
+            rgbColor,
+            0,
+            nGravity,
+            CParticle::CONSTANT_VELOCITY));
+
+        nGravity += 10;
+    }
+
+    nGravity = 50;
+    for (INT k = 0; k < 14; k++) {
+        LONG r1 = rand() % 10;
+        LONG r2 = rand() % 10;
+
+        LONG nPosX = (r1 * 2 + nBaseX) << CParticle::RESOLUTION_INC;
+        LONG nPosY = ((r2 * 2 + nBaseY) * 4 / 3) << CParticle::RESOLUTION_INC;
+
+        m_particleList.AddTail(new CParticle(nPosX,
+            nPosY,
+            nPosZ,
+            static_cast<SHORT>(nVelX3),
+            static_cast<SHORT>(nVelY3),
+            1000,
+            rgbColor,
+            0,
+            nGravity,
+            CParticle::CONSTANT_VELOCITY));
+
+        nGravity += 10;
+    }
 }
 
 // 0x51C3D0
