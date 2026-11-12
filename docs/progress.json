@@ -4,17 +4,19 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 8905,
-  "functions_done": 7906,
-  "functions_complete": 7899,
-  "incomplete_markers": 8,
+  "functions_total": 8903,
+  "functions_done": 7922,
+  "functions_complete": 7912,
+  "incomplete_markers": 11,
   "incomplete_by_file": {
     "src/CVidBlitter.cpp": 5,
+    "src/CGameDoor.cpp": 2,
     "src/BalDataTypes.h": 1,
+    "src/CGameTrigger.cpp": 1,
     "src/CScreenChapter.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10529,
+  "annotations_total": 10545,
   "annotations_not_function_start": 2601,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -455,10 +457,6 @@
     "0x478480": [
       "src/CGameArea.cpp",
       "src/CGameArea.cpp"
-    ],
-    "0x47E040": [
-      "src/CGameContainer.cpp",
-      "src/CGameDoor.cpp"
     ],
     "0x4A51D0": [
       "src/CGameEffect.cpp",
@@ -3821,10 +3819,25 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3800115,
-  "bytes_done": 3612428,
-  "bytes_complete": 3609743,
+  "bytes_total": 3794822,
+  "bytes_done": 3640085,
+  "bytes_complete": 3635696,
   "largest_stubs": [
+    {
+      "addr": "0x48B3C0",
+      "name": "FUN_0048b3c0",
+      "size": 568
+    },
+    {
+      "addr": "0x48B600",
+      "name": "FUN_0048b600",
+      "size": 568
+    },
+    {
+      "addr": "0x4D02C0",
+      "name": "FUN_004d02c0",
+      "size": 568
+    },
     {
       "addr": "0x7B7070",
       "name": "FUN_007b7070",
@@ -3865,7 +3878,7 @@
     {
       "addr": "0x40F940",
       "name": "CResRef_operator_equ-equ",
-      "translated_callers": 72,
+      "translated_callers": 73,
       "size": 31
     },
     {
@@ -3933,12 +3946,6 @@
       "name": "FUN_0040fa50",
       "translated_callers": 3,
       "size": 25
-    },
-    {
-      "addr": "0x425B80",
-      "name": "FUN_00425b80",
-      "translated_callers": 3,
-      "size": 76
     },
     {
       "addr": "0x4537F0",
@@ -4161,6 +4168,12 @@
       "name": "FUN_00537010",
       "translated_callers": 1,
       "size": 161
+    },
+    {
+      "addr": "0x5370C0",
+      "name": "FUN_005370c0",
+      "translated_callers": 1,
+      "size": 217
     }
   ]
 }
