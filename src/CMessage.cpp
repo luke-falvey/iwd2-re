@@ -720,6 +720,15 @@ const BYTE CBaldurMessage::MSG_SUBTYPE_RESOURCE_REPLY = 82;
 // 0x84CFB3
 const BYTE CBaldurMessage::MSG_SUBTYPE_RESOURCE_SUGGEST = 83;
 
+// 0x84CFB5
+const BYTE CBaldurMessage::MSG_TYPE_REST = 114;
+
+// 0x84CFB6
+const BYTE CBaldurMessage::MSG_SUBTYPE_REST_REQUEST = 82;
+
+// 0x84CFB7
+const BYTE CBaldurMessage::MSG_SUBTYPE_REST_ANNOUNCE = 65;
+
 // 0x84CFB8
 const BYTE CBaldurMessage::MSG_TYPE_SIGNAL = 83;
 
@@ -6750,6 +6759,59 @@ BOOLEAN CBaldurMessage::sub_4361D0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
     return TRUE;
 }
 
+// 0x436290
+BOOLEAN CBaldurMessage::SendRestRequestToServer(INT nHP, BOOLEAN bRenting, BOOLEAN bMovie)
+{
+    CString sHostName;
+
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        return FALSE;
+    }
+
+    // NOTE: Uninline.
+    g_pChitin->cNetwork.GetHostPlayerName(sHostName);
+
+    if (strcmp(sHostName, "") == 0) {
+        return FALSE;
+    }
+
+    static DWORD dwLastRequestTime = GetTickCount() - 2500;
+    DWORD dwNow = GetTickCount();
+    if (dwNow < dwLastRequestTime + 2500) {
+        return FALSE;
+    }
+
+    dwLastRequestTime = dwNow;
+
+    DWORD dwSize = sizeof(INT) + sizeof(BYTE) + sizeof(BYTE);
+    BYTE* pMessage = CreateBuffer(dwSize);
+    if (pMessage == NULL) {
+        return FALSE;
+    }
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<INT*>(pMessage + cnt) = nHP;
+    cnt += sizeof(INT);
+
+    pMessage[cnt] = bRenting;
+    cnt += sizeof(BYTE);
+
+    pMessage[cnt] = bMovie;
+
+    g_pChitin->cNetwork.SendSpecificMessage(sHostName,
+        CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_REST,
+        MSG_SUBTYPE_REST_REQUEST,
+        pMessage,
+        dwSize);
+
+    DestroyBuffer(pMessage);
+
+    return TRUE;
+}
+
 // 0x436440
 BOOLEAN CBaldurMessage::sub_436440(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
@@ -6785,6 +6847,42 @@ BOOLEAN CBaldurMessage::sub_436440(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
     } else {
         pWorld->StartRestMultiplayerHost(nHP, bRenting, bMovie);
     }
+
+    return TRUE;
+}
+
+// 0x436500
+BOOLEAN CBaldurMessage::SendRestAnnounce(INT nHP, BOOLEAN bRenting, BOOLEAN bHealParty)
+{
+    if (!g_pChitin->cNetwork.m_bConnectionEstablished
+        || !g_pChitin->cNetwork.m_bIsHost) {
+        return FALSE;
+    }
+
+    DWORD dwSize = sizeof(INT) + sizeof(BYTE) + sizeof(BYTE);
+    BYTE* pMessage = CreateBuffer(dwSize);
+    if (pMessage == NULL) {
+        return FALSE;
+    }
+
+    DWORD cnt = 0;
+
+    *reinterpret_cast<INT*>(pMessage + cnt) = nHP;
+    cnt += sizeof(INT);
+
+    pMessage[cnt] = bRenting;
+    cnt += sizeof(BYTE);
+
+    pMessage[cnt] = bHealParty;
+
+    g_pChitin->cNetwork.SendSpecificMessage(CString(""),
+        CNetwork::SEND_ALL_PLAYERS | CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_REST,
+        MSG_SUBTYPE_REST_ANNOUNCE,
+        pMessage,
+        dwSize);
+
+    DestroyBuffer(pMessage);
 
     return TRUE;
 }

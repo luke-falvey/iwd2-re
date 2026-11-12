@@ -357,3 +357,13 @@
 # DestructElements<8-byte element>(p, n) (MFC instantiation): calls the element
 # destructor 0x6F2D70 for each of n elements, advancing by 8.
 0x728160
+
+# std::vector<16-byte element>::erase(first, last) (MSVC 6 STL instantiation): copies
+# the elements from last.._Last (+8) down to first in 16-byte steps, sets _Last to the
+# new end and returns first.
+0x448630
+
+# CAIObjectType scalar deleting destructor (implicit): calls ~CAIObjectType (0x6F2D70)
+# and deletes this when the flag argument has bit 0 set; returns this. Called as
+# `delete p` from CInfGame::~CInfGame (0x59EF08).
+0x59F4E0

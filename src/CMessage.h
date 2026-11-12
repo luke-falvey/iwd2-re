@@ -254,6 +254,10 @@ public:
     static const BYTE MSG_SUBTYPE_RESOURCE_REPLY;
     static const BYTE MSG_SUBTYPE_RESOURCE_SUGGEST;
 
+    static const BYTE MSG_TYPE_REST;
+    static const BYTE MSG_SUBTYPE_REST_REQUEST;
+    static const BYTE MSG_SUBTYPE_REST_ANNOUNCE;
+
     static const BYTE MSG_TYPE_SIGNAL;
     static const BYTE MSG_SUBTYPE_SIGNAL;
     static const BYTE MSG_SUBTYPE_SIGNAL_REQUEST;
@@ -483,7 +487,9 @@ public:
     BOOLEAN sub_435C30(CString sArea, DWORD nCurrentWorldLink, CString sText, WORD wArg3, BYTE nArg4, DWORD dwArg5);
     BOOLEAN sub_435E00(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_4361D0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN SendRestRequestToServer(INT nHP, BOOLEAN bRenting, BOOLEAN bMovie);
     BOOLEAN sub_436440(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN SendRestAnnounce(INT nHP, BOOLEAN bRenting, BOOLEAN bHealParty);
     BOOLEAN sub_436610(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_436860(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_436B60(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);

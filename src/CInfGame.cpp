@@ -1386,7 +1386,51 @@ void CInfGame::DestroyGame(BOOLEAN bProgressBarRequired, BOOLEAN bProgressBarInP
 // 0x5A0160
 void CInfGame::sub_5A0160()
 {
-    // TODO: Incomplete.
+    CFileFind fileFind;
+    CString sDirName;
+    CString sPattern;
+    CString sResolved;
+    CString sFileName;
+    CString sBaseName;
+    CString sExtension;
+    CString sValue;
+
+    sDirName = g_pChitin->cDimm.cResCache.m_sDirName;
+    sPattern = sDirName + "data\\*.*";
+
+    if (!g_pChitin->lAliases.ResolveFileName(sPattern, sResolved)) {
+        sResolved = sPattern;
+    }
+
+    BOOL bWorking = fileFind.FindFile(sResolved);
+    while (bWorking) {
+        bWorking = fileFind.FindNextFile();
+        sFileName = fileFind.GetFileName();
+
+        int nSlash;
+        while ((nSlash = sFileName.Find('\\')) != -1) {
+            sFileName = sFileName.Right(sFileName.GetLength() - nSlash - 1);
+        }
+
+        sBaseName = sFileName.Left(sFileName.GetLength() - 4);
+        sExtension = sFileName.Right(4);
+        sExtension.MakeUpper();
+
+        if (strcmp(sExtension, ".BIF") == 0) {
+            CPoint ptLocation;
+            if (m_ruleTables.m_tCacheValidation.Find(sBaseName, ptLocation, FALSE) == TRUE) {
+                // NOTE: Uninline.
+                sValue = m_ruleTables.m_tCacheValidation.GetAt(CPoint(1, ptLocation.y));
+            } else {
+                // NOTE: Uninline.
+                sValue = m_ruleTables.m_tCacheValidation.GetDefault();
+            }
+
+            LONG nValue = atoi(sValue.GetBuffer(sValue.GetLength()));
+
+            g_pChitin->cDimm.cResCache.ValidateFile(g_pChitin->cDimm.GetResFileID(sBaseName), nValue);
+        }
+    }
 }
 
 // 0x5A04B0
@@ -1750,7 +1794,142 @@ CString CInfGame::GetDirSounds()
 // 0x5A1AB0
 void CInfGame::CharacterExport(LONG nCharacterId, CString sFileName)
 {
-    // TODO: Incomplete.
+    CCharacterFile cCharacterData;
+    CBiographyFile cBiographyData;
+    BOOLEAN bTemporaryKey = FALSE;
+    CGameSprite* pSprite;
+
+    BYTE rc = m_cObjectArray.GetShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        reinterpret_cast<CGameObject**>(&pSprite),
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    BYTE* pCharacter;
+    LONG nCharacterSize;
+    WORD nFacing;
+    pSprite->Marshal(&pCharacter, &nCharacterSize, &nFacing, FALSE, FALSE);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 4302
+    UTIL_ASSERT(pCharacter != NULL);
+
+    LONG nExportCharacter = sizeof(EXPORT_CHARACTER_HEADER) + nCharacterSize;
+    BYTE* pExportCharacter = new BYTE[nExportCharacter];
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 4307
+    UTIL_ASSERT(pExportCharacter != NULL);
+
+    memset(pExportCharacter, 0, nExportCharacter);
+
+    EXPORT_CHARACTER_HEADER* pHeader = reinterpret_cast<EXPORT_CHARACTER_HEADER*>(pExportCharacter);
+
+    memcpy(pHeader, "CHR V2.2", 8);
+    memset(pHeader->szName, 0, sizeof(pHeader->szName));
+    strncpy(pHeader->szName, pSprite->GetName(), 32);
+
+    for (int index = 0; index < 8; index++) {
+        pHeader->quickWeaponSlots[index] = pSprite->m_quickWeapons[index].m_abilityId.m_itemNum;
+        pHeader->quickWeaponAbilities[index] = pSprite->m_quickWeapons[index].m_abilityId.m_abilityNum;
+        pHeader->quickWeaponsField_1A4[index] = pSprite->field_3D3A[index];
+    }
+
+    for (int index = 0; index < 9; index++) {
+        pSprite->m_quickSpells[index].m_abilityId.m_res.GetResRef(pHeader->quickSpells[index]);
+        pHeader->quickSpellsClass[index] = pSprite->m_quickSpells[index].m_abilityId.m_nClass;
+        pHeader->quickSpellsField_164[index] = pSprite->m_quickSpells[index].m_abilityId.field_1D;
+        pHeader->quickSpellsKit[index] = static_cast<BYTE>(pSprite->m_quickSpells[index].m_abilityId.field_1E);
+    }
+
+    for (int index = 0; index < 3; index++) {
+        pHeader->quickItemSlots[index] = pSprite->m_quickItems[index].m_abilityId.m_itemNum;
+        pHeader->quickItemAbilities[index] = pSprite->m_quickItems[index].m_abilityId.m_abilityNum;
+    }
+
+    for (int index = 0; index < 9; index++) {
+        pSprite->m_quickInnates[index].m_abilityId.m_res.GetResRef(pHeader->quickInnates[index]);
+    }
+
+    for (int index = 0; index < 9; index++) {
+        pSprite->m_quickSongs[index].m_abilityId.m_res.GetResRef(pHeader->quickSongs[index]);
+    }
+
+    for (int index = 0; index < 9; index++) {
+        pHeader->field_13E[index] = pSprite->field_3D14[index];
+    }
+
+    pHeader->nLastSpellbookClassIndex = pSprite->m_nLastSpellbookClassIndex;
+    pHeader->nLastSpellbookSpellLevel = pSprite->m_nLastSpellbookSpellLevel;
+    pHeader->field_176[2] = pSprite->m_nLastSong;
+    pHeader->nCreatureOffset = sizeof(EXPORT_CHARACTER_HEADER);
+    pHeader->nCreatureSize = nCharacterSize;
+
+    CResRef cSecondarySounds = pSprite->m_secondarySounds;
+    cSecondarySounds.GetResRef(pHeader->secondarySounds);
+
+    CString sSoundSet;
+    sSoundSet = reinterpret_cast<char*>(pSprite->field_725A);
+    memcpy(pHeader->szSoundSet, sSoundSet, sSoundSet.GetLength());
+
+    LONG cnt = sizeof(EXPORT_CHARACTER_HEADER);
+    memcpy(pExportCharacter + cnt, pCharacter, nCharacterSize);
+    cnt += nCharacterSize;
+    delete[] pCharacter;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 4364
+    UTIL_ASSERT(cnt == nExportCharacter);
+
+    // NOTE: Uninline.
+    cCharacterData.SetResRef(CResRef(sFileName), TRUE, TRUE);
+
+    if (cCharacterData.GetResRef() == "") {
+        bTemporaryKey = TRUE;
+        g_pChitin->cDimm.AddTemporaryKey(m_sCharactersDir, CResRef(sFileName), 1018);
+
+        // NOTE: Uninline.
+        cCharacterData.SetResRef(CResRef(sFileName), TRUE, TRUE);
+    }
+
+    cCharacterData.GetRes()->Write(m_sCharactersDir, pExportCharacter, nExportCharacter);
+
+    if (bTemporaryKey == TRUE) {
+        g_pChitin->cDimm.RemoveTemporaryKey(m_sCharactersDir, CResRef(sFileName), 1018);
+    }
+
+    delete[] pExportCharacter;
+
+    STRREF strBiography = pSprite->m_baseStats.m_biography;
+    STR_RES strRes;
+    g_pBaldurChitin->GetTlkTable().Fetch(strBiography, strRes);
+
+    // NOTE: Uninline.
+    cBiographyData.SetResRef(CResRef(sFileName), TRUE, TRUE);
+
+    bTemporaryKey = FALSE;
+    if (cBiographyData.GetResRef() == "") {
+        bTemporaryKey = TRUE;
+        g_pChitin->cDimm.AddTemporaryKey(m_sCharactersDir, CResRef(sFileName), 1022);
+
+        // NOTE: Uninline.
+        cBiographyData.SetResRef(CResRef(sFileName), TRUE, TRUE);
+    }
+
+    LONG nLength = strRes.szText.GetLength();
+    cBiographyData.GetRes()->Write(m_sCharactersDir,
+        strRes.szText.GetBuffer(0),
+        (nLength > 0) + nLength);
+
+    if (bTemporaryKey == TRUE) {
+        g_pChitin->cDimm.RemoveTemporaryKey(m_sCharactersDir, CResRef(sFileName), 1022);
+    }
+
+    m_cObjectArray.ReleaseShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // 0x5A24D0
@@ -3505,8 +3684,8 @@ void CInfGame::Unmarshal(BYTE* pGame, LONG nGame, BOOLEAN bProgressBarInPlace)
     UTIL_ASSERT(cnt == (DWORD)nGame);
 }
 
-// Converts "CRE V2.0" creature to "CRE V2.1" format (reallocates
-// `*ppCreature`).
+// Converts "CRE V2.0" creature to "CRE V2.1" format (rewrites
+// `*ppCreature` in place; the size does not change).
 //
 // NOTE: Uses a register calling convention (`ppCreature` in ECX,
 // `pCreatureSize` in EDX).
@@ -3514,7 +3693,462 @@ void CInfGame::Unmarshal(BYTE* pGame, LONG nGame, BOOLEAN bProgressBarInPlace)
 // 0x5A3DB0
 static void sub_5A3DB0(BYTE** ppCreature, LONG* pCreatureSize)
 {
-    // TODO: Incomplete.
+#define OLD(type, offset) (*reinterpret_cast<type*>(pOld + (offset)))
+#define NEW(type, offset) (*reinterpret_cast<type*>(pNew + (offset)))
+#define OLD_AT(ptr, type) (*reinterpret_cast<type*>(ptr))
+#define HALF(n) (((n) & 0xFE) > 2 ? (n) >> 1 : 1)
+#define THIRD(n) ((n) / 3 > 1 ? (n) / 3 : 1)
+
+    BYTE* pOld = *ppCreature;
+    BYTE* pNew = new BYTE[*pCreatureSize];
+    memset(pNew, 0, *pCreatureSize);
+
+    memcpy(pNew, "CRE V2.1", 8);
+
+    memset(pNew + 8, 0, 0xDF * sizeof(DWORD));
+
+    NEW(DWORD, 0x08) = OLD(DWORD, 0x08);
+    NEW(DWORD, 0x0C) = OLD(DWORD, 0x0C);
+    NEW(DWORD, 0x10) = OLD(DWORD, 0x10);
+
+    DWORD nXP = OLD(DWORD, 0x14);
+    NEW(DWORD, 0x14) = nXP;
+
+    if (nXP > 50000) {
+        NEW(BYTE, 0x25A) = 17;
+    } else if (nXP > 30000) {
+        NEW(BYTE, 0x25A) = 16;
+    } else if (nXP > 20000) {
+        NEW(BYTE, 0x25A) = 15;
+    } else if (nXP > 15000) {
+        NEW(BYTE, 0x25A) = 14;
+    } else if (nXP > 12000) {
+        NEW(BYTE, 0x25A) = 13;
+    } else if (nXP > 10000) {
+        NEW(BYTE, 0x25A) = 12;
+    } else if (nXP > 8000) {
+        NEW(BYTE, 0x25A) = 11;
+    } else if (nXP > 6000) {
+        NEW(BYTE, 0x25A) = 10;
+    } else if (nXP > 4000) {
+        NEW(BYTE, 0x25A) = 9;
+    } else if (nXP > 2000) {
+        NEW(BYTE, 0x25A) = 8;
+    } else if (nXP > 1400) {
+        NEW(BYTE, 0x25A) = 7;
+    } else if (nXP > 420) {
+        NEW(BYTE, 0x25A) = 6;
+    } else if (nXP > 175) {
+        NEW(BYTE, 0x25A) = 5;
+    } else if (nXP > 120) {
+        NEW(BYTE, 0x25A) = 4;
+    } else if (nXP > 90) {
+        NEW(BYTE, 0x25A) = 3;
+    } else if (nXP > 60) {
+        NEW(BYTE, 0x25A) = 2;
+    } else if (nXP > 0) {
+        NEW(BYTE, 0x25A) = 1;
+    } else {
+        NEW(BYTE, 0x25A) = 0;
+    }
+
+    NEW(DWORD, 0x18) = OLD(DWORD, 0x18);
+    NEW(DWORD, 0x1C) = OLD(DWORD, 0x1C);
+    NEW(DWORD, 0x20) = OLD(DWORD, 0x20);
+    NEW(WORD, 0x24) = OLD(WORD, 0x24);
+    NEW(WORD, 0x26) = OLD(WORD, 0x26);
+    NEW(DWORD, 0x28) = OLD(DWORD, 0x28);
+    NEW(DWORD, 0x2C) = OLD(DWORD, 0x2C);
+    NEW(WORD, 0x30) = OLD(WORD, 0x30);
+    NEW(BYTE, 0x32) = OLD(BYTE, 0x32);
+    NEW(BYTE, 0x33) = OLD(BYTE, 0x33);
+    NEW(DWORD, 0x34) = OLD(DWORD, 0x34);
+    NEW(DWORD, 0x38) = OLD(DWORD, 0x38);
+    NEW(DWORD, 0x3C) = OLD(DWORD, 0x3C);
+    NEW(DWORD, 0x40) = OLD(DWORD, 0x40);
+    NEW(BYTE, 0x44) = OLD(BYTE, 0x44);
+    NEW(WORD, 0x46) = OLD(WORD, 0x48);
+    NEW(WORD, 0x48) = OLD(WORD, 0x4A);
+    NEW(WORD, 0x4A) = OLD(WORD, 0x4C);
+    NEW(WORD, 0x4C) = OLD(WORD, 0x4E);
+    NEW(WORD, 0x4E) = OLD(WORD, 0x50);
+    NEW(BYTE, 0x50) = OLD(BYTE, 0x52);
+    NEW(BYTE, 0x51) = OLD(BYTE, 0x53);
+    NEW(BYTE, 0x52) = OLD(BYTE, 0x54);
+    NEW(BYTE, 0x53) = OLD(BYTE, 0x55);
+    NEW(BYTE, 0x54) = OLD(BYTE, 0x56);
+    NEW(BYTE, 0x55) = OLD(BYTE, 0x59);
+    NEW(BYTE, 0x56) = OLD(BYTE, 0x5A);
+    NEW(BYTE, 0x57) = OLD(BYTE, 0x5B);
+    NEW(BYTE, 0x58) = OLD(BYTE, 0x5C);
+    NEW(BYTE, 0x59) = OLD(char, 0x5D) / 10;
+    NEW(BYTE, 0x5A) = OLD(BYTE, 0x5E);
+    NEW(BYTE, 0x5B) = OLD(BYTE, 0x5F);
+    NEW(BYTE, 0x5C) = OLD(BYTE, 0x60);
+    NEW(BYTE, 0x5D) = OLD(BYTE, 0x61);
+    NEW(BYTE, 0x5E) = OLD(BYTE, 0x62);
+    NEW(BYTE, 0x5F) = OLD(BYTE, 0x63);
+    NEW(BYTE, 0x65) = OLD(BYTE, 0x6B);
+    NEW(BYTE, 0x66) = OLD(BYTE, 0x6C);
+    NEW(BYTE, 0x67) = OLD(BYTE, 0x6D);
+    NEW(BYTE, 0x68) = OLD(BYTE, 0x82);
+    memcpy(pNew + 0x6A, pOld + 0x84, 8 * sizeof(DWORD));
+    memcpy(pNew + 0xAC, pOld + 0xA4, 0x40 * sizeof(DWORD));
+    NEW(DWORD, 0x1AC) = OLD(DWORD, 0x1A4);
+    NEW(DWORD, 0x1B0) = OLD(DWORD, 0x1A8);
+    NEW(DWORD, 0x1B4) = OLD(DWORD, 0x1AC);
+    NEW(DWORD, 0x1B8) = OLD(DWORD, 0x1B0);
+    NEW(DWORD, 0x1BC) = OLD(DWORD, 0x1B4);
+    NEW(BYTE, 0x258) = OLD(BYTE, 0x220);
+    NEW(BYTE, 0x259) = OLD(BYTE, 0x221);
+    NEW(DWORD, 0x25B) = OLD(DWORD, 0x224);
+    NEW(DWORD, 0x25F) = OLD(DWORD, 0x228);
+    NEW(BYTE, 0x263) = OLD(BYTE, 0x230);
+    NEW(BYTE, 0x265) = OLD(BYTE, 0x237);
+    NEW(BYTE, 0x266) = OLD(BYTE, 0x238);
+    NEW(BYTE, 0x267) = OLD(BYTE, 0x23A);
+    NEW(BYTE, 0x268) = OLD(BYTE, 0x23B);
+    NEW(BYTE, 0x269) = OLD(BYTE, 0x23C);
+    NEW(BYTE, 0x26A) = OLD(BYTE, 0x23D);
+    NEW(BYTE, 0x26B) = OLD(BYTE, 0x23E);
+    NEW(BYTE, 0x26C) = OLD(BYTE, 0x23F);
+    NEW(BYTE, 0x26D) = OLD(BYTE, 0x240);
+    NEW(WORD, 0x26E) = OLD(WORD, 0x242);
+
+    NEW(BYTE, 0x218) = 0;
+    NEW(BYTE, 0x219) = 0;
+    NEW(BYTE, 0x21A) = 0;
+    NEW(BYTE, 0x21B) = 0;
+    NEW(BYTE, 0x21C) = 0;
+    NEW(BYTE, 0x21D) = 0;
+    NEW(BYTE, 0x21F) = 0;
+    NEW(BYTE, 0x21E) = OLD(BYTE, 0x45) / 10;
+    NEW(BYTE, 0x220) = OLD(BYTE, 0x66);
+    NEW(BYTE, 0x221) = OLD(BYTE, 0x68) / 10;
+    NEW(BYTE, 0x222) = OLD(BYTE, 0x67) / 10;
+    NEW(BYTE, 0x223) = OLD(BYTE, 0x6A) / 10;
+    NEW(BYTE, 0x225) = 0;
+    NEW(BYTE, 0x224) = OLD(BYTE, 0x69) / 10;
+    NEW(BYTE, 0x226) = OLD(BYTE, 0x231) / 10;
+    NEW(BYTE, 0x227) = OLD(BYTE, 0x83) / 10;
+
+    NEW(DWORD, 0x270) = 0;
+    NEW(DWORD, 0x274) = OLD(DWORD, 0x248);
+    NEW(DWORD, 0x278) = OLD(DWORD, 0x24C);
+    NEW(DWORD, 0x27C) = OLD(DWORD, 0x250);
+    NEW(DWORD, 0x280) = OLD(DWORD, 0x254);
+    NEW(DWORD, 0x284) = OLD(DWORD, 0x258);
+    NEW(DWORD, 0x288) = OLD(DWORD, 0x25C);
+    NEW(DWORD, 0x28C) = OLD(DWORD, 0x260);
+    NEW(DWORD, 0x290) = OLD(DWORD, 0x264);
+    NEW(DWORD, 0x294) = OLD(DWORD, 0x268);
+    NEW(DWORD, 0x298) = OLD(DWORD, 0x26C);
+    NEW(BYTE, 0x29C) = OLD(BYTE, 0x270);
+    NEW(BYTE, 0x29D) = OLD(BYTE, 0x271);
+    NEW(BYTE, 0x29E) = OLD(BYTE, 0x272);
+    NEW(DWORD, 0x2A0) = OLD(DWORD, 0x274);
+    NEW(DWORD, 0x2A4) = OLD(DWORD, 0x278);
+    NEW(WORD, 0x2A8) = OLD(WORD, 0x27C);
+    memcpy(pNew + 0x2AA, pOld + 0x27E, 8 * sizeof(DWORD));
+    memcpy(pNew + 0x2CA, pOld + 0x29E, 8 * sizeof(DWORD));
+    NEW(BYTE, 0x2EA) = OLD(BYTE, 0x2BE);
+    NEW(WORD, 0x2EC) = OLD(WORD, 0x2C0);
+    NEW(WORD, 0x2EE) = OLD(WORD, 0x2C2);
+    NEW(BYTE, 0x2F0) = OLD(BYTE, 0x2C4);
+    NEW(BYTE, 0x2F1) = OLD(BYTE, 0x2C5);
+    NEW(DWORD, 0x2F2) = OLD(DWORD, 0x2C6);
+    NEW(DWORD, 0x2F6) = OLD(DWORD, 0x2CA);
+    NEW(DWORD, 0x2FA) = OLD(DWORD, 0x2CE);
+    NEW(BYTE, 0x2FE) = OLD(BYTE, 0x2D2);
+    NEW(BYTE, 0x2FF) = OLD(BYTE, 0x2D3);
+    NEW(BYTE, 0x300) = OLD(BYTE, 0x2D4);
+    NEW(BYTE, 0x301) = OLD(BYTE, 0x2D5);
+    NEW(BYTE, 0x302) = OLD(BYTE, 0x2D6);
+    NEW(BYTE, 0x303) = OLD(BYTE, 0x2D7);
+
+    BYTE* pTable = pNew + 0x384;
+    memset(pTable, 0, 0x1A * sizeof(DWORD) + sizeof(WORD));
+    pTable[0] = OLD(BYTE, 0x2D8);
+    pTable[1] = OLD(BYTE, 0x2D9);
+    pTable[2] = OLD(BYTE, 0x2DA);
+    *reinterpret_cast<DWORD*>(pTable + 0x32) = 0;
+
+    if (OLD(BYTE, 0x2DB) == 0 || OLD(BYTE, 0x2DB) == 0xFF) {
+        OLD(BYTE, 0x2DB) = 2;
+    }
+
+    OLD(BYTE, 0x234) = OLD(BYTE, 0x234) > 1 ? OLD(BYTE, 0x234) : 1;
+
+    switch (OLD(BYTE, 0x2DB)) {
+    case 1:
+    case 202:
+        NEW(DWORD, 0x3B6) = 0x400;
+        NEW(BYTE, 0x95) = OLD(BYTE, 0x234);
+        pTable[3] = 0xB;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        NEW(DWORD, 0x270) = 0x4000;
+        break;
+    case 2:
+    case 203:
+        // NOTE: The mask is wider than the 16-bit value, so the test is
+        // always false.
+        if ((OLD(WORD, 0x246) & 0x40000000) != 0) {
+            *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x1;
+            NEW(BYTE, 0x8B) = OLD(BYTE, 0x234);
+            pTable[3] = 0x1;
+            NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        } else {
+            *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x10;
+            NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+            pTable[3] = 0x5;
+            NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        }
+        break;
+    case 3:
+    case 204:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x4;
+        NEW(BYTE, 0x8D) = OLD(BYTE, 0x234);
+        pTable[3] = 0x3;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    case 4:
+    case 205:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x100;
+        NEW(BYTE, 0x93) = OLD(BYTE, 0x234);
+        pTable[3] = 0x9;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    case 5:
+    case 206:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x2;
+        NEW(BYTE, 0x8C) = OLD(BYTE, 0x234);
+        pTable[3] = 0x2;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    case 6:
+    case 207:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x40;
+        NEW(BYTE, 0x91) = OLD(BYTE, 0x234);
+        pTable[3] = 0x7;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        NEW(DWORD, 0x270) = 0x1;
+        break;
+    case 7:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x410;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x235);
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 8:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x14;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x8D) = OLD(BYTE, 0x235);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 9:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x110;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x93) = OLD(BYTE, 0x235);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 10:
+        OLD(BYTE, 0x234) = THIRD(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = THIRD(OLD(BYTE, 0x235));
+        OLD(BYTE, 0x236) = THIRD(OLD(BYTE, 0x236));
+        NEW(DWORD, 0x3B6) = 0x510;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x95) = OLD(BYTE, 0x235);
+        NEW(BYTE, 0x93) = OLD(BYTE, 0x236);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x236) + OLD(BYTE, 0x235);
+        break;
+    case 11:
+    case 208:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x8;
+        NEW(BYTE, 0x8E) = OLD(BYTE, 0x234);
+        pTable[3] = 0x4;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    case 12:
+    case 209:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x80;
+        NEW(BYTE, 0x92) = OLD(BYTE, 0x234);
+        pTable[3] = 0x8;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    case 13:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x500;
+        NEW(BYTE, 0x95) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x93) = OLD(BYTE, 0x235);
+        pTable[3] = 0xB;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 14:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        NEW(DWORD, 0x3B6) = 0x404;
+        NEW(BYTE, 0x8D) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x95) = OLD(BYTE, 0x235);
+        pTable[3] = 0x3;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 15:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        NEW(DWORD, 0x3B6) = 0x104;
+        NEW(BYTE, 0x8D) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x93) = OLD(BYTE, 0x235);
+        pTable[3] = 0x3;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 16:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        NEW(DWORD, 0x3B6) = 0x18;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x8E) = OLD(BYTE, 0x235);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 17:
+        OLD(BYTE, 0x234) = THIRD(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = THIRD(OLD(BYTE, 0x235));
+        OLD(BYTE, 0x236) = THIRD(OLD(BYTE, 0x236));
+        NEW(DWORD, 0x3B6) = 0x414;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x95) = OLD(BYTE, 0x235);
+        NEW(BYTE, 0x8D) = OLD(BYTE, 0x236);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x236) + OLD(BYTE, 0x235);
+        break;
+    case 18:
+        OLD(BYTE, 0x234) = HALF(OLD(BYTE, 0x234));
+        OLD(BYTE, 0x235) = HALF(OLD(BYTE, 0x235));
+        NEW(DWORD, 0x3B6) = 0x84;
+        NEW(BYTE, 0x8D) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x92) = OLD(BYTE, 0x235);
+        pTable[3] = 0x3;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234) + OLD(BYTE, 0x235);
+        break;
+    case 19:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x200;
+        NEW(BYTE, 0x94) = OLD(BYTE, 0x234);
+        pTable[3] = 0xA;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    case 20:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x20;
+        NEW(BYTE, 0x90) = OLD(BYTE, 0x234);
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        pTable[3] = 0x6;
+        NEW(DWORD, 0x270) = 0x8;
+        break;
+    default:
+        *reinterpret_cast<DWORD*>(pTable + 0x32) = 0x10;
+        NEW(BYTE, 0x8F) = OLD(BYTE, 0x234);
+        pTable[3] = 0x5;
+        NEW(BYTE, 0x8A) = OLD(BYTE, 0x234);
+        break;
+    }
+
+    NEW(BYTE, 0x3B4) = pNew[0x387];
+    NEW(BYTE, 0x388) = OLD(BYTE, 0x2DC);
+    NEW(BYTE, 0x389) = OLD(BYTE, 0x2DD);
+    NEW(DWORD, 0x38A) = OLD(DWORD, 0x2DE);
+    NEW(BYTE, 0x38E) = OLD(BYTE, 0x2E2);
+    NEW(BYTE, 0x38F) = OLD(BYTE, 0x2E3);
+    NEW(DWORD, 0x390) = OLD(DWORD, 0x2E4);
+    memcpy(pNew + 0x394, pOld + 0x2E8, 8 * sizeof(DWORD));
+    NEW(DWORD, 0x3BA) = OLD(DWORD, 0x308) + 0xB2;
+    NEW(DWORD, 0x3BE) = OLD(DWORD, 0x30C);
+    NEW(DWORD, 0x3C2) = OLD(DWORD, 0x310) + 0xB2;
+    NEW(DWORD, 0x3C6) = OLD(DWORD, 0x314);
+    NEW(DWORD, 0x3CA) = OLD(DWORD, 0x318) + 0xB2;
+    NEW(DWORD, 0x3CE) = OLD(DWORD, 0x31C);
+    NEW(DWORD, 0x3D6) = OLD(DWORD, 0x324) + 0xB2;
+    NEW(DWORD, 0x3DA) = OLD(DWORD, 0x328);
+    NEW(DWORD, 0x3D2) = OLD(DWORD, 0x320) + 0xB2;
+    NEW(DWORD, 0x3DE) = OLD(DWORD, 0x32C) + 0xB2;
+    NEW(DWORD, 0x3E2) = OLD(DWORD, 0x330);
+    NEW(DWORD, 0x3E6) = OLD(DWORD, 0x334);
+    NEW(DWORD, 0x3EA) = OLD(DWORD, 0x338);
+
+    if (NEW(LONG, 0x3C6) + NEW(LONG, 0x3CE) + NEW(LONG, 0x3BE) > 0) {
+        DWORD nSize = OLD(DWORD, 0x30C) * 3 * 4;
+
+        DWORD nCount = OLD(DWORD, 0x314);
+        if (nCount != 0) {
+            BYTE* pEntry = pOld + OLD(DWORD, 0x310) + 0xC;
+            do {
+                nSize += OLD_AT(pEntry, DWORD) * 3 * 4;
+                pEntry += 0x10;
+                nCount--;
+            } while (nCount != 0);
+        }
+
+        nSize += OLD(DWORD, 0x314) << 4;
+
+        memcpy(pNew + 0x3EE, pOld + 0x33C, nSize);
+    }
+
+    BYTE* pDest = pNew + NEW(DWORD, 0x3D2);
+    BYTE* pSource = pOld + OLD(DWORD, 0x320);
+
+    memcpy(pNew + NEW(DWORD, 0x3D6), pOld + OLD(DWORD, 0x324), OLD(DWORD, 0x328) * 5 * 4);
+
+    if (NEW(DWORD, 0x3E2) != 0) {
+        DWORD nSize;
+        if (NEW(BYTE, 0x33) == 0) {
+            nSize = NEW(DWORD, 0x3E2) * 3 * 16;
+        } else {
+            nSize = (NEW(DWORD, 0x3E2) * 33) * 8;
+        }
+
+        memcpy(pNew + NEW(DWORD, 0x3DE), pOld + OLD(DWORD, 0x32C), nSize);
+    }
+
+    memset(pDest, 0xFF, 0x1A * sizeof(DWORD));
+
+    *reinterpret_cast<WORD*>(pDest + 0x00) = *reinterpret_cast<WORD*>(pSource + 0x00);
+    *reinterpret_cast<WORD*>(pDest + 0x02) = *reinterpret_cast<WORD*>(pSource + 0x02);
+    *reinterpret_cast<WORD*>(pDest + 0x04) = *reinterpret_cast<WORD*>(pSource + 0x04);
+    *reinterpret_cast<WORD*>(pDest + 0x06) = *reinterpret_cast<WORD*>(pSource + 0x06);
+    *reinterpret_cast<WORD*>(pDest + 0x08) = *reinterpret_cast<WORD*>(pSource + 0x08);
+    *reinterpret_cast<WORD*>(pDest + 0x0A) = *reinterpret_cast<WORD*>(pSource + 0x0A);
+    *reinterpret_cast<WORD*>(pDest + 0x0C) = *reinterpret_cast<WORD*>(pSource + 0x0C);
+    *reinterpret_cast<WORD*>(pDest + 0x0E) = *reinterpret_cast<WORD*>(pSource + 0x0E);
+    *reinterpret_cast<WORD*>(pDest + 0x10) = *reinterpret_cast<WORD*>(pSource + 0x10);
+    *reinterpret_cast<DWORD*>(pDest + 0x12) = *reinterpret_cast<DWORD*>(pSource + 0x12);
+    *reinterpret_cast<DWORD*>(pDest + 0x16) = *reinterpret_cast<DWORD*>(pSource + 0x16);
+    *reinterpret_cast<DWORD*>(pDest + 0x22) = *reinterpret_cast<DWORD*>(pSource + 0x1A);
+    *reinterpret_cast<DWORD*>(pDest + 0x26) = *reinterpret_cast<DWORD*>(pSource + 0x1E);
+    *reinterpret_cast<WORD*>(pDest + 0x2A) = *reinterpret_cast<WORD*>(pSource + 0x22);
+    memcpy(pDest + 0x2C, pSource + 0x24, 0xA * sizeof(DWORD));
+    *reinterpret_cast<WORD*>(pDest + 0x64) = *reinterpret_cast<WORD*>(pSource + 0x4C);
+    *reinterpret_cast<WORD*>(pDest + 0x66) = *reinterpret_cast<WORD*>(pSource + 0x4E);
+
+    memcpy(*ppCreature, pNew, *pCreatureSize);
+
+    delete[] pNew;
+
+#undef OLD
+#undef NEW
+#undef HALF
+#undef THIRD
+#undef OLD_AT
 }
 
 // Converts "CRE V2.1" creature to "CRE V2.2" format.
@@ -14689,4 +15323,291 @@ void CGameFile::ReleaseData()
     if (pRes != NULL) {
         pRes->Release();
     }
+}
+
+// NOTE: This is a `CGameArea` method; it lives here only to keep clear of
+// concurrent edits to `CGameArea.cpp`. It should move there.
+//
+// 0x46FEA0
+BOOLEAN CGameArea::CheckRestEncounter()
+{
+    if (m_headerRestEncounter.m_activated == 0) {
+        return FALSE;
+    }
+
+    BYTE nTry = 0;
+    ULONG nOffset = 0;
+
+    do {
+        ULONG nTimeOfDay = (m_pGame->m_worldTime.m_gameTime + nOffset) % CTimerWorld::TIMESCALE_MSEC_PER_DAY;
+        if (nTimeOfDay >= CTimerWorld::TIME_NIGHT || nTimeOfDay < CTimerWorld::TIME_DAWN) {
+            if (rand() % 100 <= m_headerRestEncounter.m_probNight) {
+                break;
+            }
+        } else {
+            if (rand() % 100 <= m_headerRestEncounter.m_probDay) {
+                break;
+            }
+        }
+
+        nOffset += CTimerWorld::TIMESCALE_MSEC_PER_HOUR;
+        nTry++;
+    } while (nTry < 1);
+
+    if (nTry == 1) {
+        return FALSE;
+    }
+
+    if (m_headerRestEncounter.m_randomCreatureNum == 0) {
+        return FALSE;
+    }
+
+    if (m_headerRestEncounter.m_maxTypeNum == 0) {
+        return FALSE;
+    }
+
+    // NOTE: The original tests the divisor against zero.
+    LONG nHour = CTimerWorld::TIMESCALE_MSEC_PER_HOUR;
+    nOffset += (nHour != 0) ? rand() % nHour : 0;
+
+    m_pGame->m_worldTime.AddCurrentTime(nOffset);
+    m_pGame->FeedBack(CInfGame::FEEDBACK_TIMEPASSEDREST, nOffset, TRUE);
+
+    CCreatureFile creatureData;
+    SHORT nBestStep = 0;
+    BYTE nTotalLevel = 0;
+    CPoint ptProtagonist;
+    LONG nCharacterId;
+
+    LONG nProtagonist = g_pBaldurChitin->GetObjectGame()->GetProtagonist();
+
+    for (SHORT nPortrait = 0; nPortrait < m_pGame->m_nCharacters; nPortrait++) {
+        CGameSprite* pSprite;
+
+        nCharacterId = m_pGame->GetCharacterId(nPortrait);
+
+        BYTE rc = m_pGame->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            if (pSprite->GetId() == nProtagonist) {
+                ptProtagonist = pSprite->GetPos();
+            }
+
+            nTotalLevel += pSprite->GetDerivedStats()->m_nLevel;
+
+            m_pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
+    }
+
+    LONG nDropped = 0;
+    SHORT nRange = (m_visibility.field_E * CVisibilityMap::SQUARE_SIZEX / CPathSearch::GRID_SQUARE_SIZEX) / 2;
+
+    CPoint ptGrid;
+    ptGrid.x = ptProtagonist.x / CPathSearch::GRID_SQUARE_SIZEX;
+    ptGrid.y = ptProtagonist.y / CPathSearch::GRID_SQUARE_SIZEY;
+
+    CPoint ptBest = ptGrid;
+    BYTE nBestDir = 0;
+
+    // Look for the direction with the longest visible walkable line.
+    for (BYTE nDir = 0; nDir < 9; nDir++) {
+        if (nDir == 4) {
+            continue;
+        }
+
+        CPoint pt = ptGrid;
+        SHORT nStep = 0;
+
+        if (nRange > 0) {
+            for (;;) {
+                pt.x += nDir % 3 - 1;
+                pt.y += nDir / 3 - 1;
+
+                if (pt.x >= 0
+                    && pt.x < m_search.m_GridSquareDimensions.cx
+                    && pt.y >= 0
+                    && pt.y < m_search.m_GridSquareDimensions.cy) {
+                    SHORT nTableIndex;
+                    if (m_search.GetLOSCost(pt,
+                            CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE,
+                            nTableIndex,
+                            FALSE)
+                        != CPathSearch::COST_IMPASSABLE) {
+                        // NOTE: Inlined tile lookup (like
+                        // `CVisibilityMap::PointToTile` but with a 16-bit
+                        // row multiply).
+                        SHORT nRow = static_cast<SHORT>((pt.y * CPathSearch::GRID_SQUARE_SIZEY + CPathSearch::GRID_SQUARE_SIZEY / 2) / CVisibilityMap::SQUARE_SIZEY * m_visibility.m_nWidth);
+                        SHORT nTile = static_cast<SHORT>(nRow + (pt.x * CPathSearch::GRID_SQUARE_SIZEX + CPathSearch::GRID_SQUARE_SIZEX / 2) / CVisibilityMap::SQUARE_SIZEX);
+
+                        if (m_visibility.IsTileVisible(nTile)) {
+                            nStep++;
+                            if (nStep < nRange) {
+                                continue;
+                            }
+                            break;
+                        }
+                    }
+
+                    if (nStep > nBestStep
+                        || (nStep == nBestStep && rand() % 7 == 0)) {
+                        nBestStep = nStep;
+                        ptBest = pt;
+                        nBestDir = nDir;
+                    }
+                } else {
+                    pt.x += 1 - nDir % 3;
+                    pt.y += 1 - nDir / 3;
+                    nStep--;
+
+                    if (nStep > nBestStep
+                        || (nStep == nBestStep && rand() % 7 == 0)) {
+                        nBestStep = nStep;
+                        ptBest = pt;
+                        nBestDir = nDir;
+                    }
+                }
+                break;
+            }
+        }
+
+        if (nStep == nRange) {
+            if (nStep > nBestStep || rand() % 7 == 0) {
+                nBestStep = nStep;
+                ptBest = pt;
+                nBestDir = nDir;
+            }
+        }
+    }
+
+    BYTE nRoll = rand() % 10;
+
+    INT nCreatureIndex;
+    if (m_headerRestEncounter.m_randomCreatureNum == 0) {
+        nCreatureIndex = 0;
+    } else {
+        nCreatureIndex = rand() % m_headerRestEncounter.m_randomCreatureNum;
+    }
+
+    CPoint* pOffsets = NULL;
+
+    INT nCount = m_headerRestEncounter.m_maxTypeNum + (rand() % 5 - 2);
+    if (nCount < 1) {
+        nCount = 1;
+    }
+
+    if (g_pBaldurChitin->GetObjectGame()->m_cOptions.m_nNightmareMode == 1) {
+        nCount++;
+    }
+
+    if (nCount > 0) {
+        BYTE nIndex = 0;
+        do {
+            RESREF* pResRef = &m_headerRestEncounter.m_randomCreature[nCreatureIndex];
+
+            // NOTE: Inlined `CResHelper::SetResRef`.
+            creatureData.SetResRef(CResRef(reinterpret_cast<BYTE*>(pResRef)), TRUE, TRUE);
+
+            CGameSprite* pSprite = new CGameSprite(creatureData.GetData(),
+                creatureData.GetDataSize(),
+                0,
+                1,
+                m_headerRestEncounter.m_lifeSpan * CTimerWorld::TIMESCALE_MSEC_PER_SEC + m_pGame->m_worldTime.m_gameTime,
+                m_headerRestEncounter.m_huntingRange,
+                m_headerRestEncounter.m_followRange,
+                0x7FFFFFFF,
+                ptProtagonist,
+                0);
+
+            pSprite->SetResRef(creatureData.GetResRef().GetResRefStr());
+
+            creatureData.ReleaseData();
+
+            if (pSprite != NULL) {
+                CString sResRef;
+                sResRef = reinterpret_cast<char*>(pResRef);
+                pSprite->SetResRef(sResRef);
+
+                INT nAttempt;
+                for (nAttempt = 0; nAttempt < 5; nAttempt++) {
+                    CPoint ptTarget;
+
+                    if (nRoll != 0) {
+                        if (nIndex == 0) {
+                            SHORT nFormation = rand() % 9 + 1;
+                            pOffsets = m_pGame->m_group.GetOffsets(nFormation,
+                                (pSprite->GetDirection(ptProtagonist) * 360 / 16) % 360,
+                                TRUE);
+                        }
+
+                        CPoint* pOffset = &pOffsets[nIndex % CAIGroup::FORMATION_MAX_SIZE];
+                        ptTarget.x = pOffset->x / CAIGroup::OFFSET_MULTIPLIER + ptBest.x;
+                        ptTarget.y = pOffset->y / CAIGroup::OFFSET_MULTIPLIER + ptBest.y;
+
+                        ptTarget = m_search.GetNearestOpenSquare(ptTarget,
+                            pSprite->GetTerrainTable(),
+                            pSprite->m_animation.GetPersonalSpace(),
+                            -1);
+                    } else {
+                        ptTarget = m_search.GetNearestOpenSquare(ptBest,
+                            pSprite->GetTerrainTable(),
+                            pSprite->m_animation.GetPersonalSpace(),
+                            -1);
+
+                        if (rand() % 2 == 0) {
+                            ptBest.x += 1 - nBestDir % 3;
+                            ptBest.y += 1 - nBestDir / 3;
+                        }
+                    }
+
+                    ptTarget.x = ptTarget.x * CPathSearch::GRID_SQUARE_SIZEX + CPathSearch::GRID_SQUARE_SIZEX / 2;
+                    ptTarget.y = ptTarget.y * CPathSearch::GRID_SQUARE_SIZEY + CPathSearch::GRID_SQUARE_SIZEY / 2;
+
+                    SHORT nRow = static_cast<SHORT>(ptTarget.y / CVisibilityMap::SQUARE_SIZEY * m_visibility.m_nWidth);
+                    SHORT nTile = static_cast<SHORT>(nRow + ptTarget.x / CVisibilityMap::SQUARE_SIZEX);
+
+                    if (nTile < m_visibility.m_nWidth * m_visibility.m_nHeight) {
+                        pSprite->AddToArea(this, ptTarget, 0, pSprite->m_animation.GetListType());
+                        pSprite->SetFacing(pSprite->GetDirection(ptProtagonist));
+                        break;
+                    }
+                }
+
+                if (nAttempt >= 5) {
+                    nDropped++;
+                }
+            } else {
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameArea.cpp
+                // __LINE__: 3611
+                UTIL_ASSERT(FALSE);
+            }
+
+            nIndex++;
+        } while (nIndex < nCount);
+
+        if (nDropped > 0) {
+            char* szMessage = new char[200];
+            if (szMessage != NULL) {
+                sprintf(szMessage, "Spawned creatures dropped due to invalid positions: %d of %d\n", nDropped, nCount);
+                delete[] szMessage;
+            }
+        }
+
+        if (pOffsets != NULL) {
+            delete[] pOffsets;
+        }
+    }
+
+    g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(-1,
+        m_headerRestEncounter.m_randomCreatureString[nCreatureIndex],
+        RGB(0, 0, 0),
+        RGB(165, 144, 5),
+        -1,
+        nCharacterId,
+        nCharacterId);
+
+    return TRUE;
 }
