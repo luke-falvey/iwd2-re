@@ -1,8 +1,11 @@
 #include "CSpawn.h"
 
 #include "CGameAIBase.h"
+#include "CBaldurChitin.h"
 #include "CGameArea.h"
+#include "CInfGame.h"
 #include "CMemINI.h"
+#include "CTimerWorld.h"
 #include "CUtil.h"
 
 template <class Thing>
@@ -393,9 +396,9 @@ BOOL CSpawnFile::GetINIKey(CMemINISection* pSection, const CString& sKey, CStrin
 CSpawnList::CSpawnList(CMemINI* pMemINI, const CString& sSection)
 {
     mInterval = INT_MAX;
-    field_20 = 0;
-    field_24 = 0;
-    field_28 = 0;
+    mTimerInitialized = 0;
+    mLastTime = 0;
+    mLastDay = 0;
     CheckSpawnTimes = 0;
     SpawnTimeOfDay = 0;
     pControlVar = NULL;
@@ -478,9 +481,9 @@ CSpawnList::~CSpawnList()
     }
 
     pControlVar = NULL;
-    field_20 = 0;
-    field_24 = 0;
-    field_28 = 0;
+    mTimerInitialized = 0;
+    mLastTime = 0;
+    mLastDay = 0;
 }
 
 // 0x768D50
@@ -516,9 +519,113 @@ int CSpawnList::ParseData(const CString& sData, CStringArray& Sections)
 // 0x768FA0
 int CSpawnList::Execute(CGameArea* pArea, BOOL bForce)
 {
-    // TODO: Incomplete.
+    if (m_nCount < 1) {
+        return 0;
+    }
 
-    return 0;
+    if (pControlVar != NULL) {
+        CVariable* pControl = CGameAIBase::GetGlobalVariable(pControlVar->mScope, pControlVar->mLabel, 0);
+        if (pControl == NULL || pControl->m_intValue == 0) {
+            return 0;
+        }
+    }
+
+    if (CheckSpawnTimes != 0) {
+        ULONG nHour = g_pBaldurChitin->GetObjectGame()->m_worldTime.m_gameTime % CTimerWorld::TIMESCALE_MSEC_PER_DAY
+            / CTimerWorld::TIMESCALE_MSEC_PER_SEC
+            / CTimerWorld::TIMESCALE_SEC_PER_MIN
+            / CTimerWorld::TIMESCALE_MIN_PER_HOUR;
+        if (((SpawnTimeOfDay >> nHour) & 0x1) == 0) {
+            return 0;
+        }
+    }
+
+    CVariable var;
+
+    CString sTimerName = pArea->m_resRef.GetResRefStr() + mSectionAlias + "_TIMER";
+    CString sDayName = pArea->m_resRef.GetResRefStr() + mSectionAlias + "_DAY";
+
+    CVariable* pTimerVar = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sTimerName);
+    CVariable* pDayVar = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sDayName);
+
+    ULONG nTime = g_pBaldurChitin->GetObjectGame()->m_worldTime.m_gameTime;
+    ULONG nDay = static_cast<WORD>(nTime / CTimerWorld::TIMESCALE_MSEC_PER_DAY + 1);
+
+    BOOL bReady;
+    if (mTimerInitialized == 0) {
+        if (pTimerVar != NULL) {
+            if (pDayVar == NULL) {
+                var.SetName(sDayName);
+                var.m_intValue = nDay;
+                g_pBaldurChitin->GetObjectGame()->GetVariables()->AddKey(var);
+
+                pDayVar = g_pBaldurChitin->GetObjectGame()->GetVariables()->FindKey(sDayName);
+            }
+
+            if ((nDay - pDayVar->m_intValue) * CTimerWorld::TIMESCALE_MSEC_PER_DAY - pTimerVar->m_intValue + nTime >= mInterval) {
+                bReady = TRUE;
+            } else {
+                bReady = bForce;
+            }
+
+            mLastTime = nTime;
+            pTimerVar->m_intValue = nTime;
+            mLastDay = nDay;
+            pDayVar->m_intValue = nDay;
+        } else {
+            bReady = TRUE;
+            mLastTime = nTime;
+
+            var.SetName(sTimerName);
+            var.m_intValue = mLastTime;
+            g_pBaldurChitin->GetObjectGame()->GetVariables()->AddKey(var);
+
+            mLastDay = nDay;
+
+            var.SetName(sDayName);
+            var.m_intValue = mLastDay;
+            g_pBaldurChitin->GetObjectGame()->GetVariables()->AddKey(var);
+        }
+
+        mTimerInitialized = 1;
+
+        if (!bReady) {
+            return 0;
+        }
+    } else {
+        bReady = bForce;
+    }
+
+    int nSpawned = 0;
+
+    if (!bReady) {
+        // NOTE: The constant 1296000 is 15 * 60 * 60 * 24, which differs from
+        // `CTimerWorld::TIMESCALE_MSEC_PER_DAY` used above.
+        if (nDay * 1296000 - mLastDay * 1296000 - mLastTime + nTime < mInterval) {
+            return 0;
+        }
+    }
+
+    mLastTime = nTime;
+    mLastDay = nDay;
+
+    if (pTimerVar != NULL) {
+        pTimerVar->m_intValue = nTime;
+    }
+
+    if (pDayVar != NULL) {
+        pDayVar->m_intValue = mLastDay;
+    }
+
+    POSITION pos = GetHeadPosition();
+    while (pos != NULL) {
+        CSpawn* pSpawn = GetNext(pos);
+        if (pSpawn != NULL) {
+            nSpawned += pSpawn->ExecuteSpawn(pArea);
+        }
+    }
+
+    return nSpawned;
 }
 
 // NOTE: Inlined.
