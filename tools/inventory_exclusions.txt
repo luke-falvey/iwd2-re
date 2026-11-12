@@ -466,3 +466,6 @@
 # links prev/next, copies 7 dwords to node+8, ++size (+8).
 0x56BDD0
 0x56BE50
+
+# CArray<CRect>::SetSize helper: ConstructElements, memset(p, 0, n * 16) (called from 0x69C2A0, 0x6A0AA0).
+0x6A0C40

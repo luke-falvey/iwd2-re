@@ -397,6 +397,7 @@ public:
     BOOLEAN SendMapWorldCancelRequestToServer();
     BOOLEAN SendMapWorldAnnounceStatus(BOOLEAN bActive, PLAYER_ID idController, LONG nLeavingEdge);
     BOOLEAN SendMapWorldRevealArea(CString sAreaResRef);
+    BOOLEAN sub_4356E0(CString sArea, DWORD dwArg2, CString sText, WORD nFacing, BYTE nArg5, DWORD dwArg6);
     BOOLEAN SendMovieRequestToServer(CResRef cResMovie);
     BOOLEAN MovieAnnounceStatus(CResRef cResMovie);
     BOOLEAN SendReformPartyAnnounceStatus();

@@ -228,7 +228,6 @@ BYTE* CScreenWorldMap::GetVirtualKeysFlags()
 // 0x699650
 CScreenWorldMap::~CScreenWorldMap()
 {
-    // TODO: Incomplete.
 }
 
 // 0x699760
