@@ -1276,8 +1276,6 @@ void CScreenStore::sub_673740(CUIPanel* pPanel)
 BOOL CScreenStore::IsCharacterAlive(SHORT nPortraitNum)
 {
     CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
-    BOOL bAlive;
-
     // NOTE: Uninline.
     LONG nCharacterId = pGame->GetCharacterId(nPortraitNum);
 
@@ -1293,9 +1291,10 @@ BOOL CScreenStore::IsCharacterAlive(SHORT nPortraitNum)
 
     if (rc == CGameObjectArray::SUCCESS) {
         if ((pSprite->GetDerivedStats()->m_generalState & STATE_DEAD) != 0) {
-            bAlive = FALSE;
-        } else {
-            bAlive = TRUE;
+            pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            return FALSE;
         }
 
         pGame->GetObjectArray()->ReleaseShare(nCharacterId,
@@ -1303,7 +1302,7 @@ BOOL CScreenStore::IsCharacterAlive(SHORT nPortraitNum)
             INFINITE);
     }
 
-    return bAlive;
+    return TRUE;
 }
 
 // NOTE: Inlined.
