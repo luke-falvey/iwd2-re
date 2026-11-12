@@ -7,6 +7,9 @@
 #include "CResWED.h"
 #include "CScreenWorld.h"
 #include "CTiledObject.h"
+#include "CUIControlLabel.h"
+#include "CUIManager.h"
+#include "CUIPanel.h"
 #include "CUtil.h"
 #include "CVidInf.h"
 #include "CVidPoly.h"
@@ -3953,7 +3956,74 @@ void CInfinity::SetMessageScreen(CResRef resRef, DWORD strText, DWORD nDuration)
 // 0x5D2530
 DWORD CInfinity::RenderMessageScreen(CVidMode* pNewVidMode, INT nSurface)
 {
-    // TODO: Incomplete.
+    UI_PANELHEADER panelInfo;
+    panelInfo.nPanelID = 0;
+    panelInfo.x = static_cast<WORD>(rViewPort.left);
+    panelInfo.y = static_cast<WORD>(rViewPort.top);
+    panelInfo.nWidth = static_cast<WORD>(rViewPort.right - rViewPort.left);
+    panelInfo.nHeight = static_cast<WORD>(rViewPort.bottom - rViewPort.top);
+    panelInfo.nType = 0;
+    panelInfo.nControls = 0;
+    // NOTE: The original copies the first byte of `refMosaic` from a byte
+    // global at 0x8C5CF8 and zeroes the rest.
+    memset(panelInfo.refMosaic, 0, sizeof(panelInfo.refMosaic));
+    panelInfo.nFirstControl = 0;
+    panelInfo.wFlags = 0;
+
+    UI_CONTROL_LABEL labelInfo;
+    labelInfo.base.nID = 0;
+    labelInfo.base.x = 1;
+    labelInfo.base.y = 1;
+    labelInfo.base.nWidth = static_cast<WORD>(static_cast<WORD>(rViewPort.right - rViewPort.left) - 1);
+    labelInfo.base.nHeight = static_cast<WORD>(static_cast<WORD>(rViewPort.bottom - rViewPort.top) - 1);
+    labelInfo.base.nType = 0;
+    labelInfo.nText = m_strMessageText;
+    strncpy(reinterpret_cast<char*>(labelInfo.refTextFont), "REALMS", RESREF_SIZE);
+    labelInfo.nForegroundColor = 0;
+    labelInfo.nBackgroundColor = 0;
+    // NOTE: The flags are read from four word globals at 0x84C978 (0x40),
+    // 0x84C970 (0x4), 0x84C96E (0x2) and 0x84C97C (TYPE_WORD_WRAP). Only the
+    // last is named in the repo; the others are inferred from their
+    // neighbours.
+    labelInfo.nTextFlags = 0x40 | 0x4 | 0x2 | CUIControlLabel::TYPE_WORD_WRAP;
+
+    CUIManager manager;
+    manager.m_bDoubleSize = g_pBaldurChitin->field_4A2C;
+
+    CUIPanel panel(&manager, &panelInfo);
+    CUIControlLabel label(&panel, &labelInfo);
+
+    if (m_vbMessageScreen.pRes != NULL) {
+        m_vbMessageScreen.RenderDirect(0, rViewPort.left, rViewPort.top, rViewPort, 0, 0);
+    } else {
+        if (nSurface >= pNewVidMode->GetNumSurfaces()) {
+            return RENDER_ERROR;
+        }
+
+        if (static_cast<UINT>(nSurface) >= pNewVidMode->m_nSurfaces) {
+            return RENDER_ERROR;
+        }
+
+        IDirectDrawSurface* pSurface = pNewVidMode->pSurfaces[nSurface];
+        if (pSurface == NULL) {
+            return RENDER_ERROR;
+        }
+
+        DDBLTFX bltFx;
+        bltFx.dwSize = sizeof(DDBLTFX);
+        bltFx.dwFillColor = pNewVidMode->ConvertToSurfaceRGB(pNewVidMode->ApplyBrightnessContrast(0));
+
+        HRESULT hr;
+        do {
+            hr = g_pBaldurChitin->cVideo.cVidBlitter.Blt(pSurface, &rViewPort, NULL, NULL, DDBLT_WAIT | DDBLT_COLORFILL, &bltFx);
+            pNewVidMode->CheckResults(hr);
+        } while (hr == DDERR_SURFACELOST || hr == DDERR_WASSTILLDRAWING);
+
+        // NOTE: The original blits once more after the retry loop.
+        g_pBaldurChitin->cVideo.cVidBlitter.Blt(pSurface, &rViewPort, NULL, NULL, DDBLT_WAIT | DDBLT_COLORFILL, &bltFx);
+    }
+
+    label.Render(TRUE);
 
     return RENDER_MESSAGESCREEN;
 }
