@@ -219,3 +219,11 @@
 # (allocating a block of 0xC byte nodes when empty), links it after the tail and
 # stores the LONG; used inline by CObjectMarker::AddObject.
 0x727CD0
+
+# Scalar deleting destructors (implicit) of CGameChunk, CGame85BF7C and
+# CGame85BFE8: each calls the real destructor (0x70F770, 0x710000, 0x711CB0)
+# and deletes this when the flag argument has bit 0 set. Slot 0 of the vtables
+# at 0x85BF10, 0x85BF7C and 0x85BFE8.
+0x70F750
+0x70FFE0
+0x711C90
