@@ -2728,6 +2728,9 @@ void CScreenCharacter::UpdateGeneralInformation(CUIControlTextDisplay* pText, CG
     // __LINE__: 4916
     UTIL_ASSERT(pBStats != NULL);
 
+    // NOTE: Result is unused.
+    pDStats->GetBestClass();
+
     INT nLevel = pDStats->m_nLevel;
 
     UpdateTextForceColor(pText,
@@ -2766,8 +2769,10 @@ void CScreenCharacter::UpdateGeneralInformation(CUIControlTextDisplay* pText, CG
             pSprite->GetEffectiveCharacterLevel());
     }
 
-    rule.GetClassStringMixed(pSprite->GetRacialFavoredClass(nSpecialization),
-        nSpecialization,
+    DWORD nFavoredSpecialization;
+    INT nFavoredClass = pSprite->GetRacialFavoredClass(nFavoredSpecialization);
+    rule.GetClassStringMixed(nFavoredClass,
+        nFavoredSpecialization,
         pBStats->m_flags,
         sValue,
         typeAI.m_nGender != 2);
@@ -2975,7 +2980,7 @@ void CScreenCharacter::UpdateGeneralInformation(CUIControlTextDisplay* pText, CG
             FetchString(15982)); // "Favored Enemies"
 
         for (INT nIndex = 0; nIndex < MAX_HATED_RACES; nIndex++) {
-            BYTE nRace = pBStats->m_favoredEnemies[nIndex];
+            BYTE& nRace = pBStats->m_favoredEnemies[nIndex];
             if (nRace != CAIObjectType::R_NO_RACE) {
                 STRREF strRace;
                 switch (nRace) {
@@ -3044,8 +3049,93 @@ void CScreenCharacter::UpdateGeneralInformation(CUIControlTextDisplay* pText, CG
         UpdateText(pText, "");
     }
 
+    BOOL bHeaderShown = FALSE;
+    BOOLEAN bHasSpells = FALSE;
     if (pSprite->HasClassMask(CLASSMASK_WIZARD | CLASSMASK_SORCERER | CLASSMASK_RANGER | CLASSMASK_PALADIN | CLASSMASK_DRUID | CLASSMASK_CLERIC | CLASSMASK_BARD)) {
-        // TODO: Incomplete (spells).
+        for (UINT nIndex = 0; nIndex < 7; nIndex++) {
+            BYTE nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nIndex);
+
+            // NOTE: Inlined `CInfGame::GetSpellcasterClassMask` (without the
+            // assertion).
+            DWORD dwClassMask = 0;
+            switch (nIndex) {
+            case 0:
+                dwClassMask = CLASSMASK_BARD;
+                break;
+            case 1:
+                dwClassMask = CLASSMASK_CLERIC;
+                break;
+            case 2:
+                dwClassMask = CLASSMASK_DRUID;
+                break;
+            case 3:
+                dwClassMask = CLASSMASK_PALADIN;
+                break;
+            case 4:
+                dwClassMask = CLASSMASK_RANGER;
+                break;
+            case 5:
+                dwClassMask = CLASSMASK_SORCERER;
+                break;
+            case 6:
+                dwClassMask = CLASSMASK_WIZARD;
+                break;
+            }
+
+            if (pSprite->HasClassMask(dwClassMask)) {
+                INT nBonus;
+                rule.GetMaxKnownSpells(nClass,
+                    typeAI,
+                    *pDStats,
+                    pBStats->m_specialization,
+                    1,
+                    nBonus);
+
+                if (nBonus > 0) {
+                    bHasSpells = TRUE;
+
+                    CString sSpells;
+                    rule.GetClassStringMixed(nClass,
+                        pBStats->m_specialization,
+                        pBStats->m_flags,
+                        sSpells,
+                        typeAI.m_nGender != 2);
+
+                    if (!bHeaderShown) {
+                        UpdateTextForceColor(pText,
+                            RGB(200, 200, 0),
+                            "%s",
+                            (LPCSTR)FetchString(10344)); // "Spells"
+                        bHeaderShown = TRUE;
+                    }
+
+                    UpdateText(pText, "%s", (LPCSTR)sSpells);
+
+                    INT nSpellLevel = 1;
+                    while (nSpellLevel <= 9 && nBonus > 0) {
+                        sValue.Format("%d", nSpellLevel);
+                        g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_SPELLLEVEL, sValue);
+
+                        UpdateTextNoTrim(pText,
+                            "  %s: %+d",
+                            (LPCSTR)FetchString(10345), // "Level <SPELLLEVEL>"
+                            nBonus);
+
+                        nSpellLevel++;
+                        rule.GetMaxKnownSpells(nClass,
+                            typeAI,
+                            *pDStats,
+                            pBStats->m_specialization,
+                            nSpellLevel,
+                            nBonus);
+                    }
+                }
+            }
+        }
+
+        if (bHasSpells == TRUE) {
+            UpdateText(pText, "");
+        }
     }
 
     UpdateTextForceColor(pText,
@@ -3053,6 +3143,7 @@ void CScreenCharacter::UpdateGeneralInformation(CUIControlTextDisplay* pText, CG
         "%s",
         (LPCSTR)FetchString(40315)); // "Ability Statistics"
 
+    // NOTE: Uninline (`C2DArray::GetAt`).
     INT nTotalWeight = static_cast<INT>(static_cast<float>(rule.GetEncumbranceMod(pSprite)) / 100.0f
         * static_cast<float>(atol(rule.m_tStrengthMod.GetAt(CPoint(3, pDStats->m_nSTR)))));
 
@@ -3087,6 +3178,8 @@ void CScreenCharacter::UpdateGeneralInformation(CUIControlTextDisplay* pText, CG
         || pDStats->m_nResistPiercing != 0
         || pDStats->m_nResistSlashing != 0
         || pDStats->m_nMagicDamageResistance != 0) {
+        UpdateText(pText, "");
+
         UpdateTextForceColor(pText,
             RGB(200, 200, 0),
             "%s",
@@ -3170,7 +3263,86 @@ void CScreenCharacter::UpdateGeneralInformation(CUIControlTextDisplay* pText, CG
         (LPCSTR)FetchString(15581), // "Spell Resistance"
         pDStats->m_nResistMagic);
 
-    // TODO: Incomplete (checking unknown STL container for damage reductions).
+    if (pDStats->m_damageReduction.size() > 0) {
+        UpdateText(pText, "");
+
+        UpdateTextForceColor(pText,
+            RGB(200, 200, 0),
+            "%s",
+            (LPCSTR)FetchString(39325)); // "Damage Reduction"
+
+        for (INT nEnchantment = 5; nEnchantment >= 0; nEnchantment--) {
+            CDamageReduction* pReduction = pDStats->m_damageReduction.sub_448130(nEnchantment);
+            if (pReduction != NULL) {
+                UpdateText(pText,
+                    "%s: %d/+%d",
+                    (LPCSTR)FetchString(41406),
+                    pReduction->sub_447E30(),
+                    pReduction->m_nEnchantment);
+                break;
+            }
+        }
+
+        for (INT nEnchantment = 5; nEnchantment >= 0; nEnchantment--) {
+            CDamageReduction* pReduction = pDStats->m_damageReduction.sub_4481A0(nEnchantment, 0);
+            if (pReduction != NULL) {
+                UpdateText(pText,
+                    "%s: %d/+%d",
+                    (LPCSTR)FetchString(11770), // "Bludgeoning"
+                    pReduction->sub_447E30(),
+                    pReduction->m_nEnchantment);
+                break;
+            }
+        }
+
+        for (INT nEnchantment = 5; nEnchantment >= 0; nEnchantment--) {
+            CDamageReduction* pReduction = pDStats->m_damageReduction.sub_4481A0(nEnchantment, 0x100000);
+            if (pReduction != NULL) {
+                UpdateText(pText,
+                    "%s: %d/+%d",
+                    (LPCSTR)FetchString(11769), // "Piercing"
+                    pReduction->sub_447E30(),
+                    pReduction->m_nEnchantment);
+                break;
+            }
+        }
+
+        for (INT nEnchantment = 5; nEnchantment >= 0; nEnchantment--) {
+            CDamageReduction* pReduction = pDStats->m_damageReduction.sub_4481A0(nEnchantment, 0x1000000);
+            if (pReduction != NULL) {
+                UpdateText(pText,
+                    "%s: %d/+%d",
+                    (LPCSTR)FetchString(11768), // "Slashing"
+                    pReduction->sub_447E30(),
+                    pReduction->m_nEnchantment);
+                break;
+            }
+        }
+
+        for (INT nEnchantment = 5; nEnchantment >= 0; nEnchantment--) {
+            CDamageReduction* pReduction = pDStats->m_damageReduction.sub_4481A0(nEnchantment, 0x2000000);
+            if (pReduction != NULL) {
+                UpdateText(pText,
+                    "%s: %d/+%d",
+                    (LPCSTR)FetchString(41404),
+                    pReduction->sub_447E30(),
+                    pReduction->m_nEnchantment);
+                break;
+            }
+        }
+
+        for (INT nEnchantment = 5; nEnchantment >= 0; nEnchantment--) {
+            CDamageReduction* pReduction = pDStats->m_damageReduction.sub_4481A0(nEnchantment, 0x4000000);
+            if (pReduction != NULL) {
+                UpdateText(pText,
+                    "%s: %d/+%d",
+                    (LPCSTR)FetchString(41405),
+                    pReduction->sub_447E30(),
+                    pReduction->m_nEnchantment);
+                break;
+            }
+        }
+    }
 }
 
 // 0x5DE2C0
@@ -5100,12 +5272,14 @@ void CScreenCharacter::LevelUp(CGameSprite* pSprite)
         CAbilityId ab;
         ab.m_itemType = 1;
         ab.m_nClass = m_nClass;
-        ab.field_1D = 1;
 
         INT nBonus1 = 0;
         INT nBonus2 = 0;
 
         for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+            // NOTE: Recomputed on every pass (0x5E588F).
+            ab.field_1D = static_cast<BYTE>(nLevel + 1);
+
             INT nMaxSpells1 = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetMaxKnownSpells(m_nClass,
                 pSprite->GetAIType(),
                 pSprite->m_derivedStats,
