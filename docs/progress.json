@@ -4,16 +4,15 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 9748,
-  "functions_done": 7773,
-  "functions_complete": 7632,
-  "incomplete_markers": 160,
+  "functions_total": 9736,
+  "functions_done": 7777,
+  "functions_complete": 7647,
+  "incomplete_markers": 149,
   "incomplete_by_file": {
     "src/CGameSprite.cpp": 11,
     "src/CScreenCharacter.cpp": 11,
     "src/CInfGame.cpp": 9,
     "src/CProjectilePart2.cpp": 9,
-    "src/CProjectilePart6.cpp": 9,
     "src/CBaldurProjector.cpp": 7,
     "src/CParticle.cpp": 6,
     "src/CScreenCreateChar.cpp": 6,
@@ -25,7 +24,6 @@
     "src/CScreenStore.cpp": 4,
     "src/CScreenWorldMap.cpp": 4,
     "src/CChitin.cpp": 3,
-    "src/CMessage.cpp": 3,
     "src/CProjectileArea.cpp": 3,
     "src/CProjectileBAM.cpp": 3,
     "src/CProjectileSingleTarget.cpp": 3,
@@ -48,6 +46,7 @@
     "src/CGameSpawning.cpp": 1,
     "src/CInfinity.cpp": 1,
     "src/CMoveList.cpp": 1,
+    "src/CProjectilePart6.cpp": 1,
     "src/CScreenChapter.cpp": 1,
     "src/CScreenMap.cpp": 1,
     "src/CScreenSave.cpp": 1,
@@ -60,7 +59,7 @@
     "src/CWarp.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10368,
+  "annotations_total": 10372,
   "annotations_not_function_start": 2573,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -3846,9 +3845,9 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3833939,
-  "bytes_done": 3492126,
-  "bytes_complete": 3217106,
+  "bytes_total": 3830259,
+  "bytes_done": 3493247,
+  "bytes_complete": 3231882,
   "largest_stubs": [
     {
       "addr": "0x4DB160",
@@ -3894,11 +3893,6 @@
       "addr": "0x5DC9D0",
       "name": "CScreenCharacter_Unknown",
       "size": 6207
-    },
-    {
-      "addr": "0x50D6F0",
-      "name": "FUN_0050d6f0",
-      "size": 6056
     },
     {
       "addr": "0x4D7130",
@@ -4049,6 +4043,11 @@
       "addr": "0x51A500",
       "name": "FUN_0051a500",
       "size": 2279
+    },
+    {
+      "addr": "0x409820",
+      "name": "FUN_00409820",
+      "size": 2214
     }
   ],
   "next": [
@@ -4119,6 +4118,12 @@
       "size": 225
     },
     {
+      "addr": "0x4C4B70",
+      "name": "FUN_004c4b70",
+      "translated_callers": 12,
+      "size": 22
+    },
+    {
       "addr": "0x7B3190",
       "name": "CVidBitmap_Render",
       "translated_callers": 12,
@@ -4129,12 +4134,6 @@
       "name": "FUN_00402a50",
       "translated_callers": 11,
       "size": 84
-    },
-    {
-      "addr": "0x4C4B70",
-      "name": "FUN_004c4b70",
-      "translated_callers": 11,
-      "size": 22
     },
     {
       "addr": "0x4C4C30",
@@ -4275,12 +4274,6 @@
       "size": 138
     },
     {
-      "addr": "0x4C5770",
-      "name": "FUN_004c5770",
-      "translated_callers": 4,
-      "size": 27
-    },
-    {
       "addr": "0x65F8F0",
       "name": "FUN_0065f8f0",
       "translated_callers": 4,
@@ -4351,6 +4344,12 @@
       "name": "FUN_004537f0",
       "translated_callers": 3,
       "size": 70
+    },
+    {
+      "addr": "0x45B200",
+      "name": "CPtrList_GetCount",
+      "translated_callers": 3,
+      "size": 4
     }
   ]
 }
