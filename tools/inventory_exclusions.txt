@@ -1311,3 +1311,7 @@
 # then szText (+0x0). Emitted out of line; called when a STR_RES local goes out of
 # scope, e.g. in CGameSprite::DebugDump (inlined GetName).
 0x425B80
+
+# Compiler-generated dynamic initializer of CGameEffect::EFFECT_NAME (0x8D45F0, CGameEffect.cpp):
+# one CString constructor per entry, 170 entries, plain RET.
+0x48B8E0
