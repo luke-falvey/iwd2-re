@@ -6,6 +6,15 @@
 #include "CResRef.h"
 #include "CUtil.h"
 
+// 0x78AED0
+CDimmKeyTable::~CDimmKeyTable()
+{
+    if (m_pResFileNameEntries != NULL) {
+        free(m_pResFileNameEntries);
+        m_pResFileNameEntries = NULL;
+    }
+}
+
 // 0x78AEF0
 BOOL CDimmKeyTable::AddKey(CResRef cResRef, USHORT nResType, RESID nID)
 {

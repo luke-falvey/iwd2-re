@@ -32,6 +32,8 @@ public:
         field_20 = 0;
     }
 
+    ~CDimmKeyTable();
+
     BOOL AddKey(CResRef cResRef, USHORT nResType, RESID nID);
     BOOL BuildNewTable(int a2);
     void DestroyTable(CDimm* dimm);

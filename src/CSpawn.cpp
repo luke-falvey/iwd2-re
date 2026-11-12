@@ -1650,7 +1650,8 @@ CSpawnPoint::CSpawnPoint(const CPoint& pt, int facing)
     mFacing = facing;
 }
 
-// 0x769650
+// 0x769670
+// NOTE: 0x769650 is the scalar deleting destructor (compiler-generated).
 CSpawnPoint::~CSpawnPoint()
 {
 }

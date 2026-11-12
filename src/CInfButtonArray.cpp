@@ -84,6 +84,12 @@ CInfButtonArray::CInfButtonArray()
     m_nSelectedWeaponSet = 0;
 }
 
+// 0x59E980
+CInfButtonArray::~CInfButtonArray()
+{
+    ClearList();
+}
+
 // 0x587BD0
 void CInfButtonArray::ClearList()
 {

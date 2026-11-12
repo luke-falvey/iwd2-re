@@ -16263,6 +16263,22 @@ UINT CSpellList::Get(UINT nIndex)
 
 // -----------------------------------------------------------------------------
 
+// 0x59EBD0
+CInfGameUnknownEntryList::~CInfGameUnknownEntryList()
+{
+    POSITION pos = GetHeadPosition();
+    while (pos != NULL) {
+        POSITION posOld = pos;
+        CString* node = GetNext(pos);
+        if (node != NULL) {
+            delete node;
+        }
+        RemoveAt(posOld);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
 // 0x59EB60
 CGroupedSpellList::CGroupedSpellList()
 {

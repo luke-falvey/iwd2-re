@@ -49,12 +49,6 @@ CDimm::CDimm()
 CDimm::~CDimm()
 {
     m_lDirectories.RemoveAll();
-
-    // TODO: Likely `CDimmKeyTable` destructor.
-    if (m_cKeyTable.m_pResFileNameEntries != NULL) {
-        free(m_cKeyTable.m_pResFileNameEntries);
-        m_cKeyTable.m_pResFileNameEntries = NULL;
-    }
 }
 
 // 0x782240

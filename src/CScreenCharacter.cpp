@@ -10614,7 +10614,7 @@ CUIControlButtonCharacterAbilitiesPlusMinus::~CUIControlButtonCharacterAbilities
 {
 }
 
-// 0x619220
+// 0x5EDAB0
 BOOL CUIControlButtonCharacterAbilitiesPlusMinus::OnLButtonDown(CPoint pt)
 {
     CScreenCharacter* pCharacter = g_pBaldurChitin->m_pEngineCharacter;
@@ -11925,7 +11925,7 @@ CUIControlTextDisplayCharacterScriptScripts::~CUIControlTextDisplayCharacterScri
 {
 }
 
-// 0x5ED130
+// 0x5ECE70
 void CUIControlTextDisplayCharacterScriptScripts::OnItemSelected(LONG lMarker)
 {
     CScreenCharacter* pCharacter = g_pBaldurChitin->m_pEngineCharacter;
@@ -11939,6 +11939,9 @@ void CUIControlTextDisplayCharacterScriptScripts::OnItemSelected(LONG lMarker)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
     // __LINE__: 13514
     UTIL_ASSERT(pGame != NULL);
+
+    CSingleLock renderLock(&(pCharacter->GetManager()->field_36), FALSE);
+    renderLock.Lock(INFINITE);
 
     INT nGameSprite = pGame->GetCharacterId(pCharacter->GetSelectedCharacter());
 
@@ -11959,6 +11962,8 @@ void CUIControlTextDisplayCharacterScriptScripts::OnItemSelected(LONG lMarker)
             CGameObjectArray::THREAD_ASYNCH,
             INFINITE);
     }
+
+    renderLock.Unlock();
 }
 
 // -----------------------------------------------------------------------------
