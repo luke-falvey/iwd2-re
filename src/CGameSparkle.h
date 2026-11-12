@@ -23,20 +23,22 @@ public:
     /* 004C */ void Render(CGameArea* pArea, CVidMode* pVidMode, int a3) override;
 
     void SetExplosionVelocity(const CPoint& velocity);
+    void sub_51CE50();
 
     /* 006E */ CVidMode* m_pVidMode;
     /* 0072 */ CTypedPtrList<CPtrList, CParticle*> m_particleList;
     /* 008E */ COLORREF m_aColors[CGAMESPARKLE_NUM_COLORS];
-    /* 00A2 */ BYTE field_A2;
-    /* 00A3 */ BYTE field_A3;
-    /* 00A4 */ BYTE field_A4;
-    /* 00A5 */ BYTE field_A5;
+    // NOTE: Height thresholds set by `AddToArea` from the start height (99%,
+    // 85%, 75%, 55%); `AIUpdate` picks the particle colour by height band.
+    /* 00A2 */ BYTE m_aHeightThresholds[4];
     /* 00A6 */ CRect m_rBounding;
     /* 00B6 */ WORD m_wType;
-    /* 00B8 */ LONG field_B8;
-    /* 00BC */ WORD field_BC;
+    // NOTE: Bursts emitted so far / to emit (only when `m_wType & 2`).
+    /* 00B8 */ DWORD m_nBurstCount;
+    /* 00BC */ WORD m_nBurstMax;
     /* 00BE */ CPoint m_velocity;
-    /* 00C6 */ LONG field_C6;
+    // NOTE: Base gravity of the particles made by `AddToArea` (50).
+    /* 00C6 */ LONG m_nGravity;
 };
 
 #endif /* CGAMESPARKLE_H_ */
