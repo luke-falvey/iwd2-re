@@ -307,3 +307,53 @@
 # as its only stack argument, loads node = *pos, stores node->pNext into *pos and returns
 # &node->data (node + 8). Called by HandleFollowPath for m_memberList.
 0x409800
+
+# MSVC vector constructor iterator (__vec_ctor style, compiler generated): calls the
+# element constructor in ECX for each of N elements, advancing by the element size.
+0x401000
+
+# CResHelper<T, nType>::CResHelper() (the repo template in CRes.h): CResRef ctor at +8,
+# pRes (+4) = 0, cResRef = "", bLoading (+0) = 0.
+0x40FAD0
+
+# CResHelper<CResSpell, 1006>::SetResRef (the repo template in CRes.h; resource type
+# 0x3EE passed to CDimm::GetResObject, same body as the other CResHelper instances).
+0x4699F0
+
+# CObList-derived scalar deleting destructor (compiler generated): calls the destructor
+# 0x653D70, then operator_delete when bit 0 of the flags argument is set.
+0x4D4730
+
+# std::vector<16-byte element> size() (library; CGameSpriteSpellListEntry list):
+# `first ? (last - first) >> 4 : 0`.
+0x5F66F0
+
+# CGameSprite scalar deleting destructor (compiler generated): calls ~CGameSprite
+# (0x6F2D80), then operator_delete when bit 0 of the flags argument is set.
+0x6F2CC0
+
+# CTypedPtrList / CList<T, T> constructors (instantiations): CPtrList ctor 0x7FB239
+# with the block size, then store the list vtable (0x85C078, 0x85C084, 0x85C090).
+0x727BF0
+0x727C10
+0x727C70
+
+# std::bitset<32>::test(pos): range check via 0x4C5790 (already excluded), then
+# `(word[pos >> 5] & (1 << (pos & 31))) != 0`.
+0x727C30
+
+# CPtrList::RemoveAt (MFC instantiation): unlinks the node, returns it to the free
+# list (+0x10), decrements the count (+0xC) and frees the block chain when it hits 0.
+0x727D50
+
+# CPtrList::Find(searchValue, startAfter) (MFC instantiation): walks the nodes
+# comparing the data field at +8.
+0x727DC0
+
+# CList<8-byte element>::RemoveAll (instantiation): destructs each node's element (0x6F2D70),
+# clears head/tail/count/free list and frees the block chain.
+0x7280F0
+
+# DestructElements<8-byte element>(p, n) (MFC instantiation): calls the element
+# destructor 0x6F2D70 for each of n elements, advancing by 8.
+0x728160

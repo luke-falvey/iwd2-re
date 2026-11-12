@@ -9847,25 +9847,433 @@ BOOLEAN CGameSprite::CanCast(BYTE nClass, DWORD nSpecialization, CSpell* pSpell)
 // 0x714F70
 CGameButtonList* CGameSprite::sub_714F70(const BYTE& nClass)
 {
-    // TODO: Incomplete.
+    CGameButtonList* pButtonList = new CGameButtonList();
 
-    return NULL;
+    // NOTE: Not reset per spell, so a spell without a suitable ability reuses
+    // the one found for a previous spell.
+    SPELL_ABILITY* pAbility = NULL;
+
+    UINT nClassIndex = g_pBaldurChitin->GetObjectGame()->GetSpellcasterIndex(nClass);
+
+    CGameSpriteGroupedSpellList* pGrouped = m_spells.Get(nClassIndex);
+
+    for (UINT nLevel = 0; nLevel < pGrouped->m_nHighestLevel; nLevel++) {
+        if (nClassIndex == 0 || nClassIndex == 5) {
+            // NOTE: Uninline.
+            if (pGrouped->GetSpellsAtLevel(nLevel)->field_18 == 0) {
+                continue;
+            }
+        }
+
+        // NOTE: Uninline.
+        for (UINT nIndex = 0; nIndex < pGrouped->GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+            // NOTE: Uninline.
+            CGameSpriteSpellListEntry* pEntry = pGrouped->GetSpellsAtLevel(nLevel)->Get(nIndex);
+
+            if ((pEntry->field_C & 1) != 0) {
+                continue;
+            }
+
+            if (nClassIndex != 0 && nClassIndex != 5) {
+                if (pEntry->field_4 == 0 || pEntry->field_8 == 0) {
+                    continue;
+                }
+            }
+
+            UINT nSpellId = pEntry->m_nID;
+
+            // NOTE: Uninline.
+            const CResRef& resRef = g_pBaldurChitin->GetObjectGame()->m_spells.Get(nSpellId);
+
+            // NOTE: Inlined constructor (takes `CResRef` by value).
+            CSpell cSpell(resRef);
+
+            if (cSpell.Demand()) {
+                if (cSpell.GetRes() == NULL) {
+                    cSpell.Release();
+                    continue;
+                }
+
+                if (resRef == CGameSprite::SPWI110) {
+                    cSpell.Release();
+                    continue;
+                }
+
+                SHORT nCasterLevel = 1;
+                SHORT nSpellCasterLevel = GetCasterLevel(&cSpell, nClass, 0);
+                if (nSpellCasterLevel > nCasterLevel) {
+                    nCasterLevel = nSpellCasterLevel;
+                }
+
+                for (INT nAbilityNum = 0; nAbilityNum < cSpell.GetAbilityCount(); nAbilityNum++) {
+                    if (cSpell.GetAbility(nAbilityNum)->minCasterLevel > nCasterLevel) {
+                        break;
+                    }
+
+                    // FIXME: Calls `GetAbility` one more time.
+                    pAbility = cSpell.GetAbility(nAbilityNum);
+                }
+
+                if (pAbility != NULL && pAbility->quickSlotType == 2) {
+                    CButtonData* pButtonData = new CButtonData();
+
+                    pButtonData->m_icon = CString(pAbility->quickSlotIcon);
+                    pButtonData->m_abilityId.m_itemType = 1;
+                    pButtonData->m_abilityId.m_res = resRef;
+                    pButtonData->m_abilityId.m_targetType = pAbility->actionType;
+
+                    INT nSpellType = 0;
+                    switch (cSpell.GetCasterType()) {
+                    case 1:
+                        nSpellType = 0;
+                        break;
+                    case 2:
+                        nSpellType = 1;
+                        break;
+                    case 4:
+                        nSpellType = 2;
+                        break;
+                    }
+
+                    // NOTE: Uninline.
+                    pButtonData->m_bDisabled = GetActiveStats()->m_disabledSpellTypes[nSpellType];
+
+                    pButtonData->m_abilityId.field_10 = cSpell.GetGenericName();
+                    pButtonData->m_name = cSpell.GetGenericName();
+                    pButtonData->m_abilityId.field_18 = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetClassSuffixStringRef(nClass);
+                    pButtonData->m_abilityId.m_nClass = nClass;
+                    pButtonData->m_abilityId.field_1D = static_cast<BYTE>(nLevel + 1);
+                    pButtonData->m_abilityId.field_1E = 0;
+
+                    if (!CanCast(nClass, 0, &cSpell)) {
+                        pButtonData->m_bDisabled = TRUE;
+                        pButtonData->m_abilityId.field_18 = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetClassBeyondCastingAbilityStringRef(nClass);
+                    }
+
+                    SHORT nCount;
+                    if (nClassIndex != 0 && nClassIndex != 5) {
+                        nCount = static_cast<SHORT>(pEntry->field_8);
+                    } else {
+                        // NOTE: Uninline.
+                        nCount = static_cast<SHORT>(pGrouped->GetSpellsAtLevel(nLevel)->field_18);
+                    }
+
+                    pButtonData->m_count = nCount;
+                    if (nCount <= 0) {
+                        pButtonData->m_bDisabled = TRUE;
+                    }
+
+                    pButtonList->AddTail(pButtonData);
+                }
+
+                cSpell.Release();
+            }
+        }
+    }
+
+    return pButtonList;
 }
 
 // 0x7155C0
-CGameButtonList* CGameSprite::sub_7155C0(const BYTE& nClass, DWORD a2)
+CGameButtonList* CGameSprite::sub_7155C0(const BYTE& nClass, DWORD nSpecialization)
 {
-    // TODO: Incomplete.
+    CGameButtonList* pButtonList = new CGameButtonList();
 
-    return NULL;
+    // NOTE: Not reset per spell, so a spell without a suitable ability reuses
+    // the one found for a previous spell.
+    SPELL_ABILITY* pAbility = NULL;
+
+    UINT nClassIndex = g_pBaldurChitin->GetObjectGame()->GetSpellcasterIndex(nClass);
+
+    for (UINT nLevel = 0; nLevel < m_domainSpells.m_nHighestLevel; nLevel++) {
+        if (nClassIndex == 0 || nClassIndex == 5) {
+            // NOTE: Uninline.
+            if (m_domainSpells.GetSpellsAtLevel(nLevel)->field_18 == 0) {
+                continue;
+            }
+        }
+
+        // NOTE: Uninline.
+        for (UINT nIndex = 0; nIndex < m_domainSpells.GetSpellsAtLevel(nLevel)->m_List.size(); nIndex++) {
+            // NOTE: Uninline.
+            CGameSpriteSpellListEntry* pEntry = m_domainSpells.GetSpellsAtLevel(nLevel)->Get(nIndex);
+
+            if ((pEntry->field_C & 1) != 0) {
+                continue;
+            }
+
+            if (pEntry->field_4 == 0 || pEntry->field_8 == 0) {
+                continue;
+            }
+
+            UINT nSpellId = pEntry->m_nID;
+
+            // NOTE: Uninline.
+            const CResRef& resRef = g_pBaldurChitin->GetObjectGame()->m_spells.Get(nSpellId);
+
+            // NOTE: Inlined constructor (takes `CResRef` by value).
+            CSpell cSpell(resRef);
+
+            if (cSpell.Demand()) {
+                if (cSpell.GetRes() == NULL) {
+                    cSpell.Release();
+                    continue;
+                }
+
+                if (resRef == CGameSprite::SPWI110) {
+                    cSpell.Release();
+                    continue;
+                }
+
+                SHORT nCasterLevel = 1;
+                SHORT nSpellCasterLevel = GetCasterLevel(&cSpell, nClass, nSpecialization);
+                if (nSpellCasterLevel > nCasterLevel) {
+                    nCasterLevel = nSpellCasterLevel;
+                }
+
+                for (INT nAbilityNum = 0; nAbilityNum < cSpell.GetAbilityCount(); nAbilityNum++) {
+                    if (cSpell.GetAbility(nAbilityNum)->minCasterLevel > nCasterLevel) {
+                        break;
+                    }
+
+                    // FIXME: Calls `GetAbility` one more time.
+                    pAbility = cSpell.GetAbility(nAbilityNum);
+                }
+
+                if (pAbility != NULL && pAbility->quickSlotType == 2) {
+                    CButtonData* pButtonData = new CButtonData();
+
+                    pButtonData->m_icon = CString(pAbility->quickSlotIcon);
+                    pButtonData->m_abilityId.m_itemType = 1;
+                    pButtonData->m_abilityId.m_res = resRef;
+                    pButtonData->m_abilityId.m_targetType = pAbility->actionType;
+
+                    INT nSpellType = 0;
+                    switch (cSpell.GetCasterType()) {
+                    case 1:
+                        nSpellType = 0;
+                        break;
+                    case 2:
+                        nSpellType = 1;
+                        break;
+                    case 4:
+                        nSpellType = 2;
+                        break;
+                    }
+
+                    // NOTE: Uninline.
+                    pButtonData->m_bDisabled = GetActiveStats()->m_disabledSpellTypes[nSpellType];
+
+                    pButtonData->m_abilityId.field_10 = cSpell.GetGenericName();
+                    pButtonData->m_name = cSpell.GetGenericName();
+                    pButtonData->m_abilityId.field_18 = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetClassSuffixStringRef(nClass);
+                    pButtonData->m_abilityId.m_nClass = nClass;
+                    pButtonData->m_abilityId.field_1D = static_cast<BYTE>(nLevel + 1);
+                    pButtonData->m_abilityId.field_1E = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetSpecializationIndex(nClass, nSpecialization);
+
+                    if (!CanCast(nClass, nSpecialization, &cSpell)) {
+                        pButtonData->m_bDisabled = TRUE;
+                        pButtonData->m_abilityId.field_18 = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetClassBeyondCastingAbilityStringRef(nClass);
+                    }
+
+                    pButtonData->m_count = static_cast<SHORT>(pEntry->field_8);
+                    if (pButtonData->m_count <= 0) {
+                        pButtonData->m_bDisabled = TRUE;
+                    }
+
+                    pButtonList->AddTail(pButtonData);
+                }
+
+                cSpell.Release();
+            }
+        }
+    }
+
+    return pButtonList;
 }
 
 // 0x715BD0
 CGameButtonList* CGameSprite::sub_715BD0()
 {
-    // TODO: Incomplete.
+    CGameButtonList* pButtonList = new CGameButtonList();
 
-    return NULL;
+    // NOTE: Not reset per spell, so a spell without a suitable ability reuses
+    // the one found for a previous spell (shared by both loops).
+    SPELL_ABILITY* pAbility = NULL;
+
+    for (UINT nIndex = 0; nIndex < m_innateSpells.m_List.size(); nIndex++) {
+        // NOTE: Uninline.
+        CGameSpriteSpellListEntry* pEntry = m_innateSpells.Get(nIndex);
+
+        if ((pEntry->field_C & 1) != 0) {
+            continue;
+        }
+
+        if (pEntry->field_4 == 0 || pEntry->field_8 == 0) {
+            continue;
+        }
+
+        UINT nSpellId = pEntry->m_nID;
+
+        // NOTE: Uninline.
+        const CResRef& resRef = g_pBaldurChitin->GetObjectGame()->m_innateSpells.Get(nSpellId);
+
+        // NOTE: Inlined constructor (takes `CResRef` by value).
+        CSpell cSpell(resRef);
+
+        if (cSpell.Demand()) {
+            if (cSpell.GetRes() == NULL) {
+                cSpell.Release();
+                continue;
+            }
+
+            if (resRef == CGameSprite::SPIN285) {
+                cSpell.Release();
+                continue;
+            }
+
+            SHORT nCasterLevel = GetCasterLevel(&cSpell, 0, 0);
+            if (nCasterLevel <= 1) {
+                nCasterLevel = 1;
+            }
+
+            for (INT nAbilityNum = 0; nAbilityNum < cSpell.GetAbilityCount(); nAbilityNum++) {
+                if (cSpell.GetAbility(nAbilityNum)->minCasterLevel > nCasterLevel) {
+                    break;
+                }
+
+                // FIXME: Calls `GetAbility` one more time.
+                pAbility = cSpell.GetAbility(nAbilityNum);
+            }
+
+            if (pAbility != NULL && pAbility->quickSlotType == 4) {
+                CButtonData* pButtonData = new CButtonData();
+
+                pButtonData->m_icon = CString(pAbility->quickSlotIcon);
+                pButtonData->m_name = cSpell.GetGenericName();
+                pButtonData->m_abilityId.m_itemType = 1;
+                pButtonData->m_abilityId.m_res = resRef;
+                pButtonData->m_abilityId.m_targetType = pAbility->actionType;
+                pButtonData->m_abilityId.field_10 = cSpell.GetGenericName();
+
+                // NOTE: Uninline.
+                pButtonData->m_bDisabled = GetActiveStats()->m_disabledSpellTypes[2];
+
+                pButtonData->m_count = static_cast<SHORT>(pEntry->field_8);
+                if (pButtonData->m_count <= 0) {
+                    pButtonData->m_bDisabled = TRUE;
+                }
+
+                if (pButtonData->m_abilityId.m_res == CGameSprite::SPIN275) {
+                    pButtonData->m_count = sub_763150(CGAMESPRITE_FEAT_POWER_ATTACK) ? static_cast<SHORT>(field_4C54[1]) : 0;
+                    if (!sub_763150(CGAMESPRITE_FEAT_POWER_ATTACK)) {
+                        pButtonData->m_bDisabled = TRUE;
+                    }
+                } else if (pButtonData->m_abilityId.m_res == CGameSprite::SPIN276) {
+                    pButtonData->m_count = sub_763150(CGAMESPRITE_FEAT_EXPERTISE) ? static_cast<SHORT>(field_4C54[0]) : 0;
+                    if (!sub_763150(CGAMESPRITE_FEAT_EXPERTISE)) {
+                        pButtonData->m_bDisabled = TRUE;
+                    }
+                } else if (pButtonData->m_abilityId.m_res == CGameSprite::SPIN277) {
+                    pButtonData->m_bDisplayCount = FALSE;
+                    pButtonData->m_count = 0;
+                    if (!sub_763150(CGAMESPRITE_FEAT_ARTERIAL_STRIKE)) {
+                        pButtonData->m_bDisabled = TRUE;
+                    }
+                } else if (pButtonData->m_abilityId.m_res == CGameSprite::SPIN278) {
+                    pButtonData->m_bDisplayCount = FALSE;
+                    pButtonData->m_count = 0;
+                    if (!sub_763150(CGAMESPRITE_FEAT_HAMSTRING)) {
+                        pButtonData->m_bDisabled = TRUE;
+                    }
+                } else if (pButtonData->m_abilityId.m_res == CGameSprite::SPIN279) {
+                    pButtonData->m_bDisplayCount = FALSE;
+                    pButtonData->m_count = 0;
+                    if (!sub_763150(CGAMESPRITE_FEAT_RAPID_SHOT)) {
+                        pButtonData->m_bDisabled = TRUE;
+                    }
+                }
+
+                pButtonList->AddTail(pButtonData);
+            }
+
+            cSpell.Release();
+        }
+    }
+
+    for (UINT nIndex = 0; nIndex < m_shapeshifts.m_List.size(); nIndex++) {
+        // NOTE: Uninline.
+        CGameSpriteSpellListEntry* pEntry = m_shapeshifts.Get(nIndex);
+
+        if ((pEntry->field_C & 1) != 0) {
+            continue;
+        }
+
+        if (pEntry->field_4 == 0 || pEntry->field_8 == 0) {
+            continue;
+        }
+
+        UINT nSpellId = pEntry->m_nID;
+
+        // NOTE: Uninline.
+        const CResRef& resRef = g_pBaldurChitin->GetObjectGame()->m_shapeshifts.Get(nSpellId);
+
+        // NOTE: Inlined constructor (takes `CResRef` by value).
+        CSpell cSpell(resRef);
+
+        if (cSpell.Demand()) {
+            if (cSpell.GetRes() == NULL) {
+                cSpell.Release();
+                continue;
+            }
+
+            SHORT nCasterLevel = GetCasterLevel(&cSpell, 0, 0);
+            if (nCasterLevel <= 1) {
+                nCasterLevel = 1;
+            }
+
+            for (INT nAbilityNum = 0; nAbilityNum < cSpell.GetAbilityCount(); nAbilityNum++) {
+                if (cSpell.GetAbility(nAbilityNum)->minCasterLevel > nCasterLevel) {
+                    break;
+                }
+
+                // FIXME: Calls `GetAbility` one more time.
+                pAbility = cSpell.GetAbility(nAbilityNum);
+            }
+
+            if (pAbility != NULL && pAbility->quickSlotType == 4) {
+                // NOTE: `CAbilityId` constructor is inlined here.
+                CButtonData* pButtonData = new CButtonData();
+
+                pButtonData->m_icon = CString(pAbility->quickSlotIcon);
+                pButtonData->m_name = cSpell.GetGenericName();
+                pButtonData->m_abilityId.m_itemType = 1;
+                pButtonData->m_abilityId.m_res = resRef;
+                pButtonData->m_abilityId.m_targetType = pAbility->actionType;
+                pButtonData->m_abilityId.field_10 = cSpell.GetGenericName();
+
+                // NOTE: Uninline.
+                pButtonData->m_bDisabled = GetActiveStats()->m_disabledSpellTypes[2];
+
+                if (resRef == CGameSprite::SPIN122) {
+                    pButtonData->m_count = static_cast<SHORT>(pEntry->field_8);
+                } else {
+                    pButtonData->m_count = static_cast<SHORT>(m_shapeshifts.field_18);
+                }
+
+                pButtonData->m_bDisplayCount = TRUE;
+                if (pButtonData->m_count <= 0) {
+                    pButtonData->m_bDisabled = TRUE;
+                }
+
+                pButtonList->AddTail(pButtonData);
+            }
+
+            cSpell.Release();
+        }
+    }
+
+    return pButtonList;
 }
 
 // 0x716770
@@ -10274,11 +10682,69 @@ CGameButtonList* CGameSprite::sub_717250(INT a1)
 }
 
 // 0x717FC0
-CGameButtonList* CGameSprite::sub_717FC0(const CResRef& cResRef, INT nCount)
+CGameButtonList* CGameSprite::sub_717FC0(const CResRef& cResRef, UINT nCount)
 {
-    // TODO: Incomplete.
+    CGameButtonList* pButtonList = new CGameButtonList();
 
-    return NULL;
+    // NOTE: Inlined constructor (takes `CResRef` by value).
+    CSpell cSpell(cResRef);
+
+    SPELL_ABILITY* pAbility = NULL;
+
+    // NOTE: Leaks `pButtonList` on every early return.
+    if (!cSpell.Demand()) {
+        return NULL;
+    }
+
+    if (cSpell.GetRes() == NULL) {
+        cSpell.Release();
+        return NULL;
+    }
+
+    SHORT nCasterLevel = GetCasterLevel(&cSpell, 0, 0);
+    if (nCasterLevel <= 1) {
+        nCasterLevel = 1;
+    }
+
+    for (INT nAbilityNum = 0; nAbilityNum < cSpell.GetAbilityCount(); nAbilityNum++) {
+        if (cSpell.GetAbility(nAbilityNum)->minCasterLevel > nCasterLevel) {
+            break;
+        }
+
+        // FIXME: Calls `GetAbility` one more time.
+        pAbility = cSpell.GetAbility(nAbilityNum);
+    }
+
+    if (pAbility == NULL || pAbility->quickSlotType != 4) {
+        cSpell.Release();
+        return NULL;
+    }
+
+    for (UINT nIndex = 0; nIndex < nCount; nIndex++) {
+        CButtonData* pButtonData = new CButtonData();
+
+        pButtonData->m_icon = CString(pAbility->quickSlotIcon);
+        pButtonData->m_name = cSpell.GetGenericName();
+        pButtonData->m_abilityId.m_itemType = 1;
+        pButtonData->m_abilityId.m_res = cResRef;
+        pButtonData->m_abilityId.m_targetType = pAbility->actionType;
+        pButtonData->m_abilityId.field_10 = cSpell.GetGenericName();
+
+        // NOTE: Uninline.
+        pButtonData->m_bDisabled = GetActiveStats()->m_disabledSpellTypes[2];
+
+        pButtonData->m_abilityId.field_18 = nIndex + 0x9B97;
+
+        if (nIndex > 0) {
+            pButtonData->m_count = static_cast<SHORT>(nIndex);
+        }
+
+        pButtonList->AddTail(pButtonData);
+    }
+
+    cSpell.Release();
+
+    return pButtonList;
 }
 
 // 0x718390
@@ -14057,7 +14523,131 @@ void CGameSprite::sub_71E760(CDerivedStats& DStats, int a2)
 // 0x722D50
 void CGameSprite::sub_722D50(BYTE nClass, SHORT nLevels, int a3)
 {
-    // TODO: Incomplete.
+    CString sAbility;
+    CString sPrefix;
+
+    const C2DArray* pTable = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetClassAbilityTable(nClass, GetSpecialization());
+    if (pTable != NULL) {
+        // NOTE: Uninline.
+        DWORD nClassLevel = GetActiveStats()->GetClassLevel(nClass);
+
+        SHORT nStartLevel = 0;
+        if (nLevels != -1) {
+            nStartLevel = static_cast<SHORT>(nClassLevel - nLevels);
+        }
+
+        INT nLevel = nStartLevel;
+        INT nEndLevel = static_cast<SHORT>(nClassLevel);
+
+        while (nLevel < nEndLevel && nLevel < pTable->GetWidth()) {
+            for (INT nRow = 0; nRow < pTable->GetHeight(); nRow++) {
+                // NOTE: Uninline.
+                sAbility = pTable->GetAt(CPoint(nLevel, nRow));
+
+                if (strcmp(sAbility, pTable->GetDefault()) != 0) {
+                    sPrefix = sAbility.Left(3);
+                    sAbility = sAbility.Right(sAbility.GetLength() - 3);
+
+                    if (strcmp(sPrefix, CGameSprite::FA) == 0) {
+                        FeedBack(CGameSprite::FEEDBACK_GAINEDSPECIALABILITY,
+                            0,
+                            0,
+                            0,
+                            atol(sAbility),
+                            0,
+                            0);
+                    } else if (strcmp(sPrefix, CGameSprite::GA) == 0) {
+                        AddSpecialAbility(CResRef(sAbility), a3);
+                    } else if (strcmp(sPrefix, CGameSprite::RA) == 0) {
+                        RemoveSpecialAbility(CResRef(sAbility));
+                    } else if (strcmp(sPrefix, CGameSprite::AP) == 0) {
+                        std::list<CGameEffect*> effects = IcewindMisc::GetSpellEffects(this, sAbility, 1);
+
+                        for (std::list<CGameEffect*>::iterator it = effects.begin(); it != effects.end(); ++it) {
+                            CGameEffect* pEffect = *it;
+                            if (pEffect != NULL) {
+                                pEffect->m_sourceRes = sAbility;
+
+                                if (GetObjectType() == CGameObject::TYPE_SPRITE) {
+                                    AddEffect(pEffect, EFFECT_LIST_TIMED, FALSE, TRUE);
+                                }
+                            }
+                        }
+                    } else {
+                        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+                        // __LINE__: 24151
+                        UTIL_ASSERT_MSG(FALSE, "Invalid ability type");
+                    }
+                }
+            }
+
+            INT nLevelNumber = nLevel + 1;
+
+            switch (nClass) {
+            case CAIOBJECTTYPE_C_BARBARIAN:
+                if (nLevelNumber >= 11 && (nLevelNumber - 11) % 3 == 0) {
+                    m_baseStats.m_resistAcidBase++;
+                    m_baseStats.m_resistColdBase++;
+                    m_baseStats.m_resistElectricityBase++;
+                    m_baseStats.m_resistFireBase++;
+                    m_baseStats.m_resistMissileBase++;
+                    m_baseStats.m_resistCrushingBase++;
+                    m_baseStats.m_resistPiercingBase++;
+                    m_baseStats.m_resistSlashingBase++;
+                }
+                break;
+            case CAIOBJECTTYPE_C_CLERIC:
+                if ((m_baseStats.m_specialization & SPECMASK_CLERIC) == SPECMASK_CLERIC_MASK
+                    && nLevelNumber == 1) {
+                    CCreatureFileHeader oldBaseStats = m_baseStats;
+                    SetFeatValue(CGAMESPRITE_FEAT_BLIND_FIGHT, 1);
+                    UpdateFeats(&oldBaseStats, &m_derivedStats);
+                }
+                break;
+            case CAIOBJECTTYPE_C_MONK:
+                if (nLevelNumber == 2) {
+                    CCreatureFileHeader oldBaseStats = m_baseStats;
+                    SetFeatValue(CGAMESPRITE_FEAT_DEFLECT_ARROWS, 1);
+                    UpdateFeats(&oldBaseStats, &m_derivedStats);
+                } else if (nLevelNumber == 9) {
+                    CCreatureFileHeader oldBaseStats = m_baseStats;
+                    SetFeatValue(CGAMESPRITE_FEAT_IMPROVED_EVASION, 1);
+                    UpdateFeats(&oldBaseStats, &m_derivedStats);
+                } else if (nLevelNumber == 13) {
+                    m_baseStats.m_resistMagicBase += 23;
+                } else if (nLevelNumber > 13) {
+                    m_baseStats.m_resistMagicBase++;
+                }
+
+                if (nLevelNumber % 5 == 0) {
+                    m_baseStats.field_3E++;
+                }
+                break;
+            }
+
+            nLevel++;
+        }
+
+        if (nClass == CAIOBJECTTYPE_C_MONK) {
+            SetMonkAbilities();
+        }
+
+        // NOTE: Result is not used.
+        GetAIType();
+
+        int a2 = 0;
+        int nAttacks = 0;
+        int a4 = 0;
+        g_pBaldurChitin->GetObjectGame()->GetRuleTables().sub_546B60(this, a2, nAttacks, a4, FALSE);
+
+        // NOTE: The first store is redundant.
+        m_baseStats.m_numberOfAttacksBase = static_cast<BYTE>(nAttacks);
+        if (static_cast<BYTE>(nAttacks) > 5) {
+            m_baseStats.m_numberOfAttacksBase = 5;
+        } else {
+            m_baseStats.m_numberOfAttacksBase = static_cast<BYTE>(nAttacks);
+        }
+    }
 }
 
 // 0x71F6E0

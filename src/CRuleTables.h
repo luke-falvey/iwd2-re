@@ -442,6 +442,7 @@ public:
     CString sub_5461E0(const CString& sName, const CString& sRolled) const;
     BOOL sub_5463E0(CString& sResRef) const;
     STRREF GetSpeechStringRef(CString& sSoundSet, INT nSpeech) const;
+    INT Average(INT a1, INT a2) const;
     BOOLEAN IsHatedRace(const CAIObjectType& typeAI, const CCreatureFileHeader& BStats) const;
     BOOLEAN IsHatedRace(BYTE& nRace, const CCreatureFileHeader& BStats) const;
     INT GetHatedRaceBonus(BYTE& nRace, const CCreatureFileHeader& BStats) const;

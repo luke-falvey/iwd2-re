@@ -3611,6 +3611,12 @@ STRREF CRuleTables::GetSpeechStringRef(CString& sSoundSet, INT nSpeech) const
     return m_tCharStr.GetAtLong(ptLocation);
 }
 
+// 0x5467E0
+INT CRuleTables::Average(INT a1, INT a2) const
+{
+    return (a1 + a2) / 2;
+}
+
 // 0x546800
 BOOLEAN CRuleTables::IsHatedRace(const CAIObjectType& typeAI, const CCreatureFileHeader& BStats) const
 {
