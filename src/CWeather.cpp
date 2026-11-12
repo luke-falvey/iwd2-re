@@ -1172,9 +1172,9 @@ void CSnowStorm::GenerateFlakes(const CPoint& ptViewPort, const CRect& rBounds)
 void CSnowStorm::Render(CVidMode* pVidMode, int a2, const CRect& rClip, COLORREF rgbColor)
 {
     CRect& rSurface = g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->GetInfinity()->rViewPort;
-    COLORREF rgbSnowColor = RGB(GetRValue(rgbColor) * GetRValue(CSnowFlake::SNOWFLAKE_BASE_COLOR),
-        GetGValue(rgbColor) * GetGValue(CSnowFlake::SNOWFLAKE_BASE_COLOR),
-        GetBValue(rgbColor) * GetBValue(CSnowFlake::SNOWFLAKE_BASE_COLOR));
+    COLORREF rgbSnowColor = RGB((GetRValue(rgbColor) * GetRValue(CSnowFlake::SNOWFLAKE_BASE_COLOR)) >> 8,
+        (GetGValue(rgbColor) * GetGValue(CSnowFlake::SNOWFLAKE_BASE_COLOR)) >> 8,
+        (GetBValue(rgbColor) * GetBValue(CSnowFlake::SNOWFLAKE_BASE_COLOR)) >> 8);
 
     CSingleLock renderLock(&m_cCriticalSection, TRUE);
     if (m_pSnowFlakes != NULL && static_cast<CVidInf*>(pVidMode)->BKLock(rSurface)) {
