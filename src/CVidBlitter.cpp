@@ -13,8 +13,8 @@ CVidBlitter::CVidBlitter()
     m_bSoftBlt = FALSE;
     m_bSoftMirrorBlt = FALSE;
     field_E6 = 0;
-    field_DE = 0;
-    field_E2 = 0;
+    m_pSrcSurface = NULL;
+    m_pDestSurface = NULL;
     m_pfnBltFast = &CVidBlitter::DxBltFast;
     m_pfnBltNoFX = &CVidBlitter::DxBlt;
     m_pfnSrcKeyBltFast = &CVidBlitter::DxBltFast;
@@ -154,10 +154,101 @@ HRESULT CVidBlitter::BltFast(IDirectDrawSurface* lpDDSurface, DWORD dwX, DWORD d
     }
 }
 
+// 0x7B6B20
+HRESULT CVidBlitter::FUN_007b6b20(IDirectDrawSurface* lpDDSurface, LPRECT lpDestRect, IDirectDrawSurface* lpDDSrcSurface, LPRECT lpSrcRect)
+{
+    // TODO: Incomplete.
+
+    return S_OK;
+}
+
+// 0x7B6CC0
+void CVidBlitter::FUN_007b6cc0(BYTE* pDest, BYTE* pSrc, int nBytes)
+{
+    // TODO: Incomplete.
+}
+
+// 0x7B6DC0
+void CVidBlitter::FUN_007b6dc0(BYTE* pDest, BYTE* pSrc, int nBytes, DWORD dwColorKey)
+{
+    // TODO: Incomplete.
+}
+
+// 0x7B6F20
+void CVidBlitter::FUN_007b6f20(BYTE* pDest, BYTE* pSrc, int nBytes, DWORD dwColorKey)
+{
+    // TODO: Incomplete.
+}
+
+// 0x7B7070
+HRESULT CVidBlitter::FUN_007b7070(IDirectDrawSurface* lpDDSurface, LPRECT lpDestRect, LPDDBLTFX lpDDBltFx)
+{
+    // TODO: Incomplete.
+
+    return S_OK;
+}
+
 // 0x7B7280
 HRESULT CVidBlitter::SoftBlt(IDirectDrawSurface* lpDDSurface, LPRECT lpDestRect, IDirectDrawSurface* lpDDSrcSurface, LPRECT lpSrcRect, DWORD dwFlags, LPDDBLTFX lpDDBltFx)
 {
-    // TODO: Incomplete.
+    if ((dwFlags & 0x400) != 0) {
+        return FUN_007b7070(lpDDSurface, lpDestRect, lpDDBltFx);
+    }
+
+    int width = lpSrcRect->right - lpSrcRect->left;
+    int height = lpSrcRect->bottom - lpSrcRect->top;
+
+    RECT rDest;
+    SetRect(&rDest,
+        lpDestRect->left,
+        lpDestRect->top,
+        lpDestRect->left + width,
+        lpDestRect->top + height);
+
+    HRESULT hr = FUN_007b6b20(lpDDSurface, &rDest, lpDDSrcSurface, lpSrcRect);
+    if (hr != S_OK) {
+        return hr;
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidSoftBlt.cpp
+    // __LINE__: 1340
+    UTIL_ASSERT(m_pSrcSurface != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidSoftBlt.cpp
+    // __LINE__: 1341
+    UTIL_ASSERT(m_pDestSurface != NULL);
+
+    int nBytes = width * 2;
+    int destPitch = m_ddsdDest.lPitch >> 1;
+    int srcPitch = m_ddsdSrc.lPitch >> 1;
+
+    BOOL bMirrorLeftRight = FALSE;
+    if ((dwFlags & 0x800) != 0) {
+        DWORD dwDDFX = lpDDBltFx->dwDDFX;
+        bMirrorLeftRight = (dwDDFX & 0x2) != 0;
+        if ((dwDDFX & 0x4) != 0) {
+            m_pSrcSurface += ((height - 1) * srcPitch) << 1;
+            srcPitch = -srcPitch;
+        }
+    }
+
+    if (bMirrorLeftRight) {
+        for (int y = 0; y < height; y++) {
+            FUN_007b6cc0(m_pDestSurface, m_pSrcSurface, nBytes);
+            m_pDestSurface += destPitch * 2;
+            m_pSrcSurface += srcPitch * 2;
+        }
+    } else {
+        for (int y = 0; y < height; y++) {
+            // NOTE: The original inlines this as a REP MOVSD / REP MOVSB copy.
+            memcpy(m_pDestSurface, m_pSrcSurface, nBytes);
+            m_pDestSurface += destPitch * 2;
+            m_pSrcSurface += srcPitch * 2;
+        }
+    }
+
+    lpDDSurface->Unlock(m_ddsdDest.lpSurface);
+    lpDDSrcSurface->Unlock(m_ddsdSrc.lpSurface);
 
     return S_OK;
 }
@@ -165,7 +256,64 @@ HRESULT CVidBlitter::SoftBlt(IDirectDrawSurface* lpDDSurface, LPRECT lpDestRect,
 // 0x7B74F0
 HRESULT CVidBlitter::SoftSrcKeyBlt(IDirectDrawSurface* lpDDSurface, LPRECT lpDestRect, IDirectDrawSurface* lpDDSrcSurface, LPRECT lpSrcRect, DWORD dwFlags, LPDDBLTFX lpDDBltFx)
 {
-    // TODO: Incomplete.
+    int width = lpSrcRect->right - lpSrcRect->left;
+    int height = lpSrcRect->bottom - lpSrcRect->top;
+
+    RECT rDest;
+    rDest.left = lpDestRect->left;
+    rDest.top = lpDestRect->top;
+    rDest.right = lpDestRect->left + width;
+    rDest.bottom = lpDestRect->top + height;
+
+    DDCOLORKEY colorKey;
+    lpDDSrcSurface->GetColorKey(DDCKEY_SRCBLT, &colorKey);
+
+    DWORD dwColorKey = colorKey.dwColorSpaceLowValue & 0xFFFF;
+    dwColorKey = (dwColorKey << 16) | dwColorKey;
+
+    HRESULT hr = FUN_007b6b20(lpDDSurface, &rDest, lpDDSrcSurface, lpSrcRect);
+    if (hr != S_OK) {
+        return hr;
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidSoftBlt.cpp
+    // __LINE__: 1445
+    UTIL_ASSERT(m_pSrcSurface != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidSoftBlt.cpp
+    // __LINE__: 1446
+    UTIL_ASSERT(m_pDestSurface != NULL);
+
+    int nBytes = width * 2;
+    int destPitch = m_ddsdDest.lPitch >> 1;
+    int srcPitch = m_ddsdSrc.lPitch >> 1;
+
+    BOOL bMirrorLeftRight = FALSE;
+    if ((dwFlags & 0x800) != 0) {
+        DWORD dwDDFX = lpDDBltFx->dwDDFX;
+        bMirrorLeftRight = (dwDDFX & 0x2) != 0;
+        if ((dwDDFX & 0x4) != 0) {
+            m_pSrcSurface += ((height - 1) * srcPitch) << 1;
+            srcPitch = -srcPitch;
+        }
+    }
+
+    if (bMirrorLeftRight) {
+        for (int y = 0; y < height; y++) {
+            FUN_007b6dc0(m_pDestSurface, m_pSrcSurface, nBytes, dwColorKey);
+            m_pDestSurface += destPitch * 2;
+            m_pSrcSurface += srcPitch * 2;
+        }
+    } else {
+        for (int y = 0; y < height; y++) {
+            FUN_007b6f20(m_pDestSurface, m_pSrcSurface, nBytes, dwColorKey);
+            m_pDestSurface += destPitch * 2;
+            m_pSrcSurface += srcPitch * 2;
+        }
+    }
+
+    lpDDSurface->Unlock(m_ddsdDest.lpSurface);
+    lpDDSrcSurface->Unlock(m_ddsdSrc.lpSurface);
 
     return S_OK;
 }

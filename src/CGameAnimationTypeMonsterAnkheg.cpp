@@ -2,6 +2,7 @@
 
 #include "CBaldurChitin.h"
 #include "CGameSprite.h"
+#include "CInfinity.h"
 #include "CUtil.h"
 
 // 0x8F8E00
@@ -456,7 +457,151 @@ void CGameAnimationTypeMonsterAnkheg::SetColorEffectAll(BYTE effectType, COLORRE
 // 0x6C3910
 void CGameAnimationTypeMonsterAnkheg::Render(CInfinity* pInfinity, CVidMode* pVidMode, INT nSurface, const CRect& rectFX, const CPoint& ptNewPos, const CPoint& ptReference, DWORD dwRenderFlags, COLORREF rgbTintColor, const CRect& rGCBounds, BOOL bDithered, BOOL bFadeOut, LONG posZ, BYTE transparency)
 {
-    // TODO: Incomplete.
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+    // __LINE__: 15919
+    UTIL_ASSERT(pInfinity != NULL && pVidMode != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+    // __LINE__: 15920
+    UTIL_ASSERT(m_currentVidCell != NULL && m_currentVidCellHole != NULL);
+
+    CPoint ptPos(ptNewPos.x, ptNewPos.y + posZ);
+
+    if (MIRROR_BAM) {
+        if (m_currentBamDirection > m_extendDirectionTest) {
+            dwRenderFlags |= CInfinity::MIRROR_FX;
+        }
+
+        if (transparency != 0) {
+            dwRenderFlags |= CInfinity::FXPREP_COPYFROMBACK;
+            dwRenderFlags |= 0x2;
+        } else {
+            dwRenderFlags |= CInfinity::FXPREP_CLEARFILL;
+            dwRenderFlags |= 0x1;
+        }
+    } else {
+        dwRenderFlags |= 0x4;
+
+        dwRenderFlags |= CInfinity::FXPREP_COPYFROMBACK;
+
+        if (transparency != 0) {
+            dwRenderFlags |= 0x2;
+        }
+    }
+
+    // NOTE: `rectFX`, `ptReference` and `rGCBounds` are unused; the original
+    // derives all three from the current frames.
+    CPoint ptRef;
+    CSize frameSize;
+    CRect rFXRect;
+
+    // Hole.
+    m_currentVidCellHole->GetCurrentCenterPoint(ptRef, FALSE);
+
+    m_currentVidCellHole->GetCurrentFrameSize(frameSize, FALSE);
+
+    rFXRect.SetRect(0, 0, frameSize.cx, frameSize.cy);
+
+    pInfinity->FXPrep(rFXRect, dwRenderFlags, nSurface, ptPos, ptRef);
+
+    if (pInfinity->FXLock(rFXRect, dwRenderFlags)) {
+        m_currentVidCellHole->SetTintColor(rgbTintColor);
+
+        pInfinity->FXRender(m_currentVidCellHole,
+            ptRef.x,
+            ptRef.y,
+            dwRenderFlags,
+            transparency);
+
+        CRect rGCBoundsCell;
+        CalculateGCBoundsRect(rGCBoundsCell,
+            ptNewPos,
+            ptRef,
+            posZ,
+            rFXRect.right - rFXRect.left,
+            rFXRect.bottom - rFXRect.top);
+
+        CRect rGCBoundsFX(rGCBoundsCell.left,
+            rGCBoundsCell.top - posZ,
+            rGCBoundsCell.right,
+            rGCBoundsCell.bottom - posZ);
+
+        pInfinity->FXRenderClippingPolys(ptPos.x,
+            ptPos.y - posZ,
+            posZ,
+            ptRef,
+            rGCBoundsFX,
+            bDithered,
+            dwRenderFlags);
+
+        if (bFadeOut != FALSE) {
+            pInfinity->FXUnlock(dwRenderFlags, &rFXRect, ptPos + ptRef);
+        } else {
+            pInfinity->FXUnlock(dwRenderFlags, NULL, CPoint(0, 0));
+        }
+
+        pInfinity->FXBltFrom(nSurface,
+            rFXRect,
+            ptPos.x,
+            ptPos.y,
+            ptRef.x,
+            ptRef.y,
+            dwRenderFlags);
+    }
+
+    // Body.
+    m_currentVidCell->GetCurrentCenterPoint(ptRef, FALSE);
+
+    m_currentVidCell->GetCurrentFrameSize(frameSize, FALSE);
+
+    rFXRect.SetRect(0, 0, frameSize.cx, frameSize.cy);
+
+    pInfinity->FXPrep(rFXRect, dwRenderFlags, nSurface, ptPos, ptRef);
+
+    if (pInfinity->FXLock(rFXRect, dwRenderFlags)) {
+        m_currentVidCell->SetTintColor(rgbTintColor);
+
+        pInfinity->FXRender(m_currentVidCell,
+            ptRef.x,
+            ptRef.y,
+            dwRenderFlags,
+            transparency);
+
+        CRect rGCBoundsCell;
+        CalculateGCBoundsRect(rGCBoundsCell,
+            ptNewPos,
+            ptRef,
+            posZ,
+            rFXRect.right - rFXRect.left,
+            rFXRect.bottom - rFXRect.top);
+
+        CRect rGCBoundsFX(rGCBoundsCell.left,
+            rGCBoundsCell.top - posZ,
+            rGCBoundsCell.right,
+            rGCBoundsCell.bottom - posZ);
+
+        pInfinity->FXRenderClippingPolys(ptPos.x,
+            ptPos.y - posZ,
+            posZ,
+            ptRef,
+            rGCBoundsFX,
+            bDithered,
+            dwRenderFlags);
+
+        if (bFadeOut != FALSE) {
+            pInfinity->FXUnlock(dwRenderFlags, &rFXRect, ptPos + ptRef);
+        } else {
+            pInfinity->FXUnlock(dwRenderFlags, NULL, CPoint(0, 0));
+        }
+
+        pInfinity->FXBltFrom(nSurface,
+            rFXRect,
+            ptPos.x,
+            ptPos.y,
+            ptRef.x,
+            ptRef.y,
+            dwRenderFlags);
+    }
 }
 
 // 0x6C3D10

@@ -3,6 +3,7 @@
 #include "CChitin.h"
 #include "CUtil.h"
 #include "CVidMode.h"
+#include "CWarp.h"
 #include "CVideo3d.h"
 
 // 0x85EAA4
@@ -830,13 +831,49 @@ void CVidPoly::SetHLineFunction(DWORD dwFlags)
 // 0x7C1FD0
 void CVidPoly::DrawHLineShaded16(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef)
 {
-    // TODO: Incomplete.
+    CWarp* pEngine = g_pChitin->pActiveEngine;
+    CVidMode* pVidMode;
+    if (pEngine != NULL) {
+        pVidMode = pEngine->pVidMode;
+    } else {
+        pVidMode = NULL;
+    }
+
+    unsigned short* pSurface16 = reinterpret_cast<unsigned short*>(pSurface);
+
+    int width = xMax - xMin + 1;
+    if (width > 0) {
+        pSurface16 += xMin;
+
+        for (int x = 0; x < width; x++) {
+            *pSurface16 = static_cast<unsigned short>(pVidMode->FUN_0079ad20(dwColor & 0xFFFF, pVidMode->FUN_0079ad90(*pSurface16) >> 2));
+            pSurface16++;
+        }
+    }
 }
 
 // 0x7C2040
 void CVidPoly::DrawHLineShadedMirrored16(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef)
 {
-    // TODO: Incomplete.
+    CWarp* pEngine = g_pChitin->pActiveEngine;
+    CVidMode* pVidMode;
+    if (pEngine != NULL) {
+        pVidMode = pEngine->pVidMode;
+    } else {
+        pVidMode = NULL;
+    }
+
+    unsigned short* pSurface16 = reinterpret_cast<unsigned short*>(pSurface);
+
+    int width = xMax - xMin + 1;
+    if (width > 0) {
+        pSurface16 += rSurface.Width() - xMin;
+
+        for (int x = 0; x < width; x++) {
+            *pSurface16 = static_cast<unsigned short>(pVidMode->FUN_0079ad20(dwColor & 0xFFFF, pVidMode->FUN_0079ad90(*pSurface16) >> 2));
+            pSurface16--;
+        }
+    }
 }
 
 // 0x7D6970
@@ -1041,23 +1078,116 @@ void CVidPoly::DrawHLineDitheredMirrored32(void* pSurface, int xMin, int xMax, D
 // 0x7D6CA0
 void CVidPoly::DrawHLineShaded24(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef)
 {
-    // TODO: Incomplete.
+    int c0 = dwColor & 0xFF;
+    int c1 = (dwColor >> 8) & 0xFF;
+    int c2 = (dwColor >> 16) & 0xFF;
+    int gray = (c0 + c2 + c1) / 3;
+
+    unsigned char* pSurface8 = reinterpret_cast<unsigned char*>(pSurface);
+
+    int width = xMax - xMin + 1;
+    if (width > 0) {
+        pSurface8 += xMin * 3;
+
+        for (int x = 0; x < width; x++) {
+            int b0 = *pSurface8;
+            int b1 = b0 + 1;
+            int b2 = b0 + 2;
+            if (b0 + b1 + b2 >= 0x20 && gray >= ((b0 + b1 + b2) >> 3)) {
+                int inv = 0xFF - gray;
+                pSurface8[1] = static_cast<unsigned char>((c1 * gray + inv * b1) >> 8);
+                pSurface8[0] = static_cast<unsigned char>((c2 * gray + inv * b0) >> 8);
+                pSurface8[2] = static_cast<unsigned char>((c0 * gray + inv * b2) >> 8);
+            }
+            pSurface8 += 3;
+        }
+    }
 }
 
 // 0x7D6DA0
 void CVidPoly::DrawHLineShadedMirrored24(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef)
 {
-    // TODO: Incomplete.
+    int c0 = dwColor & 0xFF;
+    int c1 = (dwColor >> 8) & 0xFF;
+    int c2 = (dwColor >> 16) & 0xFF;
+    int gray = (c0 + c2 + c1) / 3;
+
+    unsigned char* pSurface8 = reinterpret_cast<unsigned char*>(pSurface);
+
+    int width = xMax - xMin + 1;
+    if (width > 0) {
+        pSurface8 += (rSurface.Width() - xMin + 1) * 3;
+
+        for (int x = 0; x < width; x++) {
+            pSurface8 -= 3;
+            int b0 = *pSurface8;
+            int b1 = b0 + 1;
+            int b2 = b0 + 2;
+            if (b0 + b1 + b2 >= 0x20 && gray >= ((b0 + b1 + b2) >> 3)) {
+                int inv = 0xFF - gray;
+                pSurface8[1] = static_cast<unsigned char>((c1 * gray + inv * b1) >> 8);
+                pSurface8[0] = static_cast<unsigned char>((c2 * gray + inv * b0) >> 8);
+                pSurface8[2] = static_cast<unsigned char>((c0 * gray + inv * b2) >> 8);
+            }
+
+        }
+    }
 }
 
 // 0x7D6EB0
 void CVidPoly::DrawHLineShaded32(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef)
 {
-    // TODO: Incomplete.
+    int c0 = dwColor & 0xFF;
+    int c1 = (dwColor >> 8) & 0xFF;
+    int c2 = (dwColor >> 16) & 0xFF;
+    int gray = (c0 + c2 + c1) / 3;
+
+    unsigned int* pSurface32 = reinterpret_cast<unsigned int*>(pSurface);
+
+    int width = xMax - xMin + 1;
+    if (width > 0) {
+        pSurface32 += xMin;
+
+        for (int x = 0; x < width; x++) {
+            int b0 = *pSurface32 & 0xFF;
+            int b1 = (*pSurface32 >> 8) & 0xFF;
+            if (b0 + b1 + b0 >= 0x20 && gray >= ((b0 + b1 + b0) >> 3)) {
+                int inv = 0xFF - gray;
+                int r = (c2 * gray + inv * b0) >> 8;
+                int g = (c1 * gray + inv * b1) >> 8;
+                int b = (c0 * gray + inv * b0) >> 8;
+                *pSurface32 = (((r << 8) | g) << 8) | b;
+            }
+            pSurface32++;
+        }
+    }
 }
 
 // 0x7D6FD0
 void CVidPoly::DrawHLineShadedMirrored32(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef)
 {
-    // TODO: Incomplete.
+    int c0 = dwColor & 0xFF;
+    int c1 = (dwColor >> 8) & 0xFF;
+    int c2 = (dwColor >> 16) & 0xFF;
+    int gray = (c0 + c2 + c1) / 3;
+
+    unsigned int* pSurface32 = reinterpret_cast<unsigned int*>(pSurface);
+
+    int width = xMax - xMin + 1;
+    if (width > 0) {
+        pSurface32 += rSurface.Width() - xMin;
+
+        for (int x = 0; x < width; x++) {
+            int b0 = *pSurface32 & 0xFF;
+            int b1 = (*pSurface32 >> 8) & 0xFF;
+            if (b0 + b1 + b0 >= 0x20 && gray >= ((b0 + b1 + b0) >> 3)) {
+                int inv = 0xFF - gray;
+                int r = (c2 * gray + inv * b0) >> 8;
+                int g = (c1 * gray + inv * b1) >> 8;
+                int b = (c0 * gray + inv * b0) >> 8;
+                *pSurface32 = (((r << 8) | g) << 8) | b;
+            }
+            pSurface32--;
+        }
+    }
 }
