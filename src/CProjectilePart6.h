@@ -37,6 +37,7 @@ class CProjectileHelper84EEB0 : public CProjectileHelper84EEA8 {
 public:
     CProjectileHelper84EEB0();
     /* 0004 */ std::list<LONG> Virtual4() override;
+    void sub_55B010(CPoint& a1, CPoint& a2);
 
     /* 0036 */ LONG field_36;
     /* 003A */ BOOLEAN field_3A;
@@ -159,6 +160,7 @@ public:
     /* 000C */ void AIUpdate() override;
     /* 006C */ void Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType) override;
     /* 0070 */ void OnArrival() override;
+    CPoint sub_5800E0(int a2);
 
     /* 02AE */ LONG field_2AE;
     /* 02B2 */ LONG field_2B2;
@@ -224,7 +226,6 @@ public:
     /* 000C */ void AIUpdate() override;
     /* 006C */ void Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType) override;
     /* 0070 */ void OnArrival() override;
-    /* 0088 */ virtual void Virtual88();
 
     /* 02AE */ LONG field_2AE;
     /* 02B2 */ BOOLEAN field_2B2;

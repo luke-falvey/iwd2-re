@@ -1,5 +1,7 @@
 #include "CProjectilePart6.h"
 
+#include <stdlib.h>
+
 #include "CBaldurChitin.h"
 #include "CGameArea.h"
 #include "CGameEffect.h"
@@ -43,6 +45,12 @@ std::list<LONG> CProjectileHelper84EEA8::Virtual4()
 CProjectileHelper84EEB0::CProjectileHelper84EEB0()
 {
     field_3A = FALSE;
+}
+
+// 0x55B010
+void CProjectileHelper84EEB0::sub_55B010(CPoint& a1, CPoint& a2)
+{
+    // TODO: Incomplete.
 }
 
 // 0x55B1B0
@@ -419,7 +427,103 @@ CProjectileSingleTarget850F14::CProjectileSingleTarget850F14(const std::set<LONG
 // 0x57C7B0
 void CProjectileSingleTarget850F14::DeliverEffects()
 {
-    // TODO: Incomplete.
+    field_2AE.insert(m_targetId);
+
+    CGameObject* pObject;
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pObject,
+        INFINITE);
+    if (rc == CGameObjectArray::SUCCESS) {
+        CGameArea* areaPtr = pObject->m_pArea;
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCProjectiles.cpp
+        // __LINE__: 552
+        UTIL_ASSERT(areaPtr != NULL);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        BYTE nCount = 0;
+        LONG nNearest = 0;
+
+        while (TRUE) {
+            CAIObjectType type(CAIObjectType::ANYONE);
+            type.m_nEnemyAlly = CAIObjectType::EA_ENEMY;
+
+            LONG nPrevious = nNearest;
+            nNearest = areaPtr->GetNearest(m_targetId,
+                type,
+                0x7FFF,
+                field_EA->m_visibleTerrainTable,
+                TRUE,
+                TRUE,
+                TRUE,
+                nCount,
+                FALSE);
+            if (nNearest == nPrevious
+                || nNearest == CGameObjectArray::INVALID_INDEX
+                || nCount > 20) {
+                CProjectile::DeliverEffects();
+                return;
+            }
+
+            nCount++;
+
+            if (field_2AE.find(nNearest) == field_2AE.end()) {
+                break;
+            }
+        }
+
+        CProjectileSingleTarget850F14* pProjectile = new CProjectileSingleTarget850F14(field_2AE);
+
+        CGameObject* pNearest;
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nNearest,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pNearest,
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            delete pProjectile;
+            CProjectile::DeliverEffects();
+            return;
+        }
+
+        CPoint ptNearest = pNearest->GetPos();
+        LONG nNearestId = pNearest->m_id;
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nNearest,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        POSITION pos = m_effectList.GetHeadPosition();
+        while (pos != NULL) {
+            // NOTE: The copy leaks when the projectile is deleted below.
+            CGameEffect* pEffect = m_effectList.GetNext(pos)->Copy();
+            if (pEffect->m_effectID == CGAMEEFFECT_DAMAGE) {
+                if (field_2AE.size() == 1) {
+                    pEffect->m_numDice >>= 1;
+                }
+
+                if (field_2AE.size() >= static_cast<BYTE>(pEffect->m_casterLevel)) {
+                    delete pProjectile;
+                    CProjectile::DeliverEffects();
+                    return;
+                }
+            }
+
+            pProjectile->AddEffect(pEffect);
+        }
+
+        pProjectile->Fire(field_EA,
+            m_id,
+            nNearestId,
+            ptNearest,
+            m_posZ,
+            0);
+    }
+
+    CProjectile::DeliverEffects();
 }
 
 // 0x57D390
@@ -450,6 +554,148 @@ CProjectileSingleTarget85101C::CProjectileSingleTarget85101C()
 void CProjectileSingleTarget85101C::AIUpdate()
 {
     // TODO: Incomplete.
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    if (field_2AE == 0) {
+        // NOTE: Inlined `CProjectile::RemoveSelf`.
+        RemoveFromArea();
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+            CGameObjectArray::THREAD_ASYNCH,
+            NULL,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            delete this;
+        }
+
+        return;
+    }
+
+    field_2AE--;
+
+    m_pVidCell->FrameAdvance();
+
+    LONG nOldGridY = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+    LONG nOldGridX = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+    m_posExact.x += m_posDelta.x;
+    m_posExact.y += m_posDelta.y;
+
+    m_pos.x = m_posExact.x >> CParticle::RESOLUTION_INC;
+    m_pos.y = (3 * m_posExact.y / 4) >> CParticle::RESOLUTION_INC;
+
+    if (m_pos.x < 0
+        || m_pos.y < 0
+        || m_pos.x >= field_EA->m_cInfinity.nAreaX
+        || m_pos.y >= field_EA->m_cInfinity.nAreaY) {
+        // NOTE: Inlined `CProjectile::RemoveSelf`.
+        RemoveFromArea();
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+            CGameObjectArray::THREAD_ASYNCH,
+            NULL,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            delete this;
+        }
+
+        return;
+    }
+
+    CPoint ptSearch;
+    ptSearch.x = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+    ptSearch.y = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+
+    if (nOldGridX != ptSearch.x || nOldGridY != ptSearch.y) {
+        SHORT nTableIndex;
+        BYTE nCost = field_EA->m_search.GetLOSCost(ptSearch, m_terrainTable, nTableIndex, FALSE);
+        if (nCost == CPathSearch::COST_IMPASSABLE || nTableIndex == 8) {
+            if (field_2B2 > 0) {
+                field_2B2--;
+                if (field_2B2 <= 0) {
+                    // NOTE: Inlined `CProjectile::RemoveSelf`.
+                    RemoveFromArea();
+
+                    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        NULL,
+                        INFINITE);
+                    if (rc == CGameObjectArray::SUCCESS) {
+                        delete this;
+                    }
+
+
+                    return;
+                }
+            }
+
+            if (abs(m_posDelta.x) < abs(m_posDelta.y)) {
+                ptSearch.x = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+                ptSearch.y = ((3 * (m_posExact.y - 2 * m_posDelta.y) / 4) >> CParticle::RESOLUTION_INC) / CPathSearch::GRID_SQUARE_SIZEY;
+                nCost = field_EA->m_search.GetLOSCost(ptSearch, m_terrainTable, nTableIndex, FALSE);
+                if (nCost == CPathSearch::COST_IMPASSABLE || nTableIndex == 8) {
+                    m_posExact.x += -m_posDelta.x * 2;
+                    m_posDelta.x = -m_posDelta.x;
+                    m_pos.x = m_posExact.x >> CParticle::RESOLUTION_INC;
+                    ptSearch.x = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+                    ptSearch.y = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+                    nCost = field_EA->m_search.GetLOSCost(ptSearch, m_terrainTable, nTableIndex, FALSE);
+                    if (nCost == CPathSearch::COST_IMPASSABLE) {
+                        m_posExact.y += -m_posDelta.y * 2;
+                        m_posDelta.y = -m_posDelta.y;
+                        m_pos.y = (3 * m_posExact.y / 4) >> CParticle::RESOLUTION_INC;
+                    }
+                } else {
+                    m_posExact.y += -m_posDelta.y * 2;
+                    m_posDelta.y = -m_posDelta.y;
+                    m_pos.y = (3 * m_posExact.y / 4) >> CParticle::RESOLUTION_INC;
+                }
+            } else {
+                ptSearch.x = ((m_posExact.x - 2 * m_posDelta.x) >> CParticle::RESOLUTION_INC) / CPathSearch::GRID_SQUARE_SIZEX;
+                ptSearch.y = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+                nCost = field_EA->m_search.GetLOSCost(ptSearch, m_terrainTable, nTableIndex, FALSE);
+                if (nCost == CPathSearch::COST_IMPASSABLE || nTableIndex == 8) {
+                    m_posExact.y += -m_posDelta.y * 2;
+                    m_posDelta.y = -m_posDelta.y;
+                    m_pos.y = (3 * m_posExact.y / 4) >> CParticle::RESOLUTION_INC;
+                    ptSearch.x = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+                    ptSearch.y = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+                    nCost = field_EA->m_search.GetLOSCost(ptSearch, m_terrainTable, nTableIndex, FALSE);
+                    if (nCost == CPathSearch::COST_IMPASSABLE || nTableIndex == 8) {
+                        m_posExact.x += -m_posDelta.x * 2;
+                        m_posDelta.x = -m_posDelta.x;
+                        m_pos.x = m_posExact.x >> CParticle::RESOLUTION_INC;
+                    }
+                } else {
+                    m_posExact.x += -m_posDelta.x * 2;
+                    m_posDelta.x = -m_posDelta.x;
+                    m_pos.x = m_posExact.x >> CParticle::RESOLUTION_INC;
+                }
+            }
+
+            CPoint ptDest;
+            ptDest.y = (3 * (m_posExact.y + m_posDelta.y) / 4) >> CParticle::RESOLUTION_INC;
+            ptDest.x = (m_posExact.x + m_posDelta.x) >> CParticle::RESOLUTION_INC;
+            m_nDirection = GetDirection(ptDest);
+            m_posDest = ptDest;
+        }
+
+        if (field_E2 != 0) {
+            // TODO: Incomplete. Creates an object (size 0xCA, constructor
+            // 0x51AE40, vtable 0x84D618) from `field_9A`, the word at
+            // 0x84D600 and the word at 0x84D5F0, then calls its
+            // `AddToArea(field_EA, m_pos, m_posZ, CGameObject::LIST_FRONT)`.
+        }
+    }
+
+    field_2B6.Virtual0();
+
+    m_sound.SetCoordinates(m_pos.x, m_pos.y, m_posZ);
 }
 
 // 0x57D700
@@ -679,7 +925,150 @@ CProjectileSingleTarget851444::CProjectileSingleTarget851444()
 // 0x57F8D0
 void CProjectileSingleTarget851444::AIUpdate()
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    if (field_354 == TRUE) {
+        if (field_2F0.IsSoundPlaying()) {
+            return;
+        }
+
+        // NOTE: Inlined `CProjectile::RemoveSelf`.
+        RemoveFromArea();
+
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+            CGameObjectArray::THREAD_ASYNCH,
+            NULL,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            delete this;
+        }
+
+        return;
+    }
+
+    if (field_2B2 <= 0) {
+        m_posDest = sub_5800E0(0);
+        field_2B2 = rand() % 50 + 50;
+    } else {
+        field_2B2--;
+    }
+
+    if (field_2AE > 0 && field_2BA.field_30 != TRUE) {
+        field_2AE--;
+
+        m_posExact.x += m_posDelta.x;
+        m_posExact.y += m_posDelta.y;
+
+        m_pos.x = m_posExact.x >> CParticle::RESOLUTION_INC;
+        m_pos.y = (3 * m_posExact.y / 4) >> CParticle::RESOLUTION_INC;
+
+        if (m_pos.x < 0
+            || m_pos.y < 0
+            || m_pos.x >= field_EA->m_cInfinity.nAreaX
+            || m_pos.y >= field_EA->m_cInfinity.nAreaY) {
+            // NOTE: Inlined `CProjectile::RemoveSelf`.
+            RemoveFromArea();
+
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+                CGameObjectArray::THREAD_ASYNCH,
+                NULL,
+                INFINITE);
+            if (rc == CGameObjectArray::SUCCESS) {
+                delete this;
+            }
+
+            return;
+        }
+
+        CPoint ptSearch;
+        ptSearch.x = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+        ptSearch.y = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+
+        SHORT nTableIndex;
+        BYTE nCost = field_EA->m_search.GetLOSCost(ptSearch, m_terrainTable, nTableIndex, FALSE);
+        if (nCost == CPathSearch::COST_IMPASSABLE || nTableIndex == 8) {
+            if (abs(m_posDelta.x) < abs(m_posDelta.y)) {
+                ptSearch.x = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+                ptSearch.y = ((3 * (m_posExact.y - 2 * m_posDelta.y) / 4) >> CParticle::RESOLUTION_INC) / CPathSearch::GRID_SQUARE_SIZEY;
+                nCost = field_EA->m_search.GetLOSCost(ptSearch, m_terrainTable, nTableIndex, FALSE);
+                if (nCost == CPathSearch::COST_IMPASSABLE || nTableIndex == 8) {
+                    m_posExact.x += -m_posDelta.x * 2;
+                    m_posDelta.x = -m_posDelta.x;
+                    m_pos.x = m_posExact.x >> CParticle::RESOLUTION_INC;
+                    ptSearch.x = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+                    ptSearch.y = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+                    nCost = field_EA->m_search.GetLOSCost(ptSearch, m_terrainTable, nTableIndex, FALSE);
+                    if (nCost == CPathSearch::COST_IMPASSABLE || nTableIndex == 8) {
+                        m_posExact.y += -m_posDelta.y * 2;
+                        m_posDelta.y = -m_posDelta.y;
+                        m_pos.y = (3 * m_posExact.y / 4) >> CParticle::RESOLUTION_INC;
+                    }
+                } else {
+                    m_posExact.y += -m_posDelta.y * 2;
+                    m_posDelta.y = -m_posDelta.y;
+                    m_pos.y = (3 * m_posExact.y / 4) >> CParticle::RESOLUTION_INC;
+                }
+            } else {
+                ptSearch.x = ((m_posExact.x - 2 * m_posDelta.x) >> CParticle::RESOLUTION_INC) / CPathSearch::GRID_SQUARE_SIZEX;
+                ptSearch.y = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+                nCost = field_EA->m_search.GetLOSCost(ptSearch, m_terrainTable, nTableIndex, FALSE);
+                if (nCost == CPathSearch::COST_IMPASSABLE || nTableIndex == 8) {
+                    m_posExact.y += -m_posDelta.y * 2;
+                    m_posDelta.y = -m_posDelta.y;
+                    m_pos.y = (3 * m_posExact.y / 4) >> CParticle::RESOLUTION_INC;
+                    ptSearch.x = m_pos.x / CPathSearch::GRID_SQUARE_SIZEX;
+                    ptSearch.y = m_pos.y / CPathSearch::GRID_SQUARE_SIZEY;
+                    nCost = field_EA->m_search.GetLOSCost(ptSearch, m_terrainTable, nTableIndex, FALSE);
+                    if (nCost == CPathSearch::COST_IMPASSABLE) {
+                        m_posExact.x += -m_posDelta.x * 2;
+                        m_posDelta.x = -m_posDelta.x;
+                        m_pos.x = m_posExact.x >> CParticle::RESOLUTION_INC;
+                    }
+                } else {
+                    m_posExact.x += -m_posDelta.x * 2;
+                    m_posDelta.x = -m_posDelta.x;
+                    m_pos.x = m_posExact.x >> CParticle::RESOLUTION_INC;
+                }
+            }
+
+            CPoint ptDest;
+            ptDest.y = (3 * (m_posExact.y + 3 * m_posDelta.y) / 4) >> CParticle::RESOLUTION_INC;
+            ptDest.x = (3 * m_posDelta.x + m_posExact.x) >> CParticle::RESOLUTION_INC;
+            m_nDirection = GetDirection(ptDest);
+            m_posDest = ptDest;
+
+            field_2B2 = rand() % 50 + 50;
+        }
+
+        field_2BA.Virtual0();
+
+        m_sound.SetCoordinates(m_pos.x, m_pos.y, m_posZ);
+
+        if (m_posDest.x < m_pos.x + 32
+            && m_posDest.x > m_pos.x - 32
+            && m_posDest.y < m_pos.y + 24
+            && m_posDest.y > m_pos.y - 24) {
+            m_posDest = sub_5800E0(0);
+            field_2B2 = rand() % 50 + 50;
+        }
+
+        CProjectileSingleTarget::AIUpdate();
+        return;
+    }
+
+    // NOTE: Uninline.
+    field_2F0.SetResRef(CResRef("AFT_P23"), TRUE, TRUE);
+
+    field_2F0.SetFireForget(TRUE);
+    field_2F0.SetChannel(15, reinterpret_cast<DWORD>(field_EA));
+    field_2F0.Play(m_pos.x, m_pos.y, 0, FALSE);
+
+    field_354 = TRUE;
+    field_1DE = 0;
 }
 
 // 0x57FF80
@@ -695,10 +1084,101 @@ void CProjectileSingleTarget851444::Fire(CGameArea* pArea, LONG source, LONG tar
     CProjectileSingleTarget::Fire(pArea, source, CGameObjectArray::INVALID_INDEX, targetPos, nHeight, nType);
 }
 
+// 0x5800E0
+CPoint CProjectileSingleTarget851444::sub_5800E0(int a2)
+{
+    int nDirection;
+    int x;
+    int y;
+
+    // NOTE: Only the low byte of the argument is compared.
+    if (static_cast<BYTE>(a2) == 1) {
+        nDirection = (GetDirection(m_posDest) + 8) % 16;
+    } else {
+        srand(field_356);
+        field_356 = rand();
+        nDirection = field_356 % 16;
+    }
+
+    switch (nDirection) {
+    case 0:
+        x = 0;
+        y = 27;
+        break;
+    case 1:
+        x = -10;
+        y = 18;
+        break;
+    case 2:
+        x = -19;
+        y = 14;
+        break;
+    case 3:
+        x = -25;
+        y = 8;
+        break;
+    case 4:
+        x = -20;
+        y = 0;
+        break;
+    case 5:
+        x = -25;
+        y = -8;
+        break;
+    case 6:
+        x = -19;
+        y = -14;
+        break;
+    case 7:
+        x = -10;
+        y = -18;
+        break;
+    case 8:
+        x = 0;
+        y = -27;
+        break;
+    case 9:
+        x = 10;
+        y = -18;
+        break;
+    case 10:
+        x = 19;
+        y = -14;
+        break;
+    case 11:
+        x = 25;
+        y = -8;
+        break;
+    case 12:
+        x = 20;
+        y = 0;
+        break;
+    case 13:
+        x = 25;
+        y = 8;
+        break;
+    case 14:
+        x = 19;
+        y = 14;
+        break;
+    case 15:
+        x = 10;
+        y = 18;
+        break;
+    default:
+        x = a2;
+        y = a2;
+        break;
+    }
+
+    return IcewindMisc::sub_5847B0(m_pos, x, y, 100);
+}
+
 // 0x580270
 void CProjectileSingleTarget851444::OnArrival()
 {
-    // TODO: Incomplete.
+    m_posDest = sub_5800E0(0);
+    field_2B2 = rand() % 50 + 50;
 }
 
 // 0x5802B0
@@ -755,7 +1235,27 @@ void CProjectileSingleTarget8514CC::AIUpdate()
 // 0x580600
 void CProjectileSingleTarget8514CC::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    if (CInfGame::dword_8E52EC < 1) {
+        CInfGame::dword_8E52EC++;
+
+        CGameObject* pObject;
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(source,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            field_2B4.sub_55B010(pObject->GetPos(), targetPos);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(source,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            CProjectileSingleTarget::Fire(pArea, source, target, targetPos, nHeight, nType);
+
+            m_pos.x = targetPos.x;
+            m_pos.y = targetPos.y;
+        }
+    }
 }
 
 // 0x5820B0
@@ -802,6 +1302,7 @@ void CProjectileSingleTarget8513BC::AIUpdate()
                 delete this;
             }
 
+
             return;
         }
 
@@ -829,6 +1330,7 @@ void CProjectileSingleTarget8513BC::AIUpdate()
                 delete this;
             }
 
+
             return;
         }
 
@@ -849,6 +1351,7 @@ void CProjectileSingleTarget8513BC::AIUpdate()
                 if (rc == CGameObjectArray::SUCCESS) {
                     delete this;
                 }
+
 
                 return;
             }
@@ -912,7 +1415,65 @@ CProjectileSingleTarget851554::CProjectileSingleTarget851554()
 // 0x580E10
 void CProjectileSingleTarget851554::OnArrival()
 {
-    // TODO: Incomplete.
+    CGameObject* pTarget;
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pTarget,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    if (pTarget->GetObjectType() == CGameObject::TYPE_SPRITE
+        && static_cast<CGameSprite*>(pTarget)->m_derivedStats.m_cImmunitiesProjectile.OnList(m_projectileType)) {
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+        CProjectile::OnArrival();
+        return;
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    CTypedPtrList<CPtrList, CGameEffect*> effects(10);
+    BYTE nCasterLevel = 7;
+
+    POSITION pos = m_effectList.GetHeadPosition();
+    while (pos != NULL) {
+        CGameEffect* pEffect = m_effectList.GetNext(pos);
+        nCasterLevel = static_cast<BYTE>(pEffect->m_casterLevel);
+        effects.AddTail(pEffect);
+    }
+    m_effectList.RemoveAll();
+
+    CGameObject* pSource;
+    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(m_sourceId,
+        CGameObjectArray::THREAD_ASYNCH,
+        &pSource,
+        INFINITE);
+    if (rc == CGameObjectArray::SUCCESS) {
+        CGameEffect* pDamage = IcewindMisc::sub_585380(pSource, 0, 0, nCasterLevel, 4, 8);
+        pDamage->m_sourceRes = CResRef(CString("SpWi422"));
+        AddEffect2(pDamage);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(m_sourceId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        field_2AE.Virtual0();
+
+        m_effectList.RemoveAll();
+
+        pos = effects.GetHeadPosition();
+        while (pos != NULL) {
+            m_effectList.AddTail(effects.GetNext(pos));
+        }
+
+        CProjectile::OnArrival();
+    }
 }
 
 // 0x581060
@@ -957,6 +1518,7 @@ void CProjectileSingleTarget8515DC::AIUpdate()
             if (rc == CGameObjectArray::SUCCESS) {
                 delete this;
             }
+
 
             return;
         }
@@ -1131,7 +1693,8 @@ void CProjectileSingleTarget8515DC::Render(CGameArea* pArea, CVidMode* pVidMode,
 // 0x581170
 void CProjectileSingleTarget8515DC::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    CProjectileSingleTarget::Fire(pArea, source, target, targetPos, nHeight, nType);
+    DeliverEffects();
 }
 
 // 0x581CA0
@@ -1189,7 +1752,27 @@ void CProjectileSingleTarget851664::AIUpdate()
 // 0x581FF0
 void CProjectileSingleTarget851664::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
+    if (CInfGame::dword_8E52F0 < 1) {
+        CInfGame::dword_8E52F0++;
+
+        CGameObject* pObject;
+        BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(source,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+        if (rc == CGameObjectArray::SUCCESS) {
+            field_2B4.sub_55B010(pObject->GetPos(), targetPos);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(source,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            CProjectileSingleTarget::Fire(pArea, source, target, targetPos, nHeight, nType);
+
+            m_pos.x = targetPos.x;
+            m_pos.y = targetPos.y;
+        }
+    }
 }
 
 // 0x5820B0
@@ -1206,12 +1789,6 @@ void CProjectileSingleTarget851664::OnArrival()
 
     field_2B2 = TRUE;
     field_1DE = TRUE;
-}
-
-// 0x583500
-void CProjectileSingleTarget851664::Virtual88()
-{
-    // TODO: Incomplete.
 }
 
 // 0x8E52D0
