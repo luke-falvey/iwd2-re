@@ -508,3 +508,21 @@
 
 # Catch handler (compiler-generated funclet) of CDimm::WriteFile (0x789090): CFile::Close, LeaveCriticalSection(&field_344), _chdir(path), epilogue.
 0x7891E1
+
+# Compiler-generated default constructor of CMovieSubtitleEntry (stores the empty CString): used by new[] in 0x428AD0.
+0x428F70
+
+# Compiler-generated destructor of CMovieSubtitleEntry (CString dtor at +4): used by delete[] in 0x43F900.
+0x428F80
+
+# STL/MFC template instantiations in the CScreenCharacter range:
+# STL node helper returning arg1 + 8.
+0x5E8680
+# Constructors of CPtrList-derived template classes (CPtrList ctor, then vtable store).
+0x5F97F0
+0x5F9A80
+# vector<24-byte element>::clear (destroys 0x24-byte elements, frees the buffer).
+0x5F9870
+# STL map destructors/clear (red-black tree erase, shared nil node 0x8D13F0 / 0x8D13E8).
+0x5F99A0
+0x5F98B0

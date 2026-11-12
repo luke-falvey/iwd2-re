@@ -33,9 +33,33 @@ typedef int(__stdcall BinkWait)(HBINK bnk);
 typedef char*(__stdcall BinkGetError)();
 typedef void(__stdcall BinkSetVolume)(HBINK bnk, unsigned int trackid, int volume);
 
+// One line of movie subtitles: the frame at which it appears and its text.
+// NOTE: Default constructor/destructor are compiler-generated (0x428F70 and
+// 0x428F80).
+struct CMovieSubtitleEntry {
+    /* 0000 */ int m_nFrame;
+    /* 0004 */ CString m_sText;
+};
+
+// #guess
+class CMovieSubtitle {
+public:
+    CMovieSubtitle(CMovieSubtitleEntry* pEntries, int nWidth);
+    ~CMovieSubtitle();
+    void Render();
+
+    /* 0000 */ CString m_sText;
+    /* 0004 */ int m_nFrame;
+    /* 0008 */ CMovieSubtitleEntry* m_pEntries;
+    /* 000C */ int m_nCurrent;
+    /* 0010 */ COLORREF m_rgbColor;
+    /* 0014 */ CRect m_rect;
+};
+
 class CBaldurProjector : public CBaldurEngine {
 public:
     static BOOLEAN byte_8CFF2C;
+    static CMovieSubtitle* m_pSubtitle;
 
     CBaldurProjector();
     ~CBaldurProjector();
@@ -59,7 +83,7 @@ public:
     void sub_43E300(HBINK bnk);
 
     /* 0106 */ int field_106;
-    /* 010A */ int field_10A;
+    /* 010A */ IUnknown* field_10A; // #guess
     /* 0112 */ BOOL m_bDeactivateEngine; // #guess
     /* 0116 */ CKeyInfo m_pVirtualKeys[CBALDURPROJECTOR_VIRTUAL_KEYS];
     /* 0126 */ BYTE m_pVirtualKeysFlags[CBALDURPROJECTOR_VIRTUAL_KEYS];

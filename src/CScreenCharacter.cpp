@@ -5735,7 +5735,97 @@ void CScreenCharacter::UpdateCharacterStatus(LONG nCharacterId)
 // 0x5E87E0
 void CScreenCharacter::sub_5E87E0(CGameSprite* pSprite)
 {
-    // TODO: Incomplete.
+    CUIPanel* pPanel = m_cUIManager.GetPanel(56);
+
+    const CRuleTables& ruleTables = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
+
+    HighlightLabel(pPanel,
+        0x1000000C,
+        m_nExtraFeats != 0,
+        COLOR_LABEL_HIGHLIGHT_BONUS);
+    UpdateLabel(pPanel,
+        0x1000000C,
+        "%d",
+        m_nExtraFeats);
+
+    SHORT nMaxHitPoints = pSprite->m_derivedStats.m_nMaxHitPoints;
+    WORD nMaxHitPointsBase = pSprite->m_baseStats.m_maxHitPointsBase;
+    SHORT nHitPointsBase = pSprite->m_baseStats.m_hitPoints;
+    LONG nHPCONBonusTotalOld = pSprite->m_nHPCONBonusTotalOld;
+
+    pSprite->field_562C = 1;
+    pSprite->ProcessEffectList();
+
+    pSprite->m_baseStats.m_hitPoints = nHitPointsBase;
+    pSprite->m_derivedStats.m_nMaxHitPoints = nMaxHitPoints;
+    pSprite->m_baseStats.m_maxHitPointsBase = nMaxHitPointsBase;
+    pSprite->m_nHPCONBonusTotalOld = nHPCONBonusTotalOld;
+
+    // NOTE: Constant at 0x84EA66. The original loads `m_nTopFeat` as an
+    // unsigned word.
+    m_nTopFeat = max(0, min(static_cast<USHORT>(m_nTopFeat), 75 - 9));
+
+    for (DWORD nIndex = 0; nIndex < 9; nIndex++) {
+        UpdateLabel(pPanel,
+            0x10000001 + nIndex,
+            "%s",
+            (LPCSTR)FetchString(ruleTables.GetFeatName(ruleTables.GetFeatId(static_cast<USHORT>(m_nTopFeat) + nIndex))));
+    }
+
+    CUIControlButton* pDone = static_cast<CUIControlButton*>(pPanel->GetControl(0));
+    pDone->SetEnabled(IsDoneButtonClickable(pSprite));
+
+    CUIControlScrollBar* pScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(104));
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 10806
+    UTIL_ASSERT(pScrollBar != NULL);
+
+    CScreenCharacter* pCharacter = g_pBaldurChitin->m_pEngineCharacter;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 17070
+    UTIL_ASSERT(pCharacter != NULL);
+
+    pScrollBar->AdjustScrollBar(pCharacter->m_nTopFeat, 75, 9);
+
+    DWORD nButtonID = 15;
+    for (DWORD nIndex = 0; nButtonID < 33; nIndex++) {
+        BOOL bEnable = pSprite->sub_763A40(ruleTables.GetFeatId(static_cast<USHORT>(m_nTopFeat) + nIndex), 1)
+            && m_nExtraFeats > 0;
+
+        CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButtonID - 1));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 10824
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetActive(bEnable);
+        pButton->SetEnabled(bEnable);
+
+        HighlightLabel(pPanel,
+            0x10000001 + nIndex,
+            bEnable == FALSE,
+            COLOR_LABEL_DISABLE);
+
+        bEnable = FALSE;
+        if (m_storedFeats[static_cast<USHORT>(m_nTopFeat) + nIndex] < pSprite->GetFeatValue(static_cast<USHORT>(m_nTopFeat) + nIndex)) {
+            bEnable = TRUE;
+        }
+
+        pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButtonID));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 10836
+        UTIL_ASSERT(pButton != NULL);
+
+        pButton->SetActive(bEnable);
+        pButton->SetEnabled(bEnable);
+
+        nButtonID += 2;
+    }
+
+    pPanel->InvalidateRect(NULL);
 }
 
 // 0x5E8B70
@@ -6379,6 +6469,170 @@ void CScreenCharacter::ResetCustomizeBiographyPanel(CUIPanel* pPanel, CGameSprit
 
     CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(6));
     pButton->SetEnabled(g_pBaldurChitin->GetTlkTable().m_override.Fetch(strBiography, strRes));
+}
+
+// 0x8B2AB4
+static const char* szLineIndent = "   ";
+
+// 0x8F2B28
+//
+// NOTE: The size of the buffer is not known.
+static char szLineBuffer[1024];
+
+// 0x5EF760
+char* CScreenCharacter::sub_5EF760(const CString& sName, const CString& sValue, BYTE a3)
+{
+    char szBuffer[1000];
+
+    if (a3) {
+        strcpy(szBuffer, "L......................... ");
+        strncpy(szBuffer, sName, sName.GetLength());
+        strcat(szBuffer, sValue);
+        strcat(szBuffer, "\n");
+
+        strcpy(szLineBuffer, szLineIndent);
+        strcat(szLineBuffer, szBuffer);
+    } else {
+        strcpy(szLineBuffer, "L............................ ");
+        strncpy(szLineBuffer, sName, sName.GetLength());
+        strcat(szLineBuffer, sValue);
+        strcat(szLineBuffer, "\n");
+    }
+
+    return szLineBuffer;
+}
+
+// 0x5EF920
+void CScreenCharacter::sub_5EF920(FILE* pFile, const CString& sName, const CString& sValue, BYTE a4)
+{
+    CString sNameText;
+    CString sValueText;
+
+    sNameText.Format("%s", (LPCSTR)sName);
+    sValueText.Format("%s", (LPCSTR)sValue);
+
+    fputs(sub_5EF760(sNameText, sValueText, a4), pFile);
+}
+
+// 0x5EF9E0
+void CScreenCharacter::sub_5EF9E0(FILE* pFile, const CString& sName, int nValue, BYTE a4)
+{
+    CString sNameText;
+    CString sValueText;
+
+    sNameText.Format("%s", (LPCSTR)sName);
+    sValueText.Format("%d", nValue);
+
+    fputs(sub_5EF760(sNameText, sValueText, a4), pFile);
+}
+
+// 0x5EFAA0
+void CScreenCharacter::sub_5EFAA0(FILE* pFile, const CString& sName, const char* szFormat, int nValue, BYTE a5)
+{
+    CString sNameText;
+    CString sValueText;
+
+    sNameText.Format("%s", (LPCSTR)sName);
+    sValueText.Format(szFormat, nValue);
+
+    fputs(sub_5EF760(sNameText, sValueText, a5), pFile);
+}
+
+// 0x5EFB60
+void CScreenCharacter::sub_5EFB60(FILE* pFile, STRREF strDescription)
+{
+    CString sText = CString("     ") + FetchString(strDescription);
+
+    int nLength = sText.GetLength();
+    int nOffset = 0;
+
+    if (nLength > 0) {
+        do {
+            CString sLine = sText.Mid(nOffset, 70);
+
+            int nIndex = sLine.Find('\n');
+            if (nIndex != -1) {
+                sLine.SetAt(nIndex, '\0');
+                fprintf(pFile, "%s\n", (LPCSTR)sLine);
+            } else {
+                if (sLine.GetLength() < 70) {
+                    fputs(sLine, pFile);
+                    break;
+                }
+
+                nIndex = sLine.ReverseFind(' ');
+                sLine.SetAt(nIndex, '\0');
+                fprintf(pFile, "%s\n", (LPCSTR)sLine);
+            }
+
+            nOffset += nIndex + 1;
+        } while (nOffset < nLength);
+    }
+}
+
+// 0x5EFCC0
+void CScreenCharacter::sub_5EFCC0(FILE* pFile, CItem* pItem, BYTE a3, BYTE a4)
+{
+    WORD nUsageCount = pItem->GetUsageCount(0);
+
+    if (nUsageCount > 1) {
+        if ((pItem->m_flags & 0x1) != 0) {
+            if (a3) {
+                fprintf(pFile,
+                    "-- %s (%d) *\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()),
+                    nUsageCount);
+            } else {
+                fprintf(pFile,
+                    "-- %s (%d)\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()),
+                    nUsageCount);
+            }
+        } else {
+            if (a3) {
+                fprintf(pFile,
+                    "-- %s (%d) - %s *\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()),
+                    nUsageCount,
+                    (LPCSTR)FetchString(17108));
+            } else {
+                fprintf(pFile,
+                    "-- %s (%d) - %s\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()),
+                    nUsageCount,
+                    (LPCSTR)FetchString(17108));
+            }
+        }
+    } else {
+        if ((pItem->m_flags & 0x1) != 0) {
+            if (a3) {
+                fprintf(pFile,
+                    "-- %s *\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()));
+            } else {
+                fprintf(pFile,
+                    "-- %s\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()));
+            }
+        } else {
+            if (a3) {
+                fprintf(pFile,
+                    "-- %s - %s *\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()),
+                    (LPCSTR)FetchString(17108));
+            } else {
+                fprintf(pFile,
+                    "-- %s - %s\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()),
+                    (LPCSTR)FetchString(17108));
+            }
+        }
+    }
+
+    if (a4) {
+        sub_5EFB60(pFile, pItem->GetDescription());
+        fputs("\n\n\n", pFile);
+    }
 }
 
 // 0x5EFFD0
