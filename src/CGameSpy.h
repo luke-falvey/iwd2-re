@@ -15,7 +15,11 @@ public:
     BOOLEAN sub_4D2310();
     BOOLEAN sub_4D0980();
     BOOLEAN sub_4D0B80(SOCKET s, DWORD* pAddr, WORD* pPort, char** ppBuf, DWORD* pLen);
-    void sub_4D15D0(DWORD nAddr, DWORD nPort, char* pBuf, DWORD nLen);
+    BOOLEAN sub_4D15D0(DWORD nAddr, DWORD nPort, char* pBuf, DWORD nLen);
+    BOOLEAN sub_4D0C70(DWORD nAddr, DWORD nPort);
+    BOOLEAN sub_4D0DA0(const char* pBuf, DWORD nLen, CString sKey, char** ppValue, DWORD* pValueLen);
+    BOOLEAN sub_4D0F40(DWORD nAddr, DWORD nPort, char* pSecure);
+    BOOLEAN sub_4D1220(DWORD nAddr, DWORD nPort, char* pSecure);
 
     /* 0000 */ unsigned char field_0;
     /* 0001 */ unsigned char field_1;
@@ -24,10 +28,10 @@ public:
     /* 000A */ SOCKET field_A;
     /* 000E */ SOCKET field_E;
     /* 0012 */ int field_12;
-    /* 0016 */ int field_16;
+    /* 0016 */ DWORD field_16;
     /* 001A */ int field_1A;
     /* 001E */ int field_1E;
-    /* 0022 */ int field_22;
+    /* 0022 */ char* field_22;
     /* 0026 */ unsigned char field_26;
     /* 0028 */ int field_28;
 };
