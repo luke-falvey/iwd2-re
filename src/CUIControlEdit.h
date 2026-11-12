@@ -33,8 +33,8 @@ public:
     /* 0350 */ int field_350;
     /* 0354 */ int field_354;
     /* 0358 */ CVidFont m_cVidFont;
-    /* 0858 */ short m_nMaxLength;
-    /* 085A */ short m_nTextCapitalization;
+    /* 0858 */ WORD m_nMaxLength;
+    /* 085A */ WORD m_nTextCapitalization;
     /* 085C */ short field_85C;
     /* 085E */ SHORT m_nRenderCount;
     /* 0860 */ BOOL m_bFocused;
