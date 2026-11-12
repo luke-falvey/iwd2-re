@@ -21428,6 +21428,154 @@ void CMessageSpriteUpdate::Run()
                     pSprite->m_derivedStats.m_visualEffects = m_visualEffects;
                 }
 
+                if (pTargetArea == NULL || pSprite->m_pArea != pTargetArea) {
+                    CResRef areaResRef(m_sAreaString);
+                    if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(areaResRef, 1010, TRUE) != NULL) {
+                        if (pSprite->m_pArea == NULL) {
+                            DWORD nSexBits = 0;
+                            DWORD nRaceBits = 0;
+                            DWORD nClassBits = 0;
+                            BOOL bAnimationValid = FALSE;
+
+                            switch (pSprite->GetAIType().m_nGender) {
+                            case CAIOBJECTTYPE_SEX_MALE:
+                                nSexBits = 0;
+                                bAnimationValid = TRUE;
+                                break;
+                            case CAIOBJECTTYPE_SEX_FEMALE:
+                                nSexBits = 0x10;
+                                bAnimationValid = TRUE;
+                                break;
+                            }
+
+                            if (bAnimationValid) {
+                                bAnimationValid = FALSE;
+
+                                switch (pSprite->GetAIType().m_nRace) {
+                                case CAIOBJECTTYPE_R_HUMAN:
+                                    nRaceBits = 0;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_R_ELF:
+                                case CAIOBJECTTYPE_R_HALF_ELF:
+                                    nRaceBits = 1;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_R_DWARF:
+                                case CAIOBJECTTYPE_R_GNOME:
+                                    nRaceBits = 2;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_R_HALFLING:
+                                    nRaceBits = 3;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_R_HALF_ORC:
+                                    nRaceBits = 5;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                }
+                            }
+
+                            if (bAnimationValid) {
+                                bAnimationValid = FALSE;
+
+                                switch (pSprite->GetAIType().m_nClass) {
+                                case CAIOBJECTTYPE_C_CLERIC:
+                                case CAIOBJECTTYPE_C_DRUID:
+                                    nClassBits = 0;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_C_BARBARIAN:
+                                case CAIOBJECTTYPE_C_FIGHTER:
+                                case CAIOBJECTTYPE_C_MONK:
+                                case CAIOBJECTTYPE_C_PALADIN:
+                                case CAIOBJECTTYPE_C_RANGER:
+                                    nClassBits = 0x100;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_C_SORCERER:
+                                case CAIOBJECTTYPE_C_WIZARD:
+                                    nClassBits = 0x200;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                case CAIOBJECTTYPE_C_BARD:
+                                case CAIOBJECTTYPE_C_ROGUE:
+                                    nClassBits = 0x300;
+                                    bAnimationValid = TRUE;
+                                    break;
+                                }
+                            }
+
+                            if (bAnimationValid) {
+                                DWORD nAnimation = nClassBits | nRaceBits | nSexBits | 0x6000;
+
+                                // NOTE: The original stores a DWORD (`nAnimation & 0xFFFF`) over
+                                // `m_animationType` and `field_22`.
+                                pSprite->m_baseStats.m_animationType = static_cast<short>(nAnimation);
+                                pSprite->m_baseStats.field_22 = 0;
+
+                                pSprite->m_animation.SetAnimationType(static_cast<USHORT>(nAnimation),
+                                    pSprite->m_baseStats.m_colors,
+                                    0);
+                            }
+
+                            if (pTargetArea == NULL) {
+                                pTargetArea = g_pBaldurChitin->GetObjectGame()->LoadArea(m_sAreaString,
+                                    0xFF,
+                                    FALSE,
+                                    FALSE);
+                            }
+
+                            if (pTargetArea != NULL) {
+                                BYTE nPersonalSpace = pSprite->m_animation.GetPersonalSpace();
+
+                                CPoint ptGrid;
+                                ptGrid.y = m_ptPosition.y / CPathSearch::GRID_SQUARE_SIZEY;
+                                ptGrid.x = m_ptPosition.x / CPathSearch::GRID_SQUARE_SIZEX;
+
+                                CPoint ptOpen = pTargetArea->m_search.GetNearestOpenSquare(ptGrid,
+                                    pSprite->GetTerrainTable(),
+                                    nPersonalSpace,
+                                    m_nFacing);
+
+                                CPoint ptPosition;
+                                ptPosition.x = ptOpen.x * CPathSearch::GRID_SQUARE_SIZEX + CPathSearch::GRID_SQUARE_SIZEX / 2;
+                                ptPosition.y = ptOpen.y * CPathSearch::GRID_SQUARE_SIZEY + CPathSearch::GRID_SQUARE_SIZEY / 2;
+
+                                g_pBaldurChitin->GetObjectGame()->m_bInAreaTransition = TRUE;
+                                pSprite->AddToArea(pTargetArea, ptPosition, 0, CGameObject::LIST_FRONT);
+                                g_pBaldurChitin->GetObjectGame()->m_bInAreaTransition = FALSE;
+                            }
+                        } else {
+                            // NOTE: Unused. The original copies the area resref as `LPCSTR`.
+                            CString sAreaName;
+                            sAreaName = pSprite->m_pArea->m_header.m_areaName;
+
+                            CAIAction action(CAIAction::LEAVEAREALUA, m_sAreaString, m_ptPosition, 0, 1);
+
+                            pSprite->ClearActions(FALSE);
+                            pSprite->m_interrupt = TRUE;
+                            pSprite->SetCurrAction(action);
+                            pSprite->ExecuteAction();
+
+                            if (g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_nCharacters == 0) {
+                                g_pBaldurChitin->GetObjectGame()->UnselectAll();
+                                g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_bPicked = FALSE;
+
+                                CGameArea* pVisibleArea = g_pBaldurChitin->GetObjectGame()->GetVisibleArea();
+                                pVisibleArea->m_iPicked = CGameObjectArray::INVALID_INDEX;
+                                pVisibleArea->m_nToolTip = 0;
+
+                                g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnDeactivation();
+
+                                g_pBaldurChitin->GetObjectGame()->m_visibleArea = pSprite->m_pArea->m_id;
+                                g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnActivation();
+                            }
+                        }
+                    }
+                }
+
                 // TODO: Incomplete.
             }
         }
