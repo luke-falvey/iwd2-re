@@ -695,8 +695,7 @@ void CCtrlAltDelete::DisplayText(CString sText)
 void CCtrlAltDelete::MoveToArea(CString sAreaName)
 {
     if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(CResRef(sAreaName), 0x3F2, TRUE) == NULL) {
-        DisplayText("Error File " + sAreaName + " does not exist
-");
+        DisplayText("Error File " + sAreaName + " does not exist\n");
     } else {
         g_pBaldurChitin->GetScreenWorld()->MoveToArea(sAreaName);
     }
@@ -720,8 +719,7 @@ void CCtrlAltDelete::CreateCreature(CString sName)
     CResRef resRef(sName);
 
     if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(resRef, 0x3F1, TRUE) == NULL) {
-        DisplayText("Error File " + sName + " does not exist
-");
+        DisplayText("Error File " + sName + " does not exist\n");
         return;
     }
 
@@ -799,8 +797,7 @@ void CCtrlAltDelete::AddItem(CString sName, WORD nUseCount1, WORD nUseCount2, WO
     CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
     if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(CResRef(sName), 0x3ED, TRUE) == NULL) {
-        DisplayText("Error File " + sName + " does not exist
-");
+        DisplayText("Error File " + sName + " does not exist\n");
         return;
     }
 
@@ -920,8 +917,7 @@ void CCtrlAltDelete::AddItem2(CString sName, WORD nUseCount1, WORD nUseCount2, W
 
     if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(CResRef(sName), 0x3ED, TRUE) == NULL) {
         // NOTE: Uninline.
-        DisplayText("Error File " + sName + " does not exist
-");
+        DisplayText("Error File " + sName + " does not exist\n");
         return;
     }
 
@@ -1044,8 +1040,7 @@ void CCtrlAltDelete::AddSpell(CString sName, UINT nAmount)
         AddAllSpellsOfClass(nClass, nAmount);
     } else {
         if (g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(CResRef(sName), 0x3EE, TRUE) == NULL) {
-            DisplayText("Error File " + sName + " does not exist
-");
+            DisplayText("Error File " + sName + " does not exist\n");
             return;
         }
 
