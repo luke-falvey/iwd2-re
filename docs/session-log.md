@@ -2,6 +2,32 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-13 (morning): batches 65–87, snow confirmed on the original, 21 markers left
+
+**S6 weather.** Eight S6 runs on the original produced one snow start (dark world with snowflakes), so the "dark world" is the original's own 15% roll. `checkpoints.py` now records a `name.altN.png` variant when the original shows a screen that matches no golden, and S6 has snow variants for the dock and world regions. On the rebuild a snow start matched the snow golden except that no snowflakes were drawn: `CParticle::Render` had only the 32-bit cases. Batch 80 added the 16- and 24-bit cases. Not yet seen in a play test: 20 S6 runs since the merge rolled no snow.
+
+**S6 tolerance.** The world region differs 2.0–3.4% from the golden on every rebuild run (30 runs measured) because idle characters stand in different poses; the limit was 3.0% and is now 4.5%. A wrong weather state differs by 19% or more.
+
+**Batches merged: 65–87.** Character screen complete (skills panel, cancel and done handlers, `LevelUp`, general and equipment information, the 26 KB character-sheet export 0x5EFFD0); `CGameSprite` `Spell`, `SpellPoint`, `UseItem`, `IsSpellTargetValid`, the `SetCurrAction` spell block, item removal in `ExecuteAction`; `CGameAIBase::FireSpell`/`FireSpellPoint`; spawning (`CGameSpawning::Spawn`, `CSpawnList::Execute`, `CSpawn::ExecuteSpawn`); `CAIGroup::GroupDrawMove` and `GroupProtectPoint`; particles, blood and tiled objects; connection screen timer and EM events; save-slot list; map fog of war; projectile `Fire`/`AIUpdate` for the single-target and BAM projectiles, with visual-effect (VEF) creation; `CTimerWorld::GetCurrentTimeString`; `CSwitchCDStatus` complete; GameSpy sockets, heartbeat and query handling; `CUIControlEncumbrance::Render`.
+
+**Verifier findings fixed in old code:** `CInfGame::GetShapeshifts` returned nothing; `CScreenLoad::RefreshGameSlots` built the save path with `/` and skipped the 8-byte signature for creatures referenced by resref (the original does not, on that path only); `CParticle::Render3d` used divisions for shifts and offset one line end; an extra `Unlock` in the map control's `Render`.
+
+**GameSpy.** `sub_4D0980` does `WSAStartup` and an asynchronous DNS lookup of `master.gamespy.com` with a wait of up to 3 s. It only runs when hosting a TCP/IP session with `[GameSpy] Enabled=1` in the ini, never at start-up. The two response senders (0x4D0F40, 0x4D1220) need the key-encoding class `CUnknown1`, in progress.
+
+**Progress:** 7,857 of 9,647 counted functions complete (81.4%), 93.8% of bytes. 21 `TODO: Incomplete` markers remain, in 13 files; the rest of the gap (about 227 KB) is functions that have no body in the repo yet.
+
+**Process notes**
+- Five agents at once ran into the 5-hour usage limit; three or four is the ceiling.
+- A `CGameEffect` asm offset is the header comment plus 4 (vtable first); a `CMessage` constructor takes the caller, then the target. Both are in the translate-function skill now.
+- A translator's doubt is often wrong in the other direction: two "suspected errors" in neighbouring old code were real, one was not (`CScreenLoad` has no `>= 4` slot-number condition; only `CScreenSave` does). Always send such doubts to a verifier before changing anything.
+- A stray file with a mangled name (ending `verify_d_packet.txt`) sits untracked in the batch3 worktree root; left for the owner to delete.
+
+**Open**
+- Confirm snowflakes on the rebuild in a snow-start S6 run.
+- `CVisualEffect` has no translated destructor (components leak); lists at 0x24A/0x266 are typed from one constructor only.
+- Flag constants 0x80, 0x40, 0x20, 0x10, 0x8, 0x4 next to `CUIControlLabel::TYPE_WORD_WRAP` are literals.
+- Earlier items below still stand.
+
 ## 2026-11-13: batches 47–64, S6 stall fixed, old code audited
 
 **S6.** The dock member that stopped short was `CGameArea::SortLists` (0x4794E0), an old hand-written function: it never re-sorted the y-sorted object list after the first render (inverted `m_firstRender` test), its bubble sort advanced the wrong variable, and the merge read the wrong half of the array. `GetAllInRange` depends on that order, so a blocked sprite found no neighbour to bump. A verifier pass over the whole function then found three more differences (an early return that skipped the back/flight/remove lists, a missing count decrement for deleted objects, `InsertAfter` for `InsertBefore`). All fixed. S6 now passes most runs; the remaining failures are the world region at exactly the 3.0% limit.
