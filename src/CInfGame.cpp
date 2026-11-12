@@ -12829,7 +12829,106 @@ void CInfGame::sub_5C4AD0(LONG nCharacterId, LONG nTriggerId, CString sArea)
             }
         }
 
-        // TODO: Incomplete.
+        g_pChitin->cProgressBar.m_bTimeoutVisible = FALSE;
+        g_pChitin->cProgressBar.m_nActionProgress += g_pChitin->cProgressBar.m_nActionTarget - g_pChitin->cProgressBar.m_nActionProgress;
+        g_pChitin->m_bDisplayStale = TRUE;
+        sub_59FA00(TRUE);
+
+        g_pChitin->SetProgressBar(FALSE, 0, 0, 0, FALSE, 0, FALSE, 0, FALSE, FALSE, 0xFF);
+
+        g_pBaldurChitin->cSoundMixer.m_nActiveArea = reinterpret_cast<DWORD>(pArea);
+        g_pBaldurChitin->cSoundMixer.UpdateSoundList();
+        g_pBaldurChitin->m_pEngineWorld->m_weather.OnAreaChange(FALSE);
+
+        if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE
+            && g_pChitin->cNetwork.m_bIsHost == TRUE) {
+            // NOTE: Shadows the outer `pGame`.
+            CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+            // __LINE__: 21370
+            UTIL_ASSERT(pGame != NULL);
+
+            for (INT nSlot = 0; nSlot < CMultiplayerSettings::MAX_CHARACTERS; nSlot++) {
+                LONG nId;
+                if (nSlot < 6) {
+                    nId = pGame->m_characters[nSlot];
+                } else {
+                    nId = CGameObjectArray::INVALID_INDEX;
+                }
+
+                BOOLEAN bMoved = FALSE;
+                BOOLEAN bInControl = FALSE;
+
+                CGameSprite* pSprite;
+                do {
+                    rc = pGame->GetObjectArray()->GetShare(nId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc == CGameObjectArray::SUCCESS) {
+                    // NOTE: `Animate` is the function at 0x728560 which tests
+                    // the "not dead" state bit.
+                    if (pSprite->Animate()
+                        && pSprite->m_pArea != NULL
+                        && pSprite->m_pArea != pArea) {
+                        bMoved = TRUE;
+
+                        // NOTE: Uninline.
+                        bInControl = pSprite->InControl();
+                    }
+
+                    pGame->GetObjectArray()->ReleaseShare(nId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                }
+
+                if (bMoved == TRUE) {
+                    if (!bInControl) {
+                        g_pBaldurChitin->GetObjectGame()->m_multiplayerSettings.SetCharacterControlledByPlayer(nSlot,
+                            static_cast<BYTE>(g_pChitin->cNetwork.m_nLocalPlayer),
+                            TRUE,
+                            TRUE);
+                    }
+
+                    do {
+                        rc = pGame->GetObjectArray()->GetDeny(nId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            reinterpret_cast<CGameObject**>(&pSprite),
+                            INFINITE);
+                    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                    if (rc == CGameObjectArray::SUCCESS) {
+                        pSprite->m_cLastSpriteUpdate.Initialize(TRUE);
+
+                        CAIAction action(CAIAction::LEAVEAREALUA, sTriggerArea, ptEnter, 0, 1);
+
+                        pSprite->ClearActions(FALSE);
+                        pSprite->m_targetPoint.x = -1;
+                        pSprite->m_targetPoint.y = -1;
+                        pSprite->m_interrupt = TRUE;
+                        pSprite->SetCurrAction(action);
+                        pSprite->ExecuteAction();
+
+                        if (g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_nCharacters == 0) {
+                            g_pBaldurChitin->GetObjectGame()->UnselectAll();
+                            g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_bPicked = FALSE;
+                            g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_iPicked = -1;
+                            g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_nToolTip = 0;
+                            g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnDeactivation();
+                            g_pBaldurChitin->GetObjectGame()->m_visibleArea = pSprite->m_pArea->m_id;
+                            g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnActivation();
+                        }
+
+                        pGame->GetObjectArray()->ReleaseDeny(nId,
+                            CGameObjectArray::THREAD_ASYNCH,
+                            INFINITE);
+                    }
+                }
+            }
+        }
     }
 }
 
