@@ -14475,6 +14475,50 @@ INT CGameSprite::sub_723DB0()
     return 10 + nAC + sub_723F60() + nDexBonus;
 }
 
+// 0x723EA0
+INT CGameSprite::sub_723EA0()
+{
+    // NOTE: Same as `sub_724010` applied to the Dexterity bonus, followed by
+    // the Blind Fight check from `GetAC`.
+    INT nDexBonus = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetAbilityScoreModifier(m_derivedStats.m_nDEX);
+
+    CItem* pItem = m_equipment.m_items[1];
+    if (pItem != NULL) {
+        switch (pItem->GetItemType()) {
+        case 60:
+            nDexBonus = min(6, nDexBonus);
+            break;
+        case 61:
+            nDexBonus = min(5, nDexBonus);
+            break;
+        case 62:
+            nDexBonus = min(2, nDexBonus);
+            break;
+        case 63:
+        case 64:
+            nDexBonus = min(0, nDexBonus);
+            break;
+        case 65:
+            nDexBonus = min(1, nDexBonus);
+            break;
+        case 66:
+            nDexBonus = min(4, nDexBonus);
+            break;
+        case 68:
+            nDexBonus = min(3, nDexBonus);
+            break;
+        }
+    }
+
+    if ((m_derivedStats.m_generalState & STATE_BLIND) != 0
+        && nDexBonus > 0
+        && !sub_763150(CGAMESPRITE_FEAT_BLIND_FIGHT)) {
+        return 0;
+    }
+
+    return nDexBonus;
+}
+
 // 0x723F60
 INT CGameSprite::sub_723F60()
 {
