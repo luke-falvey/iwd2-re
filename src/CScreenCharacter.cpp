@@ -9510,25 +9510,203 @@ CString CScreenCharacter::sub_5EFFD0(BOOLEAN& bFlag)
         fputs("\n", pFile);
     }
 
-    // 0x5F4825 - 0x5F4DFC (0x5D7 bytes): header "%s:\n" 10315
-    // (0x284B) (no leading "\n"); lines through `sub_5EFAA0`/`sub_5EF9E0`: 10332 (0x285C),
-    // 16462 (0x404E, `GetCriticalHitBonus`), 28357 (0x6EC5), 28373 (0x6ED5),
-    // 10336 (0x2860), 10338 (0x2862, `GetEncumbranceMod` 0x546AA0 with
-    // `__ftol` and 2DA `atol` 0x7E7B03), 10342 (0x2866, `sub_542EC0` 0x542EC0).
-    // SECTION NOT TRANSLATED.
+    // 0x5F4825 - 0x5F4DFC: Ability statistics.
+    fprintf(pFile, "%s:\n", (LPCSTR)FetchString(10315));
 
-    // 0x5F4DFC - 0x5F523B (0x43F bytes): seven `IsClassValid` tests and the
-    // spellcaster class loop (`GetSpellcasterClass` 0x5CA730, jump table at
-    // 0x5F66CC, `GetMaxKnownSpells` 0x5431E0, `GetClassStringMixed`
-    // 0x544120, "   %s: %s\n" 0x8B32F4, 2DA lookup 0x7FC1A5): lines 10343
-    // (0x2867) "%d%%", 10344 (0x2868), 10345 (0x2869).
-    // SECTION NOT TRANSLATED.
+    {
+        // NOTE: Uninline (`C2DArray::GetAt`). Column constant at 0x84EA58.
+        INT nValue = atol(rule.m_tStrengthMod.GetAt(CPoint(0, pDStats->m_nSTR)));
+        if (nValue != 0) {
+            sub_5EFAA0(pFile, FetchString(10332), "%+d", nValue, 1);
+        } else {
+            sub_5EF9E0(pFile, FetchString(10332), 0, 1);
+        }
+    }
 
-    // 0x5F523B - 0x5F594B (0x710 bytes): "\n"; header "%s:\n" 15544 (0x3CB8);
-    // `sub_5EF9E0` lines (a3 = 1) 15581 (0x3CDD), 11770 (0x2DFA), 11769
-    // (0x2DF9), 11768 (0x2DF8), 15578 (0x3CDA), 15546 (0x3CBA), 15577
-    // (0x3CD9), 15545 (0x3CB9), 11767 (0x2DF7), 38135 (0x94F7).
-    // SECTION NOT TRANSLATED.
+    if (pSprite->GetCriticalHitBonus() != 0) {
+        INT nValue = pSprite->GetCriticalHitBonus();
+        if (nValue != 0) {
+            sub_5EFAA0(pFile, FetchString(16462), "%+d", nValue, 1);
+        } else {
+            sub_5EF9E0(pFile, FetchString(16462), 0, 1);
+        }
+    }
+
+    {
+        SHORT nPhysicalSpeed = pDStats->m_nPhysicalSpeed;
+        if (nPhysicalSpeed != 0) {
+            INT nValue = nPhysicalSpeed;
+            if (nValue != 0) {
+                sub_5EFAA0(pFile, FetchString(28357), "%+d", nValue, 1);
+            } else {
+                sub_5EF9E0(pFile, FetchString(28357), 0, 1);
+            }
+        }
+    }
+
+    {
+        SHORT nValue6 = pDStats->field_6;
+        if (nValue6 != 0) {
+            INT nValue = nValue6;
+            if (nValue != 0) {
+                sub_5EFAA0(pFile, FetchString(28373), "%+d", nValue, 1);
+            } else {
+                sub_5EF9E0(pFile, FetchString(28373), 0, 1);
+            }
+        }
+    }
+
+    {
+        // NOTE: Uninline (`C2DArray::GetAt`). Column constant at 0x84EA5A.
+        INT nValue = atol(rule.m_tStrengthMod.GetAt(CPoint(1, pDStats->m_nSTR)));
+        if (nValue != 0) {
+            sub_5EFAA0(pFile, FetchString(10336), "%+d", nValue, 1);
+        } else {
+            sub_5EF9E0(pFile, FetchString(10336), 0, 1);
+        }
+    }
+
+    {
+        // NOTE: Uninline (`C2DArray::GetAt`). Column constant at 0x84EA5E.
+        INT nStrengthWeight = atol(rule.m_tStrengthMod.GetAt(CPoint(3, pDStats->m_nSTR)));
+        INT nWeight = static_cast<INT>(static_cast<float>(rule.GetEncumbranceMod(pSprite)) / 100.0f
+            * static_cast<float>(nStrengthWeight));
+
+        if (nWeight != 0) {
+            // NOTE: Uninline (`sub_5EFAA0`).
+            sub_5EFAA0(pFile, FetchString(10338), "%+d", nWeight, 1);
+        } else {
+            sub_5EF9E0(pFile, FetchString(10338), 0, 1);
+        }
+    }
+
+    {
+        INT nResult;
+        INT nFlag;
+        rule.sub_542EC0(pTypeAI->m_nClass, static_cast<BYTE>(pDStats->m_nCON), &nResult, &nFlag);
+
+        if (nResult != 0) {
+            // NOTE: Uninline (`sub_5EFAA0`).
+            sub_5EFAA0(pFile, FetchString(10342), "%+d", nResult, 1);
+        } else {
+            sub_5EF9E0(pFile, FetchString(10342), 0, 1);
+        }
+    }
+
+    // 0x5F4DFC - 0x5F523A: Bonus spells and spells known.
+    if (pTypeAI->IsClassValid(CAIObjectType::C_WIZARD)) {
+        // NOTE: Uninline (`C2DArray::GetAt`). Column constant at 0x84EA6A.
+        INT nValue = atol(rule.m_tIntelligenceMod.GetAt(CPoint(0, pDStats->m_nINT)));
+
+        // NOTE: Uninline (`sub_5EFAA0`).
+        sub_5EFAA0(pFile, FetchString(10343), "%d%%", nValue, 1);
+    }
+
+    if (pTypeAI->IsClassValid(CAIObjectType::C_BARD)
+        || pTypeAI->IsClassValid(CAIObjectType::C_CLERIC)
+        || pTypeAI->IsClassValid(CAIObjectType::C_DRUID)
+        || pTypeAI->IsClassValid(CAIObjectType::C_PALADIN)
+        || pTypeAI->IsClassValid(CAIObjectType::C_RANGER)
+        || pTypeAI->IsClassValid(CAIObjectType::C_SORCERER)
+        || pTypeAI->IsClassValid(CAIObjectType::C_WIZARD)) {
+        for (UINT nIndex = 0; nIndex < 7; nIndex++) {
+            BYTE nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nIndex);
+
+            // NOTE: Inlined `CInfGame::GetSpellcasterClassMask` (without the
+            // assertion).
+            DWORD dwClassMask = 0;
+            switch (nIndex) {
+            case 0:
+                dwClassMask = CLASSMASK_BARD;
+                break;
+            case 1:
+                dwClassMask = CLASSMASK_CLERIC;
+                break;
+            case 2:
+                dwClassMask = CLASSMASK_DRUID;
+                break;
+            case 3:
+                dwClassMask = CLASSMASK_PALADIN;
+                break;
+            case 4:
+                dwClassMask = CLASSMASK_RANGER;
+                break;
+            case 5:
+                dwClassMask = CLASSMASK_SORCERER;
+                break;
+            case 6:
+                dwClassMask = CLASSMASK_WIZARD;
+                break;
+            }
+
+            if ((pTypeAI->m_nClassMask & dwClassMask) != 0) {
+                INT nBonus;
+                rule.GetMaxKnownSpells(nClass,
+                    *pTypeAI,
+                    *pDStats,
+                    pBStats->m_specialization,
+                    1,
+                    nBonus);
+
+                if (nBonus > 0) {
+                    CString sClass;
+                    rule.GetClassStringMixed(nClass,
+                        pBStats->m_specialization,
+                        pBStats->m_flags,
+                        sClass,
+                        pTypeAI->m_nGender != 2);
+
+                    fprintf(pFile,
+                        "   %s: %s\n",
+                        (LPCSTR)FetchString(10344),
+                        (LPCSTR)sClass);
+
+                    INT nSpellLevel = 1;
+                    while (nSpellLevel <= 9 && nBonus > 0) {
+                        sValue.Format("%d", nSpellLevel);
+                        g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_SPELLLEVEL, sValue);
+
+                        INT nValue = nBonus;
+                        if (nValue != 0) {
+                            // NOTE: Uninline (`sub_5EFAA0`).
+                            sub_5EFAA0(pFile, FetchString(10345), "%+d", nValue, 1);
+                        } else {
+                            sub_5EF9E0(pFile, FetchString(10345), 0, 1);
+                        }
+
+                        // NOTE: The class argument is a copy of the class of
+                        // the character's type instead of `nClass`.
+                        BYTE nTypeClass = pTypeAI->m_nClass;
+
+                        nSpellLevel++;
+                        rule.GetMaxKnownSpells(nTypeClass,
+                            *pTypeAI,
+                            *pDStats,
+                            pBStats->m_specialization,
+                            nSpellLevel,
+                            nBonus);
+                    }
+                }
+            }
+        }
+    }
+
+    // 0x5F523A - 0x5F594A: Resistances.
+    fputs("\n", pFile);
+
+    fprintf(pFile, "%s:\n", (LPCSTR)FetchString(15544));
+
+    // NOTE: Uninline (`sub_5EF9E0`) for each line.
+    sub_5EF9E0(pFile, FetchString(15581), pDStats->m_nResistMagic, 1);
+    sub_5EF9E0(pFile, FetchString(11770), pDStats->m_nResistCrushing, 1);
+    sub_5EF9E0(pFile, FetchString(11769), pDStats->m_nResistPiercing, 1);
+    sub_5EF9E0(pFile, FetchString(11768), pDStats->m_nResistSlashing, 1);
+    sub_5EF9E0(pFile, FetchString(15578), pDStats->m_nResistAcid, 1);
+    sub_5EF9E0(pFile, FetchString(15546), pDStats->m_nResistCold, 1);
+    sub_5EF9E0(pFile, FetchString(15577), pDStats->m_nResistElectricity, 1);
+    sub_5EF9E0(pFile, FetchString(15545), pDStats->m_nResistFire, 1);
+    sub_5EF9E0(pFile, FetchString(11767), pDStats->m_nResistMissile, 1);
+    sub_5EF9E0(pFile, FetchString(38135), pDStats->m_nResistPoison, 1);
 
     // 0x5F594B - 0x5F5C15 (0x2CA bytes): "\n" x2; spell lists:
     // `CGameSprite::GetSpells` (0x724730), `GetSpellcasterClass`, class name
