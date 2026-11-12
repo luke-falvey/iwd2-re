@@ -8129,7 +8129,105 @@ void CUIControlButtonCharacter5EBC60::sub_5EBDD0(CResRef cResRef)
 // 0x5EBFA0
 void CUIControlButtonCharacter5EBC60::OnLButtonClick(CPoint pt)
 {
-    // TODO: Incomplete.
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CScreenCharacter* pCharacter = g_pBaldurChitin->m_pEngineCharacter;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 13049
+    UTIL_ASSERT(pGame != NULL);
+
+    SHORT nPortrait = pCharacter->GetSelectedCharacter();
+
+    // NOTE: Uninline.
+    LONG nCharacterId = pGame->GetCharacterId(nPortrait);
+
+    CGameSprite* pSprite;
+    BYTE rc;
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc == CGameObjectArray::SUCCESS) {
+        INT nExtraSpells = pCharacter->m_nExtraMageSpells;
+        BYTE nClass = pCharacter->m_nClass;
+        UINT nSpellLevel = static_cast<BYTE>(pCharacter->field_1776) - 1;
+        CResRef cResRef = field_676;
+
+        CSpell cSpell;
+        cSpell.SetResRef(cResRef, TRUE, TRUE);
+
+        // NOTE: Result unused.
+        cSpell.Demand();
+
+        // NOTE: Result unused.
+        cSpell.GetDescription();
+
+        if ((pSprite->GetSpecialization() & SPECMASK_WIZARD_UNIVERSAL) == 0) {
+            if (!pSprite->IsSpellSchool(cSpell.GetSchool())) {
+                g_pBaldurChitin->m_pEngineCreateChar->sub_618D10(static_cast<BYTE>(nSpellLevel + 1), pSprite);
+            }
+        }
+
+        cSpell.Release();
+
+        INT nBonus = 0;
+        INT nTotal = 1;
+
+        if (nClass == CAIOBJECTTYPE_C_BARD || nClass == CAIOBJECTTYPE_C_SORCERER) {
+            nTotal = g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetMaxKnownSpells(nClass,
+                pSprite->m_startTypeAI,
+                pSprite->m_derivedStats,
+                pSprite->m_baseStats.m_specialization,
+                nSpellLevel + 1,
+                nBonus)
+                + nBonus;
+        }
+
+        UINT nClassIndex = g_pBaldurChitin->GetObjectGame()->GetSpellcasterIndex(nClass);
+
+        UINT nID = 0;
+        if (!g_pBaldurChitin->GetObjectGame()->m_spells.Find(field_676, nID)) {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+            // __LINE__: 13095
+            UTIL_ASSERT(FALSE);
+        }
+
+        if (m_bSelected) {
+            SetSelected(FALSE);
+
+            pCharacter->m_nExtraMageSpells = nExtraSpells + 1;
+
+            // __FILE__: .\Include\ObjCreature.h
+            // __LINE__: 1741
+            UTIL_ASSERT(nClassIndex <= CSPELLLIST_NUM_CLASSES);
+
+            // NOTE: Uninline.
+            pSprite->m_spells.Get(nClassIndex)->Remove(nID, nSpellLevel, 1, 0, 0);
+        } else if (nExtraSpells > 0
+            && cSpell.pRes != NULL
+            && cSpell.CheckUsableBy(pSprite) == TRUE) {
+            SetSelected(TRUE);
+
+            pCharacter->m_nExtraMageSpells = nExtraSpells - 1;
+
+            // __FILE__: .\Include\ObjCreature.h
+            // __LINE__: 1741
+            UTIL_ASSERT(nClassIndex <= CSPELLLIST_NUM_CLASSES);
+
+            // NOTE: Uninline.
+            pSprite->m_spells.Get(nClassIndex)->Add(nID, nSpellLevel, nTotal, 0, 0);
+        }
+
+        pCharacter->UpdateHelp(m_pPanel->m_nID, 30, cSpell.GetDescription());
+        pCharacter->UpdatePopupPanel(m_pPanel->m_nID, pSprite);
+
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+    }
 }
 
 // 0x5EC420

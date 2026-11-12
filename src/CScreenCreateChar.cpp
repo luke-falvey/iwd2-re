@@ -11032,3 +11032,10 @@ BOOL CUIControlButtonCharGenFeatsCircle::Render(BOOL bForce)
 
     return TRUE;
 }
+
+// 0x618D10
+BOOL CScreenCreateChar::sub_618D10(BYTE nSpellLevel, CGameSprite* pSprite)
+{
+    // TODO: Incomplete.
+    return FALSE;
+}
