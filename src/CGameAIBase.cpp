@@ -6660,15 +6660,337 @@ void CGameAIBase::sub_481890(CRect* r, CArray<CRect*>& ary)
 }
 
 // 0x467C50
-void CGameAIBase::FireSpell(const CResRef& resRef, CGameObject* target)
+SHORT CGameAIBase::FireSpell(const CResRef& resRef, CGameObject* target)
 {
-    // TODO: Incomplete.
+    CString sSpell;
+
+    if (target == NULL) {
+        return ACTION_ERROR;
+    }
+
+    resRef.CopyToString(sSpell);
+
+    CSpell* pSpell = new CSpell(CResRef(sSpell));
+    if (pSpell == NULL) {
+        return ACTION_ERROR;
+    }
+
+    pSpell->Demand();
+
+    SHORT casterLevel;
+    if (GetObjectType() == TYPE_SPRITE) {
+        casterLevel = static_cast<CGameSprite*>(this)->GetCasterLevel(pSpell, 0, 0);
+        if (casterLevel < 1) {
+            casterLevel = 1;
+        }
+    } else {
+        casterLevel = 1;
+    }
+
+    SHORT nAbility = 0;
+    if (pSpell->GetAbilityCount() > 0) {
+        do {
+            if (pSpell->GetAbility(nAbility)->minCasterLevel > casterLevel) {
+                break;
+            }
+
+            // NOTE: Result is unused.
+            pSpell->GetAbility(nAbility);
+
+            nAbility++;
+        } while (nAbility < pSpell->GetAbilityCount());
+    }
+
+    LONG abilityNum = static_cast<SHORT>(nAbility - 1);
+    SPELL_ABILITY* pAbility = pSpell->GetAbility(abilityNum);
+    if (pAbility == NULL) {
+        pSpell->Release();
+        delete pSpell;
+        return ACTION_ERROR;
+    }
+
+    CProjectile* pProjectile = CProjectile::DecodeProjectile(pAbility->missileType, this, FALSE);
+    if (GetObjectType() == TYPE_SPRITE) {
+        BYTE nClass = 0;
+        int nType = 0;
+        BYTE nLevel = 0;
+        if (static_cast<CGameSprite*>(this)->sub_727720(pSpell->cResRef, nClass, nType, nLevel) == 1) {
+            pProjectile->field_186 = nLevel;
+        }
+        pProjectile->field_18A = pSpell->cResRef;
+    }
+
+    for (LONG nEffect = 0; nEffect < pAbility->effectCount; nEffect++) {
+        CGameEffect* pEffect = pSpell->DecodeEffect(abilityNum,
+            nEffect,
+            this,
+            0,
+            0,
+            0);
+        pEffect->m_source = m_pos;
+        pEffect->m_sourceID = m_id;
+        pEffect->m_target = target->GetPos();
+
+        switch (pEffect->m_targetType) {
+        case 1:
+            pEffect->m_flags |= 0x2;
+
+            {
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+            break;
+        case 2:
+            pProjectile->AddEffect(pEffect);
+            break;
+        case 3:
+            ApplyEffectToParty(pEffect);
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+            break;
+        case 4:
+            m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, NULL);
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+            break;
+        case 5:
+            m_pArea->sub_46E130(pEffect, TRUE, FALSE, 0, NULL);
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+            break;
+        case 6:
+            m_pArea->sub_46E130(pEffect, FALSE, TRUE, m_typeAI.m_nSpecific, NULL);
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+            break;
+        case 7:
+            m_pArea->sub_46E130(pEffect, FALSE, TRUE, target->GetAIType().m_nSpecific, NULL);
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+            break;
+        case 8:
+            m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, this);
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameAIBaseActions.cpp
+            // __LINE__: 4780
+            UTIL_ASSERT(FALSE);
+        }
+    }
+
+    if (GetObjectType() == TYPE_SPRITE) {
+        static_cast<CGameSprite*>(this)->FeedBack(CGameSprite::FEEDBACK_SPELL,
+            0,
+            0,
+            0,
+            pSpell->GetGenericName(),
+            0,
+            0);
+    }
+
+    // NOTE: `DetermineHeight` is called with `this` even when it's not a
+    // sprite.
+    CMessageFireProjectile* pMessage = new CMessageFireProjectile(pProjectile->m_projectileType,
+        target->m_id,
+        target->GetPos(),
+        pProjectile->DetermineHeight(static_cast<CGameSprite*>(this)),
+        m_id,
+        m_id,
+        0);
+
+    if (pProjectile->m_projectileType == 304) {
+        int nRandom = rand() % 1000000;
+        // FIXME: Member of the specific `CProjectile` subclass for projectile
+        // type 304 (offset 0x356), not of `CProjectile`.
+        *reinterpret_cast<int*>(reinterpret_cast<BYTE*>(pProjectile) + 0x356) = nRandom;
+        pMessage->field_20 = nRandom;
+    }
+
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+    pProjectile->Fire(m_pArea,
+        m_id,
+        target->m_id,
+        target->GetPos(),
+        30,
+        0);
+
+    pSpell->Release();
+    delete pSpell;
+
+    return ACTION_DONE;
 }
 
 // 0x4681E0
-void CGameAIBase::FireSpellPoint(const CResRef& resRef, const CPoint& ptTarget)
+SHORT CGameAIBase::FireSpellPoint(const CResRef& resRef, const CPoint& ptTarget)
 {
-    // TODO: Incomplete.
+    CString sSpell;
+
+    // NOTE: `resRef` is never read, the spell is created from the empty string.
+    CSpell* pSpell = new CSpell(CResRef(sSpell));
+    if (pSpell == NULL) {
+        return ACTION_ERROR;
+    }
+
+    pSpell->Demand();
+
+    SHORT casterLevel;
+    if (GetObjectType() == TYPE_SPRITE) {
+        casterLevel = static_cast<CGameSprite*>(this)->GetCasterLevel(pSpell, 0, 0);
+        if (casterLevel < 1) {
+            casterLevel = 1;
+        }
+    } else {
+        casterLevel = 1;
+    }
+
+    SHORT nAbility = 0;
+    if (pSpell->GetAbilityCount() > 0) {
+        do {
+            if (pSpell->GetAbility(nAbility)->minCasterLevel > casterLevel) {
+                break;
+            }
+
+            // NOTE: Result is unused.
+            pSpell->GetAbility(nAbility);
+
+            nAbility++;
+        } while (nAbility < pSpell->GetAbilityCount());
+    }
+
+    LONG abilityNum = static_cast<SHORT>(nAbility - 1);
+    SPELL_ABILITY* pAbility = pSpell->GetAbility(abilityNum);
+    if (pAbility == NULL) {
+        pSpell->Release();
+        delete pSpell;
+        return ACTION_ERROR;
+    }
+
+    CProjectile* pProjectile = CProjectile::DecodeProjectile(pAbility->missileType, this, FALSE);
+    if (GetObjectType() == TYPE_SPRITE) {
+        BYTE nClass = 0;
+        int nType = 0;
+        BYTE nLevel = 0;
+        if (static_cast<CGameSprite*>(this)->sub_727720(pSpell->cResRef, nClass, nType, nLevel) == 1) {
+            pProjectile->field_186 = nLevel;
+        }
+        pProjectile->field_18A = pSpell->cResRef;
+    }
+
+    for (LONG nEffect = 0; nEffect < pAbility->effectCount; nEffect++) {
+        CGameEffect* pEffect = pSpell->DecodeEffect(abilityNum,
+            nEffect,
+            this,
+            0,
+            0,
+            0);
+        pEffect->m_source = m_pos;
+        pEffect->m_sourceID = m_id;
+        pEffect->m_target = ptTarget;
+
+        switch (pEffect->m_targetType) {
+        case 1:
+            pEffect->m_flags |= 0x2;
+
+            {
+                CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+            break;
+        case 2:
+            pProjectile->AddEffect(pEffect);
+            break;
+        case 3:
+            ApplyEffectToParty(pEffect);
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+            break;
+        case 4:
+            m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, NULL);
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+            break;
+        case 5:
+            m_pArea->sub_46E130(pEffect, TRUE, FALSE, 0, NULL);
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+            break;
+        case 6:
+            m_pArea->sub_46E130(pEffect, FALSE, TRUE, m_typeAI.m_nSpecific, NULL);
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+            break;
+        case 7:
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+            break;
+        case 8:
+            m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, this);
+            if (pEffect != NULL) {
+                delete pEffect;
+            }
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameAIBaseActions.cpp
+            // __LINE__: 4942
+            UTIL_ASSERT(FALSE);
+        }
+    }
+
+    if (GetObjectType() == TYPE_SPRITE) {
+        static_cast<CGameSprite*>(this)->FeedBack(CGameSprite::FEEDBACK_SPELL,
+            0,
+            0,
+            0,
+            pSpell->GetGenericName(),
+            0,
+            0);
+    }
+
+    // NOTE: `DetermineHeight` is called with `this` even when it's not a
+    // sprite.
+    CMessageFireProjectile* pMessage = new CMessageFireProjectile(pProjectile->m_projectileType,
+        CGameObjectArray::INVALID_INDEX,
+        ptTarget,
+        pProjectile->DetermineHeight(static_cast<CGameSprite*>(this)),
+        m_id,
+        m_id,
+        0);
+
+    if (pProjectile->m_projectileType == 304) {
+        int nRandom = rand() % 1000000;
+        // FIXME: Member of the specific `CProjectile` subclass for projectile
+        // type 304 (offset 0x356), not of `CProjectile`.
+        *reinterpret_cast<int*>(reinterpret_cast<BYTE*>(pProjectile) + 0x356) = nRandom;
+        pMessage->field_20 = nRandom;
+    }
+
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+    pProjectile->Fire(m_pArea,
+        m_id,
+        CGameObjectArray::INVALID_INDEX,
+        ptTarget,
+        30,
+        0);
+
+    pSpell->Release();
+    delete pSpell;
+
+    return ACTION_DONE;
 }
 
 // 0x4686C0

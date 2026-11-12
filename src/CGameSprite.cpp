@@ -15260,8 +15260,6 @@ void CGameSprite::ResolveInstants(BOOL dropNonInstants)
 // 0x728F80
 SHORT CGameSprite::ExecuteAction()
 {
-    // TODO: Incomplete (action 223 does not send `CMessageRemoveItem`).
-
     SHORT actionReturn = ACTION_DONE;
     CGameObject* pObject = NULL;
     BOOL bShare = FALSE;
@@ -15957,9 +15955,8 @@ SHORT CGameSprite::ExecuteAction()
     case 223:
         for (INT nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
             if (m_equipment.m_items[nSlot] != NULL && nSlot != CGameSpriteEquipment::SLOT_FIST) {
-                // TODO: Original sends `CMessageRemoveItem(nSlot, m_id, m_id)`
-                // (vtable 0x848C04, constructor 0x4F5C70) which is not
-                // translated yet.
+                CMessageRemoveInventoryItem* pMessage = new CMessageRemoveInventoryItem(static_cast<SHORT>(nSlot), m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
 
                 CAbilityId abilityId;
                 abilityId.m_itemType = 2;
