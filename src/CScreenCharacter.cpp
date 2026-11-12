@@ -8458,8 +8458,6 @@ void CScreenCharacter::sub_5EFCC0(FILE* pFile, CItem* pItem, BYTE a3, BYTE a4)
 // 0x5EFFD0
 CString CScreenCharacter::sub_5EFFD0(BOOLEAN& bFlag)
 {
-    // TODO: Incomplete.
-
     // 0x5EFFD0 - 0x5F0391: Prologue, character lookup, file name, file open.
     LONG nCharacterId = g_pBaldurChitin->m_pObjectGame->GetCharacterId(m_nSelectedCharacter);
 
@@ -9833,18 +9831,149 @@ CString CScreenCharacter::sub_5EFFD0(BOOLEAN& bFlag)
     fputs("\n", pFile);
     fputs("\n", pFile);
 
-    // 0x5F6100 - 0x5F6345 (0x245 bytes): `CALL [EDX + 0xA0]` then the
-    // function pointer at 0x847310 with ("Game Options", "Output Full Detailed
-    // Description"); `GetEquipment` (0x45B740); "--  %s:\n" (0x8B3254) strref
-    // 11292 (0x2C1C); separators (0x8B3260, 0x8B321C); `sub_5EFCC0` item
-    // calls for the equipment slots (a3/a4 = 1 and 0), `sub_726800`
-    // selected weapon.
-    // SECTION NOT TRANSLATED.
+    // 0x5F60F2 - 0x5F62CD: Equipment.
+    //
+    // NOTE: The file name is the result of the virtual call at `CChitin` +0xA0
+    // (`GetIniFileName`); `GetPrivateProfileIntA` is the import at 0x847310.
+    BYTE bFull = GetPrivateProfileIntA("Game Options",
+                     "Output Full Detailed Description",
+                     0,
+                     g_pBaldurChitin->GetIniFileName())
+        != 0;
 
-    // 0x5F6345 - 0x5F6463 (0x11E bytes): inventory loops (slot ranges 0..8,
-    // 8..12, 12..18, 18.., 15..18, 0xA/0x33) with `Demand`/`Release` and
-    // `sub_5EFCC0`.
-    // SECTION NOT TRANSLATED.
+    CGameSpriteEquipment* pEquipment = pSprite->GetEquipment();
+
+    BYTE aSlotDone[51] = { 0 };
+
+    fputs("--------------------------------------------------\n", pFile);
+
+    fprintf(pFile, "--  %s:\n", (LPCSTR)FetchString(11292));
+
+    fputs("--------------------------------------------------\n\n", pFile);
+
+    if (pEquipment->m_items[6] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[6], 1, bFull);
+        aSlotDone[6] = TRUE;
+    }
+
+    if (pEquipment->m_items[0] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[0], 1, bFull);
+        aSlotDone[0] = TRUE;
+    }
+
+    if (pEquipment->m_items[1] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[1], 1, bFull);
+        aSlotDone[1] = TRUE;
+    }
+
+    if (pEquipment->m_items[4] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[4], 1, bFull);
+        aSlotDone[4] = TRUE;
+    }
+
+    if (pEquipment->m_items[pSprite->sub_726800() & 0xFF] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[pSprite->sub_726800() & 0xFF], 1, bFull);
+        aSlotDone[pSprite->sub_726800() & 0xFF] = TRUE;
+    }
+
+    if (pEquipment->m_items[5] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[5], 1, bFull);
+        aSlotDone[5] = TRUE;
+    }
+
+    if (pEquipment->m_items[8] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[8], 1, bFull);
+        aSlotDone[8] = TRUE;
+    }
+
+    if (pEquipment->m_items[7] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[7], 1, bFull);
+        aSlotDone[7] = TRUE;
+    }
+
+    if (pEquipment->m_items[2] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[2], 1, bFull);
+        aSlotDone[2] = TRUE;
+    }
+
+    if (pEquipment->m_items[3] != NULL) {
+        sub_5EFCC0(pFile, pEquipment->m_items[3], 1, bFull);
+        aSlotDone[3] = TRUE;
+    }
+
+    // 0x5F62CD - 0x5F6462: Inventory.
+    fputs("\n", pFile);
+
+    for (INT nIndex = 0; nIndex < 8; nIndex++) {
+        CItem* pItem = pEquipment->m_items[nIndex + 43];
+        if (pItem != NULL) {
+            pItem->Demand();
+
+            sub_5EFCC0(pFile,
+                pItem,
+                pEquipment->m_selectedWeapon == nIndex + 43 ? 1 : 0,
+                bFull);
+
+            aSlotDone[nIndex + 43] = TRUE;
+
+            // NOTE: The original tests `pItem` again.
+            if (pItem != NULL) {
+                pItem->Release();
+            }
+        }
+    }
+
+    fputs("\n", pFile);
+
+    for (INT nIndex = 0; nIndex < 4; nIndex++) {
+        CItem* pItem = pEquipment->m_items[nIndex + 11];
+        if (pItem != NULL) {
+            pItem->Demand();
+
+            sub_5EFCC0(pFile,
+                pItem,
+                pEquipment->m_selectedWeapon == nIndex + 11 ? 1 : 0,
+                bFull);
+
+            aSlotDone[nIndex + 11] = TRUE;
+
+            // NOTE: The original tests `pItem` again.
+            if (pItem != NULL) {
+                pItem->Release();
+            }
+        }
+    }
+
+    fputs("\n", pFile);
+
+    for (INT nSlot = 15; nSlot < 18; nSlot++) {
+        if (pEquipment->m_items[nSlot] != NULL) {
+            pEquipment->m_items[nSlot]->Demand();
+
+            sub_5EFCC0(pFile, pEquipment->m_items[nSlot], 1, bFull);
+
+            pEquipment->m_items[nSlot]->Release();
+
+            aSlotDone[nSlot] = TRUE;
+        }
+    }
+
+    fputs("\n", pFile);
+
+    for (INT nSlot = 0; nSlot < 51; nSlot++) {
+        if (nSlot != CGameSpriteEquipment::SLOT_FIST) {
+            CItem* pItem = pEquipment->m_items[nSlot];
+            if (pItem != NULL) {
+                pItem->Demand();
+
+                if (!aSlotDone[nSlot]) {
+                    sub_5EFCC0(pFile, pItem, 0, bFull);
+                }
+
+                pItem->Release();
+            }
+        }
+    }
 
     // 0x5F6462 - 0x5F65BB: Epilogue.
     fclose(pFile);
