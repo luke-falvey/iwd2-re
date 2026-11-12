@@ -2102,6 +2102,24 @@ INT CRuleTables::sub_542CB0(INT nClass, CDerivedStats& DStatsOld, CDerivedStats&
     return nResult;
 }
 
+// 0x542EC0
+void CRuleTables::sub_542EC0(INT a1, BYTE nScore, INT* pResult, INT* pFlag) const
+{
+    // NOTE: a1 is unused.
+    INT nValue = nScore;
+    float fValue = static_cast<float>(nValue);
+
+    if (nValue < 10) {
+        fValue = fValue - 1.0f;
+    }
+
+    fValue = fValue - 10.0f;
+    fValue = fValue / 2.0f;
+
+    *pResult = static_cast<INT>(fValue);
+    *pFlag = 1;
+}
+
 // 0x542FA0
 INT CRuleTables::GetStartingHitPoints(const CAIObjectType& typeAI, CDerivedStats& DStatsOld, CDerivedStats& DStats, BYTE nCON) const
 {
