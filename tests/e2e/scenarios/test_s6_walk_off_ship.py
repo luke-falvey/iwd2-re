@@ -1,4 +1,4 @@
-"""S6: select the whole party and walk it off the ship.
+﻿"""S6: select the whole party and walk it off the ship.
 
 Continues S5 (Hedron's dialogue finished, party on the deck of the ship in
 area AR1000, game running). Drags a selection box around the party on the
@@ -85,6 +85,8 @@ def test_s6_walk_off_ship(game, golden_dir):
     check(checkpoint, "walked-portraits", region=PORTRAITS_REGION, settle=1.0, max_diff=0.004)
     check(checkpoint, "walked-messages", region=MESSAGE_REGION, settle=1.0)
     check(unsettled_checkpoint, "walked-dock", region=DOCK_REGION, max_diff=0.03)
-    check(unsettled_checkpoint, "walked-world", region=WORLD_REGION, max_diff=0.03)
+    # Characters idle in different poses and spots each run: measured 2.0-3.4% over
+    # 30 runs on the rebuild. A wrong weather state differs by 19% or more.
+    check(unsettled_checkpoint, "walked-world", region=WORLD_REGION, max_diff=0.045)
 
     assert not failures, "; ".join(failures)
