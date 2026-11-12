@@ -137,6 +137,8 @@ target_sources(iwd2-core PRIVATE
     "src/CGameAreaNotes.cpp"
     "src/CGameAreaNotes.h"
     "src/CGameButtonList.h"
+    "src/CGameChunk.cpp"
+    "src/CGameChunk.h"
     "src/CGameContainer.cpp"
     "src/CGameContainer.h"
     "src/CGameDialog.cpp"

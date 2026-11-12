@@ -46,7 +46,7 @@ CProjectileSingleTarget::CProjectileSingleTarget()
     field_1DA = 0;
     field_29C = FALSE;
     field_1DE = 1;
-    memcpy(m_terrainTable, CGameObject::DEFAULT_TERRAIN_TABLE, 16);
+    memcpy(m_terrainTable, CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE, 16);
     m_callBackProjectile = CGameObjectArray::INVALID_INDEX;
     field_17E = "";
     field_1C2 = 1;
@@ -86,7 +86,7 @@ CProjectileSingleTarget::CProjectileSingleTarget(CResRef resRef)
     field_1DA = 0;
     field_29C = FALSE;
     field_1DE = 1;
-    memcpy(m_terrainTable, CGameObject::DEFAULT_TERRAIN_TABLE, 16);
+    memcpy(m_terrainTable, CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE, 16);
     m_callBackProjectile = CGameObjectArray::INVALID_INDEX;
     field_17E = "";
     field_1C2 = 1;

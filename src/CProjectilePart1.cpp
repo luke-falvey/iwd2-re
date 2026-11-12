@@ -6,6 +6,7 @@
 
 #include "CBaldurChitin.h"
 #include "CGameArea.h"
+#include "CGameChunk.h"
 #include "CGameEffect.h"
 #include "CGameSparkle.h"
 #include "CGameSprite.h"
@@ -98,18 +99,6 @@ CProjectileBAM84DBDC::CProjectileBAM84DBDC(CResRef resRef)
     field_3D4 = FALSE;
     field_2F2 = 0;
     field_2F1 = 0xFF;
-}
-
-// 0x7105B0
-CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const CPoint& pos, WORD a5, BYTE a6, BYTE a7, WORD a8)
-{
-    // TODO: Incomplete.
-}
-
-// 0x70FD50
-CGame85BF7C::CGame85BF7C(DWORD a1, const BYTE* pColors, const CString& a3, CGameArea* pArea, const CPoint& pos, LONG nPosZ, const CPoint& a7, LONG a8, LONG a9, BYTE a10)
-{
-    // TODO: Incomplete.
 }
 
 // 0x52DD60

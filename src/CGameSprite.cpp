@@ -11,6 +11,7 @@
 #include "CGameAnimationTypeMonsterIcewindNew.h"
 #include "CGameArea.h"
 #include "CGameButtonList.h"
+#include "CGameChunk.h"
 #include "CGameContainer.h"
 #include "CGameDoor.h"
 #include "CGameTimer.h"
@@ -7839,15 +7840,17 @@ void CGameSprite::Shatter(BYTE nType)
                 LONG nVelocityX = -nAmplitude - ptReference.y / 5;
                 LONG nVelocityY = (nRand3 + 1) * m_doBounce;
 
-                // TODO: Incomplete. Original constructs `new CGameChunk(0x100, colors,
-                // sName, m_pArea, m_pos, ptOffset, nVelocityX, nVelocityY,
-                // nDuration * 4, nDuration)` (0x70F4F0, RET 0x28, size 583).
-                static_cast<void>(colors);
-                static_cast<void>(sName);
-                static_cast<void>(ptOffset);
-                static_cast<void>(nVelocityX);
-                static_cast<void>(nVelocityY);
-                static_cast<void>(nDuration);
+                // NOTE: The object registers itself in the object array.
+                new CGameChunk(0x100,
+                    colors,
+                    sName,
+                    m_pArea,
+                    m_pos,
+                    ptOffset,
+                    nVelocityX,
+                    nVelocityY,
+                    static_cast<BYTE>(nDuration * 4),
+                    nDuration);
                 nRemaining--;
             } while (nRemaining != 0);
         }
@@ -7886,15 +7889,17 @@ void CGameSprite::Shatter(BYTE nType)
                 LONG nVelocityX = -nAmplitude - ptReference.y / 5;
                 LONG nVelocityY = (nRand3 + 1) * m_doBounce;
 
-                // TODO: Incomplete. Original constructs `new CGameChunk(0x100, colors,
-                // sName, m_pArea, m_pos, ptOffset, nVelocityX, nVelocityY,
-                // nDuration * 4, nDuration)` (0x70F4F0, RET 0x28, size 583).
-                static_cast<void>(colors);
-                static_cast<void>(sName);
-                static_cast<void>(ptOffset);
-                static_cast<void>(nVelocityX);
-                static_cast<void>(nVelocityY);
-                static_cast<void>(nDuration);
+                // NOTE: The object registers itself in the object array.
+                new CGameChunk(0x100,
+                    colors,
+                    sName,
+                    m_pArea,
+                    m_pos,
+                    ptOffset,
+                    nVelocityX,
+                    nVelocityY,
+                    static_cast<BYTE>(nDuration * 4),
+                    nDuration);
                 nRemaining--;
             } while (nRemaining != 0);
         }
@@ -7930,15 +7935,17 @@ void CGameSprite::Shatter(BYTE nType)
             LONG nVelocityX = -nAmplitude - ptReference.y / 5;
             LONG nVelocityY = (nRand3 + 1) * m_doBounce;
 
-            // TODO: Incomplete. Original constructs `new CGameChunk(chunkTypes[nChunk], colors,
-            // sName, m_pArea, m_pos, ptOffset, nVelocityX, nVelocityY,
-            // nDuration * 4, nDuration)` (0x70F4F0, RET 0x28, size 583).
-            static_cast<void>(colors);
-            static_cast<void>(sName);
-            static_cast<void>(ptOffset);
-            static_cast<void>(nVelocityX);
-            static_cast<void>(nVelocityY);
-            static_cast<void>(nDuration);
+            // NOTE: The object registers itself in the object array.
+            new CGameChunk(chunkTypes[nChunk],
+                colors,
+                sName,
+                m_pArea,
+                m_pos,
+                ptOffset,
+                nVelocityX,
+                nVelocityY,
+                static_cast<BYTE>(nDuration * 4),
+                nDuration);
         }
 
         AddBlood(0, 0, CBlood::EXPLODING_DEATH);
