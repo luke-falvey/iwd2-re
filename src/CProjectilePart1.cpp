@@ -5,6 +5,9 @@
 #include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CInfGame.h"
+#include "CInfinity.h"
+#include "CPathSearch.h"
+#include "CVidPalette.h"
 #include "CUtil.h"
 
 // 0x529A90
@@ -100,7 +103,124 @@ void CProjectileBAM84DBDC::AIUpdate()
 // 0x52CF80
 void CProjectileBAM84DBDC::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
 {
-    // TODO: Incomplete.
+    CProjectileBAM::Render(pArea, pVidMode, a3);
+
+    if (field_2A8 == 0 || field_2F6 == 0) {
+        return;
+    }
+
+    CRect rGCBounds(0, 0, 0, 0);
+    COLORREF rgbTint = RGB(CVidPalette::NO_TINT, CVidPalette::NO_TINT, CVidPalette::NO_TINT);
+
+    DWORD dwFlags = Virtual80();
+
+    // NOTE: Uninline.
+    if (!field_EA->m_visibility.IsTileVisible(field_EA->m_visibility.PointToTile(m_pos))) {
+        return;
+    }
+
+    CPoint ptSearch(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX,
+        m_pos.y / CPathSearch::GRID_SQUARE_SIZEY);
+    if (field_EA->m_search.GetMobileCost(ptSearch, m_terrainTable, 3, TRUE) == CPathSearch::COST_IMPASSABLE) {
+        return;
+    }
+
+    if (field_1C6 != 0) {
+        dwFlags |= 0x200;
+    }
+
+    if (field_1BE != 0) {
+        dwFlags |= 0x10000;
+    }
+
+    if (field_3D4 != 0) {
+        dwFlags |= 0x4;
+    }
+
+    CInfinity* pInfinity = field_EA->GetInfinity();
+
+    CRect rScreen;
+    rScreen.left = pInfinity->nCurrentX;
+    rScreen.top = pInfinity->nCurrentY;
+    rScreen.right = pInfinity->rViewPort.right - pInfinity->rViewPort.left + pInfinity->nCurrentX;
+    rScreen.bottom = pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + pInfinity->nCurrentY;
+
+    CRect rFx;
+    CPoint ptRef;
+    sub_52B6B0(rFx, ptRef, NULL);
+
+    CPoint pos;
+    LONG nPosZ;
+    pos.x = m_pos.x;
+    if ((field_1C6 != 0 && !g_pBaldurChitin->cVideo.m_bIs3dAccelerated) || field_3D4 != 0) {
+        pos.y = m_pos.y;
+        nPosZ = m_posZ;
+    } else {
+        pos.y = m_pos.y - m_posZ;
+        nPosZ = 0;
+    }
+
+    if (field_1C2 != 0) {
+        pos.y += field_EA->GetHeightOffset(m_pos, m_listType);
+    }
+
+    if (field_1DA > CGameSprite::DIR_N) {
+        rGCBounds.left = ptRef.x - rFx.right + pos.x + rFx.left;
+    } else {
+        rGCBounds.left = pos.x - ptRef.x;
+    }
+
+    if (field_1DA > CGameSprite::DIR_W && field_1DA < CGameSprite::DIR_E) {
+        if ((field_1C6 != 0 && !g_pBaldurChitin->cVideo.m_bIs3dAccelerated) || field_3D4 != 0) {
+            ptRef.y = rFx.bottom - rFx.top - ptRef.y;
+            rGCBounds.top = pos.y - m_posZ - ptRef.y;
+        } else {
+            rGCBounds.top = rFx.top - rFx.bottom + ptRef.y + pos.y;
+        }
+        nPosZ = -nPosZ;
+    } else {
+        rGCBounds.top = pos.y - ptRef.y;
+    }
+
+    rGCBounds.right = rFx.right - rFx.left + rGCBounds.left;
+    rGCBounds.bottom = rFx.bottom - rFx.top + rGCBounds.top;
+
+    if (!IntersectRect(&rScreen, &rGCBounds, &rScreen)) {
+        return;
+    }
+
+    if (field_1BE != 0 || field_1C6 != 0) {
+        rgbTint = field_EA->GetTintColor(pos, m_listType);
+    }
+
+    if (field_1DA > CGameSprite::DIR_N) {
+        dwFlags |= CInfinity::MIRROR_FX;
+    }
+
+    if (field_1DA > CGameSprite::DIR_W && field_1DA < CGameSprite::DIR_E) {
+        dwFlags |= CInfinity::MIRROR_FX_UPDOWN;
+    }
+
+    field_EA->GetInfinity()->FXPrep(rFx, CInfinity::FXPREP_COPYFROMBACK | dwFlags, a3, pos, ptRef);
+
+    if (!field_EA->GetInfinity()->FXLock(rFx, dwFlags)) {
+        return;
+    }
+
+    if (field_1BE != 0) {
+        field_2FA.SetTintColor(rgbTint);
+    }
+
+    if (field_3D4 != 0) {
+        field_EA->GetInfinity()->FXRender(&field_3D8, ptRef.x, ptRef.y, dwFlags, 0);
+    }
+
+    field_EA->GetInfinity()->FXRender(&field_2FA, ptRef.x, ptRef.y - nPosZ, dwFlags, 128);
+
+    field_EA->GetInfinity()->FXRenderClippingPolys(pos.x, pos.y, 0, ptRef, rGCBounds, FALSE, dwFlags);
+
+    field_EA->GetInfinity()->FXUnlock(dwFlags, NULL, CPoint(0, 0));
+    field_EA->GetInfinity()->FXBltFrom(a3, rFx, pos.x, pos.y, ptRef.x, ptRef.y, dwFlags);
 }
 
 // 0x52D9F0
