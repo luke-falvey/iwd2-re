@@ -8036,6 +8036,13 @@ BOOLEAN CBaldurMessage::OnLeaveAreaNameReplyFromServer(BYTE* pByteMessage, DWORD
     return TRUE;
 }
 
+// 0x438F90
+BOOLEAN CBaldurMessage::sub_438F90(LONG nCharacterId, LONG nTriggerId, CString sArea)
+{
+    // TODO: Incomplete.
+    return FALSE;
+}
+
 // 0x439250
 BOOLEAN CBaldurMessage::sub_439250(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {
@@ -21028,6 +21035,13 @@ BOOL CMessageSpriteUpdate::UnmarshalMessage(BYTE* pData, DWORD dwSize)
     field_85 = *reinterpret_cast<BYTE*>(pData + cnt);
 
     return TRUE;
+}
+
+// 0x50D660
+BOOL CMessageSpriteUpdate::sub_50D660(CString sArea)
+{
+    // TODO: Incomplete.
+    return FALSE;
 }
 
 // 0x50D6F0

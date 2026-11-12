@@ -14,6 +14,7 @@
 #include "CGameEffect.h"
 #include "CGameObject.h"
 #include "CGameSprite.h"
+#include "CGameTrigger.h"
 #include "CInfCursor.h"
 #include "CItem.h"
 #include "CPathSearch.h"
@@ -11974,7 +11975,231 @@ void CInfGame::sub_5C3B20(LONG nCharacterId, CPoint ptStart, LONG nFace, CString
 // 0x5C4AD0
 void CInfGame::sub_5C4AD0(LONG nCharacterId, LONG nTriggerId, CString sArea)
 {
-    // TODO: Incomplete.
+    CGameSprite* pSprite;
+    CGameTrigger* pTrigger;
+    BYTE rc;
+    INT nMsgFrom;
+    DWORD dwSize;
+    BYTE* pData;
+    BOOLEAN bListenToJoin;
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    CBaldurMessage* pMessage = g_pBaldurChitin->GetBaldurMessage();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 20366
+    UTIL_ASSERT(pGame != NULL && pMessage != NULL);
+
+    // NOTE: Uninline.
+    if (g_pBaldurChitin->GetObjectGame()->GetVisibleArea() != NULL) {
+        g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->sub_47A190();
+    }
+
+    if (g_pChitin->cNetwork.m_bConnectionEstablished) {
+        if (g_pBaldurChitin->GetActiveEngine() == g_pBaldurChitin->m_pEngineMap) {
+            g_pBaldurChitin->GetActiveEngine()->SelectEngine(g_pBaldurChitin->m_pEngineWorld);
+        }
+
+        if (g_pChitin->cNetwork.m_bConnectionEstablished == TRUE
+            && g_pChitin->cNetwork.m_bIsHost == TRUE
+            && g_pBaldurChitin->GetActiveEngine() != g_pBaldurChitin->m_pEngineWorld) {
+            g_pBaldurChitin->GetActiveEngine()->SelectEngine(g_pBaldurChitin->m_pEngineWorld);
+        }
+
+        g_pBaldurChitin->cSoundMixer.m_nActiveArea = -1;
+        g_pBaldurChitin->cSoundMixer.UpdateSoundList();
+        g_pBaldurChitin->m_pEngineWorld->m_weather.OnAreaChange(TRUE);
+
+        if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+            pGame->m_sSaveGame = CInfGame::AUTO_SAVE_NAME;
+            CScreenCharacter::SAVE_NAME = CInfGame::AUTO_SAVE_NAME;
+
+            if (g_pChitin->cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL) {
+                pGame->field_366E = 1;
+                pGame->field_50DC = 0;
+
+                if (!g_pChitin->cVideo.m_bIs3dAccelerated) {
+                    if (!pGame->field_50D8) {
+                        pGame->SynchronousUpdate();
+                    }
+                    pGame->field_50D8 = TRUE;
+                }
+            }
+
+            pGame->SaveGame(TRUE, FALSE, TRUE);
+
+            if (g_pChitin->cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL
+                && g_pChitin->cVideo.m_bIs3dAccelerated) {
+                pGame->field_366E = 1;
+                pGame->field_50DC = 1;
+
+                // NOTE: Never true here.
+                if (!g_pChitin->cVideo.m_bIs3dAccelerated) {
+                    if (!pGame->field_50D8) {
+                        pGame->SynchronousUpdate();
+                    }
+                    pGame->field_50D8 = TRUE;
+                }
+            }
+
+            g_pBaldurChitin->GetBaldurMessage()->sub_438F90(nCharacterId, nTriggerId, sArea);
+        }
+
+        BOOLEAN bSaved = FALSE;
+
+        LONG nProgressTarget = 6000000;
+        if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+            nProgressTarget = 11000000;
+        }
+
+        sub_59FA00(TRUE);
+
+        g_pBaldurChitin->GetObjectGame()->m_nTravelScreenImageToUse = rand() % 5;
+        field_1B86 = sArea;
+
+        g_pChitin->SetProgressBar(TRUE, 0x26A3, 0, 0, TRUE, 0x269D, FALSE, 0, FALSE, FALSE, 0xFF);
+
+        g_pChitin->cProgressBar.m_nActionProgress = 0;
+        g_pChitin->cProgressBar.m_nActionTarget = nProgressTarget;
+        g_pChitin->cProgressBar.m_bDisableMinibars = FALSE;
+
+        if (g_pBaldurChitin->cNetwork.m_bIsHost == TRUE) {
+            bListenToJoin = pGame->m_multiplayerSettings.m_bJoinRequests;
+            pGame->m_multiplayerSettings.SetListenToJoinOption(FALSE, FALSE);
+        }
+
+        rc = pGame->GetObjectArray()->GetShare(nTriggerId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pTrigger),
+            INFINITE);
+        if (rc != CGameObjectArray::SUCCESS) {
+            return;
+        }
+
+        CString sTriggerArea;
+
+        // FIXME: `m_newArea` is not null-terminated when the area name takes all
+        // 8 characters.
+        sTriggerArea = reinterpret_cast<const char*>(pTrigger->m_newArea);
+
+        CString sEntryPoint(pTrigger->m_newEntryPoint);
+
+        pGame->GetObjectArray()->ReleaseShare(nTriggerId,
+            CGameObjectArray::THREAD_ASYNCH,
+            INFINITE);
+
+        if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+            SHORT nPlayers = 0;
+            for (INT nPlayer = 0; nPlayer < CNETWORK_MAX_PLAYERS; nPlayer++) {
+                if (g_pChitin->cNetwork.GetPlayerID(nPlayer) != 0) {
+                    nPlayers++;
+                }
+            }
+
+            if (g_pChitin->cNetwork.m_nServiceProvider != CNetwork::SERV_PROV_NULL) {
+                g_pChitin->cProgressBar.m_nWaitingReason = 0x4D03;
+                g_pChitin->cProgressBar.m_bWaiting = TRUE;
+            }
+
+            SHORT nTimeout = 40;
+            SHORT nResponses = 0;
+            while (nResponses < nPlayers - 1) {
+                pData = pMessage->PollSpecificMessageType(CBaldurMessage::MSG_TYPE_RESOURCE,
+                    CBaldurMessage::MSG_SUBTYPE_RESOURCE_DEMAND,
+                    nMsgFrom,
+                    dwSize);
+                if (pData != NULL) {
+                    pMessage->OnResourceDemanded(nMsgFrom, pData, dwSize);
+                    delete pData;
+                    nResponses++;
+                }
+
+                g_pChitin->m_bDisplayStale = TRUE;
+                SleepEx(60, FALSE);
+
+                nTimeout--;
+
+                nPlayers = 0;
+                for (INT nPlayer = 0; nPlayer < CNETWORK_MAX_PLAYERS; nPlayer++) {
+                    if (g_pChitin->cNetwork.GetPlayerID(nPlayer) != 0) {
+                        nPlayers++;
+                    }
+                }
+
+                if (nTimeout <= 0) {
+                    break;
+                }
+            }
+
+            if (nPlayers > 1 && nTimeout > 0) {
+                for (INT nRemaining = nTimeout; nRemaining > 0; nRemaining--) {
+                    g_pChitin->m_bDisplayStale = TRUE;
+                    SleepEx(60, FALSE);
+                }
+            }
+
+            g_pChitin->cProgressBar.m_bWaiting = FALSE;
+
+            g_pBaldurChitin->m_cCachingStatus.InvalidateScreen();
+        }
+
+        CGameArea* pArea = pGame->LoadArea(sTriggerArea, 0xFF, FALSE, TRUE);
+
+        do {
+            rc = pGame->GetObjectArray()->GetDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED);
+
+        if (rc != CGameObjectArray::SUCCESS) {
+            // NOTE: The object was denied above and is never released on this path.
+            g_pChitin->SetProgressBar(FALSE, 0, 0, 0, FALSE, 0, FALSE, 0, FALSE, FALSE, 0xFF);
+            return;
+        }
+
+        Icewind586B70::Instance()->sub_5872C0(pSprite);
+
+        if (pArea == NULL) {
+            g_pChitin->SetProgressBar(FALSE, 0, 0, 0, FALSE, 0, FALSE, 0, FALSE, FALSE, 0xFF);
+
+            pGame->GetObjectArray()->ReleaseDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            return;
+        }
+
+        CPoint ptEnter;
+        SHORT nFacing;
+        if (!pArea->GetEntryPoint(sEntryPoint, ptEnter, nFacing)) {
+            g_pChitin->SetProgressBar(FALSE, 0, 0, 0, FALSE, 0, FALSE, 0, FALSE, FALSE, 0xFF);
+
+            pGame->GetObjectArray()->ReleaseDeny(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+            return;
+        }
+
+        ptEnter.x /= CPathSearch::GRID_SQUARE_SIZEX;
+        ptEnter.y /= CPathSearch::GRID_SQUARE_SIZEY;
+
+        SHORT nFormation;
+        if (g_pChitin->cNetwork.m_bConnectionEstablished) {
+            nFormation = CAIGroup::FORMATION_2BY3;
+        } else {
+            nFormation = pGame->m_gameSave.m_curFormation;
+        }
+
+        CPoint* pOffsets = pGame->m_group.GetOffsets(nFormation,
+            static_cast<SHORT>(((nFacing + 8) * 360 / 16) % 360),
+            TRUE);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+        // __LINE__: 20610
+        UTIL_ASSERT(pOffsets != NULL);
+
+        // TODO: Incomplete.
+    }
 }
 
 // 0x5C72D0
