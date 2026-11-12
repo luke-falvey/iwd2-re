@@ -122,6 +122,7 @@ public:
     BOOL sub_5E4E80(CGameSprite* pSprite);
     BOOL sub_5E0FD0(DWORD dwPopupId, CGameSprite* pSprite);
     BOOL sub_5E1910(DWORD dwPopupId, CGameSprite* pSprite);
+    BOOL sub_5E1B20(DWORD dwPopupId, CGameSprite* pSprite);
     void OnInformationButtonClick();
     void OnBiographyButtonClick();
     void OnCustomizeBiographyButtonClick();

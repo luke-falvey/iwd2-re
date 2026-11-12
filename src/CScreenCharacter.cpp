@@ -4166,6 +4166,108 @@ BOOL CScreenCharacter::sub_5E1910(DWORD dwPopupId, CGameSprite* pSprite)
     return FALSE;
 }
 
+// 0x5E1B20
+BOOL CScreenCharacter::sub_5E1B20(DWORD dwPopupId, CGameSprite* pSprite)
+{
+    // NOTE: Initial value is the `pSprite` argument slot (never a valid popup
+    // id); it is only observable when the assertion below fails.
+    DWORD dwNextPopupId = reinterpret_cast<DWORD>(pSprite);
+
+    while (1) {
+        switch (dwPopupId) {
+        case 6: {
+            BOOL bDead = (pSprite->m_derivedStats.m_generalState >> 11) & 1;
+
+            pSprite->m_baseStats = *m_pTempBaseStats;
+            pSprite->m_derivedStats = *m_pTempDerivedStats;
+            pSprite->m_nHPCONBonusTotalOld = field_866;
+
+            SHORT nMaxHitPoints = pSprite->m_derivedStats.m_nMaxHitPoints;
+            WORD nMaxHitPointsBase = pSprite->m_baseStats.m_maxHitPointsBase;
+            SHORT nHitPoints = pSprite->m_baseStats.m_hitPoints;
+
+            pSprite->field_562C = 1;
+
+            pSprite->ProcessEffectList();
+
+            pSprite->m_baseStats.m_hitPoints = nHitPoints;
+            pSprite->m_derivedStats.m_nMaxHitPoints = nMaxHitPoints;
+            pSprite->m_baseStats.m_maxHitPointsBase = nMaxHitPointsBase;
+            pSprite->m_nHPCONBonusTotalOld = field_866;
+
+            if (bDead) {
+                pSprite->m_baseStats.m_generalState |= STATE_DEAD;
+                pSprite->m_derivedStats.m_generalState |= STATE_DEAD;
+            }
+
+            dwNextPopupId = 0x36;
+            break;
+        }
+        case 7:
+            dwNextPopupId = 6;
+            break;
+        case 8:
+            dwNextPopupId = 0x38;
+            break;
+        case 16:
+            dwNextPopupId = 8;
+            break;
+        case 0x36:
+            dwNextPopupId = 2;
+            break;
+        case 0x37:
+            dwNextPopupId = 7;
+            break;
+        case 0x38:
+            dwNextPopupId = 0x37;
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+            // __LINE__: 7177
+            UTIL_ASSERT(FALSE);
+            break;
+        }
+
+        if (sub_5E0FD0(dwNextPopupId, pSprite)) {
+            SummonPopup(dwNextPopupId, pSprite, 0);
+            return TRUE;
+        }
+
+        if (dwNextPopupId == 2) {
+            break;
+        }
+
+        dwPopupId = dwNextPopupId;
+    }
+
+    while (m_lPopupStack.GetTailPosition() != NULL) {
+        DismissPopup(pSprite);
+    }
+
+    if (!g_pChitin->cNetwork.m_bIsHost
+        && g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+        CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+        // __LINE__: 7200
+        UTIL_ASSERT(pGame != NULL);
+
+        // NOTE: Uninline.
+        LONG nCharacterId = pGame->GetCharacterId(m_nSelectedCharacter);
+
+        CMessage120* pMessage = new CMessage120(g_pChitin->cNetwork.m_idLocalPlayer,
+            FALSE,
+            nCharacterId,
+            nCharacterId);
+
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+    } else if (g_pChitin->cNetwork.m_bIsHost == TRUE) {
+        g_pBaldurChitin->GetObjectGame()->GetMultiplayerSettings()->sub_518660(g_pChitin->cNetwork.m_idLocalPlayer, FALSE);
+    }
+
+    return FALSE;
+}
+
 // 0x5E1DF0
 void CScreenCharacter::DismissPopup(CGameSprite* pSprite)
 {
