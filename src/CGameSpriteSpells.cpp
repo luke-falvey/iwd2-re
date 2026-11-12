@@ -19,6 +19,41 @@ CGameSpriteSpellList::~CGameSpriteSpellList()
     }
 }
 
+// NOTE: Returns a copy of `*this` by value (hidden return pointer).
+//
+// 0x444EA0
+CGameSpriteSpellList CGameSpriteSpellList::operator=(const CGameSpriteSpellList& other)
+{
+    if (m_List.size() != 0) {
+        m_List.clear();
+        field_14 = 0;
+        field_18 = 0;
+    }
+
+    m_List.reserve(other.m_List.size());
+
+    for (UINT nIndex = 0; nIndex < other.m_List.size(); nIndex++) {
+        // NOTE: Inlined accessor.
+        //
+        // __FILE__: .\Include\FileFormat.h
+        // __LINE__: 2428
+        UTIL_ASSERT(other.m_List.size() > 0);
+
+        // __FILE__: .\Include\FileFormat.h
+        // __LINE__: 2429
+        UTIL_ASSERT(nIndex < other.m_List.size());
+
+        CGameSpriteSpellListEntry entry = other.m_List[nIndex];
+        m_List.push_back(entry);
+    }
+
+    field_10 = other.field_10;
+    field_14 = other.field_14;
+    field_18 = other.field_18;
+
+    return *this;
+}
+
 // 0x725950
 BOOLEAN CGameSpriteSpellList::Add(const UINT& nID, const unsigned int& a2, const unsigned int& a3, const unsigned int& a4)
 {
@@ -351,7 +386,7 @@ BOOLEAN CGameSpriteGroupedSpellList::Remove(const UINT& nID, const UINT& nLevel,
 }
 
 // 0x726060
-BOOLEAN CGameSpriteGroupedSpellList::sub_726060(const UINT& nID, const UINT& nLevel, const unsigned int& a3, const unsigned int& a4)
+BOOLEAN CGameSpriteGroupedSpellList::sub_726060(const UINT& nID, const UINT& nLevel, const unsigned int& a3, const BOOLEAN& a4)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
     // __LINE__: 26822

@@ -615,6 +615,7 @@ public:
     INT sub_723DB0();
     INT sub_723F60();
     void sub_71E760(CDerivedStats& DStats, int a2);
+    void sub_722820();
     void sub_722D50(BYTE nClass, SHORT nLevels, int a3);
     void CheckStatsChange();
     void sub_71CC90();

@@ -431,7 +431,7 @@ void CWeather::SetCurrentWeather(CGameArea* pArea, WORD wWeatherFlags)
 // 0x556230
 void CWeather::SetCurrentWeather(CGameArea* pArea, ULONG nCurrentTime, BYTE nWeatherType)
 {
-    if (g_pBaldurChitin->cNetwork.GetSessionOpen()
+    if (!g_pBaldurChitin->cNetwork.GetSessionOpen()
         || g_pBaldurChitin->cNetwork.GetSessionHosting()) {
         if (m_nCurrentWeather != 0 || nWeatherType == 0) {
             CancelCurrentWeather(pArea, nCurrentTime);

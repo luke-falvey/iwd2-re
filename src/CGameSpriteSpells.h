@@ -24,6 +24,7 @@ class CGameSpriteSpellList {
 public:
     CGameSpriteSpellList();
     ~CGameSpriteSpellList();
+    CGameSpriteSpellList operator=(const CGameSpriteSpellList& other);
     BOOLEAN Add(const UINT& nID, const unsigned int& a2, const unsigned int& a3, const unsigned int& a4);
     BOOLEAN Remove(const UINT& nID, BOOLEAN a2, const unsigned& a3, const unsigned& a4);
     BOOLEAN sub_725C50(const UINT& nID, const unsigned int& a2, const BOOLEAN& a3);
@@ -53,7 +54,7 @@ public:
     UINT sub_725F00();
     BOOLEAN Add(const UINT& nID, const UINT& nLevel, const unsigned int& a3, const unsigned int& a4, const unsigned int& a5);
     BOOLEAN Remove(const UINT& nID, const UINT& nLevel, const unsigned int& a3, const unsigned int& a4, const unsigned int& a5);
-    BOOLEAN sub_726060(const UINT& nID, const UINT& nLevel, const unsigned int& a3, const unsigned int& a4);
+    BOOLEAN sub_726060(const UINT& nID, const UINT& nLevel, const unsigned int& a3, const BOOLEAN& a4);
     BOOLEAN sub_7260B0(const UINT& nID, const UINT& nLevel, const unsigned int& a3, const unsigned int& a4);
     BOOLEAN sub_726150(const UINT& nLevel, const unsigned int& a2, const BOOLEAN& a3);
     BOOLEAN sub_7261A0(const UINT& nLevel, const unsigned int& a2, const BOOLEAN& a3);

@@ -3428,6 +3428,20 @@ DWORD CRuleTables::GetSkillDescription(DWORD id) const
     return -1;
 }
 
+// 0x545EB0
+CResRef CRuleTables::GetAutomaticSpellPicker(BYTE nLevel, BYTE nIndex) const
+{
+    CString sValue;
+
+    nLevel = static_cast<BYTE>(max(min(nLevel - 1, 8), 0));
+    nIndex = static_cast<BYTE>(max(min(static_cast<SHORT>(m_tSpellAutomaticPicker.GetHeight()), static_cast<SHORT>(nIndex)), 0));
+
+    // NOTE: Inlined `C2DArray::GetAt`.
+    sValue = m_tSpellAutomaticPicker.GetAt(CPoint(nLevel, nIndex));
+
+    return CResRef(sValue);
+}
+
 // 0x545FD0
 INT CRuleTables::GetLoadingHint(INT nHintNumber) const
 {

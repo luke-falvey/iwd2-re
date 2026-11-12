@@ -206,9 +206,237 @@ int CUIControlEditMultiLine::ReConstitute()
 }
 
 // 0x4D9D00
-void CUIControlEditMultiLine::CalculateNewLines(BYTE a1)
+int CUIControlEditMultiLine::CalculateNewLines(BYTE a1)
 {
-    // TODO: Incomplete.
+    CString sLine;
+
+    if (field_877) {
+        m_cVidFont.Load(FALSE);
+        SHORT nFontHeight = m_cVidFont.GetFontHeight(FALSE);
+        field_877 = 0;
+        field_878 = static_cast<SHORT>((m_size.cy - m_ptText.y) / nFontHeight);
+    }
+
+    m_cVidFont.pRes->Demand();
+
+    int nWidth = m_size.cx - 10;
+
+    if (g_pChitin->field_1A0) {
+        a1 = 3;
+    }
+
+    switch (a1) {
+    case 1: {
+        if (field_86A == m_sText.GetLength()) {
+            sLine = m_sText;
+            CUtil::MakeReverse(sLine);
+
+            int nLength = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+            if (nLength == -1) {
+                nLength = sLine.GetLength();
+            }
+
+            if (m_cVidFont.GetStringLength(m_sText.Right(nLength), TRUE) < nWidth) {
+                m_cVidFont.pRes->Release();
+                return field_87A;
+            }
+
+            m_cVidFont.pRes->Release();
+            return ReConstitute();
+        }
+
+        sLine = m_sText.Right(m_sText.GetLength() - field_86A);
+
+        int nToEnd = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+        if (nToEnd == -1) {
+            nToEnd = sLine.GetLength();
+        }
+
+        sLine = m_sText.Left(field_86A);
+        CUtil::MakeReverse(sLine);
+
+        int nBack = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+        int nBackCopy = nBack;
+        if (nBack == -1) {
+            nBackCopy = sLine.GetLength();
+            nBack = nBackCopy;
+        }
+
+        sLine = m_sText.Left(field_86A + nToEnd);
+        sLine = sLine.Right(sLine.GetLength() - field_86A + nBack);
+
+        if (m_cVidFont.GetStringLength(sLine, TRUE) < nWidth) {
+            m_cVidFont.pRes->Release();
+            return field_87A;
+        }
+
+        int nLineStart = field_86A - nBackCopy;
+        int nEnd = nToEnd + field_86A;
+        int nSpaceDist;
+
+        for (;;) {
+            sLine = m_sText.Left(nEnd - 1);
+            CUtil::MakeReverse(sLine);
+
+            int nSpace = CUtil::Find(sLine, ' ', 0);
+            nSpaceDist = nSpace;
+            if (nSpace == -1) {
+                nSpaceDist = 1;
+                nSpace = nSpaceDist;
+            }
+
+            if (nEnd - nSpace <= nLineStart) {
+                nSpaceDist = 1;
+                nSpace = nSpaceDist;
+            }
+
+            int nRightCount = m_sText.GetLength() - nEnd - 1;
+            nEnd -= nSpace;
+            nSpace = nEnd - 1;
+
+            m_sText = m_sText.Left(nLineStart)
+                + m_sText.Mid(nLineStart, nEnd - nLineStart - 1)
+                + '\r'
+                + m_sText.Mid(nSpace, nSpaceDist + 1)
+                + m_sText.Right(nRightCount);
+
+            nEnd = nSpace;
+
+            sLine = m_sText.Mid(nLineStart, nEnd - nLineStart);
+
+            if (field_86A > nEnd && field_86A <= nSpaceDist + nEnd + 1) {
+                field_86A++;
+            }
+
+            if (m_cVidFont.GetStringLength(sLine, TRUE) > nWidth) {
+                continue;
+            }
+
+            nLineStart = nEnd + 1;
+
+            sLine = m_sText.Right(m_sText.GetLength() - nLineStart);
+
+            int nNext = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+            BOOL bNotFound = nNext == -1;
+            if (bNotFound) {
+                nNext = sLine.GetLength();
+            }
+
+            nEnd = nNext + nLineStart;
+
+            sLine = m_sText.Mid(nLineStart, nEnd - nLineStart);
+
+            if (m_cVidFont.GetStringLength(sLine, TRUE) > nWidth) {
+                continue;
+            }
+
+            break;
+        }
+
+        m_cVidFont.pRes->Release();
+        AdjustVisibleIndex();
+        return field_87A;
+    }
+    case 2: {
+        sLine = m_sText.Left(field_86A);
+        CUtil::MakeReverse(sLine);
+
+        int nBack = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+        int nPrevStart;
+        int nLineStart;
+
+        if (nBack == -1) {
+            nPrevStart = 0;
+            nLineStart = CUtil::FindOneOf(m_sText, CString("\n\r"), 0);
+            if (nLineStart == -1) {
+                nLineStart = m_sText.GetLength();
+            }
+        } else {
+            sLine = sLine.Right(sLine.GetLength() - nBack - 1);
+
+            nPrevStart = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+            if (nPrevStart == -1) {
+                nPrevStart = sLine.GetLength();
+            }
+
+            nLineStart = field_86A - nBack;
+            nPrevStart = nLineStart - nPrevStart - 1;
+        }
+
+        int nWordEnd;
+        for (;;) {
+            sLine = m_sText.Right(m_sText.GetLength() - nLineStart);
+
+            nWordEnd = CUtil::FindOneOf(sLine, CString(" \n\r"), 0);
+            if (nWordEnd == -1) {
+                nWordEnd = sLine.GetLength();
+            }
+
+            if (nWordEnd == 0) {
+                m_cVidFont.pRes->Release();
+                return ReConstitute();
+            }
+
+            if (m_sText[nLineStart - 1] == '\r') {
+                sLine = m_sText.Mid(nPrevStart, nWordEnd - nPrevStart + nLineStart + 1);
+
+                if (m_cVidFont.GetStringLength(sLine, TRUE) > nWidth) {
+                    nWordEnd = 0;
+                } else {
+                    m_sText = m_sText.Left(nLineStart - 1)
+                        + m_sText.Mid(nLineStart, nWordEnd + 1)
+                        + '\r'
+                        + m_sText.Right(m_sText.GetLength() - nWordEnd - nLineStart - 1);
+
+                    nLineStart = nLineStart + nWordEnd + 1;
+
+                    if (m_cVidFont.GetStringLength(sLine, TRUE) <= nWidth) {
+                        continue;
+                    }
+                }
+            } else {
+                nWordEnd = 0;
+            }
+
+            nWordEnd += nLineStart;
+            nPrevStart = nWordEnd;
+
+            sLine = m_sText.Right(m_sText.GetLength() - nWordEnd);
+
+            nLineStart = CUtil::FindOneOf(sLine, CString("\n\r"), 0);
+            if (nLineStart == -1 || sLine[nLineStart] == '\n') {
+                break;
+            }
+
+            nLineStart = nLineStart + nWordEnd + 1;
+
+            sLine = m_sText.Right(m_sText.GetLength() - nLineStart);
+
+            nWordEnd = CUtil::FindOneOf(sLine, CString(" \n\r"), 0);
+            if (nWordEnd == -1) {
+                nWordEnd = sLine.GetLength();
+            }
+
+            nWordEnd -= nPrevStart;
+
+            sLine = m_sText.Mid(nPrevStart, nLineStart + nWordEnd + 1);
+
+            if (m_cVidFont.GetStringLength(sLine, TRUE) > nWidth) {
+                break;
+            }
+        }
+
+        m_cVidFont.pRes->Release();
+        AdjustVisibleIndex();
+        return field_87A;
+    }
+    case 3:
+        m_cVidFont.pRes->Release();
+        return ReConstitute();
+    default:
+        m_cVidFont.pRes->Release();
+        return field_87A;
+    }
 }
 
 // 0x4DAA10
@@ -410,7 +638,1468 @@ BOOL CUIControlEditMultiLine::OnRButtonDown(CPoint pt)
 // 0x4DB160
 void CUIControlEditMultiLine::OnKeyDown(SHORT nKey)
 {
-    // TODO: Incomplete.
+    CString sText;
+
+    // FIXME: Unused.
+    CWnd* pWnd = g_pChitin->GetWnd();
+
+    if (g_pChitin->cImm.field_128) {
+        // 0x4DB1B0 - 0x4DB579 (1066 bytes)
+        if (nKey == VK_F3 && (GetSystemDefaultLangID() & 0x3FF) == LANG_JAPANESE) {
+            g_pChitin->cImm.sub_7C2CC0(g_pChitin->GetWnd()->GetSafeHwnd());
+        }
+
+        CString sIme = g_pChitin->cImm.sub_4D89E0();
+        if (sIme != "") {
+            int nLength = sIme.GetLength();
+
+            if (field_88E != -1 && field_88A != -1) {
+                if (field_88E < field_88A) {
+                    m_sText = m_sText.Left(field_88E)
+                        + sIme
+                        + m_sText.Right(m_sText.GetLength() - field_88A);
+                } else {
+                    m_sText = m_sText.Left(field_88A)
+                        + sIme
+                        + m_sText.Right(m_sText.GetLength() - field_88E);
+
+                    // NOTE: Length is truncated to a byte.
+                    field_86A = field_88A + static_cast<BYTE>(nLength);
+                }
+
+                field_88A = -1;
+                field_88E = -1;
+
+                CalculateNewLines(3);
+            } else {
+                m_sText = m_sText.Left(field_86A)
+                    + sIme
+                    + m_sText.Right(m_sText.GetLength() - field_86A);
+
+                // NOTE: Length is truncated to a byte.
+                field_86A += static_cast<BYTE>(nLength);
+
+                CalculateNewLines(1);
+            }
+
+            InvalidateRect();
+        }
+
+        if (nKey == VK_F4 || (nKey == VK_RETURN && (GetSystemDefaultLangID() & 0x3FF) == LANG_KOREAN)) {
+            g_pChitin->cImm.sub_7C2E10(g_pChitin->GetWnd()->GetSafeHwnd());
+            m_pPanel->InvalidateRect(&(m_pPanel->m_rImeSuggestionsFrame));
+            m_pPanel->m_rImeSuggestionsFrame.SetRectEmpty();
+            m_pPanel->m_pImeSuggestionsFont = NULL;
+            m_pPanel->InvalidateRect(NULL);
+        }
+
+        return;
+    }
+
+    if (m_pPanel->m_pManager->m_pWarp->GetMenuKey()) {
+        return;
+    }
+
+    if (m_pPanel->m_pManager->m_pWarp->GetCtrlKey()) {
+        switch (nKey) {
+        case 'X':
+            // 0x4DB5CB - 0x4DB8AF (740 bytes)
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                return;
+            }
+
+            if (OpenClipboard(NULL)) {
+                HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, m_sText.GetLength() + 1);
+                if (hMem != NULL) {
+                    LPVOID pMem = GlobalLock(hMem);
+                    if (pMem != NULL) {
+                        if (field_88E != -1 && field_88A != -1) {
+                            if (field_88E < field_88A) {
+                                sText = m_sText.Mid(field_88E, field_88A - field_88E);
+                                m_sText = m_sText.Left(field_88E) + m_sText.Mid(field_88A);
+                                field_86A = field_88E;
+                            } else {
+                                sText = m_sText.Mid(field_88A, field_88E - field_88A);
+                                m_sText = m_sText.Left(field_88A) + m_sText.Mid(field_88E);
+                                field_86A = field_88A;
+                            }
+
+                            field_88A = -1;
+                            field_88E = -1;
+                        } else {
+                            sText = m_sText;
+                            m_sText.Empty();
+                            field_86A = 0;
+                        }
+
+                        memcpy(pMem,
+                            sText.GetBuffer(sText.GetLength() + 1),
+                            sText.GetLength() + 1);
+                        sText.ReleaseBuffer();
+
+                        GlobalUnlock(hMem);
+
+                        if (SetClipboardData(CF_TEXT, hMem) == NULL) {
+                            // Ownership was not transferred.
+                            GlobalFree(hMem);
+                        }
+                    } else {
+                        GlobalFree(hMem);
+                    }
+                }
+
+                CloseClipboard();
+            }
+
+            InvalidateRect();
+            break;
+        case VK_INSERT:
+        case 'C':
+            // 0x4DB8AF - 0x4DBA26 (375 bytes)
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                return;
+            }
+
+            if (OpenClipboard(NULL)) {
+                HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, m_sText.GetLength() + 1);
+                if (hMem != NULL) {
+                    LPVOID pMem = GlobalLock(hMem);
+                    if (pMem != NULL) {
+                        if (field_88E != -1 && field_88A != -1) {
+                            if (field_88E < field_88A) {
+                                sText = m_sText.Mid(field_88E, field_88A - field_88E);
+                            } else {
+                                sText = m_sText.Mid(field_88A, field_88E - field_88A);
+                            }
+
+                            field_88A = -1;
+                            field_88E = -1;
+                        } else {
+                            sText = m_sText;
+                        }
+
+                        memcpy(pMem,
+                            sText.GetBuffer(sText.GetLength() + 1),
+                            sText.GetLength() + 1);
+                        sText.ReleaseBuffer();
+
+                        GlobalUnlock(hMem);
+
+                        if (SetClipboardData(CF_TEXT, hMem) == NULL) {
+                            // Ownership was not transferred.
+                            GlobalFree(hMem);
+                        }
+                    } else {
+                        GlobalFree(hMem);
+                    }
+                }
+
+                CloseClipboard();
+            }
+
+            InvalidateRect();
+            break;
+        case 'V':
+            // 0x4DBA26 - 0x4DBD55 (815 bytes)
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                return;
+            }
+
+            if (OpenClipboard(NULL)) {
+                HGLOBAL hMem = GetClipboardData(CF_TEXT);
+                if (hMem != NULL) {
+                    LPVOID pMem = GlobalLock(hMem);
+                    if (pMem != NULL) {
+                        if (field_88E != -1 && field_88A != -1) {
+                            if (field_88E < field_88A) {
+                                m_sText = m_sText.Left(field_88E)
+                                    + reinterpret_cast<LPCSTR>(pMem)
+                                    + m_sText.Right(m_sText.GetLength() - field_88A);
+                            } else {
+                                m_sText = m_sText.Left(field_88A)
+                                    + reinterpret_cast<LPCSTR>(pMem)
+                                    + m_sText.Right(m_sText.GetLength() - field_88E);
+                                field_86A = field_88A;
+                            }
+
+                            field_88A = -1;
+                            field_88E = -1;
+                        } else {
+                            m_sText = m_sText.Left(field_86A)
+                                + reinterpret_cast<LPCSTR>(pMem)
+                                + m_sText.Right(m_sText.GetLength() - field_86A);
+                        }
+
+                        GlobalUnlock(hMem);
+                    }
+                }
+
+                CloseClipboard();
+
+                CalculateNewLines(3);
+            }
+
+            InvalidateRect();
+            break;
+        case VK_END:
+            // 0x4DBD55 - 0x4DBDC3 (110 bytes)
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() && field_88A == -1) {
+                field_88A = field_86A;
+            }
+
+            field_86E = field_86A = m_sText.GetLength();
+
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                field_88E = field_86A;
+            } else {
+                field_88A = -1;
+                field_88E = -1;
+            }
+
+            AdjustVisibleIndex();
+            InvalidateRect();
+            break;
+        case VK_HOME:
+            // 0x4DBDC3 - 0x4DBE2C (105 bytes)
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() && field_88A == -1) {
+                field_88A = field_86A;
+            }
+
+            field_86E = field_86A = 0;
+
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                field_88E = field_86A;
+            } else {
+                field_88A = -1;
+                field_88E = -1;
+            }
+
+            AdjustVisibleIndex();
+            InvalidateRect();
+            break;
+        case VK_LEFT: {
+            // 0x4DBE2C - 0x4DC024 (504 bytes)
+            if (field_86A == 0) {
+                return;
+            }
+
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() && field_88A == -1) {
+                field_88A = field_86A;
+            }
+
+            sText = m_sText.Left(field_86A);
+            CUtil::MakeReverse(sText);
+
+            int nIndex = CUtil::FindOneOf(sText, CString("\n\r "), 0);
+            if (nIndex == -1) {
+                field_86A = 0;
+            } else {
+                int nSkip = nIndex;
+                if (nIndex == 0) {
+                    if (sText.Mid(0, 1) == CString(' ', 1)) {
+                        int nNext = CUtil::FindOneOf(sText.Right(sText.GetLength() - 1), CString("\n\r "), 0);
+                        if (nNext == -1) {
+                            field_86A = 0;
+                        } else {
+                            nSkip = nNext + 1;
+                        }
+                    } else {
+                        nSkip = 1;
+                    }
+                }
+
+                int nNewIndex = field_86A - nSkip;
+                if (nNewIndex < 0) {
+                    nNewIndex = 0;
+                }
+
+                field_86A = nNewIndex;
+            }
+
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                field_88E = field_86A;
+            } else {
+                field_88A = -1;
+                field_88E = -1;
+            }
+
+            AdjustVisibleIndex();
+            InvalidateRect();
+            break;
+        }
+        case VK_RIGHT: {
+            // 0x4DC024 - 0x4DC26A (582 bytes)
+            if (field_86A == m_sText.GetLength()) {
+                return;
+            }
+
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() && field_88A == -1) {
+                field_88A = field_86A;
+            }
+
+            int nIndex = CUtil::FindOneOf(m_sText.Mid(field_86A), CString("\n\r "), 0);
+            int nNewIndex;
+            if (nIndex == -1) {
+                nNewIndex = m_sText.GetLength();
+            } else {
+                int nSkip = nIndex;
+                if (nIndex == 0) {
+                    if (m_sText.Mid(field_86A, 1) == CString(' ', 1)) {
+                        int nNext = CUtil::FindOneOf(m_sText.Mid(field_86A + 1), CString("\n\r "), 0);
+                        if (nNext == -1) {
+                            field_86A = m_sText.GetLength();
+                        } else {
+                            nSkip = nNext + 1;
+                        }
+                    } else {
+                        nSkip = 1;
+                    }
+                }
+
+                if (m_sText.Mid(field_86A + nSkip, 1) == CString(' ', 1)) {
+                    nSkip++;
+                }
+
+                nNewIndex = nSkip + field_86A;
+                if (nNewIndex < 0) {
+                    nNewIndex = 0;
+                }
+            }
+
+            field_86A = nNewIndex;
+
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                field_88E = field_86A;
+            } else {
+                field_88A = -1;
+                field_88E = -1;
+            }
+
+            AdjustVisibleIndex();
+            InvalidateRect();
+            break;
+        }
+        }
+
+        return;
+    }
+
+    switch (nKey) {
+    case VK_F4:
+        // 0x4DC292 - 0x4DC2A9 (23 bytes)
+        if (g_pBaldurChitin->field_1A0) {
+            m_pPanel->InvalidateRect(NULL);
+        }
+
+        // FALLTHROUGH
+    case VK_F3:
+    case VK_PROCESSKEY:
+        // 0x4DC2A9 - 0x4DC3B3 (266 bytes)
+        if (g_pChitin->field_1A4) {
+            g_pChitin->cImm.sub_7C2CC0(g_pChitin->GetWnd()->GetSafeHwnd());
+
+            // FIXME: Unused.
+            g_pChitin->GetWnd();
+            if (g_pChitin->cImm.field_128) {
+                CRect r = g_pChitin->cImm.sub_7C3020(
+                    m_pPanel->m_ptOrigin,
+                    m_pPanel->m_size,
+                    m_ptOrigin,
+                    m_size,
+                    m_cVidFont.GetFontHeight(FALSE));
+                if (r.IsRectNull()) {
+                    m_pPanel->InvalidateRect(&(m_pPanel->m_rImeSuggestionsFrame));
+                }
+
+                m_pPanel->m_rImeSuggestionsFrame = r;
+                m_pPanel->m_pImeSuggestionsFont = &m_cVidFont;
+            }
+        }
+
+        InvalidateRect();
+        break;
+    case VK_INSERT:
+        // 0x4DC3B3 - 0x4DC6E2 (815 bytes)
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+            if (OpenClipboard(NULL)) {
+                HGLOBAL hMem = GetClipboardData(CF_TEXT);
+                if (hMem != NULL) {
+                    LPVOID pMem = GlobalLock(hMem);
+                    if (pMem != NULL) {
+                        if (field_88E != -1 && field_88A != -1) {
+                            if (field_88E < field_88A) {
+                                m_sText = m_sText.Left(field_88E)
+                                    + reinterpret_cast<LPCSTR>(pMem)
+                                    + m_sText.Right(m_sText.GetLength() - field_88A);
+                            } else {
+                                m_sText = m_sText.Left(field_88A)
+                                    + reinterpret_cast<LPCSTR>(pMem)
+                                    + m_sText.Right(m_sText.GetLength() - field_88E);
+                                field_86A = field_88A;
+                            }
+
+                            field_88A = -1;
+                            field_88E = -1;
+                        } else {
+                            m_sText = m_sText.Left(field_86A)
+                                + reinterpret_cast<LPCSTR>(pMem)
+                                + m_sText.Right(m_sText.GetLength() - field_86A);
+                        }
+
+                        GlobalUnlock(hMem);
+                    }
+                }
+
+                CloseClipboard();
+
+                CalculateNewLines(3);
+            }
+        }
+
+        InvalidateRect();
+        break;
+    case VK_ESCAPE:
+        // 0x4DC6E2 - 0x4DC727 (69 bytes)
+        field_88A = -1;
+        field_88E = -1;
+        m_sText = field_866;
+        ReConstitute();
+
+        // NOTE: Uninline.
+        m_pPanel->m_pManager->KillCapture();
+
+        InvalidateRect();
+        break;
+    case VK_RETURN:
+        // 0x4DC727 - 0x4DCA11 (746 bytes)
+        if (field_88E != -1 && field_88A != -1) {
+            if (field_88E < field_88A) {
+                m_sText = m_sText.Left(field_88E)
+                    + '\n'
+                    + m_sText.Right(m_sText.GetLength() - field_88A);
+            } else {
+                m_sText = m_sText.Left(field_88A)
+                    + '\n'
+                    + m_sText.Right(m_sText.GetLength() - field_88E);
+                field_86A = field_88A;
+            }
+
+            field_88A = -1;
+            field_88E = -1;
+            field_86A++;
+        } else {
+            m_sText = m_sText.Left(field_86A)
+                + '\n'
+                + m_sText.Right(m_sText.GetLength() - field_86A);
+            field_86A++;
+        }
+
+        CalculateNewLines(3);
+        InvalidateRect();
+        break;
+    case VK_END: {
+        // 0x4DCA11 - 0x4DCB1A (265 bytes)
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() && field_88A == -1) {
+            field_88A = field_86A;
+        }
+
+        int nIndex = CUtil::FindOneOf(m_sText.Mid(field_86A), CString("\n\r"), 0);
+        if (nIndex == -1) {
+            field_86A = m_sText.GetLength();
+        } else {
+            field_86A = min(m_sText.GetLength(), field_86A + nIndex);
+        }
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+            field_88E = field_86A;
+        } else {
+            field_88A = -1;
+            field_88E = -1;
+        }
+
+        AdjustVisibleIndex();
+        InvalidateRect();
+        break;
+    }
+    case VK_HOME: {
+        // 0x4DCB1A - 0x4DCC41 (295 bytes)
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() && field_88A == -1) {
+            field_88A = field_86A;
+        }
+
+        sText = m_sText.Left(field_86A);
+        CUtil::MakeReverse(sText);
+
+        int nIndex = CUtil::FindOneOf(sText, CString("\r\n"), 0);
+        if (nIndex == -1) {
+            field_86A = 0;
+        } else {
+            int nNewIndex = field_86A - nIndex;
+            if (nNewIndex < 0) {
+                nNewIndex = 0;
+            }
+
+            field_86A = nNewIndex;
+        }
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+            field_88E = field_86A;
+        } else {
+            field_88A = -1;
+            field_88E = -1;
+        }
+
+        AdjustVisibleIndex();
+        InvalidateRect();
+        break;
+    }
+    case VK_LEFT:
+        // 0x4DCC41 - 0x4DCD40 (255 bytes)
+        if (field_86A == 0) {
+            return;
+        }
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() && field_88A == -1) {
+            field_88A = field_86A;
+        }
+
+        do {
+            field_86A--;
+
+            if (g_pChitin->field_1A0 && CUtil::IsDBCSTrailByte(m_sText, field_86A)) {
+                field_86A--;
+                break;
+            }
+        } while (m_sText.Mid(field_86A, 1) == "\r");
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+            field_88E = field_86A;
+        } else {
+            field_88A = -1;
+            field_88E = -1;
+        }
+
+        AdjustVisibleIndex();
+        InvalidateRect();
+        break;
+    case VK_RIGHT:
+        // 0x4DCD40 - 0x4DCE31 (241 bytes)
+        if (field_86A == m_sText.GetLength()) {
+            return;
+        }
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() && field_88A == -1) {
+            field_88A = field_86A;
+        }
+
+        do {
+            if (g_pChitin->field_1A0 && IsDBCSLeadByte(m_sText[field_86A])) {
+                field_86A += 2;
+                break;
+            }
+
+            field_86A++;
+        } while (m_sText.Mid(field_86A, 1) == "\r");
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+            field_88E = field_86A;
+        } else {
+            field_88A = -1;
+            field_88E = -1;
+        }
+
+        AdjustVisibleIndex();
+        InvalidateRect();
+        break;
+    case VK_UP: {
+        // 0x4DCE31 - 0x4DD1E6 (949 bytes)
+        m_cVidFont.pRes->Demand();
+
+        sText = m_sText.Left(field_86A);
+        CUtil::MakeReverse(sText);
+
+        int nColumn = CUtil::FindOneOf(sText, CString("\n\r"), 0);
+        if (nColumn == -1) {
+            m_cVidFont.pRes->Release();
+            return;
+        }
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() && field_88A == -1) {
+            field_88A = field_86A;
+        }
+
+        sText = m_sText.Left(field_86A - nColumn - 1);
+        CUtil::MakeReverse(sText);
+
+        int nPrevLength = CUtil::FindOneOf(sText, CString("\n\r"), 0);
+        if (nPrevLength == -1) {
+            nPrevLength = sText.GetLength();
+        }
+
+        LONG nPrevWidth = m_cVidFont.GetStringLength(
+            m_sText.Mid(field_86A - nPrevLength - nColumn - 1, nPrevLength),
+            TRUE);
+        LONG nColumnWidth = m_cVidFont.GetStringLength(
+            m_sText.Mid(field_86A - nColumn, nColumn),
+            TRUE);
+
+        if (nPrevWidth <= nColumnWidth) {
+            field_86A += -1 - nColumn;
+
+            AdjustVisibleIndex();
+            m_cVidFont.pRes->Release();
+            InvalidateRect();
+
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                field_88E = field_86A;
+            } else {
+                field_88A = -1;
+                field_88E = -1;
+            }
+
+            return;
+        }
+
+        CUtil::MakeReverse(sText);
+
+        int nRemoved = 0;
+        int nCount = nPrevLength;
+        while (nCount > 0) {
+            nRemoved++;
+            nCount--;
+
+            if (g_pChitin->field_1A0
+                && CUtil::IsDBCSTrailByte(m_sText, field_86A - nColumn - nRemoved - 2)) {
+                nRemoved++;
+                nCount--;
+            }
+
+            nPrevWidth = m_cVidFont.GetStringLength(
+                m_sText.Mid(field_86A - nPrevLength - nColumn - 1, nCount),
+                TRUE);
+            if (nPrevWidth <= nColumnWidth) {
+                break;
+            }
+        }
+
+        field_86A += -1 - nColumn - nRemoved;
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+            field_88E = field_86A;
+        } else {
+            field_88A = -1;
+            field_88E = -1;
+        }
+
+        AdjustVisibleIndex();
+        m_cVidFont.pRes->Release();
+        InvalidateRect();
+        break;
+    }
+    case VK_DOWN: {
+        // 0x4DD1E6 - 0x4DD66F (1161 bytes)
+        if (field_86A == m_sText.GetLength()) {
+            return;
+        }
+
+        m_cVidFont.pRes->Demand();
+
+        sText = m_sText.Left(field_86A);
+        CUtil::MakeReverse(sText);
+
+        int nColumn = CUtil::FindOneOf(sText, CString("\n\r"), 0);
+        if (nColumn == -1) {
+            nColumn = sText.GetLength();
+        }
+
+        int nSkip;
+        if ((g_pChitin->field_1A0 && IsDBCSLeadByte(m_sText[field_86A]))
+            || (m_sText[field_86A] != '\n' && m_sText[field_86A] != '\r')) {
+            sText = m_sText.Right(m_sText.GetLength() - field_86A - 1);
+
+            nSkip = CUtil::FindOneOf(sText, CString("\n\r"), 0);
+            if (nSkip == -1) {
+                m_cVidFont.pRes->Release();
+                return;
+            }
+
+            nSkip += 2;
+        } else {
+            nSkip = 1;
+        }
+
+        sText = m_sText.Right(m_sText.GetLength() - nSkip - field_86A);
+
+        int nNextLength = CUtil::FindOneOf(sText, CString("\n\r"), 0);
+        if (nNextLength == -1) {
+            nNextLength = sText.GetLength();
+        }
+
+        LONG nColumnWidth = m_cVidFont.GetStringLength(
+            m_sText.Mid(field_86A - nColumn, nColumn),
+            TRUE);
+        LONG nNextWidth = m_cVidFont.GetStringLength(
+            m_sText.Mid(nSkip + field_86A, nNextLength),
+            TRUE);
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() && field_88A == -1) {
+            field_88A = field_86A;
+        }
+
+        if (nNextWidth <= nColumnWidth) {
+            field_86A += nSkip + nNextLength;
+
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                field_88E = field_86A;
+            } else {
+                field_88A = -1;
+                field_88E = -1;
+            }
+
+            AdjustVisibleIndex();
+            m_cVidFont.pRes->Release();
+            InvalidateRect();
+            return;
+        }
+
+        int nRemoved = 0;
+        int nCount = nNextLength;
+        while (nCount > 0) {
+            nRemoved++;
+            nCount--;
+
+            if (g_pChitin->field_1A0
+                && CUtil::IsDBCSTrailByte(m_sText, nSkip - nRemoved + field_86A + nNextLength - 1)) {
+                nRemoved++;
+                nCount--;
+            }
+
+            nNextWidth = m_cVidFont.GetStringLength(
+                m_sText.Mid(nSkip + field_86A, nCount),
+                TRUE);
+            if (nNextWidth <= nColumnWidth) {
+                break;
+            }
+        }
+
+        field_86A += nSkip - nRemoved + nNextLength;
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+            field_88E = field_86A;
+        } else {
+            field_88A = -1;
+            field_88E = -1;
+        }
+
+        AdjustVisibleIndex();
+        m_cVidFont.pRes->Release();
+        InvalidateRect();
+        break;
+    }
+    case VK_PRIOR: {
+        // 0x4DD66F - 0x4DDB3A (1227 bytes)
+        if (field_86E == 0) {
+            return;
+        }
+
+        m_cVidFont.pRes->Demand();
+
+        sText = m_sText.Left(field_86A);
+        CUtil::MakeReverse(sText);
+
+        int nColumn = CUtil::FindOneOf(sText, CString("\n\r"), 0);
+        if (nColumn == -1) {
+            m_cVidFont.pRes->Release();
+            return;
+        }
+
+        LONG nColumnWidth = m_cVidFont.GetStringLength(
+            m_sText.Mid(field_86A - nColumn, nColumn),
+            TRUE);
+
+        int nOffset = 0;
+
+        sText = m_sText.Left(field_86A - nColumn - 1);
+        CUtil::MakeReverse(sText);
+
+        int nLine = 0;
+        int nLines = 0;
+        for (; nLines < field_878; nLines++) {
+            nLine = CUtil::FindOneOf(sText.Mid(nOffset), CString("\n\r"), 0);
+            if (nLine == -1) {
+                if (nLines + 1 < field_878) {
+                    m_cVidFont.pRes->Release();
+                    return;
+                }
+
+                nLine = sText.Mid(nOffset).GetLength();
+            }
+
+            nOffset += nLine + 1;
+        }
+
+        field_86E -= nLines;
+
+        AdjustVisibleIndex();
+
+        CUtil::MakeReverse(sText);
+
+        nLine = CUtil::FindOneOf(sText.Mid(sText.GetLength() - nOffset + 1), CString("\n\r"), 0);
+
+        LONG nLineWidth = m_cVidFont.GetStringLength(
+            m_sText.Mid(field_86A - nColumn - nOffset, nLine),
+            TRUE);
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() && field_88A == -1) {
+            field_88A = field_86A;
+        }
+
+        if (nLineWidth <= nColumnWidth) {
+            field_86A += nLine - nColumn - nOffset;
+
+            m_cVidFont.pRes->Release();
+
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                field_88E = field_86A;
+            } else {
+                field_88A = -1;
+                field_88E = -1;
+            }
+
+            InvalidateRect();
+            return;
+        }
+
+        int nRemoved = 0;
+        int nCount = nLine;
+        while (nCount > 0) {
+            nRemoved++;
+            nCount--;
+
+            if (g_pChitin->field_1A0
+                && CUtil::IsDBCSTrailByte(m_sText, nLine - nColumn - nRemoved - nOffset + field_86A - 1)) {
+                nRemoved++;
+                nCount--;
+            }
+
+            nLineWidth = m_cVidFont.GetStringLength(
+                m_sText.Mid(field_86A - nColumn - nOffset, nCount),
+                TRUE);
+            if (nLineWidth <= nColumnWidth) {
+                break;
+            }
+        }
+
+        field_86A += nLine - nColumn - nRemoved - nOffset;
+
+        m_cVidFont.pRes->Release();
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+            field_88E = field_86A;
+        } else {
+            field_88A = -1;
+            field_88E = -1;
+        }
+
+        InvalidateRect();
+        break;
+    }
+    case VK_NEXT: {
+        // 0x4DDB3A - 0x4DDFDB (1185 bytes)
+        if (field_878 + field_86E >= field_87A) {
+            return;
+        }
+
+        m_cVidFont.pRes->Demand();
+
+        sText = m_sText.Left(field_86A);
+        CUtil::MakeReverse(sText);
+
+        int nColumn = CUtil::FindOneOf(sText, CString("\n\r"), 0);
+        if (nColumn == -1) {
+            nColumn = sText.GetLength();
+        }
+
+        LONG nColumnWidth = m_cVidFont.GetStringLength(
+            m_sText.Mid(field_86A - nColumn, nColumn),
+            TRUE);
+
+        sText = m_sText.Right(m_sText.GetLength() - field_86A);
+
+        int nOffset = 0;
+        int nLine = 0;
+        int nLines = 0;
+        for (; nLines < field_878; nLines++) {
+            nLine = CUtil::FindOneOf(sText.Mid(nOffset), CString("\n\r"), 0);
+            if (nLine == -1) {
+                m_cVidFont.pRes->Release();
+                return;
+            }
+
+            nOffset += nLine + 1;
+        }
+
+        field_86E += nLines;
+
+        AdjustVisibleIndex();
+
+        nLine = CUtil::FindOneOf(sText.Mid(nOffset), CString("\n\r"), 0);
+        if (nLine == -1) {
+            nLine = sText.Mid(nOffset).GetLength();
+        }
+
+        LONG nLineWidth = m_cVidFont.GetStringLength(
+            m_sText.Mid(field_86A + nOffset, nLine),
+            TRUE);
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() && field_88A == -1) {
+            field_88A = field_86A;
+        }
+
+        if (nLineWidth <= nColumnWidth) {
+            field_86A += nOffset + nLine;
+
+            m_cVidFont.pRes->Release();
+
+            if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                field_88E = field_86A;
+            } else {
+                field_88A = -1;
+                field_88E = -1;
+            }
+
+            InvalidateRect();
+            return;
+        }
+
+        int nRemoved = 0;
+        int nCount = nLine;
+        while (nCount > 0) {
+            nRemoved++;
+            nCount--;
+
+            if (g_pChitin->field_1A0
+                && CUtil::IsDBCSTrailByte(m_sText, field_86A - nRemoved + nOffset + nLine - 1)) {
+                nRemoved++;
+                nCount--;
+            }
+
+            nLineWidth = m_cVidFont.GetStringLength(
+                m_sText.Mid(field_86A + nOffset, nCount),
+                TRUE);
+            if (nLineWidth <= nColumnWidth) {
+                break;
+            }
+        }
+
+        field_86A += nOffset - nRemoved + nLine;
+
+        m_cVidFont.pRes->Release();
+
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+            field_88E = field_86A;
+        } else {
+            field_88A = -1;
+            field_88E = -1;
+        }
+
+        InvalidateRect();
+        break;
+    }
+    case VK_BACK:
+        // 0x4DDFDB - 0x4DE6E4 (1801 bytes)
+        if (field_86A == 0) {
+            return;
+        }
+
+        field_86A--;
+
+        if (g_pChitin->field_1A0 && CUtil::IsDBCSTrailByte(m_sText, field_86A)) {
+            field_86A--;
+        }
+
+        if (field_88E != -1 && field_88A != -1) {
+            if (field_88E < field_88A) {
+                m_sText = m_sText.Left(field_88E)
+                    + m_sText.Right(m_sText.GetLength() - field_88A);
+            } else {
+                m_sText = m_sText.Left(field_88A)
+                    + m_sText.Right(m_sText.GetLength() - field_88E);
+
+                field_86A = field_88A;
+            }
+
+            field_88A = -1;
+            field_88E = -1;
+
+            CalculateNewLines(3);
+        } else {
+            if (field_86A == m_sText.GetLength() - 1
+                && m_sText.Mid(field_86A, 1) != "\r"
+                && m_sText.Mid(field_86A, 1) != "\n") {
+                m_sText = m_sText.Left(field_86A)
+                    + m_sText.Right(m_sText.GetLength() - field_86A - 1);
+            } else if (!(g_pChitin->field_1A0 && IsDBCSLeadByte(m_sText[field_86A]))
+                && m_sText.Mid(field_86A, 1) == "\r") {
+                m_sText = m_sText.Left(field_86A)
+                    + m_sText.Right(m_sText.GetLength() - field_86A - 1);
+
+                field_86A--;
+
+                if (g_pChitin->field_1A0 && CUtil::IsDBCSTrailByte(m_sText, field_86A)) {
+                    field_86A--;
+
+                    m_sText = m_sText.Left(field_86A)
+                        + m_sText.Right(m_sText.GetLength() - field_86A - 2);
+                } else {
+                    m_sText = m_sText.Left(field_86A)
+                        + m_sText.Right(m_sText.GetLength() - field_86A - 1);
+                }
+
+                CalculateNewLines(3);
+            } else {
+                if (g_pChitin->field_1A0 && IsDBCSLeadByte(m_sText[field_86A])) {
+                    m_sText = m_sText.Left(field_86A)
+                        + m_sText.Right(m_sText.GetLength() - field_86A - 2);
+                } else {
+                    m_sText = m_sText.Left(field_86A)
+                        + m_sText.Right(m_sText.GetLength() - field_86A - 1);
+                }
+
+                CalculateNewLines(2);
+            }
+        }
+
+        InvalidateRect();
+        break;
+    case VK_DELETE:
+        // 0x4DE6E4 - 0x4DEF5E (2170 bytes)
+        if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+            if (OpenClipboard(NULL)) {
+                HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, m_sText.GetLength() + 1);
+                if (hMem != NULL) {
+                    LPVOID pMem = GlobalLock(hMem);
+                    if (pMem != NULL) {
+                        if (field_88E != -1 && field_88A != -1) {
+                            if (field_88E < field_88A) {
+                                sText = m_sText.Mid(field_88E, field_88A - field_88E);
+                                m_sText = m_sText.Left(field_88E) + m_sText.Mid(field_88A);
+                                field_86A = field_88E;
+                            } else {
+                                sText = m_sText.Mid(field_88A, field_88E - field_88A);
+                                m_sText = m_sText.Left(field_88A) + m_sText.Mid(field_88E);
+                                field_86A = field_88A;
+                            }
+
+                            field_88A = -1;
+                            field_88E = -1;
+                        } else {
+                            sText = m_sText;
+                            m_sText.Empty();
+                            field_86A = 0;
+                        }
+
+                        memcpy(pMem,
+                            sText.GetBuffer(sText.GetLength() + 1),
+                            sText.GetLength() + 1);
+                        sText.ReleaseBuffer();
+
+                        GlobalUnlock(hMem);
+
+                        if (SetClipboardData(CF_TEXT, hMem) == NULL) {
+                            // Ownership was not transferred.
+                            GlobalFree(hMem);
+                        }
+                    } else {
+                        GlobalFree(hMem);
+                    }
+                }
+
+                CloseClipboard();
+            }
+
+            InvalidateRect();
+            break;
+        }
+
+        if (field_88E != -1 && field_88A != -1) {
+            if (field_88E < field_88A) {
+                m_sText = m_sText.Left(field_88E)
+                    + m_sText.Right(m_sText.GetLength() - field_88A);
+            } else {
+                m_sText = m_sText.Left(field_88A)
+                    + m_sText.Right(m_sText.GetLength() - field_88E);
+
+                field_86A = field_88A;
+            }
+
+            field_88A = -1;
+            field_88E = -1;
+
+            CalculateNewLines(3);
+        } else {
+            if (field_86A == m_sText.GetLength()) {
+                return;
+            }
+
+            if (!(g_pChitin->field_1A0 && IsDBCSLeadByte(m_sText[field_86A]))
+                && m_sText.Mid(field_86A, 1) == "\r") {
+                m_sText = m_sText.Left(field_86A)
+                    + m_sText.Right(m_sText.GetLength() - field_86A - 1);
+
+                if (g_pChitin->field_1A0 && IsDBCSLeadByte(m_sText[field_86A])) {
+                    m_sText = m_sText.Left(field_86A)
+                        + m_sText.Right(m_sText.GetLength() - field_86A - 2);
+                } else {
+                    m_sText = m_sText.Left(field_86A)
+                        + m_sText.Right(m_sText.GetLength() - field_86A - 1);
+                }
+
+                CalculateNewLines(3);
+            } else {
+                if (g_pChitin->field_1A0 && IsDBCSLeadByte(m_sText[field_86A])) {
+                    m_sText = m_sText.Left(field_86A)
+                        + m_sText.Right(m_sText.GetLength() - field_86A - 2);
+                } else {
+                    m_sText = m_sText.Left(field_86A)
+                        + m_sText.Right(m_sText.GetLength() - field_86A - 1);
+                }
+
+                CalculateNewLines(2);
+            }
+        }
+
+        InvalidateRect();
+        break;
+    case VK_SPACE:
+        // 0x4DEF5E - 0x4DF1FB (669 bytes)
+        if (field_85A == 2) {
+            return;
+        }
+
+        if (field_88E != -1 && field_88A != -1) {
+            if (field_88E < field_88A) {
+                m_sText = m_sText.Left(field_88E)
+                    + ' '
+                    + m_sText.Right(m_sText.GetLength() - field_88A);
+            } else {
+                m_sText = m_sText.Left(field_88A)
+                    + ' '
+                    + m_sText.Right(m_sText.GetLength() - field_88E);
+
+                field_86A = field_88A + 1;
+            }
+
+            field_88A = -1;
+            field_88E = -1;
+
+            CalculateNewLines(3);
+        } else {
+            m_sText = m_sText.Left(field_86A)
+                + ' '
+                + m_sText.Right(m_sText.GetLength() - field_86A);
+
+            field_86A++;
+
+            CalculateNewLines(1);
+        }
+
+        InvalidateRect();
+        break;
+    default: {
+        // 0x4DF1FB - 0x4E03E9 (4590 bytes)
+
+        // 0x8ABA48
+        static BYTE digits[] = {
+            '0',
+            '1',
+            '2',
+            '3',
+            '4',
+            '5',
+            '6',
+            '7',
+            '8',
+            '9',
+        };
+
+        // 0x8ABA54
+        static BYTE shiftedDigits[] = {
+            ')',
+            '!',
+            '@',
+            '#',
+            '$',
+            '%',
+            '^',
+            '&',
+            '*',
+            '(',
+        };
+
+        // 0x8ABA3C
+        static BYTE symbolKeys[] = {
+            VK_OEM_1,
+            VK_OEM_PLUS,
+            VK_OEM_COMMA,
+            VK_OEM_MINUS,
+            VK_OEM_PERIOD,
+            VK_OEM_2,
+            VK_OEM_3,
+            VK_OEM_4,
+            VK_OEM_5,
+            VK_OEM_6,
+            VK_OEM_7,
+            0,
+        };
+
+        // 0x8ABA24
+        static BYTE symbols[] = {
+            ';',
+            '=',
+            ',',
+            '-',
+            '.',
+            '/',
+            '`',
+            '[',
+            '\\',
+            ']',
+            '\'',
+            0,
+        };
+
+        // 0x8ABA30
+        static BYTE shiftedSymbols[] = {
+            ':',
+            '+',
+            '<',
+            '_',
+            '>',
+            '?',
+            '~',
+            '{',
+            '|',
+            '}',
+            '"',
+            0,
+        };
+
+        if (nKey >= 'A' && nKey <= 'Z') {
+            if (field_85A == 2) {
+                InvalidateRect();
+                return;
+            }
+
+            switch (m_nTextCapitalization) {
+            case 0:
+                if (m_pPanel->m_pManager->m_pWarp->GetShiftKey() == m_pPanel->m_pManager->m_pWarp->GetCapsLockKey()) {
+                    nKey += 0x20;
+                }
+                break;
+            case 1:
+                break;
+            case 2:
+                nKey += 0x20;
+                break;
+            }
+
+            if (field_88E != -1 && field_88A != -1) {
+                if (field_88E < field_88A) {
+                    m_sText = m_sText.Left(field_88E)
+                        + static_cast<char>(nKey)
+                        + m_sText.Right(m_sText.GetLength() - field_88A);
+                } else {
+                    m_sText = m_sText.Left(field_88A)
+                        + static_cast<char>(nKey)
+                        + m_sText.Right(m_sText.GetLength() - field_88E);
+
+                    field_86A = field_88A + 1;
+                }
+
+                field_88A = -1;
+                field_88E = -1;
+
+                CalculateNewLines(3);
+            } else {
+                m_sText = m_sText.Left(field_86A)
+                    + static_cast<char>(nKey)
+                    + m_sText.Right(m_sText.GetLength() - field_86A);
+
+                field_86A++;
+
+                CalculateNewLines(1);
+            }
+        } else if ((nKey >= '0' && nKey <= '9') || (nKey >= VK_NUMPAD0 && nKey <= VK_NUMPAD9)) {
+            if (nKey >= VK_NUMPAD0 && nKey <= VK_NUMPAD9) {
+                nKey -= '0';
+            }
+
+            if (field_88E != -1 && field_88A != -1) {
+                if (field_88E < field_88A) {
+                    if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                        m_sText = m_sText.Left(field_88E)
+                            + static_cast<char>(shiftedDigits[nKey - '0'])
+                            + m_sText.Right(m_sText.GetLength() - field_88A);
+                    } else {
+                        m_sText = m_sText.Left(field_88E)
+                            + static_cast<char>(digits[nKey - '0'])
+                            + m_sText.Right(m_sText.GetLength() - field_88A);
+                    }
+                } else {
+                    if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                        m_sText = m_sText.Left(field_88A)
+                            + static_cast<char>(shiftedDigits[nKey - '0'])
+                            + m_sText.Right(m_sText.GetLength() - field_88E);
+                    } else {
+                        m_sText = m_sText.Left(field_88A)
+                            + static_cast<char>(digits[nKey - '0'])
+                            + m_sText.Right(m_sText.GetLength() - field_88E);
+                    }
+
+                    field_86A = field_88A + 1;
+                }
+
+                field_88A = -1;
+                field_88E = -1;
+
+                CalculateNewLines(3);
+            } else {
+                if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                    m_sText = m_sText.Left(field_86A)
+                        + static_cast<char>(shiftedDigits[nKey - '0'])
+                        + m_sText.Right(m_sText.GetLength() - field_86A);
+                } else {
+                    m_sText = m_sText.Left(field_86A)
+                        + static_cast<char>(digits[nKey - '0'])
+                        + m_sText.Right(m_sText.GetLength() - field_86A);
+                }
+
+                field_86A++;
+
+                CalculateNewLines(1);
+            }
+        } else if (nKey == VK_MULTIPLY
+            || nKey == VK_DIVIDE
+            || nKey == VK_ADD
+            || nKey == VK_SUBTRACT
+            || nKey == VK_DECIMAL) {
+            int ch;
+            switch (nKey) {
+            case VK_MULTIPLY:
+                ch = '*';
+                break;
+            case VK_ADD:
+                ch = '+';
+                break;
+            case VK_SUBTRACT:
+                ch = '-';
+                break;
+            case VK_DECIMAL:
+                ch = '.';
+                break;
+            case VK_DIVIDE:
+                ch = '/';
+                break;
+            default:
+                // NOTE: Unreachable, `nKey` is one of the keys above.
+                ch = 'X';
+                break;
+            }
+
+            if (field_88E != -1 && field_88A != -1) {
+                if (field_88E < field_88A) {
+                    m_sText = m_sText.Left(field_88E)
+                        + static_cast<char>(ch)
+                        + m_sText.Right(m_sText.GetLength() - field_88A);
+                } else {
+                    m_sText = m_sText.Left(field_88A)
+                        + static_cast<char>(ch)
+                        + m_sText.Right(m_sText.GetLength() - field_88E);
+
+                    field_86A = field_88A + 1;
+                }
+
+                field_88A = -1;
+                field_88E = -1;
+
+                CalculateNewLines(3);
+            } else {
+                m_sText = m_sText.Left(field_86A)
+                    + static_cast<char>(ch)
+                    + m_sText.Right(m_sText.GetLength() - field_86A);
+
+                field_86A++;
+
+                CalculateNewLines(1);
+            }
+        } else {
+            BYTE index = 0;
+            do {
+                if (symbolKeys[index] == static_cast<BYTE>(nKey)) {
+                    break;
+                }
+
+                index++;
+            } while (index < 12);
+
+            if (index == 12) {
+                InvalidateRect();
+                return;
+            }
+
+            // NOTE: Entry 11 of the key table is 0, and entry 11 of the
+            // symbol tables is the terminator.
+            if (field_88E != -1 && field_88A != -1) {
+                if (field_88E < field_88A) {
+                    if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                        m_sText = m_sText.Left(field_88E)
+                            + static_cast<char>(shiftedSymbols[index])
+                            + m_sText.Right(m_sText.GetLength() - field_88A);
+                    } else {
+                        m_sText = m_sText.Left(field_88E)
+                            + static_cast<char>(symbols[index])
+                            + m_sText.Right(m_sText.GetLength() - field_88A);
+                    }
+                } else {
+                    if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                        m_sText = m_sText.Left(field_88A)
+                            + static_cast<char>(shiftedSymbols[index])
+                            + m_sText.Right(m_sText.GetLength() - field_88E);
+                    } else {
+                        m_sText = m_sText.Left(field_88A)
+                            + static_cast<char>(symbols[index])
+                            + m_sText.Right(m_sText.GetLength() - field_88E);
+                    }
+
+                    field_86A = field_88A + 1;
+                }
+
+                field_88A = -1;
+                field_88E = -1;
+
+                CalculateNewLines(3);
+            } else {
+                if (m_pPanel->m_pManager->m_pWarp->GetShiftKey()) {
+                    m_sText = m_sText.Left(field_86A)
+                        + static_cast<char>(shiftedSymbols[index])
+                        + m_sText.Right(m_sText.GetLength() - field_86A);
+                } else {
+                    m_sText = m_sText.Left(field_86A)
+                        + static_cast<char>(symbols[index])
+                        + m_sText.Right(m_sText.GetLength() - field_86A);
+                }
+
+                field_86A++;
+
+                CalculateNewLines(1);
+            }
+        }
+
+        InvalidateRect();
+        break;
+    }
+    }
 }
 
 // 0x4E05B0
