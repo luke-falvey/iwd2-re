@@ -3693,7 +3693,193 @@ void CInfGame::Unmarshal(BYTE* pGame, LONG nGame, BOOLEAN bProgressBarInPlace)
 // 0x5A3DB0
 static void sub_5A3DB0(BYTE** ppCreature, LONG* pCreatureSize)
 {
+#define OLD(type, offset) (*reinterpret_cast<type*>(pOld + (offset)))
+#define NEW(type, offset) (*reinterpret_cast<type*>(pNew + (offset)))
+
+    BYTE* pOld = *ppCreature;
+    BYTE* pNew = new BYTE[*pCreatureSize];
+    memset(pNew, 0, *pCreatureSize);
+
+    memcpy(pNew, "CRE V2.1", 8);
+
+    memset(pNew + 8, 0, 0xDF * sizeof(DWORD));
+
+    NEW(DWORD, 0x08) = OLD(DWORD, 0x08);
+    NEW(DWORD, 0x0C) = OLD(DWORD, 0x0C);
+    NEW(DWORD, 0x10) = OLD(DWORD, 0x10);
+
+    DWORD nXP = OLD(DWORD, 0x14);
+    NEW(DWORD, 0x14) = nXP;
+
+    if (nXP > 50000) {
+        NEW(BYTE, 0x25A) = 17;
+    } else if (nXP > 30000) {
+        NEW(BYTE, 0x25A) = 16;
+    } else if (nXP > 20000) {
+        NEW(BYTE, 0x25A) = 15;
+    } else if (nXP > 15000) {
+        NEW(BYTE, 0x25A) = 14;
+    } else if (nXP > 12000) {
+        NEW(BYTE, 0x25A) = 13;
+    } else if (nXP > 10000) {
+        NEW(BYTE, 0x25A) = 12;
+    } else if (nXP > 8000) {
+        NEW(BYTE, 0x25A) = 11;
+    } else if (nXP > 6000) {
+        NEW(BYTE, 0x25A) = 10;
+    } else if (nXP > 4000) {
+        NEW(BYTE, 0x25A) = 9;
+    } else if (nXP > 2000) {
+        NEW(BYTE, 0x25A) = 8;
+    } else if (nXP > 1400) {
+        NEW(BYTE, 0x25A) = 7;
+    } else if (nXP > 420) {
+        NEW(BYTE, 0x25A) = 6;
+    } else if (nXP > 175) {
+        NEW(BYTE, 0x25A) = 5;
+    } else if (nXP > 120) {
+        NEW(BYTE, 0x25A) = 4;
+    } else if (nXP > 90) {
+        NEW(BYTE, 0x25A) = 3;
+    } else if (nXP > 60) {
+        NEW(BYTE, 0x25A) = 2;
+    } else if (nXP > 0) {
+        NEW(BYTE, 0x25A) = 1;
+    } else {
+        NEW(BYTE, 0x25A) = 0;
+    }
+
+    NEW(DWORD, 0x18) = OLD(DWORD, 0x18);
+    NEW(DWORD, 0x1C) = OLD(DWORD, 0x1C);
+    NEW(DWORD, 0x20) = OLD(DWORD, 0x20);
+    NEW(WORD, 0x24) = OLD(WORD, 0x24);
+    NEW(WORD, 0x26) = OLD(WORD, 0x26);
+    NEW(DWORD, 0x28) = OLD(DWORD, 0x28);
+    NEW(DWORD, 0x2C) = OLD(DWORD, 0x2C);
+    NEW(WORD, 0x30) = OLD(WORD, 0x30);
+    NEW(BYTE, 0x32) = OLD(BYTE, 0x32);
+    NEW(BYTE, 0x33) = OLD(BYTE, 0x33);
+    NEW(DWORD, 0x34) = OLD(DWORD, 0x34);
+    NEW(DWORD, 0x38) = OLD(DWORD, 0x38);
+    NEW(DWORD, 0x3C) = OLD(DWORD, 0x3C);
+    NEW(DWORD, 0x40) = OLD(DWORD, 0x40);
+    NEW(BYTE, 0x44) = OLD(BYTE, 0x44);
+    NEW(WORD, 0x46) = OLD(WORD, 0x48);
+    NEW(WORD, 0x48) = OLD(WORD, 0x4A);
+    NEW(WORD, 0x4A) = OLD(WORD, 0x4C);
+    NEW(WORD, 0x4C) = OLD(WORD, 0x4E);
+    NEW(WORD, 0x4E) = OLD(WORD, 0x50);
+    NEW(BYTE, 0x50) = OLD(BYTE, 0x52);
+    NEW(BYTE, 0x51) = OLD(BYTE, 0x53);
+    NEW(BYTE, 0x52) = OLD(BYTE, 0x54);
+    NEW(BYTE, 0x53) = OLD(BYTE, 0x55);
+    NEW(BYTE, 0x54) = OLD(BYTE, 0x56);
+    NEW(BYTE, 0x55) = OLD(BYTE, 0x59);
+    NEW(BYTE, 0x56) = OLD(BYTE, 0x5A);
+    NEW(BYTE, 0x57) = OLD(BYTE, 0x5B);
+    NEW(BYTE, 0x58) = OLD(BYTE, 0x5C);
+    NEW(BYTE, 0x59) = OLD(char, 0x5D) / 10;
+    NEW(BYTE, 0x5A) = OLD(BYTE, 0x5E);
+    NEW(BYTE, 0x5B) = OLD(BYTE, 0x5F);
+    NEW(BYTE, 0x5C) = OLD(BYTE, 0x60);
+    NEW(BYTE, 0x5D) = OLD(BYTE, 0x61);
+    NEW(BYTE, 0x5E) = OLD(BYTE, 0x62);
+    NEW(BYTE, 0x5F) = OLD(BYTE, 0x63);
+    NEW(BYTE, 0x65) = OLD(BYTE, 0x6B);
+    NEW(BYTE, 0x66) = OLD(BYTE, 0x6C);
+    NEW(BYTE, 0x67) = OLD(BYTE, 0x6D);
+    NEW(BYTE, 0x68) = OLD(BYTE, 0x82);
+    memcpy(pNew + 0x6A, pOld + 0x84, 8 * sizeof(DWORD));
+    memcpy(pNew + 0xAC, pOld + 0xA4, 0x40 * sizeof(DWORD));
+    NEW(DWORD, 0x1AC) = OLD(DWORD, 0x1A4);
+    NEW(DWORD, 0x1B0) = OLD(DWORD, 0x1A8);
+    NEW(DWORD, 0x1B4) = OLD(DWORD, 0x1AC);
+    NEW(DWORD, 0x1B8) = OLD(DWORD, 0x1B0);
+    NEW(DWORD, 0x1BC) = OLD(DWORD, 0x1B4);
+    NEW(BYTE, 0x258) = OLD(BYTE, 0x220);
+    NEW(BYTE, 0x259) = OLD(BYTE, 0x221);
+    NEW(DWORD, 0x25B) = OLD(DWORD, 0x224);
+    NEW(DWORD, 0x25F) = OLD(DWORD, 0x228);
+    NEW(BYTE, 0x263) = OLD(BYTE, 0x230);
+    NEW(BYTE, 0x265) = OLD(BYTE, 0x237);
+    NEW(BYTE, 0x266) = OLD(BYTE, 0x238);
+    NEW(BYTE, 0x267) = OLD(BYTE, 0x23A);
+    NEW(BYTE, 0x268) = OLD(BYTE, 0x23B);
+    NEW(BYTE, 0x269) = OLD(BYTE, 0x23C);
+    NEW(BYTE, 0x26A) = OLD(BYTE, 0x23D);
+    NEW(BYTE, 0x26B) = OLD(BYTE, 0x23E);
+    NEW(BYTE, 0x26C) = OLD(BYTE, 0x23F);
+    NEW(BYTE, 0x26D) = OLD(BYTE, 0x240);
+    NEW(WORD, 0x26E) = OLD(WORD, 0x242);
+
+    NEW(BYTE, 0x218) = 0;
+    NEW(BYTE, 0x219) = 0;
+    NEW(BYTE, 0x21A) = 0;
+    NEW(BYTE, 0x21B) = 0;
+    NEW(BYTE, 0x21C) = 0;
+    NEW(BYTE, 0x21D) = 0;
+    NEW(BYTE, 0x21F) = 0;
+    NEW(BYTE, 0x21E) = OLD(BYTE, 0x45) / 10;
+    NEW(BYTE, 0x220) = OLD(BYTE, 0x66);
+    NEW(BYTE, 0x221) = OLD(BYTE, 0x68) / 10;
+    NEW(BYTE, 0x222) = OLD(BYTE, 0x67) / 10;
+    NEW(BYTE, 0x223) = OLD(BYTE, 0x6A) / 10;
+    NEW(BYTE, 0x225) = 0;
+    NEW(BYTE, 0x224) = OLD(BYTE, 0x69) / 10;
+    NEW(BYTE, 0x226) = OLD(BYTE, 0x231) / 10;
+    NEW(BYTE, 0x227) = OLD(BYTE, 0x83) / 10;
+
+    NEW(DWORD, 0x270) = 0;
+    NEW(DWORD, 0x274) = OLD(DWORD, 0x248);
+    NEW(DWORD, 0x278) = OLD(DWORD, 0x24C);
+    NEW(DWORD, 0x27C) = OLD(DWORD, 0x250);
+    NEW(DWORD, 0x280) = OLD(DWORD, 0x254);
+    NEW(DWORD, 0x284) = OLD(DWORD, 0x258);
+    NEW(DWORD, 0x288) = OLD(DWORD, 0x25C);
+    NEW(DWORD, 0x28C) = OLD(DWORD, 0x260);
+    NEW(DWORD, 0x290) = OLD(DWORD, 0x264);
+    NEW(DWORD, 0x294) = OLD(DWORD, 0x268);
+    NEW(DWORD, 0x298) = OLD(DWORD, 0x26C);
+    NEW(BYTE, 0x29C) = OLD(BYTE, 0x270);
+    NEW(BYTE, 0x29D) = OLD(BYTE, 0x271);
+    NEW(BYTE, 0x29E) = OLD(BYTE, 0x272);
+    NEW(DWORD, 0x2A0) = OLD(DWORD, 0x274);
+    NEW(DWORD, 0x2A4) = OLD(DWORD, 0x278);
+    NEW(WORD, 0x2A8) = OLD(WORD, 0x27C);
+    memcpy(pNew + 0x2AA, pOld + 0x27E, 8 * sizeof(DWORD));
+    memcpy(pNew + 0x2CA, pOld + 0x29E, 8 * sizeof(DWORD));
+    NEW(BYTE, 0x2EA) = OLD(BYTE, 0x2BE);
+    NEW(WORD, 0x2EC) = OLD(WORD, 0x2C0);
+    NEW(WORD, 0x2EE) = OLD(WORD, 0x2C2);
+    NEW(BYTE, 0x2F0) = OLD(BYTE, 0x2C4);
+    NEW(BYTE, 0x2F1) = OLD(BYTE, 0x2C5);
+    NEW(DWORD, 0x2F2) = OLD(DWORD, 0x2C6);
+    NEW(DWORD, 0x2F6) = OLD(DWORD, 0x2CA);
+    NEW(DWORD, 0x2FA) = OLD(DWORD, 0x2CE);
+    NEW(BYTE, 0x2FE) = OLD(BYTE, 0x2D2);
+    NEW(BYTE, 0x2FF) = OLD(BYTE, 0x2D3);
+    NEW(BYTE, 0x300) = OLD(BYTE, 0x2D4);
+    NEW(BYTE, 0x301) = OLD(BYTE, 0x2D5);
+    NEW(BYTE, 0x302) = OLD(BYTE, 0x2D6);
+    NEW(BYTE, 0x303) = OLD(BYTE, 0x2D7);
+
+    BYTE* pTable = pNew + 0x384;
+    memset(pTable, 0, 0x1A * sizeof(DWORD) + sizeof(WORD));
+    pTable[0] = OLD(BYTE, 0x2D8);
+    pTable[1] = OLD(BYTE, 0x2D9);
+    pTable[2] = OLD(BYTE, 0x2DA);
+    *reinterpret_cast<DWORD*>(pTable + 0x32) = 0;
+
+    if (OLD(BYTE, 0x2DB) == 0 || OLD(BYTE, 0x2DB) == 0xFF) {
+        OLD(BYTE, 0x2DB) = 2;
+    }
+
+    OLD(BYTE, 0x234) = OLD(BYTE, 0x234) > 1 ? OLD(BYTE, 0x234) : 1;
+
     // TODO: Incomplete.
+
+#undef OLD
+#undef NEW
 }
 
 // Converts "CRE V2.1" creature to "CRE V2.2" format.
