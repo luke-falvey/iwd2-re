@@ -76,17 +76,38 @@ public:
     CProjectileBAM84E614();
     /* 000C */ void AIUpdate() override;
 
-    /* 02A0 */ char field_2A0[8];
+    /* 02A0 */ BYTE field_2A0[8];
+};
+
+// NOTE: Not in the original. Vtables 0x84E69C and 0x84E724 share AIUpdate
+// (0x533A50) but not Fire, so they cannot derive from each other.
+class CProjectileBAM84E69CBase : public CProjectileBAM {
+public:
+    CProjectileBAM84E69CBase(CResRef resRef)
+        : CProjectileBAM(resRef)
+    {
+    }
+
+    /* 000C */ void AIUpdate() override;
+
+    /* 02A0 */ SHORT field_2A0;
 };
 
 // vtable 0x84E69C, sizeof 0x2A2
-class CProjectileBAM84E69C : public CProjectileBAM {
+class CProjectileBAM84E69C : public CProjectileBAM84E69CBase {
 public:
     CProjectileBAM84E69C();
-    /* 000C */ void AIUpdate() override;
     /* 006C */ void Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType) override;
 
-    /* 02A0 */ SHORT field_2A0;
+    void sub_533600(CPoint* pt, SHORT nCount, SHORT nDirection, BOOL a4);
+};
+
+// vtable 0x84E724, sizeof 0x2A2
+class CProjectileBAM84E724 : public CProjectileBAM84E69CBase {
+public:
+    CProjectileBAM84E724(CResRef resRef, SHORT a2, SHORT nDirection);
+    /* 0000 */ ~CProjectileBAM84E724() override;
+    /* 0088 */ virtual void Virtual88(CGameArea* pArea, CPoint* pt, LONG posZ);
 };
 
 // vtable 0x84E7B0, sizeof 0x2FA
@@ -107,7 +128,7 @@ public:
     /* 02AE */ LONG field_2AE;
     /* 02B2 */ CAIObjectType field_2B2;
     /* 02EE */ LONG field_2EE;
-    /* 02F2 */ SHORT field_2F2;
+    /* 02F2 */ WORD field_2F2;
     /* 02F4 */ LONG field_2F4;
     /* 02F8 */ SHORT field_2F8;
 };

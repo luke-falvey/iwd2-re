@@ -406,3 +406,105 @@
 # 752 bytes): reallocating and in-place paths for push_back/insert. Used by
 # CGameSpriteSpellList::operator= (0x444EA0).
 0x449110
+# CResHelper<CResWave, 4>::SetResRef(const CResRef&, BOOL bSetAutoRequest, BOOL bWarningIfMissing)
+# instantiation (RET 0xC): compares the new resref with the member at +8; releases/cancels the
+# old resource, requests the new one with nType 4 via g_pChitin->cDimm.GetResObject (0x786DF0),
+# sets pRes/bLoading and assigns cResRef. Same body as the inline template in CRes.h. Called
+# as m_sound.SetResRef(resRef, TRUE, TRUE) by the inlined CProjectile::PlaySound sequence in
+# 0x532F00 and 0x533F40.
+0x4EBF40
+
+# std::set<LONG>::set() default constructor instance (MSVC 6 STL, thiscall, no args): lazily
+# creates the shared _Nil node (0x18-byte node, color byte at +0x14 = red) under the STL lock
+# (0x7F9A11/0x7F9AAD) into the global [0x8E3E38] with use count [0x8E3E34], then allocates the
+# 0x18-byte header node (_Left/_Right/_Parent bookkeeping, color black), sets size (+0xC) to 0
+# and the head pointer (+0x4). Called from the inlined CProjectileArea::field_64E construction
+# (0x56BF30).
+0x570D50
+
+# CProjectileArea84F0DC scalar deleting destructor (compiler generated): calls
+# ~CProjectileArea84F0DC (0x56CF00), then operator delete when the flag is set.
+0x56CEE0
+
+# CProjectileBAM84E724 scalar deleting destructor (compiler generated): calls
+# ~CProjectileBAM84E724 (0x533930), then operator delete when the flag is set.
+0x533910
+
+# std::vector<CProjectileArea5868E0::Entry>::insert(iterator, size_type, const Entry&)
+# (MSVC 6 STL instantiation, thiscall, 3 stack args; 10-byte elements): grows or shifts the
+# buffer. Called from CProjectileArea84F0DC::AIUpdate (0x56D0A0).
+0x56DB30
+
+# std::string::erase(size_type pos, size_type n) (MSVC 6 STL instantiation, thiscall, 2 stack
+# args): throws out_of_range when pos > length, unshares the buffer, memmoves the tail down.
+0x56DA10
+
+# CProjectileArea84F14C scalar deleting destructor (compiler generated): calls
+# ~CProjectileArea84F14C (0x56E580), then operator delete when the flag is set.
+0x56E260
+
+# CGameAnimationType84EEB8 scalar deleting destructor (compiler generated): calls
+# ~CGameAnimationType84EEB8 (0x55D2E0), then operator delete when the flag is set.
+0x55D2C0
+
+# std::bitset<256> (library): 0x4C4B90 set(pos, val) (range check 0x45E3D0, then OR / AND NOT of
+# the dword at pos >> 5), 0x4C4BF0 test(pos) (range check, returns (word & mask) != 0).
+0x4C4B90
+0x4C4BF0
+
+# std::bitset<32> (library): 0x4C4C30 set(pos, val), range check via 0x4C5790.
+0x4C4C30
+
+# std::set<int> of CDamageReduction (library, nil sentinel 0x8D13F4, key at node+0xC signed):
+# 0x447B60 constructor (head node + shared nil), 0x447E50 insert(value), 0x447F30 erase(first, last),
+# 0x449400 erase(iterator) (red-black rebalance), 0x449840 _Erase (post-order delete),
+# 0x44B1E0 iterator::operator-- / ++ (walk to the in-order neighbour).
+0x447B60
+0x447E50
+0x447F30
+0x449400
+0x449840
+0x44B1E0
+
+# std::set<DWORD> m_naturalImmunities (library, nil sentinel 0x8D13F0): 0x448DD0 insert(value),
+# 0x44AB10 _Copy (key copy via 0x517000), 0x44B180 iterator::operator++.
+0x448DD0
+0x44AB10
+0x44B180
+
+# std::set<LONG> (library, nil sentinel 0x8D48B4): 0x4C54E0 _Copy (key copy via 0x517000),
+# 0x4C5BF0 iterator::operator++.
+0x4C54E0
+0x4C5BF0
+
+# std::set<std::string> m_spellImmunities (library, nil sentinel 0x8D13E8): 0x4C5870 insert-position
+# search/insert (string compare 0x4C5E80), 0x4C5D30 iterator::operator++.
+0x4C5870
+0x4C5D30
+
+# std::string (MSVC 6) compare(pos, n, str, len) overloads (library): 0x4C5E80 compare(const string&)
+# via memcmp then length, 0x4C5ED0 compare(pos, n, ptr, len) (range check 0x7F9C0E).
+0x4C5E80
+0x4C5ED0
+
+# std::string (MSVC 6) reserve/_Tidy-style trim (library, refcount byte at ptr-1; calls 0x44BC00 and
+# 0x44BE10), and std::list<0x1C-byte element> insert(result, where, value): operator_new(0x24),
+# links prev/next, copies 7 dwords to node+8, ++size (+8).
+0x56BDD0
+0x56BE50
+
+# CArray<CRect>::SetSize helper: ConstructElements, memset(p, 0, n * 16) (called from 0x69C2A0, 0x6A0AA0).
+0x6A0C40
+
+# CList<DWORD, DWORD>::NewNode(pPrev, pNext) (MFC template instantiation; called from 0x559B40).
+0x547800
+
+# CResHelper<CResText, 1012>::~CResHelper (C2DArray destructor body; template instantiation).
+0x7B5370
+
+# CList<CString, CString>::AddTail(CString) (MFC template instantiation; CGamePathsList_AddPath):
+# takes a node from the free list (CPlex::Create of 12-byte nodes), constructs the CString, assigns it, links the tail.
+0x78D730
+
+# Catch handler (compiler-generated funclet) of CDimm::WriteFile (0x789090): CFile::Close, LeaveCriticalSection(&field_344), _chdir(path), epilogue.
+0x7891E1

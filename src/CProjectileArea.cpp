@@ -1,21 +1,62 @@
 #include "CProjectileArea.h"
 
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "CBaldurChitin.h"
 #include "CGameAIBase.h"
+#include "CGameAnimationType84EEB8.h"
 #include "CGameArea.h"
 #include "CGameSparkle.h"
 #include "CGameSprite.h"
 #include "CGameEffect.h"
 #include "CInfGame.h"
 #include "CParticle.h"
+#include "CPathSearch.h"
 #include "CUtil.h"
 #include "IcewindMisc.h"
+
+// 0x5868C0
+CProjectileArea5868E0::Entry::Entry(LONG a1, LONG a2, BYTE a3)
+{
+    field_0 = a1;
+    field_4 = a2;
+    field_8 = a3;
+}
 
 // 0x5868E0
 CProjectileArea5868E0::CProjectileArea5868E0()
 {
     field_10 = 0;
     field_0.reserve(512);
+}
+
+// 0x56FDC0
+CProjectileAreaVisual2::CProjectileAreaVisual2()
+{
+    field_2C = FALSE;
+    field_2E = 0x7FFFFFFF;
+}
+
+// 0x56FE30
+CProjectileAreaVisual3::CProjectileAreaVisual3()
+{
+    field_2C = NULL;
+    field_30 = 0;
+    field_34 = FALSE;
+    field_35 = FALSE;
+    field_36 = FALSE;
+    field_44 = FALSE;
+    field_38 = 250;
+    field_3C = 6;
+    field_40 = 30;
+}
+
+// 0x56FEC0
+LONG CProjectileAreaVisual3::GetRandomMax() const
+{
+    return 10000;
 }
 
 // 0x56EDD0
@@ -57,6 +98,444 @@ CProjectileArea::CProjectileArea(SHORT a1)
     field_4DC = 10;
 }
 
+// 0x56BF30
+CProjectileArea84F0DC::CProjectileArea84F0DC(const CProjectileAreaVisual* a1, const CProjectileAreaVisual2* a2, const CProjectileAreaVisual3* a3, CGameArea* pArea, const CPoint* pos, SHORT a6, BYTE a7, BYTE a8, WORD a9)
+    : field_164(CVidPalette::TYPE_RANGE)
+{
+    field_29C = 0;
+    field_2A0 = FALSE;
+    field_28C = 0;
+    field_188 = a9;
+    field_288 = 0;
+    field_18A = (a6 - 1) / a7 + 1;
+    field_18B = a8;
+
+    if (a1->field_0.length() != 0) {
+        CString sName(a1->field_0.c_str());
+        CResRef resRef(sName);
+
+        // NOTE: Uninline.
+        field_8A.SetResRef(resRef, FALSE, TRUE, TRUE);
+
+        field_2A0 = TRUE;
+    } else {
+        field_2A0 = FALSE;
+    }
+
+    field_290 = a1->field_20;
+    field_210 = *a2;
+    field_242 = *a3;
+
+    field_8A.SequenceSet(0);
+    field_8A.FrameSet(0);
+
+    field_7E = 0;
+    field_80 = 0;
+    m_pCells = NULL;
+
+    LONG nRadius = a6 - 1;
+    LONG nCells = nRadius / CPathSearch::GRID_SQUARE_SIZEX + 1;
+    field_18C = nCells;
+    field_190 = nCells;
+
+    m_pGrid = new BYTE[(nCells * 2 + 1) * (nCells * 2 + 1)];
+    if (m_pGrid == NULL) {
+        // NOTE: Deletes the object that is still under construction.
+        delete this;
+        return;
+    }
+
+    nCells = nRadius / (CPathSearch::GRID_SQUARE_SIZEX * 2) + 1;
+    field_18C = nCells;
+    field_190 = nCells;
+
+    LONG nIndex = g_pBaldurChitin->GetCurrentVideoMode()->GetEllipseArcPixelList(field_18C, field_18C, m_pGrid);
+    field_198 = nIndex + 1;
+    m_pGrid[field_198 - 1] = 1;
+
+    nIndex = g_pBaldurChitin->GetCurrentVideoMode()->GetEllipseArcPixelList(field_190, field_18C, m_pGrid + field_198);
+    field_19C = nIndex + 1;
+    m_pGrid[field_198 + field_19C - 1] = 1;
+
+    nCells = nRadius / CPathSearch::GRID_SQUARE_SIZEX + 1;
+    field_18C = nCells;
+    field_190 = nCells;
+
+    m_pCells = new CELL[(field_19C + field_198) * 4];
+    if (m_pCells == NULL) {
+        // NOTE: Deletes the object that is still under construction.
+        delete this;
+        return;
+    }
+
+    m_pCellStates = new BYTE[(field_19C + field_198) * 4];
+    if (m_pCellStates == NULL) {
+        // NOTE: Deletes the object that is still under construction.
+        delete this;
+        return;
+    }
+
+    memset(m_pCellStates, 0, (field_198 + field_19C) * 4);
+
+    LONG nOriginX = pos->x;
+    LONG nOriginY = pos->y * 4 / 3;
+    LONG nCurX = nOriginX;
+    LONG nCurY = a6 + nOriginY;
+
+    for (SHORT i = 0; i < field_198; i++) {
+        LONG dx = nCurX - nOriginX;
+        LONG dy = nCurY - nOriginY;
+        LONG nDistance = static_cast<LONG>(sqrt(static_cast<double>(dx * dx + dy * dy)) + 0.5);
+
+        m_pCells[i].nOffsetX = 0;
+        m_pCells[field_198 + field_19C + i].nOffsetX = 0;
+        m_pCells[i + (field_198 + field_19C) * 2].nOffsetX = 0;
+        m_pCells[i + (field_198 + field_19C) * 3].nOffsetX = 0;
+
+        m_pCells[i].nOffsetY = 0;
+        m_pCells[field_198 + field_19C + i].nOffsetY = 0;
+        m_pCells[i + (field_198 + field_19C) * 2].nOffsetY = 0;
+        m_pCells[i + (field_198 + field_19C) * 3].nOffsetY = 0;
+
+        m_pCells[i].nVelocityX = ((dx << CGameSprite::EXACT_SCALE) * a7) / nDistance;
+        m_pCells[field_198 + field_19C + i].nVelocityX = m_pCells[i].nVelocityX;
+
+        if (m_pCells[i].nVelocityX == 0) {
+            m_pCellStates[i + (field_198 + field_19C) * 2] = 2;
+            m_pCellStates[i + (field_198 + field_19C) * 3] = 2;
+        }
+
+        m_pCells[i + (field_198 + field_19C) * 2].nVelocityX = -m_pCells[i].nVelocityX;
+        m_pCells[i + (field_198 + field_19C) * 3].nVelocityX = -m_pCells[i].nVelocityX;
+
+        m_pCells[i].nVelocityY = ((dy << CGameSprite::EXACT_SCALE) * a7) / nDistance;
+        m_pCells[field_198 + field_19C + i].nVelocityY = -m_pCells[i].nVelocityY;
+        m_pCells[i + (field_198 + field_19C) * 2].nVelocityY = m_pCells[i].nVelocityY;
+        m_pCells[i + (field_198 + field_19C) * 3].nVelocityY = -m_pCells[i].nVelocityY;
+
+        nCurX += CPathSearch::GRID_SQUARE_SIZEX * 2;
+        nCurY -= m_pGrid[i] * CPathSearch::GRID_SQUARE_SIZEY * 2;
+    }
+
+    nCurX = a6 + nOriginX;
+    nCurY = nOriginY;
+
+    for (SHORT i = 0; i < field_19C; i++) {
+        LONG dx = nCurX - nOriginX;
+        LONG dy = nCurY - nOriginY;
+        LONG nDistance = static_cast<LONG>(sqrt(static_cast<double>(dx * dx + dy * dy)) + 0.5);
+
+        m_pCells[field_198 + i].nOffsetX = 0;
+        m_pCells[field_198 * 2 + field_19C + i].nOffsetX = 0;
+        m_pCells[i + (field_198 + field_19C) * 2 + field_198].nOffsetX = 0;
+        m_pCells[i + (field_198 + field_19C) * 3 + field_198].nOffsetX = 0;
+
+        m_pCells[field_198 + i].nOffsetY = 0;
+        m_pCells[field_198 * 2 + field_19C + i].nOffsetY = 0;
+        m_pCells[i + (field_198 + field_19C) * 2 + field_198].nOffsetY = 0;
+        m_pCells[i + (field_198 + field_19C) * 3 + field_198].nOffsetY = 0;
+
+        m_pCells[field_198 + i].nVelocityX = ((dx << CGameSprite::EXACT_SCALE) * a7) / nDistance;
+        m_pCells[field_198 * 2 + field_19C + i].nVelocityX = m_pCells[field_198 + i].nVelocityX;
+        m_pCells[i + (field_198 + field_19C) * 2 + field_198].nVelocityX = -m_pCells[field_198 + i].nVelocityX;
+        m_pCells[i + (field_198 + field_19C) * 3 + field_198].nVelocityX = -m_pCells[field_198 + i].nVelocityX;
+
+        m_pCells[field_198 + i].nVelocityY = ((dy << CGameSprite::EXACT_SCALE) * a7) / nDistance;
+        m_pCells[field_198 * 2 + field_19C + i].nVelocityY = -m_pCells[field_198 + i].nVelocityY;
+        m_pCells[i + (field_198 + field_19C) * 2 + field_198].nVelocityY = m_pCells[field_198 + i].nVelocityY;
+        m_pCells[i + (field_198 + field_19C) * 3 + field_198].nVelocityY = -m_pCells[field_198 + i].nVelocityY;
+
+        // NOTE: Tests the entry at `i`, not at `field_198 + i`.
+        if (m_pCells[i].nVelocityY == 0) {
+            m_pCellStates[field_198 * 2 + field_19C + i] = 2;
+            m_pCellStates[i + (field_198 + field_19C) * 3 + field_198] = 2;
+        }
+
+        nCurX -= m_pGrid[field_198 + i] * CPathSearch::GRID_SQUARE_SIZEX * 2;
+        nCurY += CPathSearch::GRID_SQUARE_SIZEY * 2;
+    }
+
+    // NOTE: Original copies the table from 0x8A8154.
+    memcpy(m_terrainTable, CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE, 16);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Add(&m_id, this, INFINITE) != CGameObjectArray::SUCCESS) {
+        // NOTE: Deletes the object that is still under construction.
+        delete this;
+        return;
+    }
+
+    CGameObject::AddToArea(pArea, *pos, 0, CGameObject::LIST_FRONT);
+}
+
+// 0x56CF00
+// NOTE: 0x56CEE0 is the scalar deleting destructor (compiler-generated).
+CProjectileArea84F0DC::~CProjectileArea84F0DC()
+{
+    if (m_pGrid != NULL) {
+        delete[] m_pGrid;
+    }
+
+    if (m_pCells != NULL) {
+        delete[] m_pCells;
+    }
+
+    if (m_pCellStates != NULL) {
+        delete[] m_pCellStates;
+    }
+}
+
+// 0x56D0A0
+void CProjectileArea84F0DC::AIUpdate()
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    BOOL bDone = TRUE;
+
+    field_28C++;
+    field_18A--;
+
+    if (field_2A0 == 1) {
+        if (field_18A == 0) {
+            if (field_8A.IsEndOfSequence(FALSE)) {
+                RemoveFromArea();
+                return;
+            }
+
+            field_18A++;
+            field_8A.FrameAdvance();
+            return;
+        }
+    } else {
+        if (field_18A == 0) {
+            RemoveFromArea();
+            return;
+        }
+    }
+
+    memset(m_pGrid, 0, (field_190 * 2 + 1) * (field_18C * 2 + 1));
+
+    for (SHORT i = 0; i < (field_198 + field_19C) * 4; i++) {
+        if (m_pCellStates[i] == 2) {
+            continue;
+        }
+
+        m_pCells[i].nOffsetX += m_pCells[i].nVelocityX;
+        m_pCells[i].nOffsetY += m_pCells[i].nVelocityY;
+
+        CPoint ptCell(((m_pCells[i].nOffsetX >> CGameSprite::EXACT_SCALE) + m_pos.x) / CPathSearch::GRID_SQUARE_SIZEX,
+            (((m_pCells[i].nOffsetY * 3 / 4) >> CGameSprite::EXACT_SCALE) + m_pos.y) / CPathSearch::GRID_SQUARE_SIZEY);
+
+        SHORT nTableIndex;
+        if (m_pArea->m_search.GetLOSCost(ptCell, m_terrainTable, nTableIndex, FALSE) == CPathSearch::COST_IMPASSABLE) {
+            if (field_18B == 1) {
+                m_pCellStates[i] = 2;
+            }
+
+            if (field_18B != 0) {
+                if (m_pCellStates[i] == 0) {
+                    bDone = FALSE;
+                }
+
+                continue;
+            }
+
+            CPoint ptPrevCell(((((m_pCells[i].nOffsetX - m_pCells[i].nVelocityX) >> CGameSprite::EXACT_SCALE) + m_pos.x)) / CPathSearch::GRID_SQUARE_SIZEX,
+                ((((m_pCells[i].nOffsetY - m_pCells[i].nVelocityY) * 3 / 4) >> CGameSprite::EXACT_SCALE) + m_pos.y) / CPathSearch::GRID_SQUARE_SIZEY);
+
+            if (ptPrevCell.x != ptCell.x) {
+                m_pCells[i].nOffsetX -= m_pCells[i].nVelocityX * 2;
+                m_pCells[i].nVelocityX = -m_pCells[i].nVelocityX;
+            }
+
+            if (ptPrevCell.y != ptCell.y) {
+                m_pCells[i].nOffsetY += -m_pCells[i].nVelocityY * 2;
+                m_pCells[i].nVelocityY = -m_pCells[i].nVelocityY;
+            }
+        }
+
+        LONG nRow = ((m_pCells[i].nOffsetY / CPathSearch::GRID_SQUARE_SIZEX) >> CGameSprite::EXACT_SCALE) + field_190;
+        LONG nIndex = ((m_pCells[i].nOffsetX / CPathSearch::GRID_SQUARE_SIZEX) >> CGameSprite::EXACT_SCALE) + field_18C + nRow * (field_18C * 2 + 1);
+
+        if (field_242.field_0.length() != 0) {
+            if (field_29C > 0) {
+                field_29C--;
+            } else {
+                LONG nChance = field_28C * field_28C / field_242.field_40 + field_242.field_38;
+                if (field_18A < 2) {
+                    nChance *= 2;
+                }
+
+                CPoint ptNew((m_pos.x << CGameSprite::EXACT_SCALE) + m_pCells[i].nOffsetX,
+                    (m_pos.y << CGameSprite::EXACT_SCALE) + m_pCells[i].nOffsetY * 3 / 4);
+
+                LONG nMax = field_242.GetRandomMax();
+                LONG nRoll = nMax != 0 ? rand() % nMax : 0;
+
+                if (nRoll <= nChance) {
+                    CProjectileArea5868E0::Entry entry(ptNew.x, ptNew.y, TRUE);
+                    field_242.field_2C->field_0.insert(field_242.field_2C->field_0.end(), 1, entry);
+                    field_242.field_30 = field_242.field_2C->field_0.size() - 1;
+
+                    CPoint ptZero(0, 0);
+
+                    new CProjectileArea84F14C(&field_242,
+                        m_pArea,
+                        ptNew,
+                        0,
+                        ptZero,
+                        static_cast<WORD>(field_18A * 2 + field_188),
+                        0,
+                        field_18B);
+
+                    field_29C = field_242.field_3C;
+                } else {
+                    CProjectileArea5868E0::Entry entry(ptNew.x, ptNew.y, FALSE);
+                    field_242.field_2C->field_0.insert(field_242.field_2C->field_0.end(), 1, entry);
+                }
+            }
+        }
+
+        BYTE nOld = m_pGrid[nIndex]++;
+        if (nOld == 0) {
+            if (m_pCellStates[i] == 0) {
+                if (field_210.field_0.length() != 0) {
+                    field_288++;
+                    if (field_288 <= field_210.field_2E) {
+                        CPoint ptNew((m_pos.x << CGameSprite::EXACT_SCALE) + m_pCells[i].nOffsetX,
+                            (m_pos.y << CGameSprite::EXACT_SCALE) + m_pCells[i].nOffsetY * 3 / 4);
+                        CPoint ptVelocity(m_pCells[i].nVelocityX, m_pCells[i].nVelocityY * 3 / 4);
+
+                        new CProjectileArea84F14C(&field_210,
+                            m_pArea,
+                            ptNew,
+                            0,
+                            ptVelocity,
+                            field_18A,
+                            0,
+                            field_18B);
+                    }
+                }
+
+                m_pCellStates[i] = 1;
+            }
+        } else if (m_pCellStates[i] == 0) {
+            bDone = FALSE;
+        }
+    }
+
+    if (bDone) {
+        if (field_2A0 == 1) {
+            if (field_8A.IsEndOfSequence(FALSE)) {
+                RemoveFromArea();
+            }
+        } else {
+            RemoveFromArea();
+        }
+    }
+
+    // NOTE: Original keeps using `this` after `RemoveFromArea` deleted it.
+    if (field_2A0 == 1) {
+        if (!field_8A.IsEndOfSequence(FALSE)) {
+            field_8A.FrameAdvance();
+        }
+    }
+}
+
+// 0x56D9B0
+void CProjectileArea84F0DC::RemoveFromArea()
+{
+    CGameObject::RemoveFromArea();
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+        CGameObjectArray::THREAD_ASYNCH,
+        NULL,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameFireball.cpp
+        // __LINE__: 493
+        UTIL_ASSERT(FALSE);
+        return;
+    }
+
+    delete this;
+}
+
+// 0x56D730
+void CProjectileArea84F0DC::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameFireball.cpp
+    // __LINE__: 396
+    UTIL_ASSERT(pVidMode != NULL);
+
+    CInfinity* pInfinity = &m_pArea->m_cInfinity;
+
+    CPoint ptTile;
+    ptTile.x = m_pos.x < 0 ? 0 : m_pos.x;
+    if (ptTile.x >= m_pArea->m_cInfinity.nAreaX - 1) {
+        ptTile.x = m_pArea->m_cInfinity.nAreaX - 1;
+    }
+    ptTile.y = m_pos.y < 0 ? 0 : m_pos.y;
+    if (ptTile.y >= m_pArea->m_cInfinity.nAreaY - 1) {
+        ptTile.y = m_pArea->m_cInfinity.nAreaY - 1;
+    }
+
+    // NOTE: Uninline.
+    if (!m_pArea->m_visibility.IsTileVisible(m_pArea->m_visibility.PointToTile(ptTile))) {
+        return;
+    }
+
+    if (!field_2A0) {
+        return;
+    }
+
+    if (field_8A.IsEndOfSequence(FALSE)) {
+        return;
+    }
+
+    CPoint ptRef;
+    field_8A.GetCurrentCenterPoint(ptRef, FALSE);
+
+    CSize size;
+    field_8A.GetCurrentFrameSize(size, FALSE);
+
+    CRect rFx;
+    rFx.SetRect(0, 0, size.cx, size.cy);
+
+    CPoint pos;
+    pos.x = m_pos.x;
+    pos.y = m_pos.y + m_pArea->GetHeightOffset(m_pos, m_listType);
+
+    LONG left = pos.x - ptRef.x;
+    LONG top = pos.y + (m_posZ - ptRef.y);
+    LONG right = rFx.right - rFx.left + left;
+    LONG bottom = rFx.bottom - rFx.top + top;
+
+    DWORD dwFlags = CInfinity::FXPREP_COPYFROMBACK | field_290.m_dwFlags;
+
+    pInfinity->FXPrep(rFx, dwFlags, a3, pos, ptRef);
+
+    if (!pInfinity->FXLock(rFx, dwFlags)) {
+        return;
+    }
+
+    pInfinity->FXRender(&field_8A, ptRef.x, ptRef.y, field_290.m_dwFlags, 0);
+
+    CRect rGCBounds(left, top - m_posZ, right, bottom - m_posZ);
+    pInfinity->FXRenderClippingPolys(pos.x,
+        pos.y - m_posZ,
+        m_posZ,
+        ptRef,
+        rGCBounds,
+        FALSE,
+        field_290.m_dwFlags);
+
+    pInfinity->FXUnlock(dwFlags, NULL, CPoint(0, 0));
+    pInfinity->FXBltFrom(a3, rFx, pos.x, pos.y, ptRef.x, ptRef.y, field_290.m_dwFlags | 1);
+}
+
 // 0x5703F0
 void CProjectileArea::sub_5703F0(CGameAIBase* pSource)
 {
@@ -92,8 +571,6 @@ void CProjectileArea::sub_5704E0(CGameAIBase* pSource)
 // 0x56FAF0
 void CProjectileArea::AIUpdate()
 {
-    // TODO: Incomplete.
-
     CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
     if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
@@ -248,8 +725,6 @@ void CProjectileArea::Fire(CGameArea* pArea, LONG source, LONG target, CPoint ta
 // 0x56F410
 void CProjectileArea::OnArrival()
 {
-    // TODO: Incomplete.
-
     if (m_callBackProjectile != CGameObjectArray::INVALID_INDEX) {
         CProjectile* pProjectile;
         BYTE rc;
@@ -284,10 +759,16 @@ void CProjectileArea::OnArrival()
     if (field_50E.field_0.length() != 0
         || field_540.field_0.length() != 0
         || field_4E2.field_0.length() != 0) {
-        // TODO: Incomplete. Creates an object of 0x2A2 bytes with constructor
-        // 0x56BF30 (args `&field_4E2`, `&field_50E`, `&field_540`, `field_EA`,
-        // `&m_pos`, `(WORD)field_2AE`, `(BYTE)m_speed`, `1`,
-        // `(WORD)field_4C0`). The result is not stored.
+        // NOTE: The object is not kept.
+        new CProjectileArea84F0DC(&field_4E2,
+            &field_50E,
+            &field_540,
+            field_EA,
+            &m_pos,
+            field_2AE,
+            static_cast<BYTE>(m_speed),
+            1 /* 0x85BD6D */,
+            static_cast<WORD>(field_4C0));
     }
 
     if (field_4E2.field_10.length() != 0) {
@@ -454,4 +935,299 @@ void CProjectileArea::Virtual98(LONG nTargetId)
     g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
         CGameObjectArray::THREAD_ASYNCH,
         INFINITE);
+}
+
+// 0x56E280
+CProjectileArea84F14C::CProjectileArea84F14C(const CProjectileAreaVisual3* a1, CGameArea* pArea, const CPoint& pos, LONG nPosZ, const CPoint& ptVelocity, WORD nTicksLeft, BYTE nFadeTicks, BYTE nMode)
+{
+    field_10E = 0;
+
+    CPoint ptZero(0, 0);
+    SHORT nDirection = CGameSprite::GetDirection(ptZero, ptVelocity);
+    m_animation.m_animation = new CGameAnimationType84EEB8(a1, nDirection % 16);
+
+    CString sSoundName(a1->field_10.c_str());
+    CResRef resRef(sSoundName);
+
+    // NOTE: Inlined.
+    m_sound.SetResRef(resRef, TRUE, TRUE);
+    m_sound.SetChannel(14, reinterpret_cast<DWORD>(pArea));
+
+    m_bVisible = 1;
+    m_ptFixedPos = pos;
+    m_ptVelocity = ptVelocity;
+    m_nTicksLeft = nTicksLeft;
+    m_nFadeTicks = nFadeTicks;
+    m_nMode = nMode;
+
+    // NOTE: Original copies the table from 0x8A8154.
+    memcpy(m_terrainTable, CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE, 16);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Add(&m_id, this, INFINITE) != CGameObjectArray::SUCCESS) {
+        // NOTE: Deletes the object that is still under construction.
+        delete this;
+        return;
+    }
+
+    CPoint ptArea(pos.x >> CGameSprite::EXACT_SCALE, pos.y >> CGameSprite::EXACT_SCALE);
+    CGameObject::AddToArea(pArea, ptArea, nPosZ, CGameObject::LIST_FRONT);
+
+    field_104 = a1->field_2C;
+    field_104->field_10++;
+    field_108 = a1->field_30;
+    field_10C = a1->field_34;
+    field_10D = a1->field_44;
+}
+
+// 0x56DF00
+CProjectileArea84F14C::CProjectileArea84F14C(const CProjectileAreaVisual2* a1, CGameArea* pArea, const CPoint& pos, LONG nPosZ, const CPoint& ptVelocity, WORD nTicksLeft, BYTE nFadeTicks, BYTE nMode)
+{
+    field_104 = NULL;
+    field_108 = 0;
+    field_10C = FALSE;
+    field_10D = FALSE;
+    field_10E = 0;
+
+    CPoint ptZero(0, 0);
+    SHORT nDirection = CGameSprite::GetDirection(ptZero, ptVelocity);
+    m_animation.m_animation = new CGameAnimationType84EEB8(a1, nDirection % 16);
+
+    CString sSoundName(a1->field_10.c_str());
+    CResRef resRef(sSoundName);
+
+    // NOTE: Inlined.
+    m_sound.SetResRef(resRef, TRUE, TRUE);
+    m_sound.SetChannel(14, reinterpret_cast<DWORD>(pArea));
+
+    m_bVisible = 1;
+    m_ptFixedPos = pos;
+    m_ptVelocity = ptVelocity;
+    m_nTicksLeft = nTicksLeft;
+    m_nFadeTicks = nFadeTicks;
+    m_nMode = nMode;
+
+    // NOTE: Original copies the table from 0x8A8154.
+    memcpy(m_terrainTable, CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE, 16);
+
+    if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Add(&m_id, this, INFINITE) != CGameObjectArray::SUCCESS) {
+        // NOTE: Deletes the object that is still under construction.
+        delete this;
+        return;
+    }
+
+    CPoint ptArea(pos.x >> CGameSprite::EXACT_SCALE, pos.y >> CGameSprite::EXACT_SCALE);
+    CGameObject::AddToArea(pArea, ptArea, nPosZ, CGameObject::LIST_FRONT);
+}
+
+// 0x56E580
+// NOTE: 0x56E260 is the scalar deleting destructor (compiler-generated).
+CProjectileArea84F14C::~CProjectileArea84F14C()
+{
+    if (field_104 != NULL) {
+        field_104->field_10--;
+        if (field_104->field_10 == 0) {
+            // NOTE: The original frees the vector storage and the holder.
+            delete field_104;
+        }
+    }
+
+    // NOTE: The members and the base class are destroyed implicitly.
+}
+
+// 0x56E650
+void CProjectileArea84F14C::AIUpdate()
+{
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
+        return;
+    }
+
+    field_10E++;
+
+    if (m_nTicksLeft == 0) {
+        if (m_animation.IsEndOfSequence()) {
+            RemoveFromArea();
+            return;
+        }
+    } else {
+        m_nTicksLeft--;
+        if (m_nTicksLeft == 0) {
+            RemoveFromArea();
+            return;
+        }
+    }
+
+    CPoint ptGrid(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX, m_pos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    m_ptFixedPos.x += m_ptVelocity.x;
+    m_ptFixedPos.y += m_ptVelocity.y;
+    m_pos.x = m_ptFixedPos.x >> CGameSprite::EXACT_SCALE;
+    m_pos.y = m_ptFixedPos.y >> CGameSprite::EXACT_SCALE;
+
+    CPoint ptNewGrid(m_pos.x / CPathSearch::GRID_SQUARE_SIZEX, m_pos.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+    if (ptGrid.x != ptNewGrid.x || ptGrid.y != ptNewGrid.y) {
+        SHORT nTableIndex;
+        if (m_pArea->m_search.GetLOSCost(ptNewGrid, m_terrainTable, nTableIndex, FALSE) == CPathSearch::COST_IMPASSABLE) {
+            if (m_nMode == 1) {
+                RemoveFromArea();
+                return;
+            }
+
+            if (m_nMode == 0) {
+                CPoint ptOld = m_ptFixedPos;
+
+                if (ptGrid.x != ptNewGrid.x) {
+                    m_ptFixedPos.x += -m_ptVelocity.x * 2;
+                    m_pos.x = m_ptFixedPos.x >> CGameSprite::EXACT_SCALE;
+                    m_ptVelocity.x = -m_ptVelocity.x;
+                }
+
+                if (ptGrid.y != ptNewGrid.y) {
+                    m_ptFixedPos.y += -m_ptVelocity.y * 2;
+                    m_pos.y = m_ptFixedPos.y >> CGameSprite::EXACT_SCALE;
+                    m_ptVelocity.y = -m_ptVelocity.y;
+                }
+
+                SHORT nDirection = CGameSprite::GetDirection(ptOld, m_ptFixedPos);
+                m_animation.ChangeDirection(nDirection);
+            } else {
+                m_bVisible = 0;
+            }
+        } else {
+            m_bVisible = 1;
+        }
+    }
+
+    if (field_10D == 1) {
+        CGameAnimationType84EEB8* pAnimation = static_cast<CGameAnimationType84EEB8*>(m_animation.m_animation);
+
+        if (m_animation.IsEndOfSequence()) {
+            if (pAnimation->field_5F6 == "ICloudB") {
+                pAnimation->sub_55DBD0("ICloudA");
+            }
+        }
+
+        // NOTE: The divisor is a global at 0x84F260 (100).
+        if (field_10E != 0 && field_10E % 100 == 0) {
+            pAnimation->sub_55DBD0("ICloudB");
+        }
+    }
+
+    if (field_10C == 1) {
+        if (m_animation.IsEndOfSequence()) {
+            LONG nIndex;
+            do {
+                LONG nSize = field_104->field_0.size();
+                LONG nOffset;
+                if (nSize == 0) {
+                    nOffset = 0;
+                } else {
+                    LONG nLimit = rand() % nSize;
+                    nOffset = nLimit != 0 ? rand() % nLimit : 0;
+                }
+
+                nIndex = nSize - nOffset - 1;
+            } while (field_104->field_0[nIndex].field_8 == 1);
+
+            field_104->field_0[nIndex].field_8 = 1;
+            field_104->field_0[field_108].field_8 = 0;
+            field_108 = nIndex;
+
+            m_ptFixedPos.x = field_104->field_0[nIndex].field_0;
+            m_ptFixedPos.y = field_104->field_0[nIndex].field_4;
+            m_pos.x = m_ptFixedPos.x >> CGameSprite::EXACT_SCALE;
+            m_pos.y = m_ptFixedPos.y >> CGameSprite::EXACT_SCALE;
+        }
+    }
+
+    m_animation.IncrementFrame();
+}
+
+// 0x56ECF0
+void CProjectileArea84F14C::RemoveFromArea()
+{
+    CGameObject::RemoveFromArea();
+
+    BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Delete(m_id,
+        CGameObjectArray::THREAD_ASYNCH,
+        NULL,
+        INFINITE);
+    if (rc != CGameObjectArray::SUCCESS) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameTemporal.cpp
+        // __LINE__: 435
+        UTIL_ASSERT(FALSE);
+        return;
+    }
+
+    delete this;
+}
+
+// 0x56EA90
+void CProjectileArea84F14C::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
+{
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindCGameTemporal.cpp
+    // __LINE__: 354
+    UTIL_ASSERT(pVidMode != NULL);
+
+    BYTE bFadeOut = FALSE;
+    CInfinity* pInfinity = &m_pArea->m_cInfinity;
+
+    if (m_bVisible == 0) {
+        return;
+    }
+
+    if (m_pos.x < 0 || m_pos.y < 0 || m_pos.x > 0x1400 || m_pos.y > 0xF00) {
+        return;
+    }
+
+    // NOTE: Uninline.
+    if (!m_pArea->m_visibility.IsTileVisible(m_pArea->m_visibility.PointToTile(m_pos))) {
+        return;
+    }
+
+    if (static_cast<SHORT>(m_nTicksLeft) < m_nFadeTicks) {
+        bFadeOut = TRUE;
+    }
+
+    CRect rView(pInfinity->nCurrentX,
+        pInfinity->nCurrentY,
+        pInfinity->rViewPort.right - pInfinity->rViewPort.left + pInfinity->nCurrentX,
+        pInfinity->rViewPort.bottom - pInfinity->rViewPort.top + pInfinity->nCurrentY);
+
+    CRect rFx;
+    CPoint ptReference;
+    m_animation.CalculateFxRect(rFx, ptReference, m_posZ);
+
+    CPoint pos = m_pos;
+    pos.y += m_pArea->GetHeightOffset(m_pos, CGameObject::LIST_BACK);
+
+    CRect rGCBounds;
+    m_animation.CalculateGCBoundsRect(rGCBounds,
+        pos,
+        ptReference,
+        m_posZ,
+        rFx.right - rFx.left,
+        rFx.bottom - rFx.top);
+
+    if (!IntersectRect(&rView, &rGCBounds, &rView)) {
+        return;
+    }
+
+    CPoint ptTint(pos.x, pos.y + m_posZ);
+    COLORREF rgbTint = m_pArea->GetTintColor(ptTint, m_listType);
+
+    m_animation.Render(pInfinity,
+        pVidMode,
+        a3,
+        rFx,
+        pos,
+        ptReference,
+        0x20000,
+        rgbTint,
+        rGCBounds,
+        FALSE,
+        bFadeOut,
+        m_posZ,
+        0);
 }

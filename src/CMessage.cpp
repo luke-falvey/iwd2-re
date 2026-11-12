@@ -6543,6 +6543,59 @@ BOOLEAN CBaldurMessage::sub_4355F0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
     return TRUE;
 }
 
+// 0x4356E0
+BOOLEAN CBaldurMessage::sub_4356E0(CString sArea, DWORD dwArg2, CString sText, WORD nFacing, BYTE nArg5, DWORD dwArg6)
+{
+    DWORD nAreaLength = sArea.GetLength();
+    DWORD nTextLength = sText.GetLength();
+
+    DWORD dwSize = static_cast<BYTE>(nTextLength) + static_cast<BYTE>(nAreaLength) + 13;
+    BYTE* pData = CreateBuffer(dwSize);
+    if (pData == NULL) {
+        return FALSE;
+    }
+
+    DWORD cnt = 0;
+
+    pData[cnt] = static_cast<BYTE>(nAreaLength);
+    cnt += sizeof(BYTE);
+
+    memcpy(pData + cnt, sArea.GetBuffer(static_cast<BYTE>(nAreaLength)), static_cast<BYTE>(nAreaLength));
+    cnt += static_cast<BYTE>(nAreaLength);
+
+    *reinterpret_cast<DWORD*>(pData + cnt) = dwArg2;
+    cnt += sizeof(DWORD);
+
+    pData[cnt] = static_cast<BYTE>(nTextLength);
+    cnt += sizeof(BYTE);
+
+    if (static_cast<BYTE>(nTextLength) != 0) {
+        memcpy(pData + cnt, sText.GetBuffer(static_cast<BYTE>(nTextLength)), static_cast<BYTE>(nTextLength));
+        cnt += static_cast<BYTE>(nTextLength);
+    }
+
+    *reinterpret_cast<WORD*>(pData + cnt) = nFacing;
+    cnt += sizeof(WORD);
+
+    pData[cnt] = nArg5;
+    cnt += sizeof(BYTE);
+
+    *reinterpret_cast<DWORD*>(pData + cnt) = dwArg6;
+    cnt += sizeof(DWORD);
+
+    // NOTE: Subtype is the byte at 0x84CF8F (81), which has no named constant.
+    g_pChitin->cNetwork.SendSpecificMessage(CString(""),
+        CNetwork::SEND_ALL_PLAYERS | CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_MAPWORLD,
+        81,
+        pData,
+        cnt);
+
+    DestroyBuffer(pData);
+
+    return TRUE;
+}
+
 // 0x4358B0
 BOOLEAN CBaldurMessage::sub_4358B0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
 {

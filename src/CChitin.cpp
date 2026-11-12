@@ -157,14 +157,42 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPara
         }
         break;
     case WM_INPUTLANGCHANGE:
-        return 0;
+        if (g_pChitin->field_1A4) {
+            return 0;
+        }
+        break;
     case WM_DISPLAYCHANGE:
         g_pChitin->OnDisplayChange();
+        break;
+    case WM_KEYDOWN:
+        g_pChitin->field_FE = GetKeyState(VK_CAPITAL);
+
+        if (wParam == VK_F10) {
+            return 0;
+        }
+
+        if (wParam == VK_PROCESSKEY) {
+            if (g_pChitin->field_1A4 && g_pChitin->cImm.field_128 != 0) {
+                g_pChitin->cImm.OnComposition(hWnd, VK_PROCESSKEY, lParam);
+            }
+        }
         break;
     case WM_SYSKEYDOWN:
         if (wParam == VK_RETURN) {
             g_pChitin->OnAltEnter(TRUE);
         } else if (wParam == VK_F10) {
+            return 0;
+        }
+        break;
+    case WM_SYSKEYUP:
+        if (wParam == VK_MENU || wParam == VK_F10) {
+            return 0;
+        }
+        break;
+    case WM_SYSCHAR:
+        return 0;
+    case WM_SYSCOMMAND:
+        if ((wParam & 0xFFF0) == SC_SCREENSAVE || (wParam & 0xFFF0) == SC_MONITORPOWER) {
             return 0;
         }
         break;
@@ -195,17 +223,47 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPara
     case WM_IME_SETCONTEXT:
     case WM_IME_CONTROL:
     case WM_IME_COMPOSITIONFULL:
+    case WM_IME_KEYDOWN:
         if (g_pChitin->field_1A4) {
             return 0;
         }
         break;
+    case 0x402:
+        switch (static_cast<DWORD>(lParam) >> 16) {
+        case 0x271E:
+        case 0x2733:
+        case 0x2734:
+        case 0x2742:
+        case 0x2747:
+        case 0x276D:
+        case 0x2AF9:
+        case 0x2AFA:
+        case 0x2AFB:
+        case 0x2AFC:
+            break;
+        default:
+            g_pChitin->cGameSpy.field_26 = 1;
+            break;
+        }
+        return 0;
+    case 0x403:
+        if (g_pChitin->cNetwork.field_9D == 1) {
+            g_pChitin->cNetwork.field_9E = 1;
+        }
+        return 0;
+    case 0x404:
+        g_pChitin->cNetwork.CreatePlayer(reinterpret_cast<INT&>(wParam));
+        return wParam;
     case 0x405:
         return g_pChitin->cNetwork.CreateDirectPlayLobbyInterface(reinterpret_cast<IDirectPlayLobby3A**>(wParam));
     case 0x406:
         return g_pChitin->cNetwork.CreateDirectPlayInterface(&GUID_NULL, reinterpret_cast<IDirectPlay4A**>(wParam));
+    default:
+        if (Msg == g_pChitin->m_nQueryCancelAutoPlayMsgID) {
+            return 1;
+        }
+        break;
     }
-
-    // TODO: Incomplete.
 
     return DefWindowProcA(hWnd, Msg, wParam, lParam);
 }
@@ -464,13 +522,216 @@ BOOL CChitin::InitializeServices(HWND hWnd)
 // 0x791610
 void CChitin::OnDisplayChange()
 {
-    // TODO: Incomplete.
+    if (!g_pChitin->m_bFullscreen) {
+        RECT rect;
+        GetWindowRect(cWnd.GetSafeHwnd(), &rect);
+        m_ptScreen.x = rect.left;
+        m_ptScreen.y = rect.top;
+
+        field_F8 = 1;
+        m_bReInitializing = TRUE;
+
+        if (pActiveEngine != NULL) {
+            pActiveEngine->EngineDeactivated();
+        }
+
+        INT nCurrentSong = cSoundMixer.m_nCurrentSong;
+        cSoundMixer.StopMusic(TRUE);
+
+        CVidMode* pCurrentVidMode = cVideo.m_pCurrentVidMode;
+        field_142 = 0;
+
+        cSoundMixer.CleanUp();
+        cVideo.CleanUp();
+
+        int nBpp = CUtil::GetCurrentBitsPerPixels();
+        if (nBpp != 16 && nBpp != 24 && nBpp != 32) {
+            CString s;
+            s.LoadStringA(GetIDSInvalidVideoMode());
+            MessageBoxA(NULL, s, m_sGameName, 0);
+            ShutDown(-1, NULL, NULL);
+            return;
+        }
+
+        cVideo.m_pCurrentVidMode = pCurrentVidMode;
+        if (!InitializeServices(cWnd.GetSafeHwnd())) {
+            ShutDown(-1, NULL, NULL);
+            return;
+        }
+
+        SetSoundVolumes();
+        cSoundMixer.StartSong(nCurrentSong, 1);
+
+        if (cDimm.m_bCDSwitchActivated) {
+            SetCDSwitchActivateEngine(TRUE);
+        } else if (cProgressBar.m_bProgressBarActivated) {
+            SetProgressBarActivateEngine(TRUE);
+        } else {
+            if (pActiveEngine != NULL) {
+                pActiveEngine->EngineActivated();
+            }
+        }
+
+        Resume();
+        field_F8 = 0;
+    }
 }
 
 // 0x7917F0
 void CChitin::ParseCommandLine()
 {
-    // TODO: Incomplete.
+    CString sResult;
+    CString sAddress;
+    CString sToken;
+    CString sPort;
+    CString sRemaining(m_sCommandLine);
+
+    sRemaining.TrimLeft();
+
+    while (sRemaining.GetLength() != 0) {
+        sToken = sRemaining.SpanExcluding(" ");
+        sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+
+        if (strcmp(sToken, "+host") == 0) {
+            sRemaining.TrimLeft();
+            if (sRemaining[0] == '"') {
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                sToken = sRemaining.SpanExcluding("\"");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (sRemaining[0] == '"') {
+                    sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                    if (!m_bStartUpConnect) {
+                        field_110 = 1;
+                        field_11C = sToken;
+                    }
+                }
+            } else {
+                sToken = sRemaining.SpanExcluding(" ");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (!m_bStartUpConnect) {
+                    field_110 = 1;
+                    field_11C = sToken;
+                }
+            }
+        } else if (strcmp(sToken, "+connect") == 0) {
+            sRemaining.TrimLeft();
+            if (sRemaining[0] == '"') {
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                sToken = sRemaining.SpanExcluding("\"");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (sRemaining[0] == '"') {
+                    sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                    sAddress = sToken.SpanExcluding(":");
+                    sPort = sToken.Right(sToken.GetLength() - sAddress.GetLength() - 1);
+                    if (!field_110) {
+                        m_bStartUpConnect = TRUE;
+                        m_sStartUpAddress = sAddress;
+                        field_11C = sPort;
+                    }
+                }
+            } else {
+                sToken = sRemaining.SpanExcluding(" ");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                sAddress = sToken.SpanExcluding(":");
+                sPort = sToken.Right(sToken.GetLength() - sAddress.GetLength() - 1);
+                if (!field_110) {
+                    m_bStartUpConnect = TRUE;
+                    m_sStartUpAddress = sAddress;
+                    field_11C = sPort;
+                }
+            }
+        } else if (strcmp(sToken, "+name") == 0) {
+            sRemaining.TrimLeft();
+            if (sRemaining[0] == '"') {
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                sToken = sRemaining.SpanExcluding("\"");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (sRemaining[0] == '"') {
+                    sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                    m_sStartUpPlayer = sToken;
+                }
+            } else {
+                sToken = sRemaining.SpanExcluding(" ");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                m_sStartUpPlayer = sToken;
+            }
+        } else if (strcmp(sToken, "+newgame") == 0) {
+            if (!field_128) {
+                field_124 = 1;
+            }
+        } else if (strcmp(sToken, "+loadgame") == 0) {
+            if (!field_124) {
+                field_128 = 1;
+            }
+        } else if (strcmp(sToken, "+hostname") == 0) {
+            sRemaining.TrimLeft();
+            if (sRemaining[0] == '"') {
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                sToken = sRemaining.SpanExcluding("\"");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (sRemaining[0] == '"') {
+                    sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                    if (field_110) {
+                        m_sStartUpSession = sToken;
+                    }
+                }
+            } else {
+                sToken = sRemaining.SpanExcluding(" ");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (field_110) {
+                    m_sStartUpSession = sToken;
+                }
+            }
+        } else if (strcmp(sToken, "+location") == 0) {
+            sRemaining.TrimLeft();
+            if (sRemaining[0] == '"') {
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                sToken = sRemaining.SpanExcluding("\"");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (sRemaining[0] == '"') {
+                    sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                    field_131 = 1;
+                    m_sStartUpGameSpyLocation = sToken;
+                }
+            } else {
+                sToken = sRemaining.SpanExcluding(" ");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                field_131 = 1;
+                m_sStartUpGameSpyLocation = sToken;
+            }
+        } else if (strcmp(sToken, "+maxclients") == 0) {
+            sRemaining.TrimLeft();
+            BOOL bParsed = FALSE;
+            if (sRemaining[0] == '"') {
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                sToken = sRemaining.SpanExcluding("\"");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                if (sRemaining[0] == '"') {
+                    sRemaining = sRemaining.Right(sRemaining.GetLength() - 1);
+                    bParsed = TRUE;
+                }
+            } else {
+                sToken = sRemaining.SpanExcluding(" ");
+                sRemaining = sRemaining.Right(sRemaining.GetLength() - sToken.GetLength());
+                bParsed = TRUE;
+            }
+
+            if (bParsed) {
+                int nMaxClients = atol(sToken.GetBuffer(128));
+                // NOTE: The original tests 'nMaxClients >= 1 || nMaxClients <= 6',
+                // which is true for every value.
+                if (nMaxClients >= 1 || nMaxClients <= 6) {
+                    field_136 = nMaxClients;
+                }
+            }
+        } else {
+            sResult = sResult + " " + sToken;
+        }
+
+        sRemaining.TrimLeft();
+    }
+
+    m_sCommandLine = sResult;
 }
 
 // 0x7926B0

@@ -96,6 +96,8 @@ target_sources(iwd2-core PRIVATE
     "src/CGameAnimation.h"
     "src/CGameAnimationType.cpp"
     "src/CGameAnimationType.h"
+    "src/CGameAnimationType84EEB8.cpp"
+    "src/CGameAnimationType84EEB8.h"
     "src/CGameAnimationTypeAmbient.cpp"
     "src/CGameAnimationTypeAmbient.h"
     "src/CGameAnimationTypeAmbientStatic.cpp"
