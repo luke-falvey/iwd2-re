@@ -8,8 +8,10 @@
 #include "CInfGame.h"
 #include "CInfinity.h"
 #include "CParticle.h"
+#include "CMessage.h"
 #include "CPathSearch.h"
 #include "CUtil.h"
+#include "CVisualEffect.h"
 
 // 0x577E40
 CProjectileSingleTarget::CProjectileSingleTarget()
@@ -121,8 +123,6 @@ void CProjectileSingleTarget::SetVidCell(CResRef resRef)
 // 0x578AB0
 void CProjectileSingleTarget::AIUpdate()
 {
-    // TODO: Incomplete.
-
     CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
     if (pGame->m_nTimeStop != 0 && pGame->m_nTimeStopCaster != m_id) {
         return;
@@ -499,8 +499,6 @@ void CProjectileSingleTarget::Virtual84(CPoint dest)
 // 0x5791D0
 void CProjectileSingleTarget::Fire(CGameArea* pArea, LONG source, LONG target, CPoint targetPos, LONG nHeight, SHORT nType)
 {
-    // TODO: Incomplete.
-
     CGameObject* pTarget;
     CGameObject* pSource;
     CPoint ptTarget;
@@ -587,17 +585,36 @@ void CProjectileSingleTarget::Fire(CGameArea* pArea, LONG source, LONG target, C
     }
 
     if (field_17E.Compare("") != 0) {
-        // TODO: Incomplete. Original code is:
-        //
-        // field_182 = sub_554D20(field_17E, pArea, ptStart, target, targetPos, nSourceHeight);
-        //
-        // (0x554D20 creates a VEF object, adds it to the area and returns
-        // its id.) Then it sends a message (size 0x2A, vtable 0x84D328)
-        // built from `target`, `m_id`, `CResRef(field_17E)`, the area
-        // resref as a string, `ptStart`, `targetPos` and `nSourceHeight`
-        // via `CMessageHandler::AddMessage(pMessage, FALSE)`. Finally it
-        // locks `field_182` with `GetDeny`, stores `m_speed` at offset 0x82
-        // of that object and sets bit 0 of the dword at offset 0x9A.
+        field_182 = CVisualEffect::sub_554D20(field_17E, pArea, ptStart, target, targetPos, nSourceHeight);
+
+        CString sAreaName;
+        pArea->m_resRef.CopyToString(sAreaName);
+
+        CMessage86* pMessage = new CMessage86(CResRef(field_17E),
+            sAreaName,
+            ptStart,
+            targetPos,
+            static_cast<WORD>(nSourceHeight),
+            m_id,
+            target);
+        g_pBaldurChitin->m_cMessageHandler.AddMessage(pMessage, FALSE);
+
+        CGameObject* pVef;
+        do {
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(field_182,
+                CGameObjectArray::THREAD_ASYNCH,
+                &pVef,
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+        if (rc == CGameObjectArray::SUCCESS) {
+            static_cast<CVisualEffect*>(pVef)->field_82 = m_speed;
+            static_cast<CVisualEffect*>(pVef)->field_9A |= 0x1;
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(field_182,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+        }
     }
 
     LONG nDistance = (ptTarget.y - ptStart.y) * (ptTarget.y - ptStart.y) * 16 / 9
