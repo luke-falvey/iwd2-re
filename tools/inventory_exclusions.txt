@@ -403,3 +403,13 @@
 # CProjectileBAM84E724 scalar deleting destructor (compiler generated): calls
 # ~CProjectileBAM84E724 (0x533930), then operator delete when the flag is set.
 0x533910
+
+# std::vector<CProjectileArea5868E0::Entry>::insert(iterator, size_type, const Entry&)
+# (MSVC 6 STL instantiation, thiscall, 3 stack args; 10-byte elements): grows or shifts the
+# buffer. Called from CProjectileArea84F0DC::AIUpdate (0x56D0A0).
+0x56DB30
+
+# std::string::erase(size_type pos, size_type n) (MSVC 6 STL instantiation, thiscall, 2 stack
+# args): throws out_of_range when pos > length, unshares the buffer, memmoves the tail down.
+0x56DA10
+

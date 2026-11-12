@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "CAIObjectType.h"
+#include "CGameAnimation.h"
 #include "CGameObject.h"
 #include "CProjectileSingleTarget.h"
 #include "CSound.h"
@@ -37,7 +38,9 @@ public:
     public:
         /* 0000 */ LONG field_0;
         /* 0004 */ LONG field_4;
-        /* 0008 */ SHORT field_8;
+        /* 0008 */ BYTE field_8;
+
+        Entry(LONG a1, LONG a2, BYTE a3);
     };
 
     CProjectileArea5868E0();
@@ -49,6 +52,8 @@ public:
 class CProjectileAreaVisual3 : public CProjectileAreaVisual {
 public:
     CProjectileAreaVisual3();
+
+    LONG GetRandomMax() const;
 
     /* 002C */ CProjectileArea5868E0* field_2C;
     /* 0030 */ LONG field_30;
@@ -105,6 +110,35 @@ public:
     /* 0290 */ IcewindCVisualEffect field_290;
     /* 029C */ LONG field_29C;
     /* 02A0 */ BOOLEAN field_2A0;
+};
+
+// NOTE: The class name is not known. Piece created by
+// `CProjectileArea84F0DC::AIUpdate`. Vtable 0x84F14C, size 0x112. Has two
+// constructors (one taking `CProjectileAreaVisual3`, one taking
+// `CProjectileAreaVisual2`).
+class CProjectileArea84F14C : public CGameObject {
+public:
+    CProjectileArea84F14C(const CProjectileAreaVisual3* a1, CGameArea* pArea, const CPoint& pos, LONG nPosZ, const CPoint& ptVelocity, WORD nTicksLeft, BYTE nFadeTicks, BYTE nMode);
+    CProjectileArea84F14C(const CProjectileAreaVisual2* a1, CGameArea* pArea, const CPoint& pos, LONG nPosZ, const CPoint& ptVelocity, WORD nTicksLeft, BYTE nFadeTicks, BYTE nMode);
+    /* 0000 */ ~CProjectileArea84F14C() override;
+    /* 000C */ void AIUpdate() override;
+    /* 0048 */ void RemoveFromArea() override;
+    /* 004C */ void Render(CGameArea* pArea, CVidMode* pVidMode, int a3) override;
+
+    /* 006E */ BYTE m_terrainTable[16];
+    /* 007E */ CGameAnimation m_animation;
+    /* 0088 */ LONG m_bVisible;
+    /* 008C */ CPoint m_ptFixedPos;
+    /* 0094 */ CPoint m_ptVelocity;
+    /* 009C */ WORD m_nTicksLeft;
+    /* 009E */ BYTE m_nFadeTicks;
+    /* 009F */ BYTE m_nMode;
+    /* 00A0 */ CSound m_sound;
+    /* 0104 */ CProjectileArea5868E0* field_104;
+    /* 0108 */ LONG field_108;
+    /* 010C */ BOOLEAN field_10C;
+    /* 010D */ BOOLEAN field_10D;
+    /* 010E */ LONG field_10E;
 };
 
 class CProjectileArea : public CProjectileSingleTarget {
