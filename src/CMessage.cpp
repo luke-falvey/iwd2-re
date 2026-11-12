@@ -8118,8 +8118,96 @@ BOOLEAN CBaldurMessage::OnLeaveAreaNameReplyFromServer(BYTE* pByteMessage, DWORD
 // 0x438F90
 BOOLEAN CBaldurMessage::sub_438F90(LONG nCharacterId, LONG nTriggerId, CString sArea)
 {
-    // TODO: Incomplete.
-    return FALSE;
+    CGameObject* pObject;
+    CGameObject* pTrigger;
+    DWORD dwSize;
+    DWORD cnt;
+    BYTE* pData;
+    BYTE rc;
+    BYTE nLength;
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pObject,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return FALSE;
+    }
+
+    PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
+    LONG remoteObjectID = pObject->m_remoteObjectID;
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTriggerId,
+            CGameObjectArray::THREAD_ASYNCH,
+            &pTrigger,
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        m_bLeaveAreaNameRequestPending = FALSE;
+        return FALSE;
+    }
+
+    PLAYER_ID triggerRemotePlayerID = pTrigger->m_remotePlayerID;
+    LONG triggerRemoteObjectID = pTrigger->m_remoteObjectID;
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTriggerId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    dwSize = sizeof(PLAYER_ID) + sizeof(LONG) + sizeof(PLAYER_ID) + sizeof(LONG);
+    dwSize += sArea.GetLength() + 1;
+
+    pData = CreateBuffer(dwSize);
+    if (pData == NULL) {
+        m_bLeaveAreaNameRequestPending = FALSE;
+        return FALSE;
+    }
+
+    cnt = 0;
+
+    *reinterpret_cast<PLAYER_ID*>(pData + cnt) = remotePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(pData + cnt) = remoteObjectID;
+    cnt += sizeof(LONG);
+
+    *reinterpret_cast<PLAYER_ID*>(pData + cnt) = triggerRemotePlayerID;
+    cnt += sizeof(PLAYER_ID);
+
+    *reinterpret_cast<LONG*>(pData + cnt) = triggerRemoteObjectID;
+    cnt += sizeof(LONG);
+
+    nLength = static_cast<BYTE>(sArea.GetLength());
+    *reinterpret_cast<BYTE*>(pData + cnt) = nLength;
+    cnt += sizeof(BYTE);
+
+    memcpy(pData + cnt, sArea.GetBuffer(nLength), nLength);
+    cnt += nLength;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CBaldurMessage.cpp
+    // __LINE__: 13447
+    UTIL_ASSERT(cnt == dwSize);
+
+    // NOTE: 0x84CFDE is the unnamed subtype 'A'.
+    g_pChitin->cNetwork.SendSpecificMessage(CString(""),
+        CNetwork::SEND_ALL_PLAYERS | CNetwork::SEND_GUARANTEED,
+        MSG_TYPE_LEAVEAREANAME,
+        'A',
+        pData,
+        cnt);
+
+    DestroyBuffer(pData);
+
+    return TRUE;
 }
 
 // 0x439250
@@ -21119,14 +21207,235 @@ BOOL CMessageSpriteUpdate::UnmarshalMessage(BYTE* pData, DWORD dwSize)
 // 0x50D660
 BOOL CMessageSpriteUpdate::sub_50D660(CString sArea)
 {
-    // TODO: Incomplete.
-    return FALSE;
+    if (strcmp(m_sAreaString, "NO_AREA") != 0 && sArea != m_sAreaString) {
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 // 0x50D6F0
 void CMessageSpriteUpdate::Run()
 {
-    // TODO: Incomplete.
+    CGameSprite* pSprite;
+    CGameObject* pObject;
+    CGameArea* pTargetArea;
+    BYTE rc;
+
+    do {
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_targetId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return;
+    }
+
+    if (pSprite->GetObjectType() == CGameObject::TYPE_SPRITE) {
+        if ((g_pChitin->cNetwork.m_nServiceProvider != 0 && !(g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID))
+            || (g_pBaldurChitin->GetObjectGame()->m_gameSave.m_cutScene == 1 && !g_pChitin->cNetwork.m_bIsHost)) {
+            if (!(field_108 & FLAG_AREA)) {
+                if (pSprite->m_pArea != NULL) {
+                    CResRef resRef;
+                    resRef = pSprite->m_pArea->m_resRef;
+                    resRef.CopyToString(m_sAreaString);
+                } else {
+                    m_sAreaString = "NO_AREA";
+                }
+            }
+
+            if (!(field_108 & FLAG_POSITION)) {
+                m_ptPosition = pSprite->GetPos();
+            }
+
+            if (!(field_108 & FLAG_SEQUENCE)) {
+                m_nSequence = pSprite->m_nSequence;
+            }
+
+            if (!(field_108 & FLAG_FACING)) {
+                m_nFacing = pSprite->m_nDirection;
+            }
+
+            if (!(field_108 & FLAG_STATE)) {
+                m_dwState = pSprite->m_derivedStats.m_generalState;
+            }
+
+            if (!(field_108 & FLAG_PATH)) {
+                m_nMoveScale = pSprite->m_animation.GetMoveScale();
+                m_ptDest = pSprite->m_curDest;
+
+                if (pSprite->m_pArea != NULL) {
+                    m_nPath = pSprite->m_nPath;
+                    m_currPath = pSprite->m_currPath;
+
+                    if (pSprite->m_pPath == NULL) {
+                        m_nPath = 0;
+                        m_currPath = 0;
+                    }
+
+                    if (m_nPath > 0) {
+                        m_pPath = new LONG[m_nPath];
+                        memcpy(m_pPath, pSprite->m_pPath, sizeof(LONG) * m_nPath);
+                    }
+                } else {
+                    m_nPath = 0;
+                    m_pPath = NULL;
+                    m_currPath = 0;
+                }
+            }
+
+            if (!(field_108 & FLAG_HITPOINTS)) {
+                m_nHitPoints = pSprite->m_baseStats.m_hitPoints;
+                m_nMaxHitPoints = pSprite->m_derivedStats.m_nMaxHitPoints;
+            } else if (m_nHitPoints > 0 && pSprite->m_baseStats.m_hitPoints <= 0) {
+                if (pSprite->GetVertListType() == CGameObject::LIST_BACK) {
+                    pSprite->MoveToFront();
+                }
+            }
+
+            if (!(field_108 & FLAG_FIELD_60)) {
+                field_60 = pSprite->m_baseStats.m_flags;
+            }
+
+            if (strcmp(m_sAreaString, "NO_AREA") == 0) {
+                g_pBaldurChitin->GetObjectGame()->m_bInAreaTransition = TRUE;
+                pSprite->RemoveFromArea();
+                g_pBaldurChitin->GetObjectGame()->m_bInAreaTransition = FALSE;
+
+                if (g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_nCharacters == 0) {
+                    g_pBaldurChitin->GetObjectGame()->UnselectAll();
+                    g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_bPicked = FALSE;
+
+                    CGameArea* pVisibleArea = g_pBaldurChitin->GetObjectGame()->GetVisibleArea();
+                    pVisibleArea->m_iPicked = CGameObjectArray::INVALID_INDEX;
+                    pVisibleArea->m_nToolTip = 0;
+
+                    g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnDeactivation();
+
+                    if (g_pChitin->cNetwork.m_nServiceProvider == CNetwork::SERV_PROV_NULL) {
+                        for (SHORT nCharacterSlot = 0; nCharacterSlot < 6; nCharacterSlot++) {
+                            LONG nCharacterId;
+                            if (nCharacterSlot < 6) {
+                                nCharacterId = g_pBaldurChitin->GetObjectGame()->m_characters[nCharacterSlot];
+                            } else {
+                                nCharacterId = CGameObjectArray::INVALID_INDEX;
+                            }
+
+                            if (nCharacterId != CGameObjectArray::INVALID_INDEX) {
+                                do {
+                                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nCharacterId,
+                                        CGameObjectArray::THREAD_ASYNCH,
+                                        &pObject,
+                                        INFINITE);
+                                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                                if (rc == CGameObjectArray::SUCCESS) {
+                                    if (pObject->m_pArea == NULL) {
+                                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                                            CGameObjectArray::THREAD_ASYNCH,
+                                            INFINITE);
+                                    } else {
+                                        g_pBaldurChitin->GetObjectGame()->m_visibleArea = pObject->m_pArea->m_id;
+                                        g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnActivation();
+
+                                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
+                                            CGameObjectArray::THREAD_ASYNCH,
+                                            INFINITE);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // NOTE: The loop bound is read from 0x85187E (12).
+                        for (SHORT nArea = 0; nArea < CINFGAME_MAX_AREAS; nArea++) {
+                            // NOTE: Uninline.
+                            if (g_pBaldurChitin->GetObjectGame()->GetArea(nArea) != NULL) {
+                                g_pBaldurChitin->GetObjectGame()->m_visibleArea = static_cast<BYTE>(nArea);
+                                g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->OnActivation();
+                            }
+                        }
+                    }
+                }
+            } else {
+                pTargetArea = g_pBaldurChitin->GetObjectGame()->GetArea(m_sAreaString);
+
+                pSprite->m_derivedStats.m_generalState = m_dwState;
+
+                if ((pSprite->m_baseStats.m_generalState & STATE_DEAD) != 0
+                    && (pSprite->m_derivedStats.m_generalState & STATE_DEAD) == 0) {
+                    pSprite->m_baseStats.m_generalState &= ~STATE_DEAD;
+                }
+
+                if (field_108 & FLAG_SPELL_STATES) {
+                    if ((pSprite->m_derivedStats.m_spellStates.test(SPLSTATE_REFLECTED_IMAGE) && !m_spellStates.test(SPLSTATE_REFLECTED_IMAGE))
+                        || (pSprite->m_derivedStats.m_spellStates.test(SPLSTATE_MIRROR_IMAGE) && !m_spellStates.test(SPLSTATE_MIRROR_IMAGE))) {
+                        pSprite->m_derivedStats.m_nMirrorImages = 0;
+                    }
+
+                    if ((pSprite->m_derivedStats.m_spellStates.test(SPLSTATE_STONESKIN) && !m_spellStates.test(SPLSTATE_STONESKIN))
+                        || (pSprite->m_derivedStats.m_spellStates.test(SPLSTATE_IRON_SKINS) && !m_spellStates.test(SPLSTATE_IRON_SKINS))) {
+                        pSprite->m_derivedStats.m_nStoneSkins = 0;
+
+                        // NOTE: `m_colors` has 7 entries, the eighth read is `m_effectVersion`.
+                        for (INT nColorRange = 0; nColorRange < 8; nColorRange++) {
+                            BYTE nRangeValue = pSprite->m_baseStats.m_colors[nColorRange];
+                            pSprite->m_animation.SetColorRange(static_cast<BYTE>(nColorRange), nRangeValue);
+                        }
+
+                        pSprite->m_animation.ClearColorEffectsAll();
+                    }
+
+                    pSprite->m_derivedStats.m_spellStates = m_spellStates;
+                }
+
+                if (field_108 & FLAG_SKILLS) {
+                    memcpy(pSprite->m_baseStats.m_skills, m_baseSkills, sizeof(m_baseSkills));
+                    memcpy(pSprite->m_derivedStats.m_nSkills, m_skills, sizeof(m_skills));
+                    pSprite->m_baseStats.field_2FF = field_106;
+                }
+
+                if (field_108 & FLAG_FADE_SPEED) {
+                    pSprite->m_baseStats.m_fadeSpeed = m_nFadeSpeed;
+                }
+
+                if (field_108 & FLAG_TRANSLUCENT) {
+                    pSprite->m_derivedStats.m_nTranslucent = m_nTranslucent;
+                }
+
+                if (field_108 & FLAG_FIELD_60) {
+                    pSprite->m_baseStats.m_flags = field_60;
+                }
+
+                if (field_108 & FLAG_VISUAL_EFFECTS) {
+                    for (size_t nEffect = 0; nEffect < 32; nEffect++) {
+                        if (!pSprite->m_derivedStats.m_visualEffects.test(nEffect)
+                            && m_visualEffects.test(nEffect)) {
+                            if (nEffect == 0x18) {
+                                pSprite->InitBlur();
+                            } else if (nEffect != 0x19) {
+                                pSprite->field_7548[nEffect].SequenceSet(0);
+                                pSprite->field_7548[nEffect].FrameSet(0);
+                            }
+                        } else if (pSprite->m_derivedStats.m_visualEffects.test(nEffect)
+                            && !m_visualEffects.test(nEffect)) {
+                            pSprite->field_9088[nEffect].Stop();
+                        }
+                    }
+
+                    pSprite->m_derivedStats.m_visualEffects = m_visualEffects;
+                }
+
+                // TODO: Incomplete.
+            }
+        }
+    }
+
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(m_targetId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
 }
 
 // -----------------------------------------------------------------------------
