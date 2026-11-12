@@ -8080,13 +8080,13 @@ BOOL CGameEffectSparkle::ApplyEffect(CGameSprite* pSprite)
 
     switch (nType) {
     case 1: {
-        CGameSparkle* pSparkle = new CGameSparkle(nType, CGameSparkle::TYPE_EXPLOSION /* 0x84D604 */, 25 /* 0x84D5F0 */);
+        CGameSparkle* pSparkle = new CGameSparkle(static_cast<SHORT>(m_effectAmount), CGameSparkle::TYPE_EXPLOSION /* 0x84D604 */, 25 /* 0x84D5F0 */);
         pSparkle->SetExplosionVelocity(m_source);
         pSparkle->AddToArea(pSprite->m_pArea, pos, nHeight, CGameObject::LIST_FRONT);
         break;
     }
     case 3: {
-        CGameSparkle* pSparkle = new CGameSparkle(nType, 2 /* 0x84D602 */, static_cast<WORD>(m_probabilityUpper - g_pBaldurChitin->GetObjectGame()->m_worldTime.m_gameTime));
+        CGameSparkle* pSparkle = new CGameSparkle(static_cast<SHORT>(m_effectAmount), 2 /* 0x84D602 */, static_cast<WORD>(m_duration - g_pBaldurChitin->GetObjectGame()->m_worldTime.m_gameTime));
         pSparkle->AddToArea(pSprite->m_pArea, pos, nHeight, CGameObject::LIST_FRONT);
         break;
     }
