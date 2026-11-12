@@ -4,19 +4,18 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 8911,
-  "functions_done": 7888,
-  "functions_complete": 7880,
-  "incomplete_markers": 9,
+  "functions_total": 8905,
+  "functions_done": 7906,
+  "functions_complete": 7899,
+  "incomplete_markers": 8,
   "incomplete_by_file": {
     "src/CVidBlitter.cpp": 5,
     "src/BalDataTypes.h": 1,
-    "src/CMessage.cpp": 1,
     "src/CScreenChapter.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10510,
-  "annotations_not_function_start": 2600,
+  "annotations_total": 10529,
+  "annotations_not_function_start": 2601,
   "duplicate_annotations": {
     "0x7ACD60": [
       "src/CAIObjectType.cpp",
@@ -1701,6 +1700,7 @@
     "0x84CF8C",
     "0x84CF8D",
     "0x84CF8E",
+    "0x84CF90",
     "0x84CF91",
     "0x84CF92",
     "0x84CF93",
@@ -3821,9 +3821,9 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3800379,
-  "bytes_done": 3593165,
-  "bytes_complete": 3590027,
+  "bytes_total": 3800115,
+  "bytes_done": 3612428,
+  "bytes_complete": 3609743,
   "largest_stubs": [
     {
       "addr": "0x7B7070",
@@ -3834,11 +3834,6 @@
       "addr": "0x5D4190",
       "name": "FUN_005d4190",
       "size": 486
-    },
-    {
-      "addr": "0x435C30",
-      "name": "FUN_00435c30",
-      "size": 453
     },
     {
       "addr": "0x7B6B20",
@@ -3870,7 +3865,7 @@
     {
       "addr": "0x40F940",
       "name": "CResRef_operator_equ-equ",
-      "translated_callers": 71,
+      "translated_callers": 72,
       "size": 31
     },
     {
