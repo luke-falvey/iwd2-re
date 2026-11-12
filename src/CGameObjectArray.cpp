@@ -3,6 +3,7 @@
 #include "CBaldurChitin.h"
 #include "CGameContainer.h"
 #include "CGameObject.h"
+#include "CGameSprite.h"
 #include "CInfGame.h"
 #include "CUtil.h"
 
@@ -604,4 +605,36 @@ LONG CGameObjectArray::FindObjectId(SHORT id)
 
     lock.Unlock();
     return -1;
+}
+
+// NOTE: The name is original (Ghidra), but the function returns FALSE when it
+// finds a sprite with one of the two spell states set, and TRUE otherwise.
+//
+// 0x5C9300
+BOOLEAN CGameObjectArray::AnySpriteIsDiseased()
+{
+    CSingleLock lock(&m_cs, FALSE);
+    lock.Lock(INFINITE);
+
+    for (SHORT arrayIndex = 0; arrayIndex < m_nMaxArrayIndex; arrayIndex++) {
+        if (m_pArray[arrayIndex].m_objectId != -1) {
+            CGameObject* pObject = m_pArray[arrayIndex].m_objectPtr;
+            if (pObject != reinterpret_cast<CGameObject*>(-1)) {
+                if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
+                    CGameSprite* pSprite = static_cast<CGameSprite*>(pObject);
+
+                    // NOTE: Original reads dword at 0xA10, bits 0x4000 and
+                    // 0x8000 (spell states 46 and 47).
+                    if (pSprite->m_derivedStats.m_spellStates[SPLSTATE_MOLD_TOUCH]
+                        || pSprite->m_derivedStats.m_spellStates[SPLSTATE_SHROUD_OF_FLAME]) {
+                        lock.Unlock();
+                        return FALSE;
+                    }
+                }
+            }
+        }
+    }
+
+    lock.Unlock();
+    return TRUE;
 }
