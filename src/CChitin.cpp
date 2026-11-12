@@ -157,14 +157,42 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPara
         }
         break;
     case WM_INPUTLANGCHANGE:
-        return 0;
+        if (g_pChitin->field_1A4) {
+            return 0;
+        }
+        break;
     case WM_DISPLAYCHANGE:
         g_pChitin->OnDisplayChange();
+        break;
+    case WM_KEYDOWN:
+        g_pChitin->field_FE = GetKeyState(VK_CAPITAL);
+
+        if (wParam == VK_F10) {
+            return 0;
+        }
+
+        if (wParam == VK_PROCESSKEY) {
+            if (g_pChitin->field_1A4 && g_pChitin->cImm.field_128 != 0) {
+                g_pChitin->cImm.OnComposition(hWnd, VK_PROCESSKEY, lParam);
+            }
+        }
         break;
     case WM_SYSKEYDOWN:
         if (wParam == VK_RETURN) {
             g_pChitin->OnAltEnter(TRUE);
         } else if (wParam == VK_F10) {
+            return 0;
+        }
+        break;
+    case WM_SYSKEYUP:
+        if (wParam == VK_MENU || wParam == VK_F10) {
+            return 0;
+        }
+        break;
+    case WM_SYSCHAR:
+        return 0;
+    case WM_SYSCOMMAND:
+        if ((wParam & 0xFFF0) == SC_SCREENSAVE || (wParam & 0xFFF0) == SC_MONITORPOWER) {
             return 0;
         }
         break;
@@ -195,17 +223,47 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPara
     case WM_IME_SETCONTEXT:
     case WM_IME_CONTROL:
     case WM_IME_COMPOSITIONFULL:
+    case WM_IME_KEYDOWN:
         if (g_pChitin->field_1A4) {
             return 0;
         }
         break;
+    case 0x402:
+        switch (static_cast<DWORD>(lParam) >> 16) {
+        case 0x271E:
+        case 0x2733:
+        case 0x2734:
+        case 0x2742:
+        case 0x2747:
+        case 0x276D:
+        case 0x2AF9:
+        case 0x2AFA:
+        case 0x2AFB:
+        case 0x2AFC:
+            break;
+        default:
+            g_pChitin->cGameSpy.field_26 = 1;
+            break;
+        }
+        return 0;
+    case 0x403:
+        if (g_pChitin->cNetwork.field_9D == 1) {
+            g_pChitin->cNetwork.field_9E = 1;
+        }
+        return 0;
+    case 0x404:
+        g_pChitin->cNetwork.CreatePlayer(reinterpret_cast<INT&>(wParam));
+        return wParam;
     case 0x405:
         return g_pChitin->cNetwork.CreateDirectPlayLobbyInterface(reinterpret_cast<IDirectPlayLobby3A**>(wParam));
     case 0x406:
         return g_pChitin->cNetwork.CreateDirectPlayInterface(&GUID_NULL, reinterpret_cast<IDirectPlay4A**>(wParam));
+    default:
+        if (Msg == g_pChitin->m_nQueryCancelAutoPlayMsgID) {
+            return 1;
+        }
+        break;
     }
-
-    // TODO: Incomplete.
 
     return DefWindowProcA(hWnd, Msg, wParam, lParam);
 }
