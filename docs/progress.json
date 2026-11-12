@@ -5,17 +5,15 @@
     "0x7DA200"
   ],
   "functions_total": 9748,
-  "functions_done": 7771,
-  "functions_complete": 7613,
-  "incomplete_markers": 177,
+  "functions_done": 7773,
+  "functions_complete": 7632,
+  "incomplete_markers": 160,
   "incomplete_by_file": {
     "src/CGameSprite.cpp": 11,
     "src/CScreenCharacter.cpp": 11,
-    "src/CInfGame.cpp": 10,
-    "src/CProjectilePart1.cpp": 9,
+    "src/CInfGame.cpp": 9,
     "src/CProjectilePart2.cpp": 9,
     "src/CProjectilePart6.cpp": 9,
-    "src/CGameChunk.cpp": 8,
     "src/CBaldurProjector.cpp": 7,
     "src/CParticle.cpp": 6,
     "src/CScreenCreateChar.cpp": 6,
@@ -27,6 +25,7 @@
     "src/CScreenStore.cpp": 4,
     "src/CScreenWorldMap.cpp": 4,
     "src/CChitin.cpp": 3,
+    "src/CMessage.cpp": 3,
     "src/CProjectileArea.cpp": 3,
     "src/CProjectileBAM.cpp": 3,
     "src/CProjectileSingleTarget.cpp": 3,
@@ -37,7 +36,6 @@
     "src/CGameAIBase.cpp": 2,
     "src/CGameEffect.cpp": 2,
     "src/CImm.cpp": 2,
-    "src/CMessage.cpp": 2,
     "src/CScreenMultiPlayer.cpp": 2,
     "src/CSearchBitmap.cpp": 2,
     "src/CSpawn.cpp": 2,
@@ -62,7 +60,7 @@
     "src/CWarp.cpp": 1,
     "src/Icewind586B70.cpp": 1
   },
-  "annotations_total": 10366,
+  "annotations_total": 10368,
   "annotations_not_function_start": 2573,
   "duplicate_annotations": {
     "0x7ACD60": [
@@ -3849,8 +3847,8 @@
     "0xA1917C"
   ],
   "bytes_total": 3833939,
-  "bytes_done": 3491286,
-  "bytes_complete": 3197851,
+  "bytes_done": 3492126,
+  "bytes_complete": 3217106,
   "largest_stubs": [
     {
       "addr": "0x4DB160",
@@ -3861,11 +3859,6 @@
       "addr": "0x69D0F0",
       "name": "FUN_0069d0f0",
       "size": 11776
-    },
-    {
-      "addr": "0x5C4AD0",
-      "name": "FUN_005c4ad0",
-      "size": 10234
     },
     {
       "addr": "0x740270",
@@ -4051,6 +4044,11 @@
       "addr": "0x600B50",
       "name": "CScreenConnection_B3AUTO_00600b50",
       "size": 2370
+    },
+    {
+      "addr": "0x51A500",
+      "name": "FUN_0051a500",
+      "size": 2279
     }
   ],
   "next": [
