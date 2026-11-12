@@ -560,7 +560,7 @@ public:
     CGameButtonList* sub_716E80(INT a1);
     CGameButtonList* sub_717250(INT a1);
     CGameButtonList* GetInternalButtonList();
-    CGameButtonList* sub_717FC0(const CResRef& cResRef, INT nCount);
+    CGameButtonList* sub_717FC0(const CResRef& cResRef, UINT nCount);
     BOOL sub_718390(const CResRef& cResRef, int a2, int a3, CButtonData& cButtonData);
     CGameButtonList* GetItemUsages(SHORT slotNum, WORD buttonType, SHORT abilityNum);
     CItem* GetLauncher(const ITEM_ABILITY* ability, SHORT& launcherSlot);
