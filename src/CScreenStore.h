@@ -155,7 +155,12 @@ public:
     void UpdateIdentifyCost();
     void UpdateStoreCost();
     void UpdateSpellCost();
+    BOOL IsBuyItemButtonClickable();
     void OnBuyItemButtonClick();
+    void sub_678110();
+    void sub_678900();
+    void sub_679170();
+    void sub_679810();
     BOOL IsSellItemButtonClickable();
     void OnSellItemButtonClick();
     void sub_67A130();
