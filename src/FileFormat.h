@@ -768,6 +768,7 @@ public:
 
 class CCreatureFileItem {
 public:
+    // 0x4F4F30
     CCreatureFileItem()
     {
         memset(this, 0, sizeof(*this));
