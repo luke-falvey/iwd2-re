@@ -1605,7 +1605,7 @@ BOOL CUIControlButtonMapAreaMap::Render(BOOL bForce)
     rMap.right = rMap.left + min(m_size.cx, mapSize.cx);
     rMap.bottom = rMap.top + min(m_size.cy, mapSize.cy);
 
-    m_rDirty &= rMap;
+    m_rDirty = m_rDirty & rMap;
 
     if (m_rDirty.IsRectNull()) {
         renderLock.Unlock();
@@ -1658,6 +1658,8 @@ BOOL CUIControlButtonMapAreaMap::Render(BOOL bForce)
         if (pPanel != NULL && pPanel->m_bActive == TRUE) {
             pPanel->InvalidateRect(NULL);
         }
+
+        return TRUE;
     }
 
     renderLock.Unlock();
@@ -1723,10 +1725,189 @@ void CUIControlButtonMapAreaMap::RenderCharacters(const CRect& rClip)
     }
 }
 
-// 0x643CC0
-void CUIControlButtonMapAreaMap::RenderFogOfWar(CVidInf* pVidInf, const CPoint& pt, const CRect& rClip)
+// 0x644390
+BOOLEAN CUIControlButtonMapAreaMap::RenderFogOfWar(CVidInf* pVidInf, const CPoint& pt, const CRect& rClip)
 {
-    // TODO: Incomplete.
+    CVisibilityMap* pVisibility = &(m_pArea->m_visibility);
+    COLORREF rgbColor = pVidInf->ApplyBrightnessContrast(0x30103) | 0xFF000000;
+    DWORD dwFlags = 0;
+    BYTE nTileSize = 4;
+
+    if (m_pArea == NULL) {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMap.cpp
+        // __LINE__: 3207
+        UTIL_ASSERT(FALSE);
+
+        return FALSE;
+    }
+
+    CSize size;
+    pVidInf->GetFXSize(size);
+
+    if (m_pPanel->m_pManager->m_bDoubleSize) {
+        nTileSize = 8;
+    }
+
+    CPoint pts[64];
+
+    INT nYOffset = 0;
+    while (rClip.top + nYOffset < rClip.bottom) {
+        INT nBandTop = rClip.top + nYOffset;
+        INT nBandBottom = min(rClip.bottom, rClip.top + size.cy + nYOffset);
+        nYOffset += size.cy;
+
+        INT nXOffset = 0;
+        while (rClip.left + nXOffset < rClip.right) {
+            INT nBandLeft = rClip.left + nXOffset;
+            INT nBandRight = min(rClip.right, nBandLeft + size.cx);
+            nXOffset += size.cx;
+
+            CRect rFXRect(0, 0, nBandRight - nBandLeft, nBandBottom - nBandTop);
+
+            dwFlags |= 0x101;
+
+            CRect rFXClip(0, 0, 0, 0);
+            CPoint ptReference(0, 0);
+            CPoint ptPos(0, 0);
+            pVidInf->FXPrep(rFXRect, dwFlags, ptPos, ptReference, rFXClip);
+
+            if (pVidInf->FXLock(rFXRect, dwFlags)) {
+                INT nTile = nTileSize;
+
+                INT nLeftTile = nBandLeft / nTile;
+                INT nLeft = nLeftTile * nTile;
+                INT nTopTile = nBandTop / nTile;
+                INT nTop = nTopTile * nTile;
+                INT nRight = (nBandRight + nTile - 1) / nTile * nTile;
+                INT nBottom = (nBandBottom + nTile - 1) / nTile * nTile;
+
+                // NOTE: Original code uses 16-bit multiplications here (the
+                // results are truncated to 16 bits below).
+                INT nMapWidth = pVisibility->m_nWidth;
+                INT nXSpan = nRight - nLeft;
+                INT nXLimit;
+                if (nMapWidth * nTile - nLeft < nXSpan) {
+                    nXLimit = nTileSize * static_cast<WORD>(pVisibility->m_nWidth) - nLeft;
+                } else {
+                    nXLimit = nXSpan;
+                }
+
+                INT nMapHeight = pVisibility->m_nHeight;
+                INT nYSpan = nBottom - nTop;
+                INT nYLimit;
+                if (nMapHeight * nTile - nTop < nYSpan) {
+                    nYLimit = nTileSize * static_cast<WORD>(pVisibility->m_nHeight) - nTop;
+                } else {
+                    nYLimit = nYSpan;
+                }
+
+                INT nTileIndex = nMapWidth * nTopTile + nLeftTile;
+                INT nXTiles = nXSpan / nTile;
+                INT nRowSkip = max(nMapWidth - nXTiles, 0);
+
+                INT nYStart = nTop - nBandTop;
+                INT nYEnd = static_cast<WORD>(nYLimit) - nBandTop + nTop;
+
+                for (INT nY = nYStart; nY < nYEnd; nY += nTile) {
+                    INT nXStart = nLeft - nBandLeft;
+                    INT nXEnd = static_cast<WORD>(nXLimit) - nBandLeft + nLeft;
+
+                    for (INT nX = nXStart; nX < nXEnd; nX += nTile) {
+                        BYTE nPoints;
+
+                        switch (pVisibility->GetSubTileCode(nTileIndex) & 0xF) {
+                        case 7:
+                            nPoints = 0;
+                            for (BYTE nRow = 0; nRow < nTileSize; nRow++) {
+                                for (BYTE nCol = 0; nCol < nTileSize; nCol++) {
+                                    if (nCol <= nRow) {
+                                        pts[nPoints].x = nX + nCol;
+                                        pts[nPoints].y = nY + nRow;
+                                        nPoints++;
+                                    }
+                                }
+                            }
+
+                            pVidInf->FXRender(pts, nPoints, rFXRect, rgbColor, FALSE);
+                            break;
+                        case 11:
+                            nPoints = 0;
+                            for (INT nRow = 0; nRow < nTile; nRow++) {
+                                for (INT nCol = 0; nCol < nTile; nCol++) {
+                                    if (nRow + nCol < nTile) {
+                                        pts[nPoints].x = nX + nCol;
+                                        pts[nPoints].y = nY + nRow;
+                                        nPoints++;
+                                    }
+                                }
+                            }
+
+                            pVidInf->FXRender(pts, nPoints, rFXRect, rgbColor, FALSE);
+                            break;
+                        case 13:
+                            nPoints = 0;
+                            for (BYTE nRow = 0; nRow < nTileSize; nRow++) {
+                                for (BYTE nCol = 0; nCol < nTileSize; nCol++) {
+                                    if (nCol >= nRow) {
+                                        pts[nPoints].x = nX + nCol;
+                                        pts[nPoints].y = nY + nRow;
+                                        nPoints++;
+                                    }
+                                }
+                            }
+
+                            pVidInf->FXRender(pts, nPoints, rFXRect, rgbColor, FALSE);
+                            break;
+                        case 14:
+                            nPoints = 0;
+                            for (INT nRow = 0; nRow < nTile; nRow++) {
+                                for (INT nCol = 0; nCol < nTile; nCol++) {
+                                    if (nRow + nCol > nTile - 1) {
+                                        pts[nPoints].x = nX + nCol;
+                                        pts[nPoints].y = nY + nRow;
+                                        nPoints++;
+                                    }
+                                }
+                            }
+
+                            pVidInf->FXRender(pts, nPoints, rFXRect, rgbColor, FALSE);
+                            break;
+                        case 15:
+                            if (!pVisibility->IsTileExplored(nTileIndex)) {
+                                nPoints = 0;
+                                for (INT nRow = 0; nRow < nTile; nRow++) {
+                                    for (INT nCol = 0; nCol < nTile; nCol++) {
+                                        pts[nPoints].x = nX + nCol;
+                                        pts[nPoints].y = nY + nRow;
+                                        nPoints++;
+                                    }
+                                }
+
+                                pVidInf->FXRender(pts, nPoints, rFXRect, rgbColor, FALSE);
+                            }
+                            break;
+                        }
+
+                        nTileIndex++;
+                    }
+
+                    nTileIndex += nRowSkip;
+                }
+
+                pVidInf->FXUnlock(dwFlags, NULL, CPoint(0, 0));
+
+                pVidInf->FXBltToBack(rFXRect,
+                    pt.x + nBandLeft,
+                    pt.y + nBandTop,
+                    0,
+                    0,
+                    CRect(nBandLeft, nBandTop, nBandRight, nBandBottom) + pt,
+                    dwFlags);
+            }
+        }
+    }
+
+    return TRUE;
 }
 
 // 0x644A50

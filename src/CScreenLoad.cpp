@@ -819,7 +819,7 @@ void CScreenLoad::RefreshGameSlots()
                 m_aGameSlots[nIndex]->m_sSlotName = sFileName;
             }
 
-            sDirName = pGame->GetDirSaveRoot() + m_aGameSlots[nIndex]->m_sFileName + "/";
+            sDirName = pGame->GetDirSaveRoot() + m_aGameSlots[nIndex]->m_sFileName + "\\";
 
             if (g_pChitin->cDimm.ServiceFromFile(&cResGame, sDirName + "ICEWIND2.GAM")) {
                 BYTE* pGameData = reinterpret_cast<BYTE*>(cResGame.m_pData);
@@ -834,7 +834,9 @@ void CScreenLoad::RefreshGameSlots()
                     CCreatureFile cCreatureFile;
                     cCreatureFile.SetResRef(pCreature->m_creatureResRef, TRUE, TRUE);
 
-                    pCreatureFileHeader = reinterpret_cast<CCreatureFileHeader*>(cCreatureFile.GetData() + 8);
+                    // NOTE: Original does not skip the 8-byte signature here (it
+                    // does for creatures embedded in the saved game below).
+                    pCreatureFileHeader = reinterpret_cast<CCreatureFileHeader*>(cCreatureFile.GetData());
                     cResPortrait = pCreatureFileHeader->m_portraitSmall;
                     nSex = pCreatureFileHeader->m_sex;
 

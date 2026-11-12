@@ -45,6 +45,9 @@ const INT CNetwork::MAX_STRING_LENGTH = 200;
 // 0x85E644
 const DWORD CNetwork::MAX_TIMEOUT_TICK_COUNT = DWORD_MAX - 1024;
 
+// 0x85E62C
+const WORD CNetwork::DEFAULT_PORT = 0xBA08;
+
 // 0x85E64C
 const INT CNetwork::SERV_PROV_TCP_IP = 8;
 

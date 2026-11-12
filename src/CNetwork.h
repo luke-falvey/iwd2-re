@@ -93,6 +93,8 @@ public:
     static const INT MAX_STRING_LENGTH;
     static const DWORD MAX_TIMEOUT_TICK_COUNT;
 
+    static const WORD DEFAULT_PORT;
+
     static const INT SERV_PROV_TCP_IP;
     static const INT SERV_PROV_MODEM;
     static const INT SERV_PROV_SERIAL;

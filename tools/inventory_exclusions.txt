@@ -536,3 +536,6 @@
 # CGameSpriteSpellListEntry by CScreenCharacter::sub_5EFFD0 (m_nID, field_4).
 0x45B240
 0x45B210
+# CTypedPtrArray<CPtrArray, CScreenSaveGameSlot*>::ElementAt (`lea eax,[m_pData+idx*4]`), called by
+# CScreenSave::RefreshGameSlots.
+0x65F8F0
