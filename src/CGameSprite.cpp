@@ -14675,7 +14675,7 @@ void CGameSprite::sub_722820()
         C2DArray cTable;
         cTable.Load(CResRef(sFile));
 
-        for (UINT nRow = 0; nRow < cTable.GetHeight(); nRow++) {
+        for (UINT nRow = 0; nRow < static_cast<UINT>(cTable.GetHeight()); nRow++) {
             // NOTE: Uninline. Columns are read from globals at 0x84EB38 (0) and 0x84EB3C (1).
             CResRef resSpell(cTable.GetAt(CPoint(0, nRow)));
 
@@ -19161,7 +19161,87 @@ void CGameSprite::SetCurrAction(const CAIAction& action)
         }
     }
 
-    // TODO: Incomplete. Spell actions (see above) are not set up here.
+    if (m_curAction.m_actionID == CAIAction::SPELL
+        || m_curAction.m_actionID == CAIAction::SPELLPOINT
+        || m_curAction.m_actionID == CAIAction::FORCESPELL
+        || m_curAction.m_actionID == CAIAction::FORCESPELLPOINT
+        || m_curAction.m_actionID == CAIAction::REALLYFORCESPELL
+        || m_curAction.m_actionID == CAIAction::SPELLNODEC
+        || m_curAction.m_actionID == CAIAction::SPELLPOINTNODEC) {
+        CString sSpell;
+
+        if (strcmp(m_curAction.GetString1(), "") == 0) {
+            DecodeSpell(m_curAction.m_specificID, sSpell);
+        } else {
+            sSpell = m_curAction.GetString1();
+        }
+
+        CResRef resSpell(sSpell);
+
+        if (pGame->GetSpellType(resSpell) == 1) {
+            BYTE nClass = static_cast<BYTE>(m_curAction.m_specificID2);
+            BYTE nIndex = static_cast<BYTE>(m_curAction.m_specificID2 >> 8);
+            int a3 = pGame->GetRuleTables().GetSpecializationMask(nClass, nIndex);
+            BYTE nLevel = static_cast<BYTE>(m_curAction.m_specificID3);
+
+            if (nClass == 0 || nLevel == 0) {
+                m_curSpell = new CSpell(resSpell);
+                if (m_curSpell != NULL) {
+                    if (!sub_727720(resSpell, nClass, a3, nLevel)) {
+                        if (m_curSpell->Demand() == TRUE) {
+                            switch (m_curSpell->GetCasterType()) {
+                            case 1:
+                                nClass = CAIOBJECTTYPE_C_WIZARD;
+                                break;
+                            case 2:
+                                nClass = CAIOBJECTTYPE_C_CLERIC;
+                                break;
+                            default:
+                                // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+                                // __LINE__: 6082
+                                UTIL_ASSERT_MSG(FALSE, "Invalid spell type.");
+                                break;
+                            }
+
+                            a3 = 0;
+                            nLevel = static_cast<BYTE>(m_curSpell->GetLevel());
+                            m_curSpell->Release();
+                        }
+
+                        CString sError(" ");
+                        sError.Format("Error setting action for %s (%s): could not find spell (%s) in any spell casting class.",
+                            m_sName,
+                            (LPCSTR)m_resRef.GetResRefStr(),
+                            (LPCSTR)resSpell.GetResRefStr());
+
+                        // NOTE: The original expression text uses `CAIOBJECT_CLASS_*` names.
+                        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+                        // __LINE__: 6102
+                        UTIL_ASSERT_MSG(nClass == CAIOBJECTTYPE_C_BARD
+                                || nClass == CAIOBJECTTYPE_C_CLERIC
+                                || nClass == CAIOBJECTTYPE_C_DRUID
+                                || nClass == CAIOBJECTTYPE_C_PALADIN
+                                || nClass == CAIOBJECTTYPE_C_RANGER
+                                || nClass == CAIOBJECTTYPE_C_SORCERER
+                                || nClass == CAIOBJECTTYPE_C_WIZARD,
+                            sError);
+
+                        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreatureAI.cpp
+                        // __LINE__: 6105
+                        UTIL_ASSERT_MSG(nLevel <= CSPELLLIST_MAX_LEVELS, "Error setting action: Invalid spell level.");
+                    }
+
+                    m_curAction.m_specificID2 = (pGame->GetRuleTables().GetSpecializationIndex(nClass, a3) << 8) | nClass;
+                    m_curAction.m_specificID3 = nLevel;
+                }
+
+                if (m_curSpell != NULL) {
+                    delete m_curSpell;
+                    m_curSpell = NULL;
+                }
+            }
+        }
+    }
 }
 
 // 0x734550
