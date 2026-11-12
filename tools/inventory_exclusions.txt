@@ -1902,3 +1902,31 @@
 # Not a function start: the fill loop and RET of CVidImage::InitTranslucentTable (0x7ACCB0),
 # which Ghidra split after the allocation check. The repo body of 0x7ACCB0 covers it.
 0x7ACCCD
+# zlib 1.1.2 (statically linked; the repo links third_party/zlib): 0x7D8190 longest_match
+# (MAX_DIST = w_size - 262, chain_length >>= 2 when prev_length >= good_match, nice_match
+# clamp, unrolled 8-byte scan), 0x7D8870 inflateEnd (inflate_blocks_free 0x7DCC80, then
+# ZFREE(z, z->state)), 0x7D88C0 inflateInit2_ (version[0] vs "1.1.2" at 0x8BDD80,
+# sizeof(z_stream) 0x38, zcalloc 0x7DA0D0), 0x7D8A30 inflateInit_ (DEF_WBITS 15),
+# 0x7D8A50 inflate (f = flush == Z_FINISH ? Z_BUF_ERROR : Z_OK; switch on the 14 modes).
+0x7D8190
+0x7D8870
+0x7D88C0
+0x7D8A30
+0x7D8A50
+# MSVC 6 std::set<std::string> (library, nil sentinel 0x8D13E8, nil refcount 0x8D13E4):
+# 0x443880 destructor (erase all via 0x44A3F0, destroy key strings, delete head, release the
+# shared nil under the lockit 0x7F9A11/0x7F9AAD), 0x44A460 constructor (allocates the shared nil
+# and the 0x20-byte head node), 0x448730 end() (stores _Head, [this+4], into the returned iterator).
+0x443880
+0x44A460
+0x448730
+# MSVC 6 std::string scalar deleting destructor (library): refcount byte at _Ptr-1
+# (0 or 0xFF frees, else decrements), clears _Ptr/_Len/_Res, deletes this on flag bit 0.
+0x4485D0
+# MSVC 6 std::set<int> of CDamageReduction (library, nil sentinel 0x8D13F4): 0x448980
+# erase(first, last) (clear when the range is the whole tree), 0x449910 _Insert (0x14-byte
+# node, key copy via 0x517000, red-black rebalance), 0x448AC0 allocator deallocate
+# (operator delete wrapper).
+0x448980
+0x449910
+0x448AC0
