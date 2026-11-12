@@ -604,7 +604,67 @@ void CScreenConnection::TimerAsynchronousUpdate()
     }
 
     if (field_FA8) {
-        // TODO: Incomplete (detecting/switching CD).
+        if (!g_pBaldurChitin->DetectBaldurCD()) {
+            CString sDriveLetter = g_pBaldurChitin->GetFirstCDRomDrive();
+
+            // NOTE: Original code passes the low byte of `field_1C4C`.
+            BYTE nCDNumber = static_cast<BYTE>(g_pChitin->field_1C4C);
+
+            g_pChitin->cDimm.field_295 = nCDNumber;
+            g_pChitin->cDimm.field_297 = 2;
+            g_pChitin->cDimm.SetCDSwitchDriveLetter(sDriveLetter);
+            g_pChitin->cDimm.m_bCDSwitchActivated = TRUE;
+            g_pChitin->cDimm.field_296 = TRUE;
+
+            g_pChitin->SetCDSwitchStatus(TRUE, FALSE, 0, CString(""), TRUE, nCDNumber, FALSE);
+
+            BOOLEAN bEscapePressed = FALSE;
+            BOOLEAN bCDDetected = FALSE;
+            INT nIteration = 0;
+
+            while (!bEscapePressed) {
+                g_pChitin->m_bDisplayStale = TRUE;
+                nIteration++;
+
+                if (GetAsyncKeyState(VK_ESCAPE) != 0) {
+                    bEscapePressed = TRUE;
+                }
+
+                if (g_pChitin->field_1932 == 1) {
+                    return;
+                }
+
+                Sleep(100);
+
+                if (nIteration % 25 == 0) {
+                    bCDDetected = g_pBaldurChitin->DetectBaldurCD();
+                }
+
+                if (bCDDetected) {
+                    break;
+                }
+            }
+
+            if (bEscapePressed == TRUE) {
+                g_pChitin->SetCDSwitchStatus(FALSE, FALSE, 0, CString(""), TRUE, FALSE, FALSE);
+
+                g_pBaldurChitin->m_dwCloseConfirmationStrId = 0x2E03;
+                g_pBaldurChitin->m_dwCloseConfirmationFlags = 0x10;
+
+                PostMessageA(g_pBaldurChitin->cWnd.GetSafeHwnd(), WM_CLOSE, 0, 0);
+
+                field_FA8 = FALSE;
+                return;
+            }
+
+            g_pChitin->SetCDSwitchStatus(FALSE, FALSE, 0, CString(""), TRUE, FALSE, FALSE);
+
+            g_pChitin->cDimm.field_295 = FALSE;
+            g_pChitin->cDimm.field_297 = 0;
+            g_pChitin->cDimm.SetCDSwitchDriveLetter(CString(""));
+            g_pChitin->cDimm.m_bCDSwitchActivated = FALSE;
+            g_pChitin->cDimm.field_296 = FALSE;
+        }
 
         srand(static_cast<unsigned int>(time(NULL)));
         rand();
@@ -685,12 +745,10 @@ void CScreenConnection::TimerAsynchronousUpdate()
         m_nEnumServiceProvidersCountDown--;
         pVidMode->m_bPointerEnabled = TRUE;
 
-        if (g_pBaldurChitin->m_bIsAutoStarting) {
-            g_pBaldurChitin->m_bIsAutoStarting = FALSE;
-            m_bAllowInput = TRUE;
-            AutoSelectServiceProvider();
-            UpdateMainPanel();
-        } else {
+        if (g_pBaldurChitin->m_bIsAutoStarting
+            && (g_pBaldurChitin->field_110
+                || g_pBaldurChitin->m_bStartUpConnect
+                || g_pBaldurChitin->field_130)) {
             if (g_pBaldurChitin->field_110) {
                 if (g_pChitin->field_131) {
                     WritePrivateProfileStringA("GameSpy",
@@ -706,17 +764,15 @@ void CScreenConnection::TimerAsynchronousUpdate()
                 g_pBaldurChitin->m_bIsAutoStarting = FALSE;
                 m_bAllowInput = TRUE;
             } else {
-                if (g_pBaldurChitin->m_bStartUpConnect || g_pBaldurChitin->field_130) {
-                    if (g_pBaldurChitin->m_bStartUpConnect) {
-                        AutoStartConnect();
-                    }
-                } else {
-                    g_pBaldurChitin->m_bIsAutoStarting = FALSE;
-                    m_bAllowInput = TRUE;
-                    AutoSelectServiceProvider();
-                    UpdateMainPanel();
+                if (g_pBaldurChitin->m_bStartUpConnect) {
+                    AutoStartConnect();
                 }
             }
+        } else {
+            g_pBaldurChitin->m_bIsAutoStarting = FALSE;
+            m_bAllowInput = TRUE;
+            AutoSelectServiceProvider();
+            UpdateMainPanel();
         }
     }
 
@@ -788,7 +844,9 @@ void CScreenConnection::TimerAsynchronousUpdate()
         g_pBaldurChitin->GetObjectCursor()->CursorUpdate(pVidMode);
 
         if (m_bExitProgram) {
-            // TODO: Incomplete.
+            // NOTE: The original calls a function at 0x7ABB90 on
+            // `CWarp::pSoundMixer` that always returns 0 (unknown name); the
+            // result is unused.
         }
     }
 }
