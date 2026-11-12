@@ -25484,9 +25484,136 @@ SHORT CGameSprite::SpellPoint()
         return ACTION_DONE;
     }
 
-    // TODO: Incomplete. Asm 0x74430C-0x74466F is not translated yet.
+    if (nSpellType == 4) {
+        FeedBack(CGameSprite::FEEDBACK_SPELL, 0, 0, 0, m_curSpell->GetGenericName(), 0, 0);
+    } else {
+        FeedBack(CGameSprite::FEEDBACK_SPELL, 1, 0, 0, m_curSpell->GetGenericName(), 0, 0);
+    }
 
-    return ACTION_ERROR;
+    if (nSequence != CGameSprite::SEQ_CAST) {
+        CMessage* message = new CMessageSetSequence(CGameSprite::SEQ_CAST, m_id, m_id);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    }
+
+    m_curProjectile = CProjectile::DecodeProjectile(pAbility->missileType, this, FALSE);
+    m_curProjectile->field_18A = m_curSpell->GetResRef();
+    m_curProjectile->field_186 = nSpellLevel;
+
+    if (pAbility->effectCount > 0) {
+        INT nEffect = 0;
+        do {
+            CGameEffect* pEffect = m_curSpell->DecodeEffect(nAbility, nEffect, this, nClass, nSpecialization, 0);
+            pEffect->m_source = m_pos;
+            pEffect->m_sourceID = m_id;
+            pEffect->m_target = ptDest;
+
+            if (pEffect->m_spellLevel != 0) {
+                pEffect->m_spellLevel = nSpellLevel;
+            }
+
+            IcewindMisc::sub_5860F0(this, pEffect);
+
+            // NOTE: Original reads the duration type from an unnamed `const WORD`
+            // at 0x8491A8.
+            if (pEffect->m_durationType == 0) {
+                switch (nSpellType) {
+                case 1:
+                    pEffect->m_duration = (m_derivedStats.m_nSpellDurationModMage * pEffect->m_duration) / 100;
+                    break;
+                case 2:
+                    pEffect->m_duration = (m_derivedStats.m_nSpellDurationModPriest * pEffect->m_duration) / 100;
+                    break;
+                }
+            }
+
+            switch (pEffect->m_targetType) {
+            case 1:
+                {
+                    pEffect->m_flags |= 0x2;
+                    CMessage* message = new CMessageAddEffect(pEffect, m_id, m_id);
+                    g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+                }
+                break;
+            case 2:
+                m_curProjectile->AddEffect(pEffect);
+                break;
+            case 3:
+                ApplyEffectToParty(pEffect);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 4:
+                m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 5:
+                m_pArea->sub_46E130(pEffect, TRUE, FALSE, 0, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 6:
+                m_pArea->sub_46E130(pEffect, FALSE, TRUE, m_typeAI.m_nSpecific, NULL);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 7:
+                // NOTE: There is no target object, so the area is not called.
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            case 8:
+                m_pArea->sub_46E130(pEffect, FALSE, FALSE, 0, this);
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            default:
+                if (pEffect != NULL) {
+                    delete pEffect;
+                }
+                break;
+            }
+
+            nEffect++;
+        } while (nEffect < pAbility->effectCount);
+    }
+
+    CMessageFireProjectile* pMessage = new CMessageFireProjectile(m_curProjectile->m_projectileType,
+        CGameObjectArray::INVALID_INDEX,
+        ptDest,
+        m_curProjectile->DetermineHeight(this),
+        m_id,
+        m_id,
+        0);
+
+    if (m_curProjectile->m_projectileType == 304) {
+        int nRandom = rand() % 1000000;
+        static_cast<CProjectileSingleTarget851444*>(m_curProjectile)->field_356 = nRandom;
+        // NOTE: No NULL check on `pMessage`.
+        pMessage->field_20 = nRandom;
+    }
+
+    g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
+    m_curProjectile->Fire(m_pArea,
+        m_id,
+        CGameObjectArray::INVALID_INDEX,
+        ptDest,
+        m_curProjectile->DetermineHeight(this),
+        0);
+
+    m_curProjectile = NULL;
+
+    m_curSpell->Release();
+    AutoPause(0x40);
+    AutoPause(0x400);
+    return ACTION_DONE;
 }
 
 // 0x7446F0
