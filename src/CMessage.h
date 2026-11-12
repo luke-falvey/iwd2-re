@@ -1318,18 +1318,6 @@ public:
     /* 002A */ SHORT m_nFacing;
     /* 002C */ DWORD m_dwState;
     /* 0030 */ std::bitset<256> m_spellStates;
-    /* 0038 */ short field_38;
-    /* 003A */ short field_3A;
-    /* 003C */ short field_3C;
-    /* 003E */ short field_3E;
-    /* 0040 */ short field_40;
-    /* 0042 */ short field_42;
-    /* 0044 */ short field_44;
-    /* 0046 */ short field_46;
-    /* 0048 */ short field_48;
-    /* 004A */ short field_4A;
-    /* 004C */ short field_4C;
-    /* 004E */ short field_4E;
     /* 0050 */ std::bitset<32> m_visualEffects;
     /* 0054 */ BYTE m_nFadeSpeed;
     /* 0055 */ unsigned char field_55;
