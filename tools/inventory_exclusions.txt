@@ -529,3 +529,6 @@
 # Out-of-line copy of the inline vector accessor with FileFormat.h asserts 2437/2438 (16-byte elements);
 # same body as the inlined CGameSpriteSpellList::Get.
 0x5F6710
+# std::string (MSVC 6, refcounted) copy constructor basic_string(const basic_string&, pos, n): shares the
+# buffer (refcount byte at [data-1], 0xFE limit, empty string 0x8485BC) or _Grow + memcpy.
+0x765FA0

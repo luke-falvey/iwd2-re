@@ -2,6 +2,33 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-13: batches 47–64, S6 stall fixed, old code audited
+
+**S6.** The dock member that stopped short was `CGameArea::SortLists` (0x4794E0), an old hand-written function: it never re-sorted the y-sorted object list after the first render (inverted `m_firstRender` test), its bubble sort advanced the wrong variable, and the merge read the wrong half of the array. `GetAllInRange` depends on that order, so a blocked sprite found no neighbour to bump. A verifier pass over the whole function then found three more differences (an early return that skipped the back/flight/remove lists, a missing count decrement for deleted objects, `InsertAfter` for `InsertBefore`). All fixed. S6 now passes most runs; the remaining failures are the world region at exactly the 3.0% limit.
+
+**The "dark world" is weather, not a bug.** AR1000 has a 15% snow chance, rolled once when the game clock reaches 07:00 a few seconds after the scenario starts; a snow start tints the world with the overcast colour (180/255). `CheckWeather` and `SetCurrentWeather` match the asm, and `rand` is seeded from the clock on the original too. Not yet observed on the original (it would take about ten runs). The S6 goldens need a second variant for a snow start, or the test must pin the weather.
+
+**Other old code fixed by the same verifier pass:** `CWeather::SetCurrentWeather` had its network guard inverted for multiplayer clients; `CInfinity::SetDawn`/`SetDusk` wrote the rain colour into the global-lighting member in the daytime branch.
+
+**Batches merged: 47–64** (store screen buying and selling; `CProjectileArea84F0DC` with its cloud object `CProjectileArea84F14C` and animation `CGameAnimationType84EEB8`; `CProjectileBAM84E7B0::AIUpdate`; multi-line edit control complete, including the 21 KB `OnKeyDown`; single-line edit `OnKeyDown` re-derived, old version was missing the IME block, Esc, symbol keys and DBCS paths; character creation complete; multiplayer screen complete; world-map screen complete with path search; `CInfGame` complete (CRE 2.1→2.2 converter); `CChitin` complete (window procedure, `OnDisplayChange`, `ParseCommandLine`); `CDimm::CDSwitch`; movie player with subtitles). Verifier findings fixed: `IsCharacterAlive` return on a failed share, effect `m_flags` versus `m_effectAmount2`, `CGameAnimationTypeEffect::IsMirroring` comparing the sequence instead of the direction, a link pointer in the world-map click handler, a 16-bit store of the animation type, `WM_INPUTLANGCHANGE` returning 0 unconditionally.
+
+**Tooling.** `tools/ghidra/DefineFunctions.java` defines and exports a function Ghidra's analysis missed (reached only through a vtable); merge its `functions.extra.json` into `functions.json`. Used for 0x534140.
+
+**Progress:** 7,784 of 9,652 counted functions complete (80.6%), 89.9% of bytes, after batch 64. About 50 more addresses went to the exclusions file (STL, MFC templates, emitted copies of inline accessors, a catch funclet).
+
+**Process notes**
+- Several functions the worklist attributes to a file are library code attributed by caller; translators now read the asm first and exclude those.
+- Translators must be told to run every command from their worktree: one built in the main tree by mistake.
+- When two agents share a scratch folder, give each a file-name prefix.
+
+**Open**
+- S6: add a snow-start golden or pin the weather; world region limit.
+- `CDimm::WriteFile` has no try/catch, so its catch handler (0x7891E1) is excluded rather than translated.
+- `sub_428AD0` (subtitle table loader) belongs in `CBaldurChitin.cpp`; it lives in `CBaldurProjector.cpp`.
+- Parameter types still declared `const unsigned int&` where the original passes a byte by reference: `RemoveKnownSpell` a4, `sub_725210`/`sub_725270` a3, the grouped list `Remove` third argument.
+- Earlier items still open: `m_bHardPaused`/`m_bPaused` width, `SetResRef(const CResRef&)` callers, `CheckRestEncounter` location, `CCreatureFile::ReleaseData`.
+- Remaining large functions: `CScreenCharacter` 0x5DC9D0, 0x5E2210, 0x5EFFD0 (26 KB); `CGameSprite` `ExecuteAction`, `Spell`, `SpellPoint`; and about 230 KB of functions with no translated caller.
+
 ## 2026-11-12 (late night): S6, the party walks, batches 34–46, packed build
 
 **Play test S6 (walk the party off the ship).** New test: drag-select the party, click on the dock, compare after 20 s. It passes on the original and found, on the rebuild:

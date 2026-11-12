@@ -717,7 +717,7 @@ void CChitin::ParseCommandLine()
             }
 
             if (bParsed) {
-                int nMaxClients = atol(sToken.GetBuffer(128));
+                int nMaxClients = atoi(sToken.GetBuffer(128));
                 // NOTE: The original tests 'nMaxClients >= 1 || nMaxClients <= 6',
                 // which is true for every value.
                 if (nMaxClients >= 1 || nMaxClients <= 6) {

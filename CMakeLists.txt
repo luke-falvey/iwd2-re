@@ -433,6 +433,8 @@ target_sources(iwd2-core PRIVATE
     "src/CVidPoly.h"
     "src/CVisibility.cpp"
     "src/CVisibility.h"
+    "src/CVisualEffect.cpp"
+    "src/CVisualEffect.h"
     "src/CVoice.cpp"
     "src/CVoice.h"
     "src/CWarp.cpp"
