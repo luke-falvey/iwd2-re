@@ -161,6 +161,8 @@ void CInfCursor::SetCursor(INT nNewCursor, BOOLEAN bForce)
 
                 m_vcArrow.FrameSet(0);
                 pVidMode->SetPointer(&m_vcArrow, TRUE, -1);
+                pVidMode->m_bPointerEnabled = TRUE;
+                g_pBaldurChitin->m_bPointerUpdated = FALSE;
             }
             break;
         case 101:

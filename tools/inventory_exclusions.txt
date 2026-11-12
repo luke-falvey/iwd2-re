@@ -1900,3 +1900,7 @@
 # Ghidra split at 0x6B006A (uses the caller's ESI/EDI/EBX/EBP; ends at RET 0x10 at 0x6B00F4). The repo
 # body of SetColorEffect covers it (the AddResPaletteAffect/SuppressTint branch).
 0x6B006A
+# Not a function start: the body of CInfCursor::SetCursor (0x5972E0, size 20), which Ghidra split at
+# 0x5972F4 (uses the caller's EBX/EBP and frame; ends at RET 0x8 at 0x5975E6). The repo body of
+# SetCursor covers it (case 100 was missing the m_bPointerEnabled/m_bPointerUpdated stores; added).
+0x5972F4
