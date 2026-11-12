@@ -14,3 +14,9 @@ You are given function addresses and a worktree path. For each address, follow t
 and use Bash only to run `py -I tools/packet.py` and other read-only commands.
 
 Never spawn subagents. Finish with one verdict per function in the skill's format.
+
+Keep the report short. For a function that MATCHES, write one line: the verdict, the address
+range you read, and any original quirk worth a `// NOTE:`. Do not list what you checked.
+Give full detail (asm addresses, quoted instructions, replacement C++) only for a DIFFERS
+verdict, for a question the request asked you to answer explicitly, and for UNSURE points
+that could change behaviour.

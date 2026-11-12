@@ -17,6 +17,10 @@ only in the files you own.
 - Never push. Commit locally only if you were told to, on the branch you were given.
 - Never run the play tests in `tests/e2e`; they take over the mouse and keyboard.
 - Never read from or write to `C:\GOG Games`.
-- Builds run from PowerShell: `tools\check.ps1`.
+- Builds run from PowerShell: `tools\check.ps1`. Always run it in the foreground (timeout
+  600000) and wait for it; never start a build or any other command in the background.
+- Build after every few functions, not after each one; a full check can take ten minutes.
 
-Finish with one report per function in the skill's format.
+Finish with one report in the skill's format, sent once, after your last command has
+finished. Keep it short: a FACTS block only for functions over 300 bytes, one line for
+smaller ones.
