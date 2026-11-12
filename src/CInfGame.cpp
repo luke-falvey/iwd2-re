@@ -10886,7 +10886,17 @@ DWORD CInfGame::GetScrollSpeed()
 // 0x5BDBA0
 void CInfGame::sub_5BDBA0(int a1, BOOL a2)
 {
-    // TODO: Incomplete.
+    m_nReputation = a1 * 10;
+
+    if (a2) {
+        if (m_nReputation > 200) {
+            m_nReputation = 200;
+        }
+
+        if (m_nReputation < 10) {
+            m_nReputation = 10;
+        }
+    }
 }
 
 // 0x5BDC00
