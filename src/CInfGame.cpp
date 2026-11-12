@@ -3684,8 +3684,8 @@ void CInfGame::Unmarshal(BYTE* pGame, LONG nGame, BOOLEAN bProgressBarInPlace)
     UTIL_ASSERT(cnt == (DWORD)nGame);
 }
 
-// Converts "CRE V2.0" creature to "CRE V2.1" format (reallocates
-// `*ppCreature`).
+// Converts "CRE V2.0" creature to "CRE V2.1" format (rewrites
+// `*ppCreature` in place; the size does not change).
 //
 // NOTE: Uses a register calling convention (`ppCreature` in ECX,
 // `pCreatureSize` in EDX).
@@ -3695,6 +3695,7 @@ static void sub_5A3DB0(BYTE** ppCreature, LONG* pCreatureSize)
 {
 #define OLD(type, offset) (*reinterpret_cast<type*>(pOld + (offset)))
 #define NEW(type, offset) (*reinterpret_cast<type*>(pNew + (offset)))
+#define OLD_AT(ptr, type) (*reinterpret_cast<type*>(ptr))
 #define HALF(n) (((n) & 0xFE) > 2 ? (n) >> 1 : 1)
 #define THIRD(n) ((n) / 3 > 1 ? (n) / 3 : 1)
 
@@ -4063,12 +4064,91 @@ static void sub_5A3DB0(BYTE** ppCreature, LONG* pCreatureSize)
         break;
     }
 
-    // TODO: Incomplete.
+    NEW(BYTE, 0x3B4) = pNew[0x387];
+    NEW(BYTE, 0x388) = OLD(BYTE, 0x2DC);
+    NEW(BYTE, 0x389) = OLD(BYTE, 0x2DD);
+    NEW(DWORD, 0x38A) = OLD(DWORD, 0x2DE);
+    NEW(BYTE, 0x38E) = OLD(BYTE, 0x2E2);
+    NEW(BYTE, 0x38F) = OLD(BYTE, 0x2E3);
+    NEW(DWORD, 0x390) = OLD(DWORD, 0x2E4);
+    memcpy(pNew + 0x394, pOld + 0x2E8, 8 * sizeof(DWORD));
+    NEW(DWORD, 0x3BA) = OLD(DWORD, 0x308) + 0xB2;
+    NEW(DWORD, 0x3BE) = OLD(DWORD, 0x30C);
+    NEW(DWORD, 0x3C2) = OLD(DWORD, 0x310) + 0xB2;
+    NEW(DWORD, 0x3C6) = OLD(DWORD, 0x314);
+    NEW(DWORD, 0x3CA) = OLD(DWORD, 0x318) + 0xB2;
+    NEW(DWORD, 0x3CE) = OLD(DWORD, 0x31C);
+    NEW(DWORD, 0x3D6) = OLD(DWORD, 0x324) + 0xB2;
+    NEW(DWORD, 0x3DA) = OLD(DWORD, 0x328);
+    NEW(DWORD, 0x3D2) = OLD(DWORD, 0x320) + 0xB2;
+    NEW(DWORD, 0x3DE) = OLD(DWORD, 0x32C) + 0xB2;
+    NEW(DWORD, 0x3E2) = OLD(DWORD, 0x330);
+    NEW(DWORD, 0x3E6) = OLD(DWORD, 0x334);
+    NEW(DWORD, 0x3EA) = OLD(DWORD, 0x338);
+
+    if (NEW(LONG, 0x3C6) + NEW(LONG, 0x3CE) + NEW(LONG, 0x3BE) > 0) {
+        DWORD nSize = OLD(DWORD, 0x30C) * 3 * 4;
+
+        DWORD nCount = OLD(DWORD, 0x314);
+        if (nCount != 0) {
+            BYTE* pEntry = pOld + OLD(DWORD, 0x310) + 0xC;
+            do {
+                nSize += OLD_AT(pEntry, DWORD) * 3 * 4;
+                pEntry += 0x10;
+                nCount--;
+            } while (nCount != 0);
+        }
+
+        nSize += OLD(DWORD, 0x314) << 4;
+
+        memcpy(pNew + 0x3EE, pOld + 0x33C, nSize);
+    }
+
+    BYTE* pDest = pNew + NEW(DWORD, 0x3D2);
+    BYTE* pSource = pOld + OLD(DWORD, 0x320);
+
+    memcpy(pNew + NEW(DWORD, 0x3D6), pOld + OLD(DWORD, 0x324), OLD(DWORD, 0x328) * 5 * 4);
+
+    if (NEW(DWORD, 0x3E2) != 0) {
+        DWORD nSize;
+        if (NEW(BYTE, 0x33) == 0) {
+            nSize = NEW(DWORD, 0x3E2) * 3 * 16;
+        } else {
+            nSize = (NEW(DWORD, 0x3E2) * 33) * 8;
+        }
+
+        memcpy(pNew + NEW(DWORD, 0x3DE), pOld + OLD(DWORD, 0x32C), nSize);
+    }
+
+    memset(pDest, 0xFF, 0x1A * sizeof(DWORD));
+
+    *reinterpret_cast<WORD*>(pDest + 0x00) = *reinterpret_cast<WORD*>(pSource + 0x00);
+    *reinterpret_cast<WORD*>(pDest + 0x02) = *reinterpret_cast<WORD*>(pSource + 0x02);
+    *reinterpret_cast<WORD*>(pDest + 0x04) = *reinterpret_cast<WORD*>(pSource + 0x04);
+    *reinterpret_cast<WORD*>(pDest + 0x06) = *reinterpret_cast<WORD*>(pSource + 0x06);
+    *reinterpret_cast<WORD*>(pDest + 0x08) = *reinterpret_cast<WORD*>(pSource + 0x08);
+    *reinterpret_cast<WORD*>(pDest + 0x0A) = *reinterpret_cast<WORD*>(pSource + 0x0A);
+    *reinterpret_cast<WORD*>(pDest + 0x0C) = *reinterpret_cast<WORD*>(pSource + 0x0C);
+    *reinterpret_cast<WORD*>(pDest + 0x0E) = *reinterpret_cast<WORD*>(pSource + 0x0E);
+    *reinterpret_cast<WORD*>(pDest + 0x10) = *reinterpret_cast<WORD*>(pSource + 0x10);
+    *reinterpret_cast<DWORD*>(pDest + 0x12) = *reinterpret_cast<DWORD*>(pSource + 0x12);
+    *reinterpret_cast<DWORD*>(pDest + 0x16) = *reinterpret_cast<DWORD*>(pSource + 0x16);
+    *reinterpret_cast<DWORD*>(pDest + 0x22) = *reinterpret_cast<DWORD*>(pSource + 0x1A);
+    *reinterpret_cast<DWORD*>(pDest + 0x26) = *reinterpret_cast<DWORD*>(pSource + 0x1E);
+    *reinterpret_cast<WORD*>(pDest + 0x2A) = *reinterpret_cast<WORD*>(pSource + 0x22);
+    memcpy(pDest + 0x2C, pSource + 0x24, 0xA * sizeof(DWORD));
+    *reinterpret_cast<WORD*>(pDest + 0x64) = *reinterpret_cast<WORD*>(pSource + 0x4C);
+    *reinterpret_cast<WORD*>(pDest + 0x66) = *reinterpret_cast<WORD*>(pSource + 0x4E);
+
+    memcpy(*ppCreature, pNew, *pCreatureSize);
+
+    delete[] pNew;
 
 #undef OLD
 #undef NEW
 #undef HALF
 #undef THIRD
+#undef OLD_AT
 }
 
 // Converts "CRE V2.1" creature to "CRE V2.2" format.
