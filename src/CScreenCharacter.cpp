@@ -8999,74 +8999,519 @@ CString CScreenCharacter::sub_5EFFD0(BOOLEAN& bFlag)
         sub_5EF920(pFile, FetchString(33548), sLine, 1);
     }
 
-    // 0x5F2518 - 0x5F26D4 (0x1BC bytes): Attacks per round.
-    // "\n"; `curWeapon == curWeaponSecond` ? "%d" with 1 : checks the item type of
-    // the off-hand weapon (via `sub_726800`, types 47/53/49/41) for "%d+%d"
-    // (0x8B2DAC) or "%d" (NumberOfAttacks); line strref 9458 (0x24F2), a3 = 1.
-    // SECTION NOT TRANSLATED.
+    // 0x5F2518 - 0x5F26D3: Attacks per round.
+    fputs("\n", pFile);
 
-    // 0x5F26D4 - 0x5F2AC8 (0x3F4 bytes): Armor class.
-    // "\n"; `pSprite->GetAC()` (0x723CC0) strref 33553 (0x8311) "%d" a3 = 0;
-    // "%d": 11997 (0x2EDD), 33551 (0x830F), 12006 (0x2EE6), 33552 (0x8310) all
-    // a3 = 1 with each preceded by the expertise style checks
-    // (0x726800/0x4E97E0 item-type tests 47/53/49/41); `sub_723EA0` (0x723EA0)
-    // line strref 1151 (0x47F) "%d" a3 = 1.
-    // SECTION NOT TRANSLATED.
+    CString sAttacksPerRound;
 
-    // 0x5F2AC8 - 0x5F2C2D (0x165 bytes): "\n"; "%d" lines 37275 (0x919B),
-    // 37590 (0x92D6), a3 = 1.
-    // SECTION NOT TRANSLATED.
+    if (curWeapon == curWeaponSecond) {
+        sAttacksPerRound.Format("%d", 1);
+    } else if (pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())] != NULL
+        && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 47
+        && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 53
+        && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 49
+        && pSprite->m_equipment.m_items[static_cast<BYTE>(pSprite->sub_726800())]->GetItemType() != 41) {
+        sAttacksPerRound.Format("%d+%d", pDStats->m_nNumberOfAttacks - 1, 1);
+    } else {
+        sAttacksPerRound.Format("%d", pDStats->m_nNumberOfAttacks);
+    }
 
-    // 0x5F2C2D - 0x5F31BB (0x58E bytes): `CAIObjectType::IsClassValid`
-    // (0x40D7E0) gated block: "%d%%" (0x8ABD0C) lines 9460 (0x24F4), 9461
-    // (0x24F5), 34120 (0x8548), 9462 (0x24F6), 9463 (0x24F7), 24113 (0x5E31)
-    // all a3 = 1; `IcewindMisc::GetSneakAttackDice` (0x585D80) /
-    // `GetSneakAttackRolls` (0x585D50) with "%dd%d" (0x8B2E60) line 24898
-    // (0x6142), a3 = 1; 0x7ABB90 value line 24897 (0x6141) "%d".
-    // SECTION NOT TRANSLATED.
+    // NOTE: Uninline.
+    sub_5EF920(pFile, FetchString(9458), sAttacksPerRound, 1);
 
-    // 0x5F31BB - 0x5F3620 (0x465 bytes): three more `IsClassValid` gated
-    // blocks: 9463 / 24113 "%d%%" (5F31BB), `CRuleTables::Average` (0x5467E0)
-    // + strref 34137 (0x8559) "%d%%" (5F3323), 12126 (0x2F5E) "%d" x2
-    // (5F33F8, 5F3560), all a3 = 1.
-    // SECTION NOT TRANSLATED.
+    // 0x5F26D3 - 0x5F2AC7: Armor class.
+    fputs("\n", pFile);
 
-    // 0x5F3620 - 0x5F37CA (0x1AA bytes): `TEST ECX,ECX` gated line strref
-    // 17093 (0x42C5) / `CResRef::CopyToString` (0x78A9F0) and strref 2078
-    // (0x81E) "%s" a3 = 1 (two forms).
-    // SECTION NOT TRANSLATED.
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile, FetchString(33553), pSprite->GetAC(), 0);
 
-    // 0x5F37CA - 0x5F391A (0x150 bytes): `IsClassValid` gated favored enemy
-    // list: header "%s:\n" strref 15982 (0x3E6E); loop 8 entries with a
-    // jump table at 0x5F6638 (byte index table 0x5F667C, 0x4F entries) and
-    // "   %s\n" (0x8B3300).
-    // SECTION NOT TRANSLATED.
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile, FetchString(11997), pDStats->field_6, 1);
 
-    // 0x5F391A - 0x5F3A37 (0x11D bytes): "\n"; header "%s:\n" 17379 (0x43E3);
-    // `sub_5EF9E0` real calls 17380 (0x43E4), 17381 (0x43E5), 17382 (0x43E6)
-    // a3 = 1; `CRuleTables::GetTrapSenseBonus` (0x5418E0) gated line 39802
-    // (0x9B7A) a3 = 1.
-    // SECTION NOT TRANSLATED.
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile, FetchString(33551), pDStats->field_8, 1);
 
-    // 0x5F3A37 - 0x5F44FE (0xAC7 bytes): "\n"; header "%s:\n" 9466 (0x24FA);
-    // 17 x `CGameSprite::sub_75E930(id)` (0x75E930) guarded by `0 < x < 20`
-    // each followed by `CString` ctor (0x7FCC88) and `sub_5EF920` (real
-    // call) a3 = 1: strrefs 8733 (0x221D), 16033 (0x3EA1), 9403 (0x24BB),
-    // 9402 (0x24BA), 16017 (0x3E91), 16013 (0x3E8D), 16020 (0x3E94), 16015
-    // (0x3E8F), 16022 (0x3E96), 16031 (0x3E9F), 16011 (0x3E8B), 8668
-    // (0x21DC), 8732 (0x221C), 31138 (0x79A2), 31135 (0x799F), 31136
-    // (0x79A0), 31137 (0x79A1).
-    // SECTION NOT TRANSLATED.
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile, FetchString(12006), pDStats->field_A, 1);
 
-    // 0x5F44FE - 0x5F4818 (0x31A bytes): "\n"; if any of the derived AC
-    // modifiers (+0xE/+0x10/+0x12/+0x14 of the derived stats) is non-zero:
-    // header "%s:\n" 11766 (0x2DF6) then `sub_5EFAA0` style "%+d" (0x8ABD14)
-    // lines a3 = 0: 11770 (0x2DFA), 11767 (0x2DF7), 11769 (0x2DF9), 11768
-    // (0x2DF8).
-    // SECTION NOT TRANSLATED.
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile, FetchString(33552), pDStats->field_C, 1);
 
-    // 0x5F4818 - 0x5F4DFC (0x5E4 bytes): "\n"; header "%s:\n" 10315
-    // (0x284B); lines through `sub_5EFAA0`/`sub_5EF9E0`: 10332 (0x285C),
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile, FetchString(1151), pSprite->sub_723EA0(), 1);
+
+    // 0x5F2AC7 - 0x5F2C20: Skills.
+    fputs("\n", pFile);
+
+    // NOTE: Uninline. The skill bytes are sign extended.
+    sub_5EF9E0(pFile,
+        FetchString(37275),
+        static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_ALCHEMY]),
+        1);
+
+    // NOTE: Uninline.
+    sub_5EF9E0(pFile,
+        FetchString(37590),
+        static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_KNOWLEDGE_ARCANA]),
+        1);
+
+    // 0x5F2C20 - 0x5F31BB: Rogue skills.
+    if (pTypeAI->IsClassValid(CAIObjectType::C_ROGUE)) {
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(9460),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_OPEN_LOCK]),
+            1);
+
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(9461),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_MOVE_SILENTLY]),
+            1);
+
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(34120),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_HIDE]),
+            1);
+
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(9462),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_SEARCH]),
+            1);
+
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(9463),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_PICK_POCKET]),
+            1);
+
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(24113),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE]),
+            1);
+
+        CString sSneakAttack;
+        sSneakAttack.Format("%dd%d",
+            IcewindMisc::GetSneakAttackRolls(pSprite),
+            IcewindMisc::GetSneakAttackDice());
+
+        // NOTE: Uninline.
+        sub_5EF920(pFile, FetchString(24898), sSneakAttack, 1);
+
+        // NOTE: The original calls a cdecl function at 0x7ABB90 with `pSprite`
+        // that always returns 0 (unknown name); its result is inlined here.
+        //
+        // NOTE: Uninline.
+        sub_5EF9E0(pFile, FetchString(24897), 0, 1);
+    }
+
+    // 0x5F31BB - 0x5F3620: Bard, ranger, paladin and cleric lines.
+    if (pTypeAI->IsClassValid(CAIObjectType::C_BARD)) {
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(9463),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_PICK_POCKET]),
+            1);
+
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(24113),
+            "%d%%",
+            static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE]),
+            1);
+    }
+
+    if (pTypeAI->IsClassValid(CAIObjectType::C_RANGER)) {
+        // NOTE: Uninline.
+        sub_5EFAA0(pFile,
+            FetchString(34137),
+            "%d%%",
+            rule.Average(static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_MOVE_SILENTLY]),
+                static_cast<signed char>(pDStats->m_nSkills[CGAMESPRITE_SKILL_HIDE])),
+            1);
+    }
+
+    if (pTypeAI->IsClassValid(CAIObjectType::C_PALADIN)) {
+        // NOTE: Uninline.
+        sub_5EF9E0(pFile, FetchString(12126), pDStats->m_nTurnUndeadLevel, 1);
+
+        // NOTE: Uninline.
+        sub_5EF9E0(pFile, FetchString(12127), pDStats->m_nLayOnHandsAmount, 1);
+    }
+
+    if (pTypeAI->IsClassValid(CAIObjectType::C_CLERIC)) {
+        // NOTE: Uninline.
+        sub_5EF9E0(pFile, FetchString(12126), pDStats->m_nTurnUndeadLevel, 1);
+    }
+
+    // 0x5F3620 - 0x5F37C9: Special script.
+    if (pSprite->m_special2Script == NULL) {
+        // NOTE: Uninline.
+        sub_5EF920(pFile, FetchString(2078), FetchString(17093), 1);
+    } else {
+        CString sSpecialScript;
+
+        CResRef cSpecialScript = pSprite->m_special2Script->m_cResRef;
+        cSpecialScript.CopyToString(sSpecialScript);
+
+        // NOTE: Uninline.
+        sub_5EF920(pFile, FetchString(2078), sSpecialScript, 1);
+    }
+
+    // 0x5F37C9 - 0x5F391A: Favored enemies.
+    fputs("\n", pFile);
+
+    if (pTypeAI->IsClassValid(CAIObjectType::C_RANGER)) {
+        fprintf(pFile, "%s:\n", (LPCSTR)FetchString(15982));
+
+        for (INT nIndex = 0; nIndex < MAX_HATED_RACES; nIndex++) {
+            BYTE& nRace = pBStats->m_favoredEnemies[nIndex];
+            if (nRace != CAIObjectType::R_NO_RACE) {
+                STRREF strRace;
+                switch (nRace) {
+                case CAIOBJECTTYPE_R_OGRE:
+                    strRace = 15975; // "Ogres"
+                    break;
+                case CAIOBJECTTYPE_R_WYVERN:
+                    strRace = 37617; // "Wyverns"
+                    break;
+                case CAIOBJECTTYPE_R_GIANT:
+                    strRace = 61; // "Giants"
+                    break;
+                case CAIOBJECTTYPE_R_GOBLIN:
+                    strRace = 29518; // "Goblins"
+                    break;
+                case CAIOBJECTTYPE_R_LIZARDMAN:
+                    strRace = 3275; // "Lizard Men"
+                    break;
+                case CAIOBJECTTYPE_R_ORC:
+                    strRace = 3271; // "Orcs"
+                    break;
+                case CAIOBJECTTYPE_R_SALAMANDER:
+                    strRace = 3272; // "Salamanders"
+                    break;
+                case CAIOBJECTTYPE_R_TROLL:
+                    strRace = 3276; // "Trolls"
+                    break;
+                case CAIOBJECTTYPE_R_UMBERHULK:
+                    strRace = 3277; // "Umber Hulks"
+                    break;
+                case CAIOBJECTTYPE_R_UNDEAD:
+                    strRace = 3278; // "Undead"
+                    break;
+                case CAIOBJECTTYPE_R_YUANTI:
+                    strRace = 30849; // "Yuan-ti"
+                    break;
+                case CAIOBJECTTYPE_R_HARPY:
+                    strRace = 37616; // "Harpies"
+                    break;
+                case CAIOBJECTTYPE_R_BUGBEAR:
+                    strRace = 28366; // "Bugbear"
+                    break;
+                case CAIOBJECTTYPE_R_HOOK_HORROR:
+                    strRace = 37606; // "Hook Horrors"
+                    break;
+                case CAIOBJECTTYPE_R_DRIDER:
+                    strRace = 37607; // "Driders"
+                    break;
+                case CAIOBJECTTYPE_R_SHAPESHIFTER:
+                    strRace = 37605; // "Shapeshifters"
+                    break;
+                default:
+                    strRace = -1;
+                    break;
+                }
+
+                fprintf(pFile, "   %s\n", (LPCSTR)FetchString(strRace));
+            }
+        }
+
+        fputs("\n", pFile);
+    }
+
+    // 0x5F391A - 0x5F3A36: Saving throws.
+    fprintf(pFile, "%s:\n", (LPCSTR)FetchString(17379));
+
+    sub_5EF9E0(pFile, FetchString(17380), pDStats->m_nSaveVSFortitude, 1);
+    sub_5EF9E0(pFile, FetchString(17381), pDStats->m_nSaveVSReflex, 1);
+    sub_5EF9E0(pFile, FetchString(17382), pDStats->m_nSaveVSWill, 1);
+
+    INT nTrapSenseBonus = rule.GetTrapSenseBonus(*pDStats);
+    if (nTrapSenseBonus != 0) {
+        // NOTE: The reflex save is shown with the trap sense bonus added.
+        sub_5EF9E0(pFile, FetchString(39802), pDStats->m_nSaveVSReflex + nTrapSenseBonus, 1);
+    }
+
+    // 0x5F3A36 - 0x5F44FD: Proficiencies.
+    fputs("\n", pFile);
+
+    fprintf(pFile, "%s:\n", (LPCSTR)FetchString(9466));
+
+    {
+        // NOTE: The argument is the byte at 0x85BC08 (value 0).
+        INT nBonus = pSprite->sub_75E930(0);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(8733), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC09 (value 1).
+        INT nBonus = pSprite->sub_75E930(1);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16033), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC0A (value 2).
+        INT nBonus = pSprite->sub_75E930(2);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(9403), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC0B (value 3).
+        INT nBonus = pSprite->sub_75E930(3);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(9402), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC0C (value 4).
+        INT nBonus = pSprite->sub_75E930(4);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16017), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC0D (value 5).
+        INT nBonus = pSprite->sub_75E930(5);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16013), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC0E (value 6).
+        INT nBonus = pSprite->sub_75E930(6);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16020), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC0F (value 7).
+        INT nBonus = pSprite->sub_75E930(7);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16015), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC10 (value 8).
+        INT nBonus = pSprite->sub_75E930(8);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16022), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC11 (value 9).
+        INT nBonus = pSprite->sub_75E930(9);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16031), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC12 (value 10).
+        INT nBonus = pSprite->sub_75E930(10);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(16011), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC13 (value 11).
+        INT nBonus = pSprite->sub_75E930(11);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(8668), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC14 (value 12).
+        INT nBonus = pSprite->sub_75E930(12);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(8732), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC15 (value 13).
+        INT nBonus = pSprite->sub_75E930(13);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(31138), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC16 (value 14).
+        INT nBonus = pSprite->sub_75E930(14);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(31135), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC17 (value 15).
+        INT nBonus = pSprite->sub_75E930(15);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(31136), sPlus, 1);
+        }
+    }
+
+    {
+        // NOTE: The argument is the byte at 0x85BC18 (value 16).
+        INT nBonus = pSprite->sub_75E930(16);
+        if (nBonus > 0 && nBonus < 20) {
+            char szPlus[20];
+            memset(szPlus, '+', nBonus);
+            szPlus[nBonus] = '\0';
+
+            CString sPlus(szPlus);
+            sub_5EF920(pFile, FetchString(31137), sPlus, 1);
+        }
+    }
+
+    // 0x5F44FD - 0x5F4825: Armor class modifiers.
+    fputs("\n", pFile);
+
+    if (pDStats->m_nACCrushingMod != 0
+        || pDStats->m_nACMissileMod != 0
+        || pDStats->m_nACPiercingMod != 0
+        || pDStats->m_nACSlashingMod != 0) {
+        fprintf(pFile, "%s:\n", (LPCSTR)FetchString(11766));
+
+        if (pDStats->m_nACCrushingMod != 0) {
+            // NOTE: Uninline.
+            sub_5EFAA0(pFile, FetchString(11770), "%+d", pDStats->m_nACCrushingMod, 0);
+        }
+
+        if (pDStats->m_nACMissileMod != 0) {
+            // NOTE: Uninline.
+            sub_5EFAA0(pFile, FetchString(11767), "%+d", pDStats->m_nACMissileMod, 0);
+        }
+
+        if (pDStats->m_nACPiercingMod != 0) {
+            // NOTE: Uninline.
+            sub_5EFAA0(pFile, FetchString(11769), "%+d", pDStats->m_nACPiercingMod, 0);
+        }
+
+        if (pDStats->m_nACSlashingMod != 0) {
+            // NOTE: Uninline.
+            sub_5EFAA0(pFile, FetchString(11768), "%+d", pDStats->m_nACSlashingMod, 0);
+        }
+
+        fputs("\n", pFile);
+    }
+
+    // 0x5F4825 - 0x5F4DFC (0x5D7 bytes): header "%s:\n" 10315
+    // (0x284B) (no leading "\n"); lines through `sub_5EFAA0`/`sub_5EF9E0`: 10332 (0x285C),
     // 16462 (0x404E, `GetCriticalHitBonus`), 28357 (0x6EC5), 28373 (0x6ED5),
     // 10336 (0x2860), 10338 (0x2862, `GetEncumbranceMod` 0x546AA0 with
     // `__ftol` and 2DA `atol` 0x7E7B03), 10342 (0x2866, `sub_542EC0` 0x542EC0).
