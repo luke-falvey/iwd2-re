@@ -173,6 +173,7 @@ void CGameChunk::RemoveFromArea()
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
         // __LINE__: 13954
         UTIL_ASSERT(FALSE);
+        return;
     }
 
     delete this;
@@ -370,6 +371,7 @@ void CGame85BF7C::RemoveFromArea()
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
         // __LINE__: 14270
         UTIL_ASSERT(FALSE);
+        return;
     }
 
     delete this;
@@ -838,6 +840,7 @@ void CGame85BFE8::RemoveFromArea()
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
         // __LINE__: 14752
         UTIL_ASSERT(FALSE);
+        return;
     }
 
     delete this;
