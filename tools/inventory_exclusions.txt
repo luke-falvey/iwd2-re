@@ -475,3 +475,10 @@
 
 # CResHelper<CResText, 1012>::~CResHelper (C2DArray destructor body; template instantiation).
 0x7B5370
+
+# CList<CString, CString>::AddTail(CString) (MFC template instantiation; CGamePathsList_AddPath):
+# takes a node from the free list (CPlex::Create of 12-byte nodes), constructs the CString, assigns it, links the tail.
+0x78D730
+
+# Catch handler (compiler-generated funclet) of CDimm::WriteFile (0x789090): CFile::Close, LeaveCriticalSection(&field_344), _chdir(path), epilogue.
+0x7891E1

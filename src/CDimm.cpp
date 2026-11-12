@@ -1740,7 +1740,111 @@ int CDimm::LocalReadResource(CRes* pRes, DWORD nNumberOfBytesToRead, DWORD nOffs
 // 0x787400
 void CDimm::sub_787400(int a1)
 {
-    // TODO: Incomplete.
+    CString sResRef;
+    CString sExtension;
+    char szResRef[RESREF_SIZE + 1];
+    DWORD nFreedSize = 0;
+    DWORD nServicedSize = 0;
+    DWORD nRequestedSize = 0;
+    POSITION pos;
+
+    pos = m_lFreed.GetHeadPosition();
+    while (pos != NULL) {
+        CRes* pRes = static_cast<CRes*>(m_lFreed.GetNext(pos));
+        if (pRes != NULL) {
+            nFreedSize += pRes->nSize;
+            if (pRes->m_pDimmKeyTableEntry != NULL) {
+                // NOTE: Uninline.
+                pRes->m_pDimmKeyTableEntry->resRef.CopyToString(szResRef);
+                sResRef = szResRef;
+                g_pChitin->TranslateType(pRes->m_pDimmKeyTableEntry->nResType, sExtension);
+            }
+        }
+    }
+
+    pos = m_lServicedHigh.GetHeadPosition();
+    while (pos != NULL) {
+        CRes* pRes = static_cast<CRes*>(m_lServicedHigh.GetNext(pos));
+        if (pRes != NULL) {
+            nServicedSize += pRes->nSize;
+            if (pRes->m_pDimmKeyTableEntry != NULL) {
+                // NOTE: Uninline.
+                pRes->m_pDimmKeyTableEntry->resRef.CopyToString(szResRef);
+                sResRef = szResRef;
+                g_pChitin->TranslateType(pRes->m_pDimmKeyTableEntry->nResType, sExtension);
+            }
+        }
+    }
+
+    pos = m_lServicedMedium.GetHeadPosition();
+    while (pos != NULL) {
+        CRes* pRes = static_cast<CRes*>(m_lServicedMedium.GetNext(pos));
+        if (pRes != NULL) {
+            nServicedSize += pRes->nSize;
+            if (pRes->m_pDimmKeyTableEntry != NULL) {
+                // NOTE: Uninline.
+                pRes->m_pDimmKeyTableEntry->resRef.CopyToString(szResRef);
+                sResRef = szResRef;
+                g_pChitin->TranslateType(pRes->m_pDimmKeyTableEntry->nResType, sExtension);
+            }
+        }
+    }
+
+    pos = m_lServicedLow.GetHeadPosition();
+    while (pos != NULL) {
+        CRes* pRes = static_cast<CRes*>(m_lServicedLow.GetNext(pos));
+        if (pRes != NULL) {
+            nServicedSize += pRes->nSize;
+            if (pRes->m_pDimmKeyTableEntry != NULL) {
+                // NOTE: Uninline.
+                pRes->m_pDimmKeyTableEntry->resRef.CopyToString(szResRef);
+                sResRef = szResRef;
+                g_pChitin->TranslateType(pRes->m_pDimmKeyTableEntry->nResType, sExtension);
+            }
+        }
+    }
+
+    pos = m_lRequestedHigh.GetHeadPosition();
+    while (pos != NULL) {
+        CRes* pRes = static_cast<CRes*>(m_lRequestedHigh.GetNext(pos));
+        if (pRes != NULL) {
+            nRequestedSize += pRes->nSize;
+            if (pRes->m_pDimmKeyTableEntry != NULL) {
+                // NOTE: Uninline.
+                pRes->m_pDimmKeyTableEntry->resRef.CopyToString(szResRef);
+                sResRef = szResRef;
+                g_pChitin->TranslateType(pRes->m_pDimmKeyTableEntry->nResType, sExtension);
+            }
+        }
+    }
+
+    pos = m_lRequestedMedium.GetHeadPosition();
+    while (pos != NULL) {
+        CRes* pRes = static_cast<CRes*>(m_lRequestedMedium.GetNext(pos));
+        if (pRes != NULL) {
+            nRequestedSize += pRes->nSize;
+            if (pRes->m_pDimmKeyTableEntry != NULL) {
+                // NOTE: Uninline.
+                pRes->m_pDimmKeyTableEntry->resRef.CopyToString(szResRef);
+                sResRef = szResRef;
+                g_pChitin->TranslateType(pRes->m_pDimmKeyTableEntry->nResType, sExtension);
+            }
+        }
+    }
+
+    pos = m_lRequestedLow.GetHeadPosition();
+    while (pos != NULL) {
+        CRes* pRes = static_cast<CRes*>(m_lRequestedLow.GetNext(pos));
+        if (pRes != NULL) {
+            nRequestedSize += pRes->nSize;
+            if (pRes->m_pDimmKeyTableEntry != NULL) {
+                // NOTE: Uninline.
+                pRes->m_pDimmKeyTableEntry->resRef.CopyToString(szResRef);
+                sResRef = szResRef;
+                g_pChitin->TranslateType(pRes->m_pDimmKeyTableEntry->nResType, sExtension);
+            }
+        }
+    }
 }
 
 // #binary-identical
