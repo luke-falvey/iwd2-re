@@ -4121,6 +4121,10 @@ BOOL CUIControlPortraitWorld::Render(BOOL bForce)
         return FALSE;
     }
 
+    if (!CUIControlButton::Render(bForce)) {
+        return FALSE;
+    }
+
     CPoint pt = m_pPanel->m_ptOrigin + m_ptOrigin;
     g_pBaldurChitin->GetObjectGame()->RenderPortrait(m_nID,
         pt,
