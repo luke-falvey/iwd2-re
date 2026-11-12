@@ -6471,6 +6471,77 @@ void CScreenCharacter::ResetCustomizeBiographyPanel(CUIPanel* pPanel, CGameSprit
     pButton->SetEnabled(g_pBaldurChitin->GetTlkTable().m_override.Fetch(strBiography, strRes));
 }
 
+// 0x5EFB60
+void CScreenCharacter::sub_5EFB60(char* pBuffer, STRREF strDescription)
+{
+    // TODO: Incomplete.
+}
+
+// 0x5EFCC0
+void CScreenCharacter::sub_5EFCC0(char* pBuffer, CItem* pItem, BYTE a3, BYTE a4)
+{
+    WORD nUsageCount = pItem->GetUsageCount(0);
+
+    if (nUsageCount > 1) {
+        if ((pItem->m_flags & 0x1) != 0) {
+            if (a3) {
+                sprintf(pBuffer,
+                    "-- %s (%d) *\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()),
+                    nUsageCount);
+            } else {
+                sprintf(pBuffer,
+                    "-- %s (%d)\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()),
+                    nUsageCount);
+            }
+        } else {
+            if (a3) {
+                sprintf(pBuffer,
+                    "-- %s (%d) - %s *\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()),
+                    nUsageCount,
+                    (LPCSTR)FetchString(17108));
+            } else {
+                sprintf(pBuffer,
+                    "-- %s (%d) - %s\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()),
+                    nUsageCount,
+                    (LPCSTR)FetchString(17108));
+            }
+        }
+    } else {
+        if ((pItem->m_flags & 0x1) != 0) {
+            if (a3) {
+                sprintf(pBuffer,
+                    "-- %s *\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()));
+            } else {
+                sprintf(pBuffer,
+                    "-- %s\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()));
+            }
+        } else {
+            if (a3) {
+                sprintf(pBuffer,
+                    "-- %s - %s *\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()),
+                    (LPCSTR)FetchString(17108));
+            } else {
+                sprintf(pBuffer,
+                    "-- %s - %s\n",
+                    (LPCSTR)FetchString(pItem->GetGenericName()),
+                    (LPCSTR)FetchString(17108));
+            }
+        }
+    }
+
+    if (a4) {
+        sub_5EFB60(pBuffer, pItem->GetDescription());
+        strcat(pBuffer, "\n\n\n");
+    }
+}
+
 // 0x5EFFD0
 CString CScreenCharacter::sub_5EFFD0(BOOLEAN& bFlag)
 {
