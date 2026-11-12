@@ -1,12 +1,17 @@
 #include "CGameTrigger.h"
 
 #include "CAIScript.h"
+#include "CAITrigger.h"
 #include "CBaldurChitin.h"
+#include "CCreatureFile.h"
 #include "CGameArea.h"
+#include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CInfCursor.h"
 #include "CInfGame.h"
+#include "CMessage.h"
 #include "CPathSearch.h"
+#include "CProjectile.h"
 #include "CScreenWorld.h"
 #include "CUtil.h"
 #include "CVidPoly.h"
@@ -178,6 +183,160 @@ void CGameTrigger::AIUpdate()
     }
 
     ProcessAI();
+}
+
+// 0x4CD650
+void CGameTrigger::AddEffect(CGameEffect* pEffect, BYTE list, BOOL noSave, BOOL immediateApply)
+{
+    if (pEffect->m_effectID == CGAMEEFFECT_DETECTTRAPS) {
+        // NOTE: Uninline.
+        if (sub_45B950()) {
+            if (m_trapDetected == 0
+                && m_trapDetectionDifficulty < 100
+                && (m_dwFlags & 0x8) != 0) {
+                // NOTE: Original reads trigger ID from a constant at
+                // 0x847E40.
+                CAITrigger trigger(CAITRIGGER_DETECTED, m_typeAI, 0);
+
+                CMessage* message = new CMessageSetTrigger(trigger, m_id, m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                m_trapDetected = TRUE;
+
+                // NOTE: Uninline.
+                message = new CMessageTriggerStatus(m_dwFlags,
+                    static_cast<WORD>(sub_45B950()),
+                    m_trapDetected,
+                    m_id,
+                    m_id);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                // NOTE: Original passes `m_id` where the callee expects a
+                // `CGameAIBase*` caller.
+                CGameObject* pObject = m_typeAI.sub_40CCA0(reinterpret_cast<CGameAIBase*>(m_id), FALSE);
+                if (pObject != NULL) {
+                    // NOTE: Uninline.
+                    if (pObject->GetAIType().Equal(CAIObjectType(CGameObject::TYPE_SPRITE))) {
+                        static_cast<CGameAIBase*>(pObject)->AutoPause(0x80);
+                    }
+                }
+            }
+
+            if (m_trapDetected != 0) {
+                // NOTE: Uninline.
+                SetDrawPoly(400);
+            }
+        }
+    } else if (pEffect->m_effectID == CGAMEEFFECT_CASTSPELL) {
+        CAIObjectType type(GetAIType());
+        CAIAction action(CAIAction::FORCESPELL, type, 0, 0, 0);
+
+        CString sResRef;
+        pEffect->m_res.CopyToString(sResRef);
+        action.SetString1(sResRef);
+        action.m_specificID = pEffect->m_effectAmount;
+
+        CMessage* message = new CMessageInsertAction(action, m_id, pEffect->m_sourceID);
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+    } else if (pEffect->m_effectID == CGAMEEFFECT_SUMMON) {
+        ITEM_EFFECT effect;
+        CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_SKILLUNSUMMON);
+
+        // NOTE: Original reads duration type 4 from a constant at 0x8491B0.
+        effect.durationType = 4;
+        effect.duration = (pEffect->m_duration - g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime) / 15;
+        effect.effectAmount = 1;
+
+        CGameEffect* pNewEffect = CGameEffect::DecodeEffect(&effect,
+            CPoint(-1, -1),
+            -1,
+            CPoint(-1, -1));
+
+        CPoint ptGrid(pEffect->m_target.x / CPathSearch::GRID_SQUARE_SIZEX,
+            pEffect->m_target.y / CPathSearch::GRID_SQUARE_SIZEY);
+
+        CCreatureFile creatureData;
+
+        // NOTE: Uninline.
+        creatureData.SetResRef(pEffect->m_res, TRUE, TRUE);
+
+        CGameSprite* pSprite = new CGameSprite(creatureData.GetData(),
+            creatureData.GetDataSize(),
+            0,
+            0,
+            -1,
+            0,
+            0,
+            0x7FFFFFFF,
+            CPoint(-1, -1),
+            0);
+
+        pSprite->SetResRef(creatureData.GetResRef().GetResRefStr());
+        creatureData.ReleaseData();
+
+        if (pSprite != NULL) {
+            LONG nSpriteId = pSprite->GetId();
+
+            CString sResRef;
+            pEffect->m_res.CopyToString(sResRef);
+            pSprite->SetResRef(sResRef);
+
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(nSpriteId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+            if (rc == CGameObjectArray::SUCCESS) {
+                CPoint ptOpen = m_pArea->m_search.GetNearestOpenSquare(ptGrid,
+                    GetTerrainTable(),
+                    pSprite->m_animation.GetPersonalSpace(),
+                    -1);
+
+                pSprite->AddToArea(m_pArea,
+                    CPoint(ptOpen.x * CPathSearch::GRID_SQUARE_SIZEX, ptOpen.y * CPathSearch::GRID_SQUARE_SIZEY),
+                    0,
+                    pSprite->m_animation.GetListType());
+
+                nSpriteId = pSprite->GetId();
+
+                CProjectile* pProjectile = CProjectile::DecodeProjectile(144, pSprite, FALSE);
+
+                CMessage* message = new CMessageFireProjectile(pProjectile->m_projectileType,
+                    nSpriteId,
+                    CPoint(0, 0),
+                    30,
+                    nSpriteId,
+                    nSpriteId,
+                    0);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                pProjectile->Fire(m_pArea, nSpriteId, nSpriteId, CPoint(0, 0), 0, 0);
+
+                // NOTE: Unused.
+                CAIObjectType typeAI(pSprite->GetAIType());
+                CAIObjectType liveTypeAI(pSprite->m_liveTypeAI);
+                CAIObjectType liveTypeAI2(pSprite->m_liveTypeAI);
+
+                // NOTE: Original reads the permanent duration type from a
+                // constant at 0x8491AA.
+                if (pEffect->m_durationType != 1) {
+                    pNewEffect->m_casterLevel = pEffect->m_casterLevel;
+                    pSprite->AddEffect(pNewEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
+                }
+                // NOTE: Otherwise `pNewEffect` leaks.
+
+                pSprite->SetSequence(CGameSprite::SEQ_AWAKE);
+                pSprite->SetFacing(rand() % 16);
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(nSpriteId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+            }
+        }
+    }
+
+    if (pEffect != NULL) {
+        delete pEffect;
+    }
 }
 
 // 0x4CE180
