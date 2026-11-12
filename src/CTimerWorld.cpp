@@ -4,6 +4,9 @@
 #include "CGameArea.h"
 #include "CInfGame.h"
 #include "CScreenWorld.h"
+#include "CStrRes.h"
+#include "CTlkTable.h"
+#include "CUtil.h"
 
 // 0x8E078C
 const CString CTimerWorld::TOKEN_MINUTE("MINUTE");
@@ -244,7 +247,125 @@ void CTimerWorld::CheckForTriggerEventPast()
 // 0x54F1D0
 void CTimerWorld::GetCurrentTimeString(ULONG nFromTime, STRREF strTimeFormat, CString& sTime)
 {
-    // TODO: Incomplete.
+    STR_RES strRes;
+    CString sTemp;
+    CString sDuration;
+    CString sDurationNoAnd;
+
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+    const C2DArray& tMonths = pGame->m_ruleTables.m_tMonths;
+
+    DWORD dwMonthsPerYear = 0;
+    DWORD dwDaysPerYear = 0;
+    while (TRUE) {
+        sTemp.Format("%d", dwMonthsPerYear);
+        DWORD dwDays = atol(tMonths.GetAt(CRuleTables::DAYS, sTemp));
+        if (!(dwDays > 0)) {
+            break;
+        }
+        dwDaysPerYear += dwDays;
+        dwMonthsPerYear++;
+    }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CTimerWorld.cpp
+    // __LINE__: 503
+    UTIL_ASSERT(dwMonthsPerYear > 0);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CTimerWorld.cpp
+    // __LINE__: 504
+    UTIL_ASSERT(dwDaysPerYear > 0);
+
+    const C2DArray& tYears = pGame->m_ruleTables.m_tYears;
+    DWORD nStartYear = atol(tYears.GetAt(CRuleTables::VALUE, CRuleTables::STARTYEAR));
+    DWORD nStartTime = atol(tYears.GetAt(CRuleTables::VALUE, CRuleTables::STARTTIME)) * 15;
+    DWORD nNormalDayMonthFormat = atol(tYears.GetAt(CRuleTables::VALUE, CRuleTables::NORMALDAYMONTHFORMAT));
+    DWORD nSpecialDayMonthFormat = atol(tYears.GetAt(CRuleTables::VALUE, CRuleTables::SPECIALDAYMONTHFORMAT));
+
+    ULONG nTime = nStartTime + nFromTime;
+    BYTE nHour = static_cast<BYTE>(nTime % TIMESCALE_MSEC_PER_DAY / TIMESCALE_MSEC_PER_SEC / TIMESCALE_SEC_PER_MIN / TIMESCALE_MIN_PER_HOUR);
+    BYTE nMinute = static_cast<BYTE>(nTime % TIMESCALE_MSEC_PER_HOUR / TIMESCALE_MSEC_PER_SEC / TIMESCALE_SEC_PER_MIN);
+    DWORD nMonth = 0;
+    DWORD nDayOfYear = static_cast<WORD>(nTime / TIMESCALE_MSEC_PER_DAY) % dwDaysPerYear;
+    DWORD nDaysInMonth;
+    for (; nMonth < dwMonthsPerYear; nMonth++) {
+        sTemp.Format("%d", nMonth);
+        nDaysInMonth = atol(tMonths.GetAt(CRuleTables::DAYS, sTemp));
+        if (nDayOfYear < nDaysInMonth) {
+            break;
+        }
+        nDayOfYear -= nDaysInMonth;
+    }
+
+    // NOTE: Literal 108000 (`TIMESCALE_MSEC_PER_DAY`) is folded into a
+    // multiplication by the compiler here.
+    DWORD nYear = nTime / 108000 / dwDaysPerYear + nStartYear;
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CTimerWorld.cpp
+    // __LINE__: 543
+    UTIL_ASSERT(nMonth < dwMonthsPerYear);
+
+    CTlkTable& tlkTable = g_pBaldurChitin->GetTlkTable();
+
+    sTemp.Format("%d", nMinute);
+    tlkTable.SetToken(TOKEN_MINUTE, sTemp);
+
+    sTemp.Format("%d", nHour);
+    tlkTable.SetToken(TOKEN_HOUR, sTemp);
+
+    sTemp.Format("%d", nDayOfYear + 1);
+    tlkTable.SetToken(TOKEN_DAY, sTemp);
+
+    sTemp.Format("%d", nMonth + 1);
+    tlkTable.SetToken(TOKEN_MONTH, sTemp);
+
+    sTemp.Format("%d", nYear);
+    tlkTable.SetToken(TOKEN_YEAR, sTemp);
+
+    sTemp.Format("%d", nMonth);
+    tlkTable.Fetch(atol(tMonths.GetAt(CRuleTables::NAME, sTemp)), strRes);
+    tlkTable.SetToken(TOKEN_MONTHNAME, strRes.szText);
+
+    sTemp.Format("%d", static_cast<WORD>(nFromTime / TIMESCALE_MSEC_PER_DAY));
+    tlkTable.SetToken(TOKEN_GAMEDAY, sTemp);
+
+    sTemp.Format("%d", static_cast<WORD>(nFromTime / TIMESCALE_MSEC_PER_DAY));
+    tlkTable.SetToken(TOKEN_GAMEDAYS, sTemp);
+
+    tlkTable.Fetch(nDaysInMonth == 1 ? nSpecialDayMonthFormat : nNormalDayMonthFormat, strRes);
+    tlkTable.SetToken(TOKEN_DAYANDMONTH, strRes.szText);
+
+    WORD nDays = static_cast<WORD>(nFromTime / TIMESCALE_MSEC_PER_DAY);
+    BYTE nHours = static_cast<BYTE>(nFromTime % TIMESCALE_MSEC_PER_DAY / TIMESCALE_MSEC_PER_SEC / TIMESCALE_SEC_PER_MIN / TIMESCALE_MIN_PER_HOUR);
+
+    if (nDays > 1) {
+        tlkTable.Fetch(0x29C9, strRes);
+        sDuration += strRes.szText;
+        sDurationNoAnd += strRes.szText;
+    } else if (nDays == 1) {
+        tlkTable.Fetch(0x29CA, strRes);
+        sDuration += strRes.szText;
+        sDurationNoAnd += strRes.szText;
+    }
+
+    if (nDays > 0) {
+        tlkTable.Fetch(0x29CB, strRes);
+        sDuration += " " + strRes.szText + " ";
+        sDurationNoAnd += " ";
+    }
+
+    if (nHours == 1) {
+        tlkTable.Fetch(0x29CD, strRes);
+    } else {
+        tlkTable.Fetch(0x29CC, strRes);
+    }
+    sDuration += strRes.szText;
+    sDurationNoAnd += strRes.szText;
+
+    tlkTable.SetToken(TOKEN_DURATION, sDuration);
+    tlkTable.SetToken(TOKEN_DURATIONNOAND, sDurationNoAnd);
+
+    tlkTable.Fetch(strTimeFormat, strRes);
+    sTime = strRes.szText;
 }
 
 // 0x54F970
