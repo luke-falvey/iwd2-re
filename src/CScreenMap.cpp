@@ -1658,6 +1658,8 @@ BOOL CUIControlButtonMapAreaMap::Render(BOOL bForce)
         if (pPanel != NULL && pPanel->m_bActive == TRUE) {
             pPanel->InvalidateRect(NULL);
         }
+
+        return TRUE;
     }
 
     renderLock.Unlock();
