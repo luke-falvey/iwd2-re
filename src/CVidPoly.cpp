@@ -846,7 +846,7 @@ void CVidPoly::DrawHLineShaded16(void* pSurface, int xMin, int xMax, DWORD dwCol
         pSurface16 += xMin;
 
         for (int x = 0; x < width; x++) {
-            *pSurface16 = static_cast<unsigned short>(pVidMode->FUN_0079ad20(pVidMode->FUN_0079ad90(*pSurface16) >> 2, dwColor & 0xFFFF));
+            *pSurface16 = static_cast<unsigned short>(pVidMode->FUN_0079ad20(dwColor & 0xFFFF, pVidMode->FUN_0079ad90(*pSurface16) >> 2));
             pSurface16++;
         }
     }
@@ -870,7 +870,7 @@ void CVidPoly::DrawHLineShadedMirrored16(void* pSurface, int xMin, int xMax, DWO
         pSurface16 += rSurface.Width() - xMin;
 
         for (int x = 0; x < width; x++) {
-            *pSurface16 = static_cast<unsigned short>(pVidMode->FUN_0079ad20(pVidMode->FUN_0079ad90(*pSurface16) >> 2, dwColor & 0xFFFF));
+            *pSurface16 = static_cast<unsigned short>(pVidMode->FUN_0079ad20(dwColor & 0xFFFF, pVidMode->FUN_0079ad90(*pSurface16) >> 2));
             pSurface16--;
         }
     }
