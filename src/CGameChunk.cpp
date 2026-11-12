@@ -67,7 +67,7 @@ CGameChunk::CGameChunk(USHORT animationID, BYTE* pColors, const CString& sSoundN
 // NOTE: 0x70F750 is the scalar deleting destructor (compiler-generated).
 CGameChunk::~CGameChunk()
 {
-    // TODO: Incomplete.
+    // NOTE: The members and the base class are destroyed implicitly.
 }
 
 // 0x70F800
@@ -131,7 +131,7 @@ CGame85BF7C::CGame85BF7C(USHORT animationID, BYTE* pColors, const CString& sSoun
 // NOTE: 0x70FFE0 is the scalar deleting destructor (compiler-generated).
 CGame85BF7C::~CGame85BF7C()
 {
-    // TODO: Incomplete.
+    // NOTE: The members and the base class are destroyed implicitly.
 }
 
 // 0x710090
@@ -402,7 +402,17 @@ CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const C
 // NOTE: 0x711C90 is the scalar deleting destructor (compiler-generated).
 CGame85BFE8::~CGame85BFE8()
 {
-    // TODO: Incomplete.
+    if (field_194 != NULL) {
+        delete[] field_194;
+    }
+
+    if (field_1A0 != NULL) {
+        delete[] field_1A0;
+    }
+
+    if (field_1A4 != NULL) {
+        delete[] field_1A4;
+    }
 }
 
 // 0x711D90
