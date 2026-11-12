@@ -482,3 +482,9 @@
 
 # Catch handler (compiler-generated funclet) of CDimm::WriteFile (0x789090): CFile::Close, LeaveCriticalSection(&field_344), _chdir(path), epilogue.
 0x7891E1
+
+# Compiler-generated default constructor of CMovieSubtitleEntry (stores the empty CString): used by new[] in 0x428AD0.
+0x428F70
+
+# Compiler-generated destructor of CMovieSubtitleEntry (CString dtor at +4): used by delete[] in 0x43F900.
+0x428F80
