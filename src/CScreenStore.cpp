@@ -1,6 +1,7 @@
 #include "CScreenStore.h"
 
 #include "CBaldurChitin.h"
+#include "CGameEffect.h"
 #include "CGameSprite.h"
 #include "CIcon.h"
 #include "CInfCursor.h"
@@ -5486,8 +5487,106 @@ void CScreenStore::SetChatEditBoxStatus(const CString& sChatText, BOOL bInputCap
 // 0x67E560
 BOOL CScreenStore::sub_67E560(SHORT nPortraitNum, const CResRef& cResSpell)
 {
-    // TODO: Incomplete.
-    return FALSE;
+    CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStore.cpp
+    // __LINE__: 9165
+    UTIL_ASSERT(pGame != NULL);
+
+    BOOL bResult = FALSE;
+
+    // NOTE: Uninline.
+    LONG nCharacterId = pGame->GetCharacterId(nPortraitNum);
+
+    CGameSprite* pSprite;
+    BYTE rc;
+    do {
+        rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+            CGameObjectArray::THREAD_ASYNCH,
+            reinterpret_cast<CGameObject**>(&pSprite),
+            INFINITE);
+    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+    if (rc != CGameObjectArray::SUCCESS) {
+        return FALSE;
+    }
+
+    DWORD dwState = pSprite->m_derivedStats.m_generalState;
+
+    if (cResSpell == "SPPR101"
+        || cResSpell == "SPPR103") {
+        bResult = (~dwState >> 11) & 1;
+    } else if (cResSpell == "SPPR303") {
+        if ((dwState & 0x800) == 0) {
+            POSITION pos = pSprite->m_timedEffectList.GetHeadPosition();
+            while (pos != NULL) {
+                CGameEffect* pEffect = pSprite->m_timedEffectList.GetNext(pos);
+                // NOTE: Byte test on `m_effectAmount2`.
+                if ((static_cast<BYTE>(pEffect->m_effectAmount2) & 1) != 0) {
+                    bResult = TRUE;
+                    goto done;
+                }
+            }
+
+            pos = pSprite->m_equipedEffectList.GetHeadPosition();
+            while (pos != NULL) {
+                CGameEffect* pEffect = pSprite->m_equipedEffectList.GetNext(pos);
+                // NOTE: Byte test on `m_effectAmount2`.
+                if ((static_cast<BYTE>(pEffect->m_effectAmount2) & 1) != 0) {
+                    bResult = TRUE;
+                    goto done;
+                }
+            }
+        }
+    } else if (cResSpell == "SPPR307") {
+        if ((dwState & 0x800) == 0) {
+            for (int nSlot = 0; nSlot < CGameSpriteEquipment::NUM_SLOT; nSlot++) {
+                CItem* pItem = pSprite->m_equipment.m_items[nSlot];
+                if (pItem != NULL) {
+                    if ((pItem->GetFlagsFile() & 0x10) != 0) {
+                        bResult = TRUE;
+                        break;
+                    }
+                }
+            }
+        }
+    } else if (cResSpell == "SPPR308") {
+        if ((dwState & 0x800) == 0 && (dwState & 0x8) != 0) {
+            bResult = TRUE;
+        }
+    } else if (cResSpell == "SPPR214"
+        || cResSpell == "SPPR401"
+        || cResSpell == "SPWI407") {
+        bResult = (~dwState >> 11) & 1;
+    } else if (cResSpell == "SPPR314") {
+        if ((dwState & 0x800) == 0 && (dwState & 0x80000) != 0) {
+            bResult = TRUE;
+        }
+    } else if (cResSpell == "SPPR404") {
+        if ((dwState & 0x800) == 0 && (dwState & 0x4000) != 0) {
+            bResult = TRUE;
+        }
+    } else if (cResSpell == "SPPR212") {
+        if ((dwState & 0x800) == 0 && (dwState & 0x4000) != 0) {
+            bResult = TRUE;
+        }
+    } else if (cResSpell == "SPPR504") {
+        bResult = dwState & 0x800;
+        if (pSprite->m_liveTypeAI.m_nRace == 2) {
+            bResult = FALSE;
+        }
+    } else if (cResSpell == "SPPR712") {
+        bResult = dwState & 0x800;
+    } else {
+        bResult = (~dwState >> 11) & 1;
+    }
+
+done:
+    pGame->GetObjectArray()->ReleaseShare(nCharacterId,
+        CGameObjectArray::THREAD_ASYNCH,
+        INFINITE);
+
+    return bResult;
 }
 
 // 0x67E870
