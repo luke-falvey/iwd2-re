@@ -416,3 +416,7 @@
 # CProjectileArea84F14C scalar deleting destructor (compiler generated): calls
 # ~CProjectileArea84F14C (0x56E580), then operator delete when the flag is set.
 0x56E260
+
+# CGameAnimationType84EEB8 scalar deleting destructor (compiler generated): calls
+# ~CGameAnimationType84EEB8 (0x55D2E0), then operator delete when the flag is set.
+0x55D2C0
