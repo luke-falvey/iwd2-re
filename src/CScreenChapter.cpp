@@ -5,6 +5,7 @@
 #include "CGameJournal.h"
 #include "CInfCursor.h"
 #include "CInfGame.h"
+#include "CMessage.h"
 #include "CScreenConnection.h"
 #include "CScreenMovies.h"
 #include "CScreenStart.h"
@@ -564,7 +565,11 @@ void CScreenChapter::OnDoneButtonClick()
 
         if (g_pBaldurChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL
             && g_pBaldurChitin->cNetwork.GetSessionHosting() == TRUE) {
-            // TODO: Incomplete.
+            // NOTE: Uses the second party slot, not the first.
+            CMessage98* pMessage = new CMessage98(g_pBaldurChitin->GetObjectGame()->m_characters[1],
+                g_pBaldurChitin->GetObjectGame()->m_characters[1]);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
+
             Sleep(25);
         }
 

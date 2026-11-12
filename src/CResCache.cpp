@@ -329,7 +329,7 @@ BOOL CResCache::CopyFile(UINT nIndex, const CString& sName, const CString& sSrcF
             g_pChitin->cProgressBar.m_nActionProgress += nBytesRead;
         }
 
-        if (GetTickCount() - nLastDisplayRefreshTime) {
+        if (GetTickCount() - nLastDisplayRefreshTime >= 200) {
             g_pChitin->m_bDisplayStale = TRUE;
             nLastDisplayRefreshTime = GetTickCount();
             SleepEx(10, 0);
@@ -357,7 +357,7 @@ BOOL CResCache::CopyFile(UINT nIndex, const CString& sName, const CString& sSrcF
         return FALSE;
     }
 
-    AddFileToCache(nIndex, CTime::GetTickCount(), nSize);
+    AddFileToCache(nIndex, CTime::GetCurrentTime(), nSize);
 
     return TRUE;
 }

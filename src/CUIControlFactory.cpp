@@ -4385,7 +4385,7 @@ CUIControlButton85C434::CUIControlButton85C434(CUIPanel* panel, UI_CONTROL_BUTTO
     m_nAUCounter = 0;
 }
 
-// 0x77A4D0
+// 0x77A4F0
 CUIControlButton85C434::~CUIControlButton85C434()
 {
 }
@@ -4521,7 +4521,7 @@ void CUIControlButtonContractDialogChatMedium::OnLButtonUp(CPoint pt)
 
 // -----------------------------------------------------------------------------
 
-// 0x77A710
+// 0x77A800
 CUIControlButtonExpandDialogChatSmall::CUIControlButtonExpandDialogChatSmall(CUIPanel* panel, UI_CONTROL_BUTTON* controlInfo)
     : CUIControlButton(panel, controlInfo, LBUTTON, 0)
 {

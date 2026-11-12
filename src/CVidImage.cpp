@@ -616,7 +616,138 @@ BOOL CVidTile::Render(LPDIRECTDRAWSURFACE pSurface, INT x, INT y, CResTile* pRes
     return TRUE;
 }
 
-/// 0x7B22E0
+// 0x7B1F70
+BOOL CVidTile::RenderBlended(LPDIRECTDRAWSURFACE pSurface, INT x, INT y, const CRect& rClip, CResTile* pResBlend, BYTE nBlend, DWORD dwFlags)
+{
+    LONG nDataJump = 0;
+
+    // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidImage.cpp
+    // __LINE__: 6526
+    UTIL_ASSERT(pSurface != NULL);
+
+    if (pRes == NULL) {
+        return FALSE;
+    }
+
+    if (rClip.IsRectEmpty()) {
+        return FALSE;
+    }
+
+    pRes->Demand();
+    pResBlend->Demand();
+
+    BYTE* pData = pRes->GetTileData();
+    BYTE* pBlendData = pResBlend->GetTileData();
+
+    INT nTileSize = pRes->GetTileSize();
+    CSize blitSize(nTileSize, nTileSize);
+
+    CRect rTileRect(x, y, x + nTileSize, y + nTileSize);
+
+    // NOTE: The clipping amounts are 16-bit.
+    SHORT nSkipTop = static_cast<SHORT>(rClip.top - rTileRect.top);
+    if (nSkipTop > 0) {
+        rTileRect.top += nSkipTop;
+        pData += nSkipTop * nTileSize;
+        pBlendData += nSkipTop * nTileSize;
+        blitSize.cy -= nSkipTop;
+    }
+
+    SHORT nSkipBottom = static_cast<SHORT>(rTileRect.bottom - rClip.bottom);
+    if (nSkipBottom > 0) {
+        blitSize.cy -= nSkipBottom;
+        rTileRect.bottom -= nSkipBottom;
+    }
+
+    SHORT nSkipRight = static_cast<SHORT>(rTileRect.right - rClip.right);
+    if (nSkipRight > 0) {
+        blitSize.cx -= nSkipRight;
+        rTileRect.right -= nSkipRight;
+    }
+
+    SHORT nSkipLeft = static_cast<SHORT>(rClip.left - rTileRect.left);
+    if (nSkipLeft > 0) {
+        blitSize.cx -= nSkipLeft;
+        pData += nSkipLeft;
+        pBlendData += nSkipLeft;
+        rTileRect.left += nSkipLeft;
+        nDataJump = nSkipLeft;
+    }
+
+    BOOL bResult;
+
+    if (!rTileRect.IsRectEmpty()) {
+        DDSURFACEDESC ddsd;
+        HRESULT hr;
+
+        do {
+            ddsd.dwSize = sizeof(ddsd);
+            hr = pSurface->Lock(&rTileRect, &ddsd, DDLOCK_WAIT, NULL);
+            if (hr == DDERR_SURFACELOST) {
+                g_pChitin->GetCurrentVideoMode()->RestoreSurfaces();
+            }
+        } while (hr == DDERR_SURFACELOST || hr == DDERR_SURFACEBUSY);
+
+        if (hr != DD_OK) {
+            // NOTE: `pResBlend` is not released.
+            pRes->Release();
+            return FALSE;
+        }
+
+        switch (g_pChitin->cVideo.m_nBpp) {
+        case 16:
+            bResult = BltBlendTile8To16(reinterpret_cast<WORD*>(ddsd.lpSurface),
+                ddsd.lPitch,
+                pData,
+                pBlendData,
+                pResBlend,
+                nBlend,
+                blitSize,
+                nDataJump,
+                dwFlags);
+            break;
+        case 24:
+            bResult = BltBlendTile8To24(reinterpret_cast<BYTE*>(ddsd.lpSurface),
+                ddsd.lPitch,
+                pData,
+                pBlendData,
+                pResBlend,
+                nBlend,
+                blitSize,
+                nDataJump,
+                dwFlags);
+            break;
+        case 32:
+            bResult = BltBlendTile8To32(reinterpret_cast<DWORD*>(ddsd.lpSurface),
+                ddsd.lPitch,
+                pData,
+                pBlendData,
+                pResBlend,
+                nBlend,
+                blitSize,
+                nDataJump,
+                dwFlags);
+            break;
+        default:
+            pSurface->Unlock(ddsd.lpSurface);
+
+            // NOTE: `pResBlend` is not released.
+            pRes->Release();
+            return FALSE;
+        }
+
+        pSurface->Unlock(ddsd.lpSurface);
+    } else {
+        bResult = FALSE;
+    }
+
+    pRes->Release();
+    pResBlend->Release();
+
+    return bResult;
+}
+
+// 0x7B22E0
 BOOL CVidTile::BltTile8To16(WORD* pSurface, LONG lPitch, BYTE* pData, const CSize& blitSize, LONG nDataJump, DWORD dwFlags)
 {
     INT nDataIndex = 0;

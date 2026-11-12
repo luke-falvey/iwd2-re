@@ -1007,6 +1007,7 @@
 0x77A1F0
 0x77A350
 0x77A410
+0x77A4D0 CUIControlButton85C434 scalar deleting destructor: calls ~CUIControlButton85C434 (0x77A4F0)
 0x77A590
 0x77A650
 0x77A740
@@ -2154,3 +2155,31 @@
 0x5AF0ED
 0x564157
 0x650064
+
+# list7_B (batch 108): library code, template instances and emitted copies of
+# inline repo functions.
+0x799F80 CVidMode::GetNumSurfaces (inline accessor in CVidMode.h), emitted copy
+0x55B520 std::_Tree::find of the std::set<DWORD> used by CProjectileHelper84EEA8::sub_55A890 (MSVC 6 STL)
+0x55B590 std::_Tree::iterator::operator++ (_Inc) used by CProjectileHelper84EEA8::sub_55A890 (MSVC 6 STL)
+0x55B900 std::_Tree::find of the std::map<LONG, CPoint> used by CProjectileHelper84EEA8::sub_55A890 (MSVC 6 STL)
+0x55BBC0 std::_Tree::insert of the std::map<LONG, CPoint> used by CProjectileHelper84EEA8::sub_55A890 (MSVC 6 STL)
+0x78C4E0 MFC CTime::operator< (afx.inl inline), emitted copy called by CResCache::AddFileToCache
+0x78C90B fragment of CResCache::CopyFile (0x78C4F0): progress/refresh tail and AddFileToCache path, covered by the repo body
+0x40F940 CResRef::operator==(const CResRef&) (repo CResRef.cpp, NOTE: Inlined), emitted copy
+0x442990 CResHelper<CResCellHeader, 1100>::SetResRef (the repo template in CRes.h)
+0x4EC030 CResHelper<CResItem, 1005>::SetResRef (the repo template in CRes.h)
+0x76C180 _SpawnReleasePointer<CString> (template in CSpawn.cpp)
+0x76C1B0 _SpawnReleasePointer<CSpawnPointVar> (template in CSpawn.cpp)
+0x68BF90 CUIPanel::GetActive (inline in CUIPanel.h), emitted copy
+0x68BFA0 CUIPanel::GetSize (inline in CUIPanel.h), emitted copy
+0x68BFC0 CUIPanel::SetActiveFlag (inline in CUIPanel.h), emitted copy
+0x68BFD0 CUIPanel::OffsetPosFromOriginal (inline in CUIPanel.h), emitted copy
+0x40FA50 CTypedPtrList<CPtrList, T*> constructor (implicit), vtable 0x847D58
+0x40FA90 CTypedPtrList<CPtrList, T*> constructor (implicit), vtable 0x847D64
+0x47A5A0 CTypedPtrList<CPtrList, T*> constructor (implicit), vtable 0x848E00
+0x51D480 CTypedPtrList<CPtrList, T*> constructor (implicit), vtable 0x84D690
+0x403320 CResText::GetText (inline in CResText.h), emitted copy
+0x403530 C2DArray::GetDefault (inline in C2DArray.h), emitted copy
+0x4F4F30 CCreatureFileItem::CCreatureFileItem (inline in FileFormat.h), emitted copy
+0x7A9DA0 MFC CObList::GetNext (afxcoll.inl inline), emitted copy called by CSound::Play
+0x41E160 MFC CString::GetLength (afx.inl inline), emitted copy

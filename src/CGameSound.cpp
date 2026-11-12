@@ -3,6 +3,7 @@
 #include "CBaldurChitin.h"
 #include "CGameArea.h"
 #include "CInfGame.h"
+#include "CTimerWorld.h"
 #include "CUtil.h"
 
 // 0x4C8B10
@@ -24,8 +25,9 @@ CGameSound::CGameSound(CGameArea* pArea, CAreaFileSoundObject* pSoundObject)
 
     m_bLoopPlaying = FALSE;
 
-    // TODO: Some strange call, check.
-    m_timeOfDayActive = m_soundObject.m_timeOfDayActive;
+    m_timeOfDayActive = CUtil::RotateLeft(m_soundObject.m_timeOfDayActive,
+        CTimerWorld::TIMESCALE_HOUR_PER_DAY,
+        1);
 
     if (m_timeOfDayActive == 0x3FFC0) {
         m_timeOfDayActive = 0x3FFF80;

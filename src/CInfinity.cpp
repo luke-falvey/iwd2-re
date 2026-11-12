@@ -295,6 +295,25 @@ BOOL CInfTileSet::RenderToPrimary(LPDIRECTDRAWSURFACE pSurface, INT nTile, INT n
         m_cVidTile.SetAddColor(m_rgbAddColor);
         dwNewFlags |= 0x10000;
         break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\Infinity.cpp
+        // __LINE__: 571
+        UTIL_ASSERT(FALSE);
+
+        m_cVidTile.SetRes(m_pResTiles[nTile]);
+        m_cVidTile.SetAddColor(m_rgbAddColor);
+        m_cVidTile.RenderBlended(pSurface,
+            0,
+            0,
+            rClip,
+            m_pResTiles[nTile]->m_pDualTileRes,
+            a6,
+            0);
+
+        // NOTE: The original shares this tail with the other cases.
+        CVisibilityMap::BltFogOWar(pSurface, tileCode);
+
+        return TRUE;
     }
 
     if (nStencilTile != -1) {

@@ -108,7 +108,8 @@ void CUIManager::fInit(CWarp* pWarp, CResRef cResRef, BOOL bDoubleSize)
     }
 }
 
-// NOTE: Inlined in destructor.
+// 0x4D3D90
+// NOTE: Also inlined in destructor.
 void CUIManager::fUninit()
 {
     if (m_bInitialized) {

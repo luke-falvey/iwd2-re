@@ -167,7 +167,7 @@ void CVidBitmap::SetRes(CResBitmap* pResBmp)
     pRes = pResBmp;
 }
 
-/// 0x7B3190
+// 0x7B3190
 BOOL CVidBitmap::RenderDirect(INT nSurface, INT x, INT y, const CRect& rClip, DWORD dwFlags, BOOLEAN bDemanded)
 {
     if (g_pChitin->cVideo.Is3dAccelerated()) {
