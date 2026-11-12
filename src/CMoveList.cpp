@@ -116,5 +116,51 @@ void CMoveList::CheckLoad(CGameArea* pArea)
 // 0x517300
 void CMoveList::AIUpdate()
 {
-    // TODO: Incomplete.
+    POSITION posCurrent = GetHeadPosition();
+    POSITION pos = posCurrent;
+    while (pos != NULL) {
+        CMoveListEntry* pEntry = GetNext(pos);
+
+        if (pEntry->m_nDelay > 0) {
+            pEntry->m_nDelay--;
+        }
+
+        if (pEntry->m_nDelay <= 0) {
+            RemoveAt(posCurrent);
+
+            CString sAreaName;
+            pEntry->m_areaResRef.CopyToString(sAreaName);
+
+            CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(sAreaName);
+            if (pArea != NULL) {
+                CGameSprite* pSprite;
+
+                BYTE rc;
+                do {
+                    rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(pEntry->m_nSpriteId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        reinterpret_cast<CGameObject**>(&pSprite),
+                        INFINITE);
+                } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
+                if (rc != CGameObjectArray::SUCCESS) {
+                    // NOTE: Original skips updating `posCurrent` here.
+                    continue;
+                }
+
+                pSprite->MoveOntoArea(pArea, pEntry->m_ptDestination, pEntry->m_nFacing);
+
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(pEntry->m_nSpriteId,
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
+
+                delete pEntry;
+            } else {
+                // NOTE: Adds to the game's list rather than `this`.
+                g_pBaldurChitin->GetObjectGame()->m_cMoveList.AddTail(pEntry);
+            }
+        }
+
+        posCurrent = pos;
+    }
 }
