@@ -276,6 +276,7 @@ public:
     static const BYTE MSG_SUBTYPE_MAPWORLD_REQUEST;
     static const BYTE MSG_SUBTYPE_MAPWORLD_CANCEL_REQUEST;
     static const BYTE MSG_SUBTYPE_MAPWORLD_ANNOUNCE;
+    static const BYTE byte_84CF90;
     static const BYTE MSG_SUBTYPE_MAPWORLD_REVEAL_AREA;
 
     static const BYTE MSG_TYPE_MOVIE;
@@ -612,6 +613,7 @@ public:
     SHORT GetCommType() override;
     BYTE GetMsgType() override;
     BYTE GetMsgSubType() override;
+    void MarshalMessage(BYTE** pData, DWORD* dwSize) override;
     BOOL UnmarshalMessage(BYTE* pData, DWORD dwSize) override;
     void Run() override;
 
