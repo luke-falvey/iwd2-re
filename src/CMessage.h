@@ -227,6 +227,8 @@ public:
     static const BYTE MSG_SUBTYPE_OBJECT_CONTROL;
     static const BYTE MSG_SUBTYPE_OBJECT_CONTROL_REQUEST;
     static const BYTE MSG_SUBTYPE_OBJECT_CONTROL_SUGGESTION;
+    static const BYTE MSG_SUBTYPE_OBJECT_DELETE;
+    static const BYTE MSG_SUBTYPE_OBJECT_DELETE_REQUEST;
 
     static const BYTE MSG_TYPE_PLAYERCHAR;
     static const BYTE MSG_SUBTYPE_PLAYERCHAR_UPDATE_DEMAND;
@@ -236,9 +238,16 @@ public:
     static const BYTE MSG_SUBTYPE_PLAYERCHAR_70;
     static const BYTE MSG_SUBTYPE_PLAYERCHAR_102;
 
+    static const BYTE MSG_TYPE_PARTYORDER;
+    static const BYTE MSG_SUBTYPE_PARTYORDER_REQUEST;
+    static const BYTE MSG_SUBTYPE_PARTYORDER_ANNOUNCE;
+
     static const BYTE MSG_TYPE_PAUSING;
     static const BYTE MSG_SUBTYPE_PAUSING_PERMIT_REQUEST;
     static const BYTE MSG_SUBTYPE_PAUSING_ANNOUNCE;
+
+    static const BYTE MSG_TYPE_REFORMPARTY;
+    static const BYTE MSG_SUBTYPE_REFORMPARTY_ANNOUNCE;
 
     static const BYTE MSG_TYPE_RESOURCE;
     static const BYTE MSG_SUBTYPE_RESOURCE_DEMAND;
@@ -261,6 +270,20 @@ public:
 
     static const BYTE MSG_TYPE_MAPWORLD;
     static const BYTE MSG_SUBTYPE_MAPWORLD_REQUEST;
+    static const BYTE MSG_SUBTYPE_MAPWORLD_CANCEL_REQUEST;
+    static const BYTE MSG_SUBTYPE_MAPWORLD_ANNOUNCE;
+    static const BYTE MSG_SUBTYPE_MAPWORLD_REVEAL_AREA;
+
+    static const BYTE MSG_TYPE_MOVIE;
+    static const BYTE MSG_SUBTYPE_MOVIE_REQUEST;
+    static const BYTE MSG_SUBTYPE_MOVIE_ANNOUNCE;
+
+    static const BYTE MSG_TYPE_TIME;
+    static const BYTE MSG_SUBTYPE_TIME_SYNCH;
+    static const BYTE MSG_SUBTYPE_TIME_CHANGE;
+
+    static const BYTE MSG_TYPE_WEATHER;
+    static const BYTE MSG_SUBTYPE_WEATHER_BROADCAST;
 
     static const BYTE MSG_TYPE_VERSION;
     static const BYTE MSG_SUBTYPE_VERSION_SERVER;
@@ -332,8 +355,10 @@ public:
     BOOLEAN sub_430DC0(LONG nObjectId);
     BOOLEAN SwapItemRequest(BYTE nLocation, LONG nObjectId, SHORT nSlotNum, CItem*& pItem, STRREF& strError, WORD wCount);
     BOOLEAN OnSwapItemRequest(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_431CA0(INT nPlayerNumber, BOOLEAN bResult, CItem* pItem, STRREF strError);
     BOOLEAN OnSwapItemReply(BYTE* pMessage, DWORD dwSize, CItem*& pItem, STRREF& strError);
     BOOLEAN CharacterPartyOrderRequest();
+    BOOLEAN sub_432610();
     BOOLEAN SendChatMessage(CString& sChatMessage);
     BOOLEAN OnChatMessage(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     void SetSignalDefaultSecondsToTimeout();
@@ -369,9 +394,9 @@ public:
     BOOLEAN MovieAnnounceStatus(CResRef cResMovie);
     BOOLEAN SendReformPartyAnnounceStatus();
     BOOLEAN sub_436C00();
-    void WeatherBroadcast(WORD wWeatherFlags);
-    void TimeSynchBroadcast(ULONG nGameTime, BOOLEAN bCompressTime);
-    void TimeChangeToServer(ULONG deltaTime);
+    BOOLEAN WeatherBroadcast(WORD wWeatherFlags);
+    BOOLEAN TimeSynchBroadcast(ULONG nGameTime, BOOLEAN bCompressTime);
+    BOOLEAN TimeChangeToServer(ULONG deltaTime);
     BYTE LeaveAreaLuaRequestToServer(LONG nCharacterId, CPoint ptStart, LONG nFace, CString sArea, CString sParchment);
     BOOLEAN OnLeaveAreaLuaRequestToServer(INT nMsgFrom, BYTE* pByteMessage, DWORD dwSize);
     BOOLEAN OnLeaveAreaNameRequestToServer(INT nMsgFrom, BYTE* pByteMessage, DWORD dwSize);
@@ -441,6 +466,7 @@ public:
     BOOLEAN sub_430BE0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_430D40(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_431020(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
+    BOOLEAN sub_431140(LONG nObjectId);
     BOOLEAN sub_4313E0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_4324E0(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
     BOOLEAN sub_432A10(INT nMsgFrom, BYTE* pMessage, DWORD dwSize);
