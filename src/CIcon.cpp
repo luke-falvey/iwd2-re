@@ -96,13 +96,15 @@ void CIcon::RenderIcon(int a1, const CPoint& pos, const CSize& size, const CRect
                 } while (wRemaining > 0);
             } else if (bForceCount) {
                 // NOTE: Uninline.
-                vcNumber.SetResRef(CResRef("NUMBER"), bDoubleSize, TRUE, TRUE);
+                // NOTE: The original forces double size off here and adds
+                // the offsets unscaled, unlike the other two number paths.
+                vcNumber.SetResRef(CResRef("NUMBER"), FALSE, TRUE, TRUE);
 
                 vcNumber.SequenceSet(0);
                 vcNumber.FrameSet(0);
 
-                x += LAST_DIGIT_OFFSET.x * scale;
-                y += LAST_DIGIT_OFFSET.y * scale;
+                x += LAST_DIGIT_OFFSET.x;
+                y += LAST_DIGIT_OFFSET.y;
 
                 bResult = vcNumber.Render(0, x, y, rClip, NULL, 0, 0, -1);
 

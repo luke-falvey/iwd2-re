@@ -27,7 +27,7 @@ CGameTiledObject::CGameTiledObject(CGameArea* pArea, CAreaFileTiledObject* pTile
     m_objectType = TYPE_TILED_OBJECT;
     m_resID = pTiledObject->m_tileID;
     m_dwFlags = pTiledObject->m_dwFlags;
-    strncpy(reinterpret_cast<char*>(m_scriptRes), pTiledObject->m_scriptName, 32);
+    strncpy(m_scriptRes, pTiledObject->m_scriptName, SCRIPTNAME_SIZE);
 
     POSITION pos = pArea->m_lTiledObjects.AddTail(&m_tiledObject);
     WORD wInitialState = (m_dwFlags & 0x1) != 0
@@ -46,36 +46,37 @@ CGameTiledObject::CGameTiledObject(CGameArea* pArea, CAreaFileTiledObject* pTile
             // __FILE__: C:\Projects\Icewind2\src\Baldur\cgametiledObject.cpp
             // __LINE__: 139
             UTIL_ASSERT(FALSE);
-        }
+            m_nPrimarySearch = 0;
+        } else {
+            // FIXME: Calculated but unused.
+            CRect rBounds(INT_MAX, INT_MAX, 0, 0);
 
-        // FIXME: Calculated but unused.
-        CRect rBounds(INT_MAX, INT_MAX, 0, 0);
+            for (WORD cnt = 0; cnt < m_nPrimarySearch; cnt++) {
+                m_pPrimarySearch[cnt].x = pPoints[pTiledObject->m_primarySearchSquaresStart + cnt].m_xPos;
+                m_pPrimarySearch[cnt].y = pPoints[pTiledObject->m_primarySearchSquaresStart + cnt].m_yPos;
 
-        for (WORD cnt = 0; cnt < m_nPrimarySearch; cnt++) {
-            m_pPrimarySearch[cnt].x = pPoints[pTiledObject->m_primarySearchSquaresStart + cnt].m_xPos;
-            m_pPrimarySearch[cnt].y = pPoints[pTiledObject->m_primarySearchSquaresStart + cnt].m_yPos;
+                if (m_pPrimarySearch[cnt].x < rBounds.left) {
+                    rBounds.left = m_pPrimarySearch[cnt].x;
+                }
 
-            if (m_pPrimarySearch[cnt].x < rBounds.left) {
-                rBounds.left = m_pPrimarySearch[cnt].x;
+                if (m_pPrimarySearch[cnt].x > rBounds.right) {
+                    rBounds.right = m_pPrimarySearch[cnt].x;
+                }
+
+                if (m_pPrimarySearch[cnt].y < rBounds.top) {
+                    rBounds.top = m_pPrimarySearch[cnt].y;
+                }
+
+                if (m_pPrimarySearch[cnt].y > rBounds.bottom) {
+                    rBounds.bottom = m_pPrimarySearch[cnt].y;
+                }
             }
 
-            if (m_pPrimarySearch[cnt].x > rBounds.right) {
-                rBounds.right = m_pPrimarySearch[cnt].x;
+            if ((m_dwFlags & 0x1) == 0) {
+                pArea->m_search.AddDoor(m_pPrimarySearch,
+                    m_nPrimarySearch,
+                    FALSE);
             }
-
-            if (m_pPrimarySearch[cnt].y < rBounds.top) {
-                rBounds.top = m_pPrimarySearch[cnt].y;
-            }
-
-            if (m_pPrimarySearch[cnt].y > rBounds.bottom) {
-                rBounds.bottom = m_pPrimarySearch[cnt].y;
-            }
-        }
-
-        if ((m_dwFlags & 0x1) == 0) {
-            pArea->m_search.AddDoor(m_pPrimarySearch,
-                m_nPrimarySearch,
-                FALSE);
         }
     } else {
         m_pPrimarySearch = NULL;
@@ -89,36 +90,37 @@ CGameTiledObject::CGameTiledObject(CGameArea* pArea, CAreaFileTiledObject* pTile
             // __FILE__: C:\Projects\Icewind2\src\Baldur\cgametiledObject.cpp
             // __LINE__: 173
             UTIL_ASSERT(FALSE);
-        }
+            m_nSecondarySearch = 0;
+        } else {
+            // FIXME: Calculated but unused.
+            CRect rBounds(INT_MAX, INT_MAX, 0, 0);
 
-        // FIXME: Calculated but unused.
-        CRect rBounds(INT_MAX, INT_MAX, 0, 0);
+            for (WORD cnt = 0; cnt < m_nSecondarySearch; cnt++) {
+                m_pSecondarySearch[cnt].x = pPoints[pTiledObject->m_secondarySearchSquaresStart + cnt].m_xPos;
+                m_pSecondarySearch[cnt].y = pPoints[pTiledObject->m_secondarySearchSquaresStart + cnt].m_yPos;
 
-        for (WORD cnt = 0; cnt < m_nSecondarySearch; cnt++) {
-            m_pSecondarySearch[cnt].x = pPoints[pTiledObject->m_secondarySearchSquaresStart + cnt].m_xPos;
-            m_pSecondarySearch[cnt].y = pPoints[pTiledObject->m_secondarySearchSquaresStart + cnt].m_yPos;
+                if (m_pSecondarySearch[cnt].x < rBounds.left) {
+                    rBounds.left = m_pSecondarySearch[cnt].x;
+                }
 
-            if (m_pSecondarySearch[cnt].x < rBounds.left) {
-                rBounds.left = m_pSecondarySearch[cnt].x;
+                if (m_pSecondarySearch[cnt].x > rBounds.right) {
+                    rBounds.right = m_pSecondarySearch[cnt].x;
+                }
+
+                if (m_pSecondarySearch[cnt].y < rBounds.top) {
+                    rBounds.top = m_pSecondarySearch[cnt].y;
+                }
+
+                if (m_pSecondarySearch[cnt].y > rBounds.bottom) {
+                    rBounds.bottom = m_pSecondarySearch[cnt].y;
+                }
             }
 
-            if (m_pSecondarySearch[cnt].x > rBounds.right) {
-                rBounds.right = m_pSecondarySearch[cnt].x;
+            if ((m_dwFlags & 0x1) != 0) {
+                pArea->m_search.AddDoor(m_pSecondarySearch,
+                    m_nSecondarySearch,
+                    FALSE);
             }
-
-            if (m_pSecondarySearch[cnt].y < rBounds.top) {
-                rBounds.top = m_pSecondarySearch[cnt].y;
-            }
-
-            if (m_pSecondarySearch[cnt].y > rBounds.bottom) {
-                rBounds.bottom = m_pSecondarySearch[cnt].y;
-            }
-        }
-
-        if ((m_dwFlags & 0x1) != 0) {
-            pArea->m_search.AddDoor(m_pSecondarySearch,
-                m_nSecondarySearch,
-                FALSE);
         }
     } else {
         m_pSecondarySearch = NULL;
@@ -166,6 +168,7 @@ void CGameTiledObject::RemoveFromArea()
         // __FILE__: C:\Projects\Icewind2\src\Baldur\cgametiledObject.cpp
         // __LINE__: 273
         UTIL_ASSERT(FALSE);
+        return;
     }
 
     delete this;

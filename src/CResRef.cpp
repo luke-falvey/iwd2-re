@@ -225,6 +225,8 @@ CResRef CResRef::operator+=(const CString& sName)
     sResRef += sName;
     sResRef.MakeUpper();
 
+    memset(m_resRef, 0, RESREF_SIZE);
+
     if (sResRef.GetLength() > 0) {
         memcpy(m_resRef, sResRef.GetBuffer(RESREF_SIZE), min(sResRef.GetLength(), RESREF_SIZE));
     }
