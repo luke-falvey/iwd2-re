@@ -98,7 +98,6 @@ CGameAIBase::CGameAIBase()
     m_lSeen.Set(CAIObjectType::NOONE);
     m_lTalkedTo.Set(CAIObjectType::NOONE);
     m_lHeard.Set(CAIObjectType::NOONE);
-    field_306.Set(CAIObjectType::NOONE);
     field_342.Set(CAIObjectType::NOONE);
     field_37E.Set(CAIObjectType::NOONE);
     field_3BA.Set(CAIObjectType::NOONE);
@@ -135,7 +134,7 @@ CGameAIBase::CGameAIBase()
     field_594 = 0;
     field_595 = 1;
     field_596 = 0;
-    m_randValue = rand() & 0x7FFF;
+    m_randValue = rand() % 0x7FFF;
 }
 
 // 0x44D160
@@ -5245,10 +5244,11 @@ void CGameAIBase::ApplyTriggers()
 
             switch (pTrigger->m_triggerID) {
             case CAITRIGGER_ATTACKEDBY:
+                m_lAttackStyle = pTrigger->m_specificID;
                 AutoPause(2);
                 if (!m_lAttacker.Equal(pTrigger->GetCause())
-                    && (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1
-                        || g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pTrigger->GetCause().GetInstance()) != -1)) {
+                    && (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) == -1
+                        || g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(pTrigger->GetCause().GetInstance()) == -1)) {
                     m_lAttacker.Set(pTrigger->GetCause());
                     message = new CMessageSetLastObject(pTrigger->GetCause(),
                         CAITRIGGER_ATTACKEDBY,
@@ -5286,6 +5286,7 @@ void CGameAIBase::ApplyTriggers()
                 break;
             case CAITRIGGER_HITBY:
                 m_lAttackStyle = pTrigger->m_specificID;
+                AutoPause(4);
                 if (!m_lHitter.Equal(pTrigger->GetCause())) {
                     m_lHitter.Set(pTrigger->GetCause());
                     message = new CMessageSetLastObject(pTrigger->GetCause(),
@@ -5324,7 +5325,7 @@ BOOL CGameAIBase::CheckAppropriateTarget(CSpell* pSpell, CGameAIBase* pTarget)
     pSpell->Demand();
     if (pTarget->GetObjectType() != TYPE_SPRITE) {
         pSpell->Release();
-        return FALSE;
+        return TRUE;
     }
 
     SPELL_ABILITY* ability = pSpell->GetAbility(0);
@@ -5350,10 +5351,14 @@ BOOL CGameAIBase::PartyHasItem(const CResRef& resRef)
         LONG nCharacterId = pGame->GetCharacterId(nPortrait);
 
         CGameSprite* pSprite;
-        BYTE rc = pGame->GetObjectArray()->GetShare(nCharacterId,
-            CGameObjectArray::THREAD_ASYNCH,
-            reinterpret_cast<CGameObject**>(&pSprite),
-            INFINITE);
+        BYTE rc;
+        do {
+            rc = pGame->GetObjectArray()->GetShare(nCharacterId,
+                CGameObjectArray::THREAD_ASYNCH,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+
         if (rc != CGameObjectArray::SUCCESS) {
             break;
         }
@@ -5385,6 +5390,7 @@ BOOL CGameAIBase::PartyHasItem(const CResRef& resRef)
 // 0x45E100
 void CGameAIBase::ApplyEffectToParty(CGameEffect* pEffect)
 {
+    // NOTE: The original pEffect is never freed.
     CMessage* message;
     CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
     for (SHORT nPortrait = 0; nPortrait < pGame->GetNumCharacters(); nPortrait++) {
@@ -5400,7 +5406,7 @@ void CGameAIBase::ApplyEffectToParty(CGameEffect* pEffect)
                     pGame->GetObjectArray()->ReleaseShare(nCharacterId,
                         CGameObjectArray::THREAD_ASYNCH,
                         INFINITE);
-                    message = new CMessageAddEffect(pEffect, m_id, nCharacterId);
+                    message = new CMessageAddEffect(pEffect->Copy(), m_id, nCharacterId);
                     g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
                 } else {
                     pGame->GetObjectArray()->ReleaseShare(nCharacterId,
@@ -5409,7 +5415,7 @@ void CGameAIBase::ApplyEffectToParty(CGameEffect* pEffect)
                 }
             }
         } else {
-            message = new CMessageAddEffect(pEffect, m_id, nCharacterId);
+            message = new CMessageAddEffect(pEffect->Copy(), m_id, nCharacterId);
             g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
         }
     }
@@ -5476,7 +5482,7 @@ SHORT CGameAIBase::MoveView(CPoint dest, int speed)
             field_594 = TRUE;
         }
 
-        if (x != dest.x && y != dest.y) {
+        if (x != dest.x || y != dest.y) {
             return ACTION_NORMAL;
         }
 
@@ -5508,16 +5514,18 @@ SHORT CGameAIBase::MoveViewPoint()
         dest.x = 0;
     }
 
-    if (dest.x > GetArea()->GetInfinity()->nAreaX) {
-        dest.x = GetArea()->GetInfinity()->nAreaX;
+    // NOTE: The exe clamps against the sign-extended low word.
+    if (dest.x > static_cast<SHORT>(GetArea()->GetInfinity()->nAreaX)) {
+        dest.x = static_cast<SHORT>(GetArea()->GetInfinity()->nAreaX);
     }
 
     if (dest.y < 0) {
         dest.y = 0;
     }
 
-    if (dest.y > GetArea()->GetInfinity()->nAreaY) {
-        dest.y = GetArea()->GetInfinity()->nAreaY;
+    // NOTE: The exe clamps against the sign-extended low word.
+    if (dest.y > static_cast<SHORT>(GetArea()->GetInfinity()->nAreaY)) {
+        dest.y = static_cast<SHORT>(GetArea()->GetInfinity()->nAreaY);
     }
 
     SHORT speed = static_cast<SHORT>(m_curAction.m_specificID);
@@ -5534,7 +5542,7 @@ SHORT CGameAIBase::MoveViewObject(CGameObject* target)
 
     CPoint dest(target->GetPos());
 
-    CRect viewPort(target->GetArea()->GetInfinity()->rViewPort);
+    CRect viewPort(GetArea()->GetInfinity()->rViewPort);
     dest.x -= viewPort.Width() / 2;
     dest.y -= viewPort.Height() / 2;
 
@@ -5777,7 +5785,7 @@ SHORT CGameAIBase::DoubleClickRButtonObject(CGameObject* target)
     }
 
     // NOTE: Uninline.
-    return DoubleClickLButton(dest);
+    return DoubleClickRButton(dest);
 }
 
 // 0x45FD20
@@ -6015,18 +6023,20 @@ SHORT CGameAIBase::DisplayString(CGameAIBase* sprite)
     strRes.szText.TrimLeft();
 
     if (sprite->m_typeAI.GetEnemyAlly() == CAIObjectType::EA_PC) {
-        if (strRes.cSound.m_nLooping == 0) {
-            strRes.cSound.SetFireForget(TRUE);
-        }
+        if (strRes.cSound.pRes != NULL) {
+            if (strRes.cSound.m_nLooping == 0) {
+                strRes.cSound.SetFireForget(TRUE);
+            }
 
-        if (sprite->GetObjectType() == TYPE_SPRITE) {
-            strRes.cSound.SetChannel(static_cast<CGameSprite*>(sprite)->GetChannel(),
-                reinterpret_cast<DWORD>(m_pArea));
-        } else {
-            strRes.cSound.SetChannel(14, reinterpret_cast<DWORD>(m_pArea));
-        }
+            if (sprite->GetObjectType() == TYPE_SPRITE) {
+                strRes.cSound.SetChannel(static_cast<CGameSprite*>(sprite)->GetChannel(),
+                    reinterpret_cast<DWORD>(m_pArea));
+            } else {
+                strRes.cSound.SetChannel(14, reinterpret_cast<DWORD>(m_pArea));
+            }
 
-        strRes.cSound.Play(m_pos.x, m_pos.y, 0, FALSE);
+            strRes.cSound.Play(FALSE);
+        }
 
         if (strRes.szText != "") {
             g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(name,
@@ -6457,7 +6467,7 @@ SHORT CGameAIBase::sub_467970()
 // 0x4679E0
 SHORT CGameAIBase::SpawnPtActivate(CGameSpawning* target)
 {
-    if (target != NULL) {
+    if (target == NULL) {
         return ACTION_ERROR;
     }
 
@@ -6478,7 +6488,7 @@ SHORT CGameAIBase::SpawnPtActivate(CGameSpawning* target)
 // 0x467A80
 SHORT CGameAIBase::SpawnPtDeactivate(CGameSpawning* target)
 {
-    if (target != NULL) {
+    if (target == NULL) {
         return ACTION_ERROR;
     }
 
@@ -6499,7 +6509,7 @@ SHORT CGameAIBase::SpawnPtDeactivate(CGameSpawning* target)
 // 0x467B10
 SHORT CGameAIBase::SpawnPtSpawn(CGameSpawning* target)
 {
-    if (target != NULL) {
+    if (target == NULL) {
         return ACTION_ERROR;
     }
 
@@ -6520,7 +6530,7 @@ SHORT CGameAIBase::SpawnPtSpawn(CGameSpawning* target)
 // 0x467BB0
 SHORT CGameAIBase::StaticStart(CGameStatic* target, BOOL bStart)
 {
-    if (target != NULL) {
+    if (target == NULL) {
         return ACTION_ERROR;
     }
 
@@ -6533,6 +6543,7 @@ SHORT CGameAIBase::StaticStart(CGameStatic* target, BOOL bStart)
         CMessageStaticStart* pMessage = new CMessageStaticStart(bStart,
             m_id,
             target->GetId());
+        g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
     }
 
     return ACTION_DONE;
