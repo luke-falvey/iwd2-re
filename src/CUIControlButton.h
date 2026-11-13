@@ -51,7 +51,7 @@ public:
     /* 063E */ int field_63E;
     /* 0642 */ int field_642;
     /* 0646 */ BOOL m_bEnabled; // #guess
-    /* 064A */ int m_nTextLines;
+    /* 064A */ BYTE m_nTextLines;
     /* 064C */ int field_64C;
     /* 0650 */ BOOL m_bValid; // #guess
     /* 0654 */ short field_654;

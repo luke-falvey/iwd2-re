@@ -37,8 +37,10 @@ CUIControlButton::CUIControlButton(CUIPanel* panel, UI_CONTROL_BUTTON* controlIn
     field_139 = 0;
     m_nTextFlags = controlInfo->nTextFlags;
     if (m_pPanel->m_pManager->m_bDoubleSize) {
-        field_658 = ((2 * controlInfo->xHigh) << 8) | (2 * controlInfo->xLow);
-        field_65C = ((2 * controlInfo->yHigh) << 8) | (2 * controlInfo->yLow);
+        // NOTE: Each byte is doubled in an 8-bit register, so it wraps at
+        // 256.
+        field_658 = (static_cast<BYTE>(2 * controlInfo->xHigh) << 8) | static_cast<BYTE>(2 * controlInfo->xLow);
+        field_65C = (static_cast<BYTE>(2 * controlInfo->yHigh) << 8) | static_cast<BYTE>(2 * controlInfo->yLow);
     } else {
         field_658 = (controlInfo->xHigh << 8) | controlInfo->xLow;
         field_65C = (controlInfo->yHigh << 8) | controlInfo->yLow;
@@ -328,7 +330,7 @@ BOOL CUIControlButton::Render(BOOL bForce)
             if ((m_nTextFlags & 0x4) != 0) {
                 pt.y += field_65C;
             } else if ((m_nTextFlags & 0x8) != 0) {
-                pt.y += field_65C - nFontHeight + m_nTextLines;
+                pt.y += field_65C - nFontHeight * m_nTextLines;
             } else {
                 pt.y += field_65C - nFontHeight * m_nTextLines / 2;
             }
@@ -344,7 +346,7 @@ BOOL CUIControlButton::Render(BOOL bForce)
             }
         }
 
-        for (int nLine = 0; nLine < m_nTextLines; nLine++) {
+        for (SHORT nLine = 0; nLine < m_nTextLines; nLine++) {
             int x;
             if ((m_nTextFlags & 0x10) != 0) {
                 if ((m_nTextFlags & 0x1) != 0) {
@@ -360,11 +362,17 @@ BOOL CUIControlButton::Render(BOOL bForce)
                 if ((m_nTextFlags & 0x1) != 0) {
                     x = pt.x + dword_8AB9B4 * (m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1);
                 } else if ((m_nTextFlags & 0x2) != 0) {
-                    // FIXME: Calculating string width twice.
-                    x = pt.x + max(m_size.cx - m_cVidFont.GetStringLength(m_pText[nLine], TRUE), 0);
+                    // NOTE: `max` macro, the string width is calculated twice
+                    // when the margin is not larger.
+                    x = pt.x + max(dword_8AB9B4 * (m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1),
+                                   m_size.cx
+                                       - dword_8AB9B4 * (m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1)
+                                       - m_cVidFont.GetStringLength(m_pText[nLine], TRUE));
                 } else {
-                    // FIXME: Calculating string width twice.
-                    x = pt.x + max(m_size.cx - m_cVidFont.GetStringLength(m_pText[nLine], TRUE), 0) / 2;
+                    // NOTE: `max` macro, the string width is calculated twice
+                    // when the margin is not larger.
+                    x = pt.x + max(dword_8AB9B4 * (m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1),
+                                   (m_size.cx - m_cVidFont.GetStringLength(m_pText[nLine], TRUE)) / 2);
                 }
             }
 
@@ -378,6 +386,8 @@ BOOL CUIControlButton::Render(BOOL bForce)
 
             pt.y += nFontHeight;
         }
+
+        m_cVidFont.pRes->Release();
     }
 
     pVidInf->BKUnlock();
