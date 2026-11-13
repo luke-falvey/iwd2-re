@@ -879,10 +879,13 @@ void* CDimm::InternalDemand(CRes* pRes)
 
     if ((pRes->dwFlags & CRes::Flags::RES_FLAG_0x04) != 0
         && pRes != field_CE
-        && (pRes->dwFlags & CRes::Flags::RES_FLAG_0x10) != 0) {
+        && (pRes->dwFlags & CRes::Flags::RES_FLAG_0x10) == 0) {
         if (pRes != NULL) {
             if ((pRes->dwFlags & (CRes::Flags::RES_FLAG_0x20 | CRes::Flags::RES_FLAG_0x40)) == 0) {
                 pRes->dwFlags |= CRes::Flags::RES_FLAG_0x20;
+                pRes->OnResourceServiced();
+                pRes->dwFlags &= ~CRes::Flags::RES_FLAG_0x20;
+                pRes->dwFlags |= CRes::Flags::RES_FLAG_0x40;
             }
         }
 
@@ -933,7 +936,7 @@ void* CDimm::InternalDemand(CRes* pRes)
             if ((pRes->dwFlags & CRes::Flags::RES_FLAG_0x04) != 0
                 && (pRes->dwFlags & (CRes::Flags::RES_FLAG_0x20 | CRes::Flags::RES_FLAG_0x40)) == 0) {
                 pRes->dwFlags |= CRes::Flags::RES_FLAG_0x20;
-                pRes->OnResourceFreed();
+                pRes->OnResourceServiced();
                 pRes->dwFlags &= ~CRes::Flags::RES_FLAG_0x20;
                 pRes->dwFlags |= CRes::Flags::RES_FLAG_0x40;
             }
@@ -990,7 +993,7 @@ void CDimm::DestroyKeyTable()
             m_ppResFiles[k] = NULL;
         }
 
-        delete m_ppResFiles;
+        free(m_ppResFiles);
         m_ppResFiles = NULL;
         m_nResFiles = 0;
     }
@@ -1014,7 +1017,7 @@ BOOL CDimm::DirectoryCopyFiles(const CString& sSource, const CString& sDest)
         sResolvedDest = sDest;
     }
 
-    if (!WriteSetUp(sResolvedDest + "foo.bar", sTemp)) {
+    if (!WriteSetUp(sDest + "foo.bar", sTemp)) {
         return FALSE;
     }
 
@@ -1177,7 +1180,7 @@ BOOL CDimm::CompressDirectory(const CString& sTempDir, const CString& sSaveDir)
         if ((findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) {
             DWORD nFileNameLength = strlen(findFileData.cFileName) + 1;
             sFileName = findFileData.cFileName;
-            if (sMainSaveFileName != findFileData.cFileName
+            if (sMainSaveFileName.CompareNoCase(findFileData.cFileName) != 0
                 && strnicmp(findFileData.cFileName, "ICEWIND2.GAM", 10) != 0
                 && strnicmp(sFileName.Right(3), "BMP", 3) != 0
                 && strnicmp(findFileData.cFileName, "WORLDMAP.WMP", 12) != 0
@@ -1260,7 +1263,7 @@ BOOL CDimm::CompressDirectory(const CString& sTempDir, const CString& sSaveDir)
     do {
         if ((findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) {
             sFileName = findFileData.cFileName;
-            if (sMainSaveFileName != findFileData.cFileName
+            if (sMainSaveFileName.CompareNoCase(findFileData.cFileName) != 0
                 && strnicmp(findFileData.cFileName, "ICEWIND2.GAM", 10) != 0
                 && strnicmp(sFileName.Right(3), "BMP", 3) != 0
                 && strnicmp(findFileData.cFileName, "WORLDMAP.WMP", 12) != 0
@@ -1330,8 +1333,8 @@ BOOL CDimm::UncompressDirectory(const CString& sTempDir, const CString& sSaveDir
     do {
         if ((findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) {
             sFileName = findFileData.cFileName;
-            if (sFileName != sSaveFileName
-                && sFileName != sMainSaveFileName
+            if (sSaveFileName.CompareNoCase(findFileData.cFileName) != 0
+                && sMainSaveFileName.CompareNoCase(findFileData.cFileName) != 0
                 && strnicmp(findFileData.cFileName, "ICEWIND2.GAM", 10) != 0
                 && strnicmp(sFileName.Right(3), "BMP", 3) != 0
                 && strnicmp(findFileData.cFileName, "WORLDMAP.WMP", 12) != 0
@@ -1391,7 +1394,7 @@ BOOL CDimm::UncompressDirectory(const CString& sTempDir, const CString& sSaveDir
                     delete pSrc;
                 }
 
-                nMaxDestSize = max(nDestSize, 65536);
+                nMaxDestSize = max(nDestSize, 0xFFFF);
 
                 pDest = new BYTE[nMaxDestSize];
                 if (pDest == NULL) {
@@ -1735,7 +1738,7 @@ BOOL CDimm::FindFileInDirectoryList(const CString& sDirName, CString& sFileName)
     POSITION pos = m_lDirectories.GetHeadPosition();
     while (pos != NULL) {
         v1 = m_lDirectories.GetAt(pos);
-        if (fileFind.FindFile(sDirName + v1)) {
+        if (fileFind.FindFile(v1 + sDirName)) {
             sFileName = v1;
             return TRUE;
         }
@@ -1895,8 +1898,9 @@ BOOL CDimm::GetResFileName(UINT nIndex, CString& sResFileName, WORD& nDrive, BOO
         }
 
         if (nDriveCandidate != 0) {
-            if (!g_pChitin->lAliases.ResolveFileName(sDrive + "\\" + sFileName, sResolvedFileName)) {
-                sResolvedFileName = sFileName;
+            CString sTemp(sDrive + "\\" + sFileName);
+            if (!g_pChitin->lAliases.ResolveFileName(sTemp, sResolvedFileName)) {
+                sResolvedFileName = sTemp;
             }
 
             if (fileFind.FindFile(sResolvedFileName)) {
@@ -1941,6 +1945,10 @@ BOOL CDimm::GetResFileName(UINT nIndex, CString& sResFileName, WORD& nDrive, BOO
             case 16:
                 sDrive = "cd3:";
                 break;
+            default:
+                // __FILE__: C:\Projects\Icewind2\src\chitin\ChDimm.cpp
+                // __LINE__: 3478
+                UTIL_ASSERT(FALSE);
             }
         }
     }
@@ -2112,7 +2120,8 @@ DWORD CDimm::LocalGetResourceSize(CRes* pRes)
         return 0;
     }
 
-    pRes->GetResRef().CopyToString(sBaseName);
+    // NOTE: Uninline.
+    pRes->m_pDimmKeyTableEntry->resRef.CopyToString(sBaseName);
     g_pChitin->TranslateType(pRes->m_pDimmKeyTableEntry->nResType, sExtension);
     GetElementInDirectoryList(~pRes->GetID() >> 20, sFilePath);
 
@@ -2393,7 +2402,9 @@ void CDimm::ReduceFreedList(UINT a2)
                 if (pRes->field_40 == 0) {
                     if (pRes->OnResourceFreed()) {
                         Dump(pRes, 1, 0);
-                        delete pRes;
+                        // NOTE: Bare `free`, as in `ReduceServicedList`: the
+                        // destructor is not run.
+                        free(pRes);
                     } else {
                         Dump(pRes, 0, 0);
                     }
@@ -2568,7 +2579,7 @@ BOOL CDimm::RemoveFromDirectoryList(const CString& sDirName, BOOL bRescan)
         }
     }
 
-    return FALSE;
+    return TRUE;
 }
 
 // #binary-identical
@@ -2789,6 +2800,7 @@ BOOL CDimm::ServiceFromFile(CRes* pRes, CString a3)
 
     UINT nSize = static_cast<UINT>(cFile.GetLength());
     if (nSize <= 0) {
+        cFile.Close();
         return FALSE;
     }
 
@@ -2832,9 +2844,8 @@ void CDimm::ServiceRequest(CRes* pRes, DWORD nBytesToRead)
 
         if (field_274 != NULL) {
             RESID nResID = pRes->GetID();
-            if ((nResID >> 20) >= m_nResFiles
-                && ((nResID & 0xFFF00000) < 0xFC000000
-                    || (pRes->dwFlags & (CRes::Flags::RES_FLAG_0x04 | CRes::Flags::RES_FLAG_0x10)) != 0)) {
+            if (((nResID >> 20) >= m_nResFiles && (nResID & 0xFFF00000) < 0xFC000000)
+                || (pRes->dwFlags & (CRes::Flags::RES_FLAG_0x04 | CRes::Flags::RES_FLAG_0x10)) != 0) {
                 pRes->dwFlags &= ~CRes::Flags::RES_FLAG_0x10;
                 field_274 = NULL;
             } else {
@@ -2899,19 +2910,13 @@ void CDimm::ServiceRequest(CRes* pRes, DWORD nBytesToRead)
                                     if (field_CE == pRes || field_CE == NULL) {
                                         field_CE = pRes;
                                         field_D2 = nBytesRead;
-                                    } else {
-                                        UINT nMoreBytesRead = (nResID & 0xFFF00000) < 0xFC000000
-                                            ? m_ppResFiles[nResID >> 20]->ReadResource(nResID, pRes->m_pData, pRes->nSize - nBytesRead, 0)
-                                            : LocalReadResource(pRes, pRes->nSize - nBytesRead, 0);
-                                        pRes->dwFlags &= ~CRes::Flags::RES_FLAG_0x10;
-                                        pRes->dwFlags |= CRes::Flags::RES_FLAG_0x04;
                                     }
                                 } else {
                                     if (field_CE == pRes || field_CE == NULL) {
-                                        field_CE = NULL;
-                                        field_D2 = nBytesRead;
                                         pRes->dwFlags &= ~CRes::Flags::RES_FLAG_0x10;
                                         pRes->dwFlags |= CRes::Flags::RES_FLAG_0x04;
+                                        field_CE = NULL;
+                                        field_D2 = pRes->nSize;
                                     }
                                 }
                             }
@@ -2933,7 +2938,7 @@ void CDimm::ServiceRequest(CRes* pRes, DWORD nBytesToRead)
             if (field_274 != NULL) {
                 if ((pRes->dwFlags & CRes::Flags::RES_FLAG_0x04) != 0) {
                     if (pRes->m_pData != NULL) {
-                        if (pRes->m_pCurrentList == &m_lRequestedLow
+                        if (pRes->m_pCurrentList == &m_lRequestedHigh
                             || pRes->m_pCurrentList == &m_lRequestedMedium
                             || pRes->m_pCurrentList == &m_lRequestedLow) {
                             if (pRes->m_pCurrentListPos != NULL && pRes->m_pCurrentList != NULL) {
@@ -2982,9 +2987,8 @@ void CDimm::ServiceRequest(CRes* pRes)
         }
 
         RESID nResID = pRes->GetID();
-        if ((nResID >> 20) >= m_nResFiles
-            && ((nResID & 0xFFF00000) < 0xFC000000
-                || (pRes->dwFlags & (CRes::Flags::RES_FLAG_0x04 | CRes::Flags::RES_FLAG_0x10)) != 0)) {
+        if (((nResID >> 20) >= m_nResFiles && (nResID & 0xFFF00000) < 0xFC000000)
+            || (pRes->dwFlags & (CRes::Flags::RES_FLAG_0x04 | CRes::Flags::RES_FLAG_0x10)) != 0) {
             if ((pRes->dwFlags & CRes::Flags::RES_FLAG_0x10) != 0) {
                 // __FILE__: C:\Projects\Icewind2\src\chitin\ChDimm.cpp
                 // __LINE__: 6079
@@ -3050,13 +3054,14 @@ void CDimm::ServiceRequest(CRes* pRes)
             } else {
                 if (field_CE == pRes || field_CE == NULL) {
                     field_CE = NULL;
-                    field_D2 = nBytesRead;
+                    field_D2 = pRes->nSize;
                     pRes->dwFlags &= ~CRes::Flags::RES_FLAG_0x10;
                     pRes->dwFlags |= CRes::Flags::RES_FLAG_0x04;
                 }
             }
         }
         LeaveCriticalSection(&(g_pChitin->field_32C));
+        field_270 = NULL;
     } else {
         if (pRes->m_pCurrentList == &m_lRequestedHigh
             || pRes->m_pCurrentList == &m_lRequestedMedium
@@ -3066,7 +3071,7 @@ void CDimm::ServiceRequest(CRes* pRes)
             if (field_270 != NULL) {
                 if ((pRes->dwFlags & CRes::Flags::RES_FLAG_0x04) != 0) {
                     if (pRes->m_pData != NULL) {
-                        if (pRes->m_pCurrentList == &m_lRequestedLow
+                        if (pRes->m_pCurrentList == &m_lRequestedHigh
                             || pRes->m_pCurrentList == &m_lRequestedMedium
                             || pRes->m_pCurrentList == &m_lRequestedLow) {
                             if (pRes->m_pCurrentListPos != NULL && pRes->m_pCurrentList != NULL) {
@@ -3411,7 +3416,9 @@ BOOL CDimm::WriteSetUp(const CString& sFileName, CString& sResolvedFileName)
     CString sTemp;
 
     char path[MAX_PATH];
-    _getcwd(path, MAX_PATH);
+    if (_getcwd(path, MAX_PATH) == NULL) {
+        return FALSE;
+    }
 
     if (!g_pChitin->lAliases.ResolveFileName(sFileName, sResolvedFileNameTemp)) {
         sResolvedFileNameTemp = sFileName;
@@ -3468,6 +3475,10 @@ BOOL CDimm::Alloc(CRes* pRes, DWORD nSize)
         // __LINE__: 7095
         UTIL_ASSERT_MSG(pRes != NULL, "Attempting to free invalid resource.");
 
+        // NOTE: The original uses `operator delete` here and `operator new`
+        // below. Kept as `free`/`malloc` because `m_pData` is still released
+        // with `free` and allocated with `malloc` elsewhere in the repo
+        // (`CRes::Demand`, `ServiceFromFile`, `CScreenLoad`, `CScreenSave`).
         free(pRes->m_pData);
         pRes->m_pData = NULL;
         field_DA -= pRes->nSize;
