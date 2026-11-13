@@ -1021,7 +1021,7 @@ LONG CDerivedStats::GetAtOffset(SHORT offset)
     case STAT_SAVEWILL:
         return m_nSaveVSWill;
     case STAT_KNOWLEDGEARCANA:
-        return static_cast<signed char>(m_nSkills[8]);
+        return m_nSkills[8];
     case STAT_RESISTFIRE:
         return m_nResistFire;
     case STAT_RESISTCOLD:
@@ -1045,15 +1045,15 @@ LONG CDerivedStats::GetAtOffset(SHORT offset)
     case STAT_RESISTMISSILE:
         return m_nResistMissile;
     case STAT_ALCHEMY:
-        return static_cast<signed char>(m_nSkills[0]);
+        return m_nSkills[0];
     case STAT_LOCKPICKING:
-        return static_cast<signed char>(m_nSkills[10]);
+        return m_nSkills[10];
     case STAT_MOVESILENTLY:
-        return static_cast<signed char>(m_nSkills[9]);
+        return m_nSkills[9];
     case STAT_TRAPS:
-        return static_cast<signed char>(m_nSkills[12]);
+        return m_nSkills[12];
     case STAT_PICKPOCKET:
-        return static_cast<signed char>(m_nSkills[11]);
+        return m_nSkills[11];
     case STAT_FATIGUE:
         return m_nFatigue;
     case STAT_INTOXICATION:
@@ -1061,7 +1061,7 @@ LONG CDerivedStats::GetAtOffset(SHORT offset)
     case STAT_LUCK:
         return m_nLuck;
     case STAT_TRACKING:
-        return static_cast<signed char>(m_nSkills[15]);
+        return m_nSkills[15];
     case STAT_LEVEL:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CDerivedStats.cpp
         // __LINE__: 1397
@@ -1171,7 +1171,7 @@ LONG CDerivedStats::GetAtOffset(SHORT offset)
     case STAT_KIT:
         return m_nSpecialization;
     case STAT_HIDEINSHADOWS:
-        return static_cast<signed char>(m_nSkills[6]);
+        return m_nSkills[6];
     case STAT_MOVESILENTLYMTPBONUS:
         return m_nMoveSilentlyMTPBonus;
     case STAT_HIDEINSHADOWSMTPBONUS:
@@ -1179,7 +1179,7 @@ LONG CDerivedStats::GetAtOffset(SHORT offset)
     case STAT_SUBRACE:
         return m_nSubRace;
     case STAT_USEMAGICDEVICE:
-        return static_cast<signed char>(m_nSkills[14]);
+        return m_nSkills[14];
     case STAT_CLASSLEVELSUM:
         return m_nLevel;
     case STAT_CLASSLEVELBARBARIAN:
