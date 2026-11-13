@@ -306,8 +306,9 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
             m_vidFont.RegisterFont();
             m_vidFont.SetColor(RGB(255, 255, 255), RGB(0, 0, 0), FALSE);
 
+            // NOTE: Unlike the other two fonts, `m_initialsFont` is not
+            // registered here.
             m_initialsFont.SetResRef(CResRef("INITIALS"), g_pBaldurChitin->field_4A28, FALSE);
-            m_initialsFont.RegisterFont();
 
             m_parchmentFont.SetResRef(CResRef("INFOFONT"), g_pBaldurChitin->field_4A28, FALSE);
             m_parchmentFont.RegisterFont();
@@ -382,7 +383,7 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
                 m_nCurrentHint = 0;
             }
 
-            sOutputString.Format("%d", m_nCurrentHint);
+            sOutputString.Format("%d", m_nCurrentHint + 1);
             WritePrivateProfileStringA("Game Options",
                 "Current Loading Hint",
                 sOutputString,
@@ -408,8 +409,8 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
             m_skullAnimating.GetRes()->Release();
             m_vidFont.GetRes()->Release();
             m_vidFont.Unload();
+            // NOTE: `m_initialsFont` is released but not unloaded.
             m_initialsFont.GetRes()->Release();
-            m_initialsFont.Unload();
             m_parchmentFont.GetRes()->Release();
             m_parchmentFont.Unload();
             m_mosMinibarSkull.GetRes()->Release();
@@ -475,6 +476,10 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
                 }
             }
         }
+
+        // NOTE: This path returns without setting `dword_8D0BA8`.
+        renderLock.Unlock();
+        return;
     } else {
         if (bDisplayMinibars == TRUE) {
             m_nScreensDrawn = 0;
@@ -595,7 +600,8 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
                     if (pVidInf->BKLock(clipRect)) {
                         CString sTemp;
                         g_pBaldurChitin->GetTlkTable().Fetch(m_nParchmentCaption, strRes);
-                        sTemp = strRes.szText;
+                        // NOTE: The text is used as the format string.
+                        sTemp.Format(strRes.szText);
                         pVidInf->BKTextOut(&m_vidFont,
                             sTemp,
                             PARCHMENT_TEXT_START_X - m_vidFont.GetStringLength(sTemp, TRUE) / 2,
@@ -638,30 +644,31 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
                             clipRect.bottom = CVideo::SCREENHEIGHT;
 
                             g_pBaldurChitin->GetTlkTable().Fetch(13980, strRes);
-                            sTemp = strRes.szText;
+                            // NOTE: The text is used as the format string.
+                            sTemp.Format(strRes.szText);
                             pVidInf->BKTextOut(&m_vidFont,
                                 sTemp,
-                                PROGRESSBAR_TIMEOUT_CENTER_X - m_vidFont.GetStringLength(sTemp, TRUE) / 2,
+                                PROGRESSBAR_TIMEOUT_CENTER_X - (m_vidFont.GetStringLength(sTemp, TRUE) >> 1),
                                 PROGRESSBAR_TIMEOUT_START1_Y,
                                 clipRect,
                                 0,
                                 TRUE);
 
                             g_pBaldurChitin->GetTlkTable().Fetch(11794, strRes);
-                            sTemp = strRes.szText;
+                            // NOTE: The text is used as the format string.
+                            sTemp.Format(strRes.szText);
                             pVidInf->BKTextOut(&m_vidFont,
                                 sTemp,
-                                PROGRESSBAR_TIMEOUT_CENTER_X - m_vidFont.GetStringLength(sTemp, TRUE) / 2,
+                                PROGRESSBAR_TIMEOUT_CENTER_X - (m_vidFont.GetStringLength(sTemp, TRUE) >> 1),
                                 PROGRESSBAR_TIMEOUT_START2_Y,
                                 clipRect,
                                 0,
                                 TRUE);
 
                             sTemp.Format("%d", nSecondsToTimeout);
-                            sTemp = strRes.szText;
                             pVidInf->BKTextOut(&m_vidFont,
                                 sTemp,
-                                PROGRESSBAR_TIMEOUT_CENTER_X - m_vidFont.GetStringLength(sTemp, TRUE) / 2,
+                                PROGRESSBAR_TIMEOUT_CENTER_X - (m_vidFont.GetStringLength(sTemp, TRUE) >> 1),
                                 PROGRESSBAR_TIMEOUT_START3_Y,
                                 clipRect,
                                 0,
@@ -671,9 +678,11 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
                         }
                     }
 
-                    for (SHORT nColumn = 0; nColumn < 2; nColumn++) {
-                        for (SHORT nRow = 0; nRow < 3; nRow++) {
-                            SHORT nPlayerIndex = nColumn * 2 + nRow;
+                    // NOTE: One running player counter covers both columns
+                    // (0-2, then 3-5); the outer loop ends on it.
+                    SHORT nPlayerIndex = 0;
+                    for (INT nColumn = 0; nPlayerIndex < 6; nColumn++) {
+                        for (INT nRow = 0; nRow < 3; nRow++, nPlayerIndex++) {
                             CString sPlayerName;
                             BOOLEAN bWaitingArea;
                             LONG nWaitReason;
@@ -684,7 +693,9 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
 
                             if (g_pChitin->cNetwork.GetPlayerID(nPlayerIndex) != 0) {
                                 g_pChitin->cNetwork.GetPlayerName(nPlayerIndex, sPlayerName);
-                                if (g_pChitin->cNetwork.m_nLocalPlayer == nPlayerIndex) {
+                                // NOTE: Only the low byte of `m_nLocalPlayer`
+                                // is compared.
+                                if (static_cast<BYTE>(g_pChitin->cNetwork.m_nLocalPlayer) == nPlayerIndex) {
                                     bWaitingArea = bWaiting;
                                     nCopied = nBytesCopied;
                                     nToCopy = nTotalBytes;
@@ -794,10 +805,13 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
                                 clipRect.right = CVideo::SCREENWIDTH;
                                 clipRect.bottom = CVideo::SCREENHEIGHT;
 
-                                if (pVidInf->BKLock(clipRect)) {
-                                    clipRect.left = x + nStartX + MINIBAR_NAME_START_X;
-                                    clipRect.right = clipRect.left + MINIBAR_NAME_SIZE_X;
+                                // NOTE: The name clip is set whether or not
+                                // the lock succeeds.
+                                BOOL bLocked = pVidInf->BKLock(clipRect);
+                                clipRect.left = x + nStartX + MINIBAR_NAME_START_X;
+                                clipRect.right = x + nStartX + MINIBAR_NAME_SIZE_X + MINIBAR_NAME_START_X;
 
+                                if (bLocked) {
                                     pVidInf->BKTextOut(&m_vidFont,
                                         sPlayerName,
                                         clipRect.left,
@@ -838,7 +852,7 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
                         mosaicRect.right = mosSize.cx;
                         mosaicRect.bottom = mosSize.cy;
 
-                        if (static_cast<float>(nBytesCopied) / static_cast<float>(nTotalBytes) >= 0.99f) {
+                        if (static_cast<float>(nBytesCopied) / static_cast<float>(nTotalBytes) >= 0.99) {
                             m_mosProgressBarSkullHighlighted.Render(CVIDINF_SURFACE_BACK,
                                 x + PROGRESSBAR_SKULL_START_X,
                                 y + PROGRESSBAR_SKULL_START_Y,
@@ -899,10 +913,11 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
                             CString sTemp;
 
                             g_pBaldurChitin->GetTlkTable().Fetch(nWaitingReason, strRes);
-                            sTemp = strRes.szText;
+                            // NOTE: The text is used as the format string.
+                            sTemp.Format(strRes.szText);
                             pVidInf->BKTextOut(&m_vidFont,
                                 sTemp,
-                                UPDATE_TEXT_X - m_vidFont.GetStringLength(sTemp, TRUE) / 2,
+                                UPDATE_TEXT_X - (m_vidFont.GetStringLength(sTemp, TRUE) >> 1),
                                 UPDATE_TEXT_Y,
                                 clipRect,
                                 0,
@@ -944,7 +959,7 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
                                 FALSE,
                                 TRUE,
                                 FALSE,
-                                -1);
+                                0xFFFF);
                             if (nLines > 1) {
                                 nLines = CUtil::SplitString(&m_vidFont,
                                     sOutputString,
@@ -963,15 +978,15 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
                                 nFontHeight = m_vidFont.GetFontHeight(TRUE);
                                 pVidInf->BKTextOut(&m_vidFont,
                                     sStrings[0],
-                                    UPDATE_TEXT_X - m_vidFont.GetStringLength(sStrings[0], TRUE) / 2,
-                                    UPDATE_TEXT_Y - nFontHeight,
+                                    UPDATE_TEXT_X - (m_vidFont.GetStringLength(sStrings[0], TRUE) >> 1),
+                                    UPDATE_TEXT_Y - (nFontHeight >> 1),
                                     clipRect,
                                     0,
                                     TRUE);
                                 pVidInf->BKTextOut(&m_vidFont,
                                     sStrings[1],
-                                    UPDATE_TEXT_X - m_vidFont.GetStringLength(sStrings[1], TRUE) / 2,
-                                    UPDATE_TEXT_Y + nFontHeight,
+                                    UPDATE_TEXT_X - (m_vidFont.GetStringLength(sStrings[1], TRUE) >> 1),
+                                    UPDATE_TEXT_Y + (nFontHeight >> 1),
                                     clipRect,
                                     0,
                                     TRUE);
@@ -980,21 +995,21 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
                                 nFontHeight = m_vidFont.GetFontHeight(TRUE);
                                 pVidInf->BKTextOut(&m_vidFont,
                                     sStrings[0],
-                                    UPDATE_TEXT_X - m_vidFont.GetStringLength(sStrings[0], TRUE) / 2,
+                                    UPDATE_TEXT_X - (m_vidFont.GetStringLength(sStrings[0], TRUE) >> 1),
                                     UPDATE_TEXT_Y - nFontHeight,
                                     clipRect,
                                     0,
                                     TRUE);
                                 pVidInf->BKTextOut(&m_vidFont,
                                     sStrings[1],
-                                    UPDATE_TEXT_X - m_vidFont.GetStringLength(sStrings[1], TRUE) / 2,
+                                    UPDATE_TEXT_X - (m_vidFont.GetStringLength(sStrings[1], TRUE) >> 1),
                                     UPDATE_TEXT_Y,
                                     clipRect,
                                     0,
                                     TRUE);
                                 pVidInf->BKTextOut(&m_vidFont,
                                     sStrings[2],
-                                    UPDATE_TEXT_X - m_vidFont.GetStringLength(sStrings[2], TRUE) / 2,
+                                    UPDATE_TEXT_X - (m_vidFont.GetStringLength(sStrings[2], TRUE) >> 1),
                                     UPDATE_TEXT_Y + nFontHeight,
                                     clipRect,
                                     0,
@@ -1004,31 +1019,31 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
                                 nFontHeight = m_vidFont.GetFontHeight(TRUE);
                                 pVidInf->BKTextOut(&m_vidFont,
                                     sStrings[0],
-                                    UPDATE_TEXT_X - m_vidFont.GetStringLength(sStrings[0], TRUE) / 2,
+                                    UPDATE_TEXT_X - (m_vidFont.GetStringLength(sStrings[0], TRUE) >> 1),
                                     UPDATE_TEXT_Y - 3 * nFontHeight / 2,
                                     clipRect,
                                     0,
                                     TRUE);
                                 pVidInf->BKTextOut(&m_vidFont,
                                     sStrings[1],
-                                    UPDATE_TEXT_X - m_vidFont.GetStringLength(sStrings[1], TRUE) / 2,
+                                    UPDATE_TEXT_X - (m_vidFont.GetStringLength(sStrings[1], TRUE) >> 1),
                                     UPDATE_TEXT_Y - nFontHeight / 2,
                                     clipRect,
                                     0,
                                     TRUE);
                                 pVidInf->BKTextOut(&m_vidFont,
                                     sStrings[2],
-                                    UPDATE_TEXT_X - m_vidFont.GetStringLength(sStrings[2], TRUE) / 2,
-                                    UPDATE_TEXT_Y + nFontHeight,
+                                    UPDATE_TEXT_X - (m_vidFont.GetStringLength(sStrings[2], TRUE) >> 1),
+                                    UPDATE_TEXT_Y + nFontHeight / 2,
                                     clipRect,
                                     0,
                                     TRUE);
-                                // FIXME: Where is line 4?
+                                // NOTE: The fourth line is never drawn.
                                 break;
                             default:
                                 pVidInf->BKTextOut(&m_vidFont,
                                     sStrings[0],
-                                    UPDATE_TEXT_X - m_vidFont.GetStringLength(sStrings[0], TRUE) / 2,
+                                    UPDATE_TEXT_X - (m_vidFont.GetStringLength(sStrings[0], TRUE) >> 1),
                                     UPDATE_TEXT_Y,
                                     clipRect,
                                     0,
@@ -1038,6 +1053,11 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
                         }
 
                         pVidInf->BKUnlock();
+                    } else {
+                        // NOTE: Returns without an explicit unlock and without
+                        // setting `dword_8D0BA8`.
+                        pVidInf->Flip(FALSE);
+                        return;
                     }
                 }
 
