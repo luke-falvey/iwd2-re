@@ -302,16 +302,18 @@ void CScreenConnection::EngineActivated()
         DWORD dwBytesPerSector;
         DWORD dwNumberOfFreeClusters;
         DWORD dwTotalNumberOfClusters;
-        if (GetDiskFreeSpaceA(NULL, &dwSectorsPerCluster, &dwBytesPerSector, &dwNumberOfFreeClusters, &dwTotalNumberOfClusters)) {
-            if (dwNumberOfFreeClusters * dwSectorsPerCluster < CBaldurChitin::MINIMUM_DRIVE_SECTORS
-                || dwNumberOfFreeClusters * dwSectorsPerCluster < CBaldurChitin::MINIMUM_DRIVE_SPACE / dwBytesPerSector
-                || !g_pBaldurChitin->cDimm.cResCache.IsCacheSpaceAvailable()) {
-                g_pBaldurChitin->m_dwCloseConfirmationStrId = 10248;
-                g_pBaldurChitin->m_dwCloseConfirmationFlags = 0x10;
-                PostMessageA(g_pBaldurChitin->cWnd.GetSafeHwnd(), WM_CLOSE, 0, 0);
-                field_FA8 = FALSE;
-                return;
-            }
+        // NOTE: A failed GetDiskFreeSpaceA is treated as low disk space.
+        // The 32-bit product of free clusters and sectors per cluster is
+        // the exe's own arithmetic.
+        if (GetDiskFreeSpaceA(NULL, &dwSectorsPerCluster, &dwBytesPerSector, &dwNumberOfFreeClusters, &dwTotalNumberOfClusters) != TRUE
+            || dwNumberOfFreeClusters * dwSectorsPerCluster < CBaldurChitin::MINIMUM_DRIVE_SECTORS
+            || dwNumberOfFreeClusters * dwSectorsPerCluster < CBaldurChitin::MINIMUM_DRIVE_SPACE / dwBytesPerSector
+            || !g_pBaldurChitin->cDimm.cResCache.IsCacheSpaceAvailable()) {
+            g_pBaldurChitin->m_dwCloseConfirmationStrId = 10248;
+            g_pBaldurChitin->m_dwCloseConfirmationFlags = 0x10;
+            PostMessageA(g_pBaldurChitin->cWnd.GetSafeHwnd(), WM_CLOSE, 0, 0);
+            field_FA8 = FALSE;
+            return;
         }
     }
 
@@ -923,7 +925,7 @@ void CScreenConnection::EnablePopupPanel(DWORD dwPanelId, BOOL bEnable)
     // __LINE__: 1718
     UTIL_ASSERT(pPanel != NULL);
 
-    pPanel->SetEnabled(dwPanelId);
+    pPanel->SetEnabled(bEnable);
 }
 
 // NOTE: Inlined.
@@ -1341,7 +1343,7 @@ void CScreenConnection::QuickLoadGame()
         pGame->SetupCharacters(FALSE);
 
         for (INT nSlot = 0; nSlot < 6; nSlot++) {
-            if (pGame->GetCharacterId(nSlot) == CGameObjectArray::INVALID_INDEX) {
+            if (pGame->GetCharacterSlot(nSlot) == CGameObjectArray::INVALID_INDEX) {
                 pGame->GetMultiplayerSettings()->SignalCharacterStatus(nSlot,
                     CMultiplayerSettings::CHARSTATUS_SIGNAL_DELETED,
                     TRUE,
@@ -1405,7 +1407,7 @@ void CScreenConnection::OnNewGameButtonClick()
     pEdit = static_cast<CUIControlEdit*>(pPanel->GetControl(1));
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
-    // __LINE__: 2389
+    // __LINE__: 2395
     UTIL_ASSERT(pEdit != NULL);
 
     sPlayerName = pEdit->GetText();
@@ -1906,7 +1908,7 @@ void CScreenConnection::OnDoneButtonClick()
 
         WritePrivateProfileStringA("Multiplayer",
             "Player Name",
-            sPassword,
+            sPlayerName,
             g_pBaldurChitin->GetIniFileName());
 
         pNetwork->EnumeratePlayers(FALSE);
@@ -1967,7 +1969,7 @@ void CScreenConnection::OnDoneButtonClick()
         DismissPopup();
 
         m_nErrorState = 4;
-        m_strErrorText = 20273;
+        m_strErrorText = 20274;
         SummonPopup(19);
 
         pVidMode->m_bPointerEnabled = FALSE;
@@ -2120,7 +2122,7 @@ void CScreenConnection::OnJoinGameButtonClick()
     CNetwork* pNetwork = &(g_pBaldurChitin->cNetwork);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
-    // __LINE__: 3531
+    // __LINE__: 3537
     UTIL_ASSERT(GetSessionIndex() != -1);
 
     pNetwork->SelectSession(m_nSessionIndex);
@@ -2316,7 +2318,7 @@ void CScreenConnection::UpdateMainPanel()
     pButton = static_cast<CUIControlButton*>(pPanel->GetControl(7));
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
-    // __LINE__: 3931
+    // __LINE__: 3924
     UTIL_ASSERT(pButton != NULL);
 
     pButton->SetEnabled(g_pChitin->cNetwork.m_bServiceProviderEnumerated && !g_pChitin->m_bStartUpConnect);
@@ -2417,9 +2419,12 @@ void CScreenConnection::UpdateProtocolPanel()
         pButton3->SetEnabled(FALSE);
     }
 
-    for (INT nServiceProviderNumber = 0; nServiceProviderNumber < g_pBaldurChitin->cNetwork.m_nTotalServiceProviders; nServiceProviderNumber++) {
+    CNetwork* pNetwork = &(g_pBaldurChitin->cNetwork);
+    INT nTotalServiceProviders = pNetwork->m_nTotalServiceProviders;
+
+    for (INT nServiceProviderNumber = 0; nServiceProviderNumber < nTotalServiceProviders; nServiceProviderNumber++) {
         INT nServiceProviderType;
-        g_pBaldurChitin->cNetwork.GetServiceProviderType(nServiceProviderNumber, nServiceProviderType);
+        pNetwork->GetServiceProviderType(nServiceProviderNumber, nServiceProviderType);
 
         if (nServiceProviderType == CNetwork::SERV_PROV_IPX) {
             nButtonID = 0;
@@ -2443,7 +2448,9 @@ void CScreenConnection::UpdateProtocolPanel()
         // __LINE__: 4110
         UTIL_ASSERT(pButton3 != NULL);
 
-        pButton3->SetEnabled(TRUE);
+        if (nButtonID != 2 || pNetwork->m_nTotalModemAddresses != 0) {
+            pButton3->SetEnabled(TRUE);
+        }
     }
 
     pButton = static_cast<CUIControlButton*>(pPanel->GetControl(10));
@@ -2469,14 +2476,23 @@ void CScreenConnection::UpdateProtocolPanel()
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
         // __LINE__: 4142
         UTIL_ASSERT(FALSE);
+
+        // NOTE: Leaves nSelectedButtonID unset. The exe loads it from the
+        // stack slot GetServiceProviderType wrote in the loop above.
+        break;
     case 4:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
         // __LINE__: 4148
         UTIL_ASSERT(FALSE);
+
+        // NOTE: Leaves nSelectedButtonID unset, as in case 3.
+        break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
         // __LINE__: 4152
         UTIL_ASSERT(FALSE);
+        nSelectedButtonID = -1;
+        break;
     }
 
     for (nButtonID = 0; nButtonID < 2; nButtonID++) {
@@ -2545,6 +2561,8 @@ void CScreenConnection::UpdateSerialPanel()
             // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
             // __LINE__: 8232
             UTIL_ASSERT(FALSE);
+            nNewSerialPort = 0;
+            break;
         }
 
         pPort->SetSelected(nOldSerialPort != nNewSerialPort);
@@ -2587,6 +2605,8 @@ void CScreenConnection::UpdateSerialPanel()
             // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
             // __LINE__: 8368
             UTIL_ASSERT(FALSE);
+            nNewSerialBaudRate = 0;
+            break;
         }
 
         pBaud->SetSelected(nOldSerialBaudRate != nNewSerialBaudRate);
@@ -2766,7 +2786,7 @@ void CScreenConnection::UpdatePasswordPanel()
     CUIControlButton* pDone = static_cast<CUIControlButton*>(pPanel->GetControl(1));
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
-    // __LINE__: 4496
+    // __LINE__: 4499
     UTIL_ASSERT(pDone != NULL);
 
     pDone->SetEnabled(IsDoneButtonClickable());
@@ -2846,7 +2866,7 @@ void CScreenConnection::UpdateMissionPackPanel()
         pButton3 = static_cast<CUIControlButton3State*>(pPanel->GetControl(dwButtonID));
 
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
-        // __LINE__: 45617
+        // __LINE__: 4617
         UTIL_ASSERT(pButton3 != NULL);
 
         pButton3->SetSelected(dwButtonID == dwSelectedButtonID);
@@ -2944,16 +2964,18 @@ void CScreenConnection::ResetSerialPanel()
         "Serial Port",
         1,
         g_pBaldurChitin->GetIniFileName());
+    pNetwork->SetSerialPort(nSerialPort);
     if (pNetwork->m_nSerialPort != nSerialPort) {
-        pNetwork->SetSerialPort(nSerialPort);
+        pNetwork->SetSerialPort(1);
     }
 
     UINT nSerialBaudRate = GetPrivateProfileIntA("Multiplayer",
         "Serial Baud",
         38400,
         g_pBaldurChitin->GetIniFileName());
+    pNetwork->SetSerialBaudRate(nSerialBaudRate);
     if (pNetwork->m_nSerialBaudRate != nSerialBaudRate) {
-        pNetwork->SetSerialBaudRate(nSerialBaudRate);
+        pNetwork->SetSerialBaudRate(38400);
     }
 
     m_nSerialPort = pNetwork->m_nSerialPort;
@@ -3321,8 +3343,12 @@ void CScreenConnection::ResetErrorPanel(CUIPanel* pPanel)
         CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButton + 1));
 
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
-        // __LINE__: 5546
+        // __LINE__: 5545
         UTIL_ASSERT(pButton != NULL);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
+        // __LINE__: 6311
+        UTIL_ASSERT(0 <= nButton && nButton < CSCREENCONNECTION_ERROR_BUTTONS);
 
         pButton->SetText(FetchString(m_strErrorButtonText[nButton]));
     }
@@ -3703,6 +3729,8 @@ void CScreenConnection::HandleJoinCompletion(BYTE nEvent)
     } else if (nEvent == 9) {
         renderLock.Lock(INFINITE);
 
+        m_nSessionIndex = -1;
+
         if (m_bJoinReturnValue) {
             DismissPopup();
             SummonPopup(8);
@@ -3912,6 +3940,7 @@ void CScreenConnection::AutoSelectServiceProvider()
         break;
     }
 
+    INT nProtocol = m_nProtocol;
     if (m_nProtocol != 0) {
         INT nNewProvider = 0;
         switch (m_nProtocol) {
@@ -3980,21 +4009,27 @@ void CScreenConnection::AutoSelectServiceProvider()
             // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
             // __LINE__: 6749
             UTIL_ASSERT(FALSE);
+            return;
         }
 
-        for (INT nIndex = 0; nIndex < pNetwork->m_nTotalServiceProviders; nIndex++) {
-            INT nProvider;
-            pNetwork->GetServiceProviderType(nIndex, nProvider);
-            if (nProvider == nNewProvider) {
-                pNetwork->SelectServiceProvider(nIndex);
+        if (nNewProvider != 0) {
+            INT nTotalServiceProviders = pNetwork->m_nTotalServiceProviders;
+            for (INT nIndex = 0; nIndex < nTotalServiceProviders; nIndex++) {
+                INT nProvider;
+                pNetwork->GetServiceProviderType(nIndex, nProvider);
+                if (nProvider == nNewProvider) {
+                    pNetwork->SelectServiceProvider(nIndex);
 
-                CString sNewLastProtocolUsed;
-                sNewLastProtocolUsed.Format("%d", m_nProtocol);
+                    // NOTE: Formats the protocol read from the INI, not
+                    // m_nProtocol (case 3 can reset that to 0).
+                    CString sNewLastProtocolUsed;
+                    sNewLastProtocolUsed.Format("%d", nProtocol);
 
-                WritePrivateProfileStringA("Multiplayer",
-                    "Last Protocol Used",
-                    sNewLastProtocolUsed,
-                    g_pBaldurChitin->GetIniFileName());
+                    WritePrivateProfileStringA("Multiplayer",
+                        "Last Protocol Used",
+                        sNewLastProtocolUsed,
+                        g_pBaldurChitin->GetIniFileName());
+                }
             }
         }
     }
@@ -4156,7 +4191,8 @@ void CUIControlButtonConnectionGameMode::OnLButtonClick(CPoint pt)
     UTIL_ASSERT(pConnection != NULL);
 
     CUIManager* pManager = pConnection->GetManager();
-    CSingleLock lock(&(pManager->field_36), TRUE);
+    CSingleLock lock(&(pManager->field_36), FALSE);
+    lock.Lock(INFINITE);
     pConnection->SummonPopup(1);
     lock.Unlock();
 }
@@ -4391,7 +4427,8 @@ void CUIControlButtonConnectionJoinGame::OnLButtonClick(CPoint pt)
         pConnection->m_strErrorButtonText[0] = 11973;
         pConnection->SummonPopup(20);
     } else {
-        CSingleLock lock(&(m_pPanel->m_pManager->field_36), TRUE);
+        CSingleLock lock(&(m_pPanel->m_pManager->field_36), FALSE);
+        lock.Lock(INFINITE);
         pConnection->m_nErrorState = 7;
         pConnection->m_strErrorText = 20624;
         pConnection->m_strErrorButtonText[0] = 20625;
@@ -4427,7 +4464,7 @@ void CUIControlTextDisplayConnectionTCPIPSessions::OnItemSelected(LONG lMarker)
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
     // __LINE__: 6795
-    UTIL_ASSERT(pConnection != NULL);
+    UTIL_ASSERT(pPanel != NULL);
 
     pConnection->m_nSessionIndex = lMarker;
 
@@ -4485,7 +4522,7 @@ void CUIControlButtonConnectionPopupCancel::OnLButtonClick(CPoint pt)
     CScreenConnection* pConnection = g_pBaldurChitin->m_pEngineConnection;
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
-    // __LINE__: 7836
+    // __LINE__: 7892
     UTIL_ASSERT(pConnection != NULL);
 
     pConnection->OnCancelButtonClick();
@@ -4511,10 +4548,17 @@ CUIControlButtonConnectionProtocolProtocol::CUIControlButtonConnectionProtocolPr
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
         // __LINE__: 7936
         UTIL_ASSERT(FALSE);
+
+        // NOTE: Leaves strId unset. The exe reads it from the stack slot of
+        // the controlInfo argument.
+        break;
     case 3:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
         // __LINE__: 7942
         UTIL_ASSERT(FALSE);
+
+        // NOTE: Leaves strId unset, as in case 2.
+        break;
     case 10:
         // "Single Player"
         strId = 15413;
@@ -4523,6 +4567,8 @@ CUIControlButtonConnectionProtocolProtocol::CUIControlButtonConnectionProtocolPr
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
         // __LINE__: 7950
         UTIL_ASSERT(FALSE);
+        strId = -1;
+        break;
     }
 
     g_pBaldurChitin->GetTlkTable().Fetch(strId, strRes);
@@ -4623,6 +4669,8 @@ CUIControlButtonConnectionSerialPort::CUIControlButtonConnectionSerialPort(CUIPa
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
         // __LINE__: 8232
         UTIL_ASSERT(FALSE);
+        nPort = 0;
+        break;
     }
 
     char buffer[80];
@@ -4668,6 +4716,8 @@ void CUIControlButtonConnectionSerialPort::OnLButtonClick(CPoint pt)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
         // __LINE__: 8232
         UTIL_ASSERT(FALSE);
+        nPort = 0;
+        break;
     }
 
     pConnection->m_nSerialPort = nPort;
@@ -4711,6 +4761,8 @@ CUIControlButtonConnectionSerialBaudRate::CUIControlButtonConnectionSerialBaudRa
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
         // __LINE__: 8368
         UTIL_ASSERT(FALSE);
+        nBaudRate = 0;
+        break;
     }
 
     char buffer[80];
@@ -4768,6 +4820,8 @@ void CUIControlButtonConnectionSerialBaudRate::OnLButtonClick(CPoint pt)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
         // __LINE__: 8368
         UTIL_ASSERT(FALSE);
+        nBaudRate = 0;
+        break;
     }
 
     pConnection->m_nSerialBaudRate = nBaudRate;
@@ -4861,7 +4915,7 @@ void CUIControlEditConnectionWithDefault::OnKeyDown(SHORT nKey)
     // __LINE__: 8581
     UTIL_ASSERT(pConnection != NULL);
 
-    switch (m_nField) {
+    switch (m_pPanel->m_nID) {
     case 5:
         pConnection->m_nSessionIndex = -1;
         break;
@@ -4998,7 +5052,7 @@ void CUIControlTextDisplayConnection604E90::OnItemSelected(LONG lMarker)
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
     // __LINE__: 5291
-    UTIL_ASSERT(pConnection != NULL);
+    UTIL_ASSERT(pPanel != NULL);
 
     pConnection->m_nSessionIndex = lMarker;
 
@@ -5056,6 +5110,9 @@ CUIControlButtonConnectionLobbyMenu::CUIControlButtonConnectionLobbyMenu(CUIPane
     case 3:
         dwStrId = 13906; // "Exit"
         break;
+    default:
+        dwStrId = -1;
+        break;
     }
 
     SetText(CBaldurEngine::FetchString(dwStrId));
@@ -5111,6 +5168,8 @@ CUIControlButtonConnection6052A0::CUIControlButtonConnection6052A0(CUIPanel* pan
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
         // __LINE__: 9070
         UTIL_ASSERT(FALSE);
+        strId = -1;
+        break;
     }
 
     g_pBaldurChitin->GetTlkTable().Fetch(strId, strRes);
@@ -5140,20 +5199,22 @@ void CUIControlButtonConnection6052A0::OnLButtonClick(CPoint pt)
     switch (m_nID) {
     case 4:
         pConnection->field_FB4 = 1;
+        pConnection->UpdatePopupPanel(m_pPanel->m_nID);
         break;
     case 5:
         pConnection->field_FB4 = 2;
+        pConnection->UpdatePopupPanel(m_pPanel->m_nID);
         break;
     case 6:
         pConnection->field_FB4 = 3;
+        pConnection->UpdatePopupPanel(m_pPanel->m_nID);
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
         // __LINE__: 9130
         UTIL_ASSERT(FALSE);
+        break;
     }
-
-    pConnection->UpdatePopupPanel(m_pPanel->m_nID);
 
     renderLock.Unlock();
 }
@@ -5178,6 +5239,8 @@ CUIControlButtonConnection605570::CUIControlButtonConnection605570(CUIPanel* pan
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenConnection.cpp
         // __LINE__: 9176
         UTIL_ASSERT(FALSE);
+        strId = -1;
+        break;
     }
 
     g_pBaldurChitin->GetTlkTable().Fetch(strId, strRes);

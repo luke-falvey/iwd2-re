@@ -1777,16 +1777,6 @@ CScreenCharacter::m_storedFeats
 CScreenCharacter::m_storedSkills
 CScreenCharacter::m_strErrorButtonText
 CScreenCharacter::m_typeAI
-CScreenConnection::field_FA6
-CScreenConnection::field_FA8
-CScreenConnection::field_FAC
-CScreenConnection::field_FB0
-CScreenConnection::field_FB4
-CScreenConnection::field_FB8
-CScreenConnection::m_bExitProgram
-CScreenConnection::m_bIsNight
-CScreenConnection::m_bPlayEndCredits
-CScreenConnection::m_vcTorch
 CScreenCreateChar::field_14A3
 CScreenCreateChar::field_14A4
 CScreenCreateChar::field_14A8
