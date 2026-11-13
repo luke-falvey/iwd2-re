@@ -448,7 +448,7 @@ CGameAnimationTypeCharacterOld::~CGameAnimationTypeCharacterOld()
 // 0x6D44E0
 BOOL CGameAnimationTypeCharacterOld::NewSupport(USHORT animationID)
 {
-    switch (animationID) {
+    switch (animationID & 0xF00) {
     case 0x000:
         switch (animationID & 0xF) {
         case 0:
@@ -575,7 +575,7 @@ BOOL CGameAnimationTypeCharacterOld::IsMirroring()
 }
 
 // 0x6D3DB0
-BOOLEAN CGameAnimationTypeCharacterOld::GetCurrentSequenceAndFrame(SHORT nSequence, SHORT nFrame)
+BOOLEAN CGameAnimationTypeCharacterOld::GetCurrentSequenceAndFrame(SHORT& nSequence, SHORT& nFrame)
 {
     nSequence = m_currentVidCell->m_nCurrentSequence;
     nFrame = m_currentVidCell->m_nCurrentFrame;
@@ -623,7 +623,7 @@ void CGameAnimationTypeCharacterOld::CalculateFxRect(CRect& rFx, CPoint& ptRefer
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
     // __LINE__: 21467
-    UTIL_ASSERT(m_currentVidCell != NULL && m_currentVidCellBase != NULL);
+    UTIL_ASSERT(m_currentVidCell != NULL);
 
     CPoint charCenter;
     m_currentVidCell->GetCurrentCenterPoint(charCenter, FALSE);
@@ -674,8 +674,7 @@ void CGameAnimationTypeCharacterOld::CalculateFxRect(CRect& rFx, CPoint& ptRefer
     }
 
     if (m_renderHelmet) {
-        if (m_currentVidCellHelmet != NULL
-            && m_currentVidCellHelmet->GetResRef().IsValid()) {
+        if (m_currentVidCellHelmet != NULL) {
             CPoint helmetCenter;
             m_currentVidCellHelmet->GetCurrentCenterPoint(helmetCenter, FALSE);
 
@@ -881,7 +880,7 @@ void CGameAnimationTypeCharacterOld::ChangeDirection(SHORT nDirection)
     }
 
     m_currentVidCellShadow->SequenceSet(8 * m_currentBamSequence + m_currentBamDirection / 2);
-    m_currentVidCell->FrameSet(nFrame);
+    m_currentVidCellShadow->FrameSet(nFrame);
 
     if (m_currentVidCellWeapon != NULL) {
         if (!MIRROR_BAM && m_currentBamDirection > m_extendDirectionTest) {
@@ -891,9 +890,9 @@ void CGameAnimationTypeCharacterOld::ChangeDirection(SHORT nDirection)
         }
 
         if (MIRROR_BAM && m_currentBamDirection > m_extendDirectionTest) {
-            if ((m_currentVidCellWeaponBase == &m_g1VidCellBase
+            if ((m_currentVidCellBase == &m_g1VidCellBase
                     && m_currentBamSequence == 0)
-                || m_currentVidCellWeaponBase == &m_w2VidCellBase) {
+                || m_currentVidCellBase == &m_w2VidCellBase) {
                 nSequence = 8 * m_currentBamSequence + ((16 - m_currentBamDirection) % 16) / 2;
             } else {
                 nSequence = 8 * m_currentBamSequence + ((17 - m_currentBamDirection) % 16) / 2;
@@ -914,9 +913,9 @@ void CGameAnimationTypeCharacterOld::ChangeDirection(SHORT nDirection)
         }
 
         if (MIRROR_BAM && m_currentBamDirection > m_extendDirectionTest) {
-            if ((m_currentVidCellShieldBase == &m_g1VidCellBase
+            if ((m_currentVidCellBase == &m_g1VidCellBase
                     && m_currentBamSequence == 0)
-                || m_currentVidCellShieldBase == &m_w2VidCellBase) {
+                || m_currentVidCellBase == &m_w2VidCellBase) {
                 nSequence = 8 * m_currentBamSequence + ((16 - m_currentBamDirection) % 16) / 2;
             } else {
                 nSequence = 8 * m_currentBamSequence + ((17 - m_currentBamDirection) % 16) / 2;
@@ -937,9 +936,9 @@ void CGameAnimationTypeCharacterOld::ChangeDirection(SHORT nDirection)
         }
 
         if (MIRROR_BAM && m_currentBamDirection > m_extendDirectionTest) {
-            if ((m_currentVidCellHelmetBase == &m_g1VidCellBase
+            if ((m_currentVidCellBase == &m_g1VidCellBase
                     && m_currentBamSequence == 0)
-                || m_currentVidCellHelmetBase == &m_w2VidCellBase) {
+                || m_currentVidCellBase == &m_w2VidCellBase) {
                 nSequence = 8 * m_currentBamSequence + ((16 - m_currentBamDirection) % 16) / 2;
             } else {
                 nSequence = 8 * m_currentBamSequence + ((17 - m_currentBamDirection) % 16) / 2;
@@ -975,9 +974,9 @@ void CGameAnimationTypeCharacterOld::EquipArmor(CHAR armorLevel, BYTE* colorRang
     m_caVidCellBase.SetResRef(CResRef(m_resRef + m_armorCode + "CA"), FALSE, TRUE, TRUE);
 
     if (!MIRROR_BAM) {
-        m_g1VidCellBase.SetResRef(CResRef(m_resRef + m_armorCode + "G1E"), FALSE, TRUE, TRUE);
-        m_w2VidCellBase.SetResRef(CResRef(m_resRef + m_armorCode + "W2E"), FALSE, TRUE, TRUE);
-        m_caVidCellBase.SetResRef(CResRef(m_resRef + m_armorCode + "CAE"), FALSE, TRUE, TRUE);
+        m_g1VidCellExtend.SetResRef(CResRef(m_resRef + m_armorCode + "G1E"), FALSE, TRUE, TRUE);
+        m_w2VidCellExtend.SetResRef(CResRef(m_resRef + m_armorCode + "W2E"), FALSE, TRUE, TRUE);
+        m_caVidCellExtend.SetResRef(CResRef(m_resRef + m_armorCode + "CAE"), FALSE, TRUE, TRUE);
     }
 
     if ((m_weaponCode & 0x4) != 0) {
@@ -1161,9 +1160,9 @@ void CGameAnimationTypeCharacterOld::EquipHelmet(const CString& resRef, BYTE* co
 
         SHORT nSequence;
         if (MIRROR_BAM && m_currentBamDirection > m_extendDirectionTest) {
-            if ((m_currentVidCell == &m_g1VidCellBase
+            if ((m_currentVidCellBase == &m_g1VidCellBase
                     && m_currentBamSequence == 0)
-                || m_currentVidCell == &m_w2VidCellBase) {
+                || m_currentVidCellBase == &m_w2VidCellBase) {
                 nSequence = 8 * m_currentBamSequence + ((16 - m_currentBamDirection) % 16) / 2;
             } else {
                 nSequence = 8 * m_currentBamSequence + ((17 - m_currentBamDirection) % 16) / 2;
@@ -1210,7 +1209,7 @@ void CGameAnimationTypeCharacterOld::EquipShield(const CString& resRef, BYTE* co
 
     if (!resRef.IsEmpty()) {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
-        // __LINE__: 21898
+        // __LINE__: 22037
         UTIL_ASSERT(colorRangeValues != NULL);
 
         if (m_currentVidCellBase == &m_w2VidCellBase) {
@@ -1247,41 +1246,6 @@ void CGameAnimationTypeCharacterOld::EquipShield(const CString& resRef, BYTE* co
             m_a3VidCellShieldBase.SetResRef(CResRef(m_heightCode + m_shieldResRef + "A5"), FALSE, TRUE, TRUE);
             if (!MIRROR_BAM) {
                 m_a3VidCellShieldExtend.SetResRef(CResRef(m_heightCode + m_shieldResRef + "A5E"), FALSE, TRUE, TRUE);
-            }
-        }
-
-        if ((m_weaponCode & 0x20) != 0) {
-            m_a1VidCellShieldBase.SetResRef(CResRef(m_heightCode + m_shieldResRef + "A2"), FALSE, TRUE, TRUE);
-            if (!MIRROR_BAM) {
-                m_a1VidCellShieldExtend.SetResRef(CResRef(m_heightCode + m_shieldResRef + "A2E"), FALSE, TRUE, TRUE);
-            }
-        }
-
-        if ((m_weaponCode & 0x40) != 0) {
-            m_a2VidCellShieldBase.SetResRef(CResRef(m_heightCode + m_shieldResRef + "A4"), FALSE, TRUE, TRUE);
-            if (!MIRROR_BAM) {
-                m_a2VidCellShieldExtend.SetResRef(CResRef(m_heightCode + m_shieldResRef + "A4E"), FALSE, TRUE, TRUE);
-            }
-        }
-
-        if ((m_weaponCode & 0x80) != 0) {
-            m_a3VidCellShieldBase.SetResRef(CResRef(m_heightCode + m_shieldResRef + "A6"), FALSE, TRUE, TRUE);
-            if (!MIRROR_BAM) {
-                m_a3VidCellShieldExtend.SetResRef(CResRef(m_heightCode + m_shieldResRef + "A6E"), FALSE, TRUE, TRUE);
-            }
-        }
-
-        if (m_weaponCode == 1) {
-            m_a1VidCellShieldBase.SetResRef(CResRef(m_heightCode + m_shieldResRef + "SA"), FALSE, TRUE, TRUE);
-            if (!MIRROR_BAM) {
-                m_a1VidCellShieldExtend.SetResRef(CResRef(m_heightCode + m_shieldResRef + "SAE"), FALSE, TRUE, TRUE);
-            }
-        }
-
-        if (m_weaponCode == 2) {
-            m_a1VidCellShieldBase.SetResRef(CResRef(m_heightCode + m_shieldResRef + "SX"), FALSE, TRUE, TRUE);
-            if (!MIRROR_BAM) {
-                m_a1VidCellShieldExtend.SetResRef(CResRef(m_heightCode + m_shieldResRef + "SXE"), FALSE, TRUE, TRUE);
             }
         }
 
@@ -1350,6 +1314,8 @@ void CGameAnimationTypeCharacterOld::EquipWeapon(const CString& resRef, BYTE* co
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
     // __LINE__: 22118
     UTIL_ASSERT(pAttackProb != NULL);
+
+    m_weaponCode = 0;
 
     bAttackProb[0] = FALSE;
     bAttackProb[1] = FALSE;
@@ -1430,7 +1396,7 @@ void CGameAnimationTypeCharacterOld::EquipWeapon(const CString& resRef, BYTE* co
     }
 
     if (pAttackProb[1] != 0) {
-        bAttackProb[0] = TRUE;
+        bAttackProb[1] = TRUE;
         if ((itemFlags & ITEM_FLAGS_TWOHANDED) == 0) {
             m_weaponCode |= 0x8;
 
@@ -1504,7 +1470,7 @@ void CGameAnimationTypeCharacterOld::EquipWeapon(const CString& resRef, BYTE* co
     }
 
     if (pAttackProb[2] != 0) {
-        bAttackProb[0] = TRUE;
+        bAttackProb[2] = TRUE;
         if ((itemFlags & ITEM_FLAGS_TWOHANDED) == 0) {
             m_weaponCode |= 0x10;
 
@@ -1530,10 +1496,10 @@ void CGameAnimationTypeCharacterOld::EquipWeapon(const CString& resRef, BYTE* co
                 m_a3VidCellShadowExtend.SetResRef(CResRef(m_shadowResRef + "A5X"), FALSE, TRUE, TRUE);
             }
 
-            if (m_currentVidCellHelmetBase != NULL) {
-                m_a3VidCellHelmetBase.SetResRef(CResRef(m_heightCode + m_shieldResRef + "A5"), FALSE, TRUE, TRUE);
+            if (m_currentVidCellShieldBase != NULL) {
+                m_a3VidCellShieldBase.SetResRef(CResRef(m_heightCode + m_shieldResRef + "A5"), FALSE, TRUE, TRUE);
                 if (!MIRROR_BAM) {
-                    m_a3VidCellHelmetExtend.SetResRef(CResRef(m_heightCode + m_shieldResRef + "A5E"), FALSE, TRUE, TRUE);
+                    m_a3VidCellShieldExtend.SetResRef(CResRef(m_heightCode + m_shieldResRef + "A5E"), FALSE, TRUE, TRUE);
                 }
             }
 
@@ -1603,9 +1569,9 @@ void CGameAnimationTypeCharacterOld::EquipWeapon(const CString& resRef, BYTE* co
         }
 
         if (m_currentVidCellHelmetBase != NULL) {
-            m_a1VidCellHelmetBase.SetResRef(CResRef(m_heightCodeHelmet + m_helmetResRef + "SX"), FALSE, TRUE, TRUE);
+            m_a1VidCellHelmetBase.SetResRef(CResRef(m_heightCodeHelmet + m_helmetResRef + "SA"), FALSE, TRUE, TRUE);
             if (!MIRROR_BAM) {
-                m_a1VidCellHelmetExtend.SetResRef(CResRef(m_heightCodeHelmet + m_helmetResRef + "SXE"), FALSE, TRUE, TRUE);
+                m_a1VidCellHelmetExtend.SetResRef(CResRef(m_heightCodeHelmet + m_helmetResRef + "SAE"), FALSE, TRUE, TRUE);
             }
         }
     }
@@ -1700,10 +1666,12 @@ void CGameAnimationTypeCharacterOld::EquipWeapon(const CString& resRef, BYTE* co
     if (bAttackProb[0] != TRUE) {
         m_a1VidCellBase.CancelRequest();
         m_a1VidCellShadowBase.CancelRequest();
+        m_a1VidCellWeaponBase.CancelRequest();
         m_a1VidCellShieldBase.CancelRequest();
         m_a1VidCellHelmetBase.CancelRequest();
         m_a1VidCellExtend.CancelRequest();
         m_a1VidCellShadowExtend.CancelRequest();
+        m_a1VidCellWeaponExtend.CancelRequest();
         m_a1VidCellShieldExtend.CancelRequest();
         m_a1VidCellHelmetExtend.CancelRequest();
     }
@@ -1711,10 +1679,12 @@ void CGameAnimationTypeCharacterOld::EquipWeapon(const CString& resRef, BYTE* co
     if (bAttackProb[1] != TRUE) {
         m_a2VidCellBase.CancelRequest();
         m_a2VidCellShadowBase.CancelRequest();
+        m_a2VidCellWeaponBase.CancelRequest();
         m_a2VidCellShieldBase.CancelRequest();
         m_a2VidCellHelmetBase.CancelRequest();
         m_a2VidCellExtend.CancelRequest();
         m_a2VidCellShadowExtend.CancelRequest();
+        m_a2VidCellWeaponExtend.CancelRequest();
         m_a2VidCellShieldExtend.CancelRequest();
         m_a2VidCellHelmetExtend.CancelRequest();
     }
@@ -1722,10 +1692,12 @@ void CGameAnimationTypeCharacterOld::EquipWeapon(const CString& resRef, BYTE* co
     if (bAttackProb[2] != TRUE) {
         m_a3VidCellBase.CancelRequest();
         m_a3VidCellShadowBase.CancelRequest();
+        m_a3VidCellWeaponBase.CancelRequest();
         m_a3VidCellShieldBase.CancelRequest();
         m_a3VidCellHelmetBase.CancelRequest();
         m_a3VidCellExtend.CancelRequest();
         m_a3VidCellShadowExtend.CancelRequest();
+        m_a3VidCellWeaponExtend.CancelRequest();
         m_a3VidCellShieldExtend.CancelRequest();
         m_a3VidCellHelmetExtend.CancelRequest();
     }
@@ -1764,16 +1736,10 @@ void CGameAnimationTypeCharacterOld::EquipWeapon(const CString& resRef, BYTE* co
                 *g_pBaldurChitin->GetObjectGame()->GetMasterBitmap());
         }
 
-        for (BYTE colorRange = 0; colorRange < 7; colorRange++) {
-            m_shieldPalette.SetRange(colorRange,
-                colorRangeValues[colorRange],
-                *g_pBaldurChitin->GetObjectGame()->GetMasterBitmap());
-        }
-
         if (!MIRROR_BAM && m_currentBamDirection > m_extendDirectionTest) {
-            m_currentVidCellShield = m_currentVidCellShieldExtend;
+            m_currentVidCellWeapon = m_currentVidCellWeaponExtend;
         } else {
-            m_currentVidCellShield = m_currentVidCellShieldBase;
+            m_currentVidCellWeapon = m_currentVidCellWeaponBase;
         }
 
         SHORT nSequence;
@@ -1789,11 +1755,7 @@ void CGameAnimationTypeCharacterOld::EquipWeapon(const CString& resRef, BYTE* co
             nSequence = 8 * m_currentBamSequence + m_currentBamDirection / 2;
         }
 
-        if (m_currentBamDirection > m_extendDirectionTest) {
-            m_currentVidCellWeapon->SequenceSet(9 * m_currentBamSequence - m_currentBamDirection + 16);
-        } else {
-            m_currentVidCellWeapon->SequenceSet(9 * m_currentBamSequence + m_currentBamDirection);
-        }
+        m_currentVidCellWeapon->SequenceSet(nSequence);
         m_currentVidCellWeapon->FrameSet(m_currentVidCell->GetCurrentFrameId());
     } else {
         m_g1VidCellWeaponBase.CancelRequest();
@@ -1819,7 +1781,10 @@ CVidPalette* CGameAnimationTypeCharacterOld::GetAnimationPalette(BYTE range)
         // __LINE__: 22615
         UTIL_ASSERT(m_currentVidCell != NULL);
 
-        return &m_charPalette;
+        if (m_falseColor) {
+            return &m_charPalette;
+        }
+        break;
     case 0x10:
         if (m_currentVidCellWeapon != NULL && m_currentVidCellWeapon->GetResRef().IsValid()) {
             return &m_weaponPalette;
@@ -1907,7 +1872,7 @@ char* CGameAnimationTypeCharacterOld::GetSndArmor()
     szTemp = new char[9];
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
-    // __LINE__: 19332
+    // __LINE__: 22762
     UTIL_ASSERT(szTemp != NULL);
 
     strcpy(szTemp, "A_      ");
@@ -1927,7 +1892,7 @@ char* CGameAnimationTypeCharacterOld::GetSndArmor()
         break;
     default:
         // FIXME: Leaking `szTemp`.
-        return NULL;
+        return "";
     }
 
     ch = rand() % cnt + '1';
@@ -2590,7 +2555,7 @@ void CGameAnimationTypeCharacterOld::SetColorEffectAll(BYTE effectType, COLORREF
         }
     }
 
-    if (m_currentVidCellHelmet != NULL) {
+    if (m_bEquipHelmet && m_currentVidCellHelmet != NULL) {
         for (BYTE colorRange = 0; colorRange < CVidPalette::NUM_RANGES; colorRange++) {
             SetColorEffect(effectType, colorRange | 0x30, tintColor, periodLength);
         }
@@ -2657,7 +2622,7 @@ void CGameAnimationTypeCharacterOld::SetColorRangeAll(BYTE rangeValue)
         }
     }
 
-    if (m_currentVidCellHelmet != NULL) {
+    if (m_bEquipHelmet && m_currentVidCellHelmet != NULL) {
         for (BYTE colorRange = 0; colorRange < CVidPalette::NUM_RANGES; colorRange++) {
             SetColorRange(colorRange | 0x30, rangeValue);
         }
@@ -2968,9 +2933,11 @@ void CGameAnimationTypeCharacterOld::Render(CInfinity* pInfinity, CVidMode* pVid
 SHORT CGameAnimationTypeCharacterOld::SetSequence(SHORT nSequence)
 {
     BOOL bRandomFrame = FALSE;
+    SHORT nDirection;
 
     m_renderWeapons = TRUE;
     m_renderHelmet = TRUE;
+    nDirection = static_cast<BYTE>(m_currentBamDirection) & 0xFE;
 
     switch (nSequence) {
     case 1:
@@ -3096,10 +3063,6 @@ SHORT CGameAnimationTypeCharacterOld::SetSequence(SHORT nSequence)
             m_currentVidCellWeaponBase = &m_g1VidCellWeaponBase;
             m_currentVidCellWeaponExtend = &m_g1VidCellWeaponExtend;
         }
-        if (m_currentVidCellShield != NULL) {
-            m_currentVidCellShieldBase = &m_g1VidCellShieldBase;
-            m_currentVidCellShieldExtend = &m_g1VidCellShieldExtend;
-        }
         if (m_currentVidCellHelmet != NULL) {
             m_currentVidCellHelmetBase = &m_g1VidCellHelmetBase;
             m_currentVidCellHelmetExtend = &m_g1VidCellHelmetExtend;
@@ -3161,6 +3124,7 @@ SHORT CGameAnimationTypeCharacterOld::SetSequence(SHORT nSequence)
         break;
     case 10:
         m_currentVidCellBase = &m_g1VidCellBase;
+        nDirection = m_currentBamDirection;
         m_currentBamSequence = 0;
         break;
     case 11:
@@ -3229,7 +3193,7 @@ SHORT CGameAnimationTypeCharacterOld::SetSequence(SHORT nSequence)
         UTIL_ASSERT(FALSE);
     }
 
-    ChangeDirection(m_currentBamDirection);
+    ChangeDirection(nDirection);
 
     SHORT nFrame = 0;
     if (bRandomFrame) {
@@ -3244,6 +3208,10 @@ SHORT CGameAnimationTypeCharacterOld::SetSequence(SHORT nSequence)
     if (m_renderWeapons) {
         if (m_currentVidCellWeapon != NULL && m_currentVidCellWeapon->GetResRef().IsValid()) {
             m_currentVidCellWeapon->FrameSet(nFrame);
+        }
+
+        if (m_currentVidCellShield != NULL) {
+            m_currentVidCellShield->FrameSet(nFrame);
         }
     }
 

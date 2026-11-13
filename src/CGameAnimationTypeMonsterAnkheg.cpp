@@ -181,7 +181,7 @@ BOOL CGameAnimationTypeMonsterAnkheg::GetAboveGround()
 }
 
 // 0x6C2D70
-BOOLEAN CGameAnimationTypeMonsterAnkheg::GetCurrentSequenceAndFrame(SHORT nSequence, SHORT nFrame)
+BOOLEAN CGameAnimationTypeMonsterAnkheg::GetCurrentSequenceAndFrame(SHORT& nSequence, SHORT& nFrame)
 {
     nSequence = m_currentVidCell->m_nCurrentSequence;
     nFrame = m_currentVidCell->m_nCurrentFrame;

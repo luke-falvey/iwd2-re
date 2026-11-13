@@ -29,7 +29,7 @@ public:
     /* 00AC */ SHORT SetSequence(SHORT nSequence) override;
     /* 00BC */ BOOL GetAboveGround() override;
     /* 00C8 */ SHORT GetCurrentFrame() override;
-    /* 00CC */ BOOLEAN GetCurrentSequenceAndFrame(SHORT nSequence, SHORT nFrame) override;
+    /* 00CC */ BOOLEAN GetCurrentSequenceAndFrame(SHORT& nSequence, SHORT& nFrame) override;
     /* 00D0 */ BOOLEAN GetCurrentResRef(CString& resBody, CString& resWeapon, CString& resShield, CString& resHelmet) override;
 
     /* 03FE */ CString m_resRef;
