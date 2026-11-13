@@ -1164,17 +1164,6 @@ CImm::field_13C
 CImm::m_cCriticalSection
 CImm::m_hKeyboardLayout
 CImm::m_sCandidateList
-CInfCursor::bAnimatingCustom
-CInfCursor::field_9EE
-CInfCursor::field_9F2
-CInfCursor::field_A02
-CInfCursor::m_nCurrentCursor
-CInfCursor::m_nDirection
-CInfCursor::m_nState
-CInfCursor::m_vcArrow
-CInfCursor::m_vcCursors
-CInfCursor::m_vcCustom
-CInfCursor::m_vcToolTip
 CInfGame::field_1B58
 CInfGame::field_1B84
 CInfGame::field_1B86

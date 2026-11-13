@@ -503,7 +503,7 @@ BOOL CInfToolTip::GetFrame()
         if (field_C8 != 0) {
             m_nCurrentFrame = 0;
         } else {
-            m_nCurrentFrame--;
+            m_nCurrentFrame = nFrames - 1;
         }
     }
 
@@ -526,10 +526,10 @@ BOOL CInfToolTip::Render(INT nSurface, int x, int y, const CRect& rClip, CVidPol
     CVidInf* pVidInf = static_cast<CVidInf*>(g_pBaldurChitin->GetCurrentVideoMode());
 
     CSize size2;
-    GetFrameSize(2, field_5DC, size2, TRUE);
+    GetFrameSize(2, field_5DC, size2, FALSE);
 
     CSize size1;
-    GetFrameSize(1, field_5DA, size1, TRUE);
+    GetFrameSize(1, field_5DA, size1, FALSE);
 
     LONG nWidth1 = size1.cx / 2;
     LONG nWidth2 = size2.cx / 2;
@@ -564,7 +564,7 @@ BOOL CInfToolTip::Render(INT nSurface, int x, int y, const CRect& rClip, CVidPol
     rFXClip.top = 0;
     rFXClip.right = rFXRect.Width() - nWidth2;
     rFXClip.bottom = rFXRect.Height();
-    if (!pVidInf->FXRender(this, ptCenter.x - (rFXRect.left + frameSize.cx - rFXRect.right) / 2, ptCenter.y, rFXClip, TRUE, dwRenderFlags)) {
+    if (!pVidInf->FXRender(this, ptCenter.x - ((rFXRect.left + frameSize.cx - rFXRect.right) >> 1), ptCenter.y, rFXClip, TRUE, dwRenderFlags)) {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfCursor.cpp
         // __LINE__: 1068
         UTIL_ASSERT(FALSE);
@@ -579,8 +579,8 @@ BOOL CInfToolTip::Render(INT nSurface, int x, int y, const CRect& rClip, CVidPol
     RealizePalette(dwRenderFlags);
     GetCurrentCenterPoint(ptCenter, TRUE);
 
-    INT nDestX = max(min(max(x - field_5E0 / 2, rClip.left), rClip.right - field_5E0 - nWidth2 - nWidth1), rClip.left);
-    INT nDestY = max(min(max(y - ptCenter.y, rClip.top), rClip.bottom - frameSize.cy - ptCenter.y), rClip.top);
+    INT nDestX = min(max(x - field_5E0 / 2, rClip.left), rClip.right - field_5E0 - nWidth2 - nWidth1);
+    INT nDestY = min(max(y - ptCenter.y, rClip.top), rClip.bottom - frameSize.cy);
 
     SequenceSet(2);
     FrameSet(field_5DC);
@@ -671,12 +671,12 @@ void CInfToolTip::SetTextRef(const STRREF& textRef, const CString& sExtra)
     }
 
     CSize size1;
-    GetFrameSize(1, field_5DA, size1, TRUE);
+    GetFrameSize(1, field_5DA, size1, FALSE);
 
     CSize size2;
-    GetFrameSize(2, field_5DC, size2, TRUE);
+    GetFrameSize(2, field_5DC, size2, FALSE);
 
-    WORD nMaxWidth = static_cast<WORD>(field_5E4 - size2.cx - size1.cx);
+    INT nMaxWidth = field_5E4 - size2.cx - size1.cx;
 
     m_font.GetRes()->Demand();
 
@@ -686,13 +686,14 @@ void CInfToolTip::SetTextRef(const STRREF& textRef, const CString& sExtra)
             CUtil::TrimRight(field_5EC[0]);
             nLines = CUtil::SplitString(&m_font,
                 sExtra,
-                nMaxWidth - 8,
+                nMaxWidth,
                 1,
                 &(field_5EC[1]),
                 FALSE,
                 TRUE,
                 TRUE,
-                -1);
+                -1)
+                + 1;
         } else {
             int pos = CUtil::Find(sExtra, '\n', 0);
             if (pos != -1) {
@@ -706,7 +707,8 @@ void CInfToolTip::SetTextRef(const STRREF& textRef, const CString& sExtra)
                     FALSE,
                     TRUE,
                     TRUE,
-                    -1);
+                    -1)
+                    + 1;
             } else {
                 nLines = CUtil::SplitString(&m_font,
                     sExtra.Mid(pos + 1),
@@ -777,12 +779,12 @@ void CInfToolTip::SetTextRef(CString sExtra, const STRREF& textRef1, const STRRE
         }
 
         CSize size1;
-        GetFrameSize(1, field_5DA, size1, TRUE);
+        GetFrameSize(1, field_5DA, size1, FALSE);
 
         CSize size2;
-        GetFrameSize(2, field_5DC, size2, TRUE);
+        GetFrameSize(2, field_5DC, size2, FALSE);
 
-        WORD nMaxWidth = static_cast<WORD>(field_5E4 - size2.cx - size1.cx);
+        INT nMaxWidth = field_5E4 - size2.cx - size1.cx;
 
         m_font.GetRes()->Demand();
 
@@ -819,6 +821,8 @@ void CInfToolTip::SetTextRef(CString sExtra, const STRREF& textRef1, const STRRE
 
             m_font.GetRes()->Release();
             field_5E6 = min(field_5E6 + 8, nMaxWidth);
+        } else {
+            m_font.GetRes()->Release();
         }
     }
 }
@@ -852,13 +856,11 @@ void CInfToolTip::StoreBackground(INT nFrom, INT nTo, INT x, INT y, const CRect&
 
     field_5E0 = field_5DE;
 
-    rStorage.left = max(min(max(x - field_5DE / 2 - size1.cx / 2, rClip.left),
-                            rClip.right - field_5DE - size1.cx - size2.cx / 2),
-        rClip.left);
-    rStorage.top = max(min(max(y - m_pFrame->nCenterY, rClip.top),
-                           rClip.bottom - m_pFrame->nHeight),
-        rClip.top);
-    rStorage.right = rStorage.left + size1.cx + size2.cx / 2 + field_5E0;
+    rStorage.left = min(max(x - field_5DE / 2, rClip.left),
+        rClip.right - field_5DE - (size1.cx / 2 + size2.cx / 2));
+    rStorage.top = min(max(y - m_pFrame->nCenterY, rClip.top),
+        rClip.bottom - m_pFrame->nHeight);
+    rStorage.right = rStorage.left + field_5DE + (size1.cx / 2 + size2.cx / 2);
     rStorage.bottom = rStorage.top + m_pFrame->nHeight;
 
     if (rStorage.left < rClip.left) {
@@ -923,13 +925,11 @@ void CInfToolTip::StoreBackground(INT x, INT y, const CRect& rClip, CRect& rStor
 
     field_5E0 = field_5DE;
 
-    rStorage.left = max(min(max(x - field_5DE / 2 - size1.cx / 2, rClip.left),
-                            rClip.right - field_5DE - size1.cx - size2.cx / 2),
-        rClip.left);
-    rStorage.top = max(min(max(y - m_pFrame->nCenterY, rClip.top),
-                           rClip.bottom - m_pFrame->nHeight),
-        rClip.top);
-    rStorage.right = rStorage.left + size1.cx + size2.cx / 2 + field_5E0;
+    rStorage.left = min(max(x - field_5DE / 2 - size1.cx / 2, rClip.left),
+        rClip.right - field_5DE - (size1.cx / 2 + size2.cx / 2));
+    rStorage.top = min(max(y - m_pFrame->nCenterY, rClip.top),
+        rClip.bottom - m_pFrame->nHeight);
+    rStorage.right = rStorage.left + field_5E0 + (size1.cx / 2 + size2.cx / 2);
     rStorage.bottom = rStorage.top + m_pFrame->nHeight;
 
     if (rStorage.left < rClip.left) {

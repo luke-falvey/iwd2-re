@@ -56,6 +56,8 @@ public:
     void SetScrollArrowDirection();
 
     /* 0000 */ BOOL m_bVisible;
+    /* 0004 */ CResCell field_4;
+    /* 0086 */ CResCell field_86;
     /* 0108 */ CVidCell m_vcCursors;
     /* 01E2 */ CVidCell m_vcArrow;
     /* 02BC */ CVidCell m_vcCustom;
