@@ -256,6 +256,7 @@ void CVidMode::DestroySurface(IDirectDrawSurface** lplpDirectDrawSurface)
     if (lplpDirectDrawSurface != NULL) {
         if (*lplpDirectDrawSurface != NULL) {
             (*lplpDirectDrawSurface)->Release();
+            *lplpDirectDrawSurface = NULL;
         }
     }
 }

@@ -1910,9 +1910,10 @@ void CVidMode::RenderTint3d(COLORREF rgbTint, const CRect& rClip)
 
     BYTE nBrightnessCorrection = g_pChitin->GetCurrentVideoMode()->m_nBrightnessCorrection;
     if (nBrightnessCorrection != 0) {
-        r = ~((~nBrightnessCorrection * ~r) >> 8);
-        g = ~((~nBrightnessCorrection * ~g) >> 8);
-        b = ~((~nBrightnessCorrection * ~b) >> 8);
+        DWORD nInvBrightness = static_cast<BYTE>(~nBrightnessCorrection);
+        r = ~((static_cast<BYTE>(~r) * nInvBrightness) >> 8);
+        g = ~((static_cast<BYTE>(~g) * nInvBrightness) >> 8);
+        b = ~((static_cast<BYTE>(~b) * nInvBrightness) >> 8);
     }
 
     BYTE nGammaCorrection = g_pChitin->GetCurrentVideoMode()->m_nGammaCorrection;
@@ -1963,9 +1964,9 @@ void CVidMode::RenderFlash3d(COLORREF rgbTint, const CRect& rClip)
     g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
 
     CVideo3d::glBegin(GL_QUADS);
-    CVideo3d::glColor4f(static_cast<float>(GetRValue(rgbTint)) / 256.0f,
-        static_cast<float>(GetGValue(rgbTint)) / 256.0f,
-        static_cast<float>(GetBValue(rgbTint)) / 256.0f,
+    CVideo3d::glColor4f(static_cast<float>(GetRValue(rgbTint)) / 255.0f,
+        static_cast<float>(GetGValue(rgbTint)) / 255.0f,
+        static_cast<float>(GetBValue(rgbTint)) / 255.0f,
         1.0f);
     CVideo3d::glVertex3f(static_cast<float>(rClip.left) + CVideo3d::SUB_PIXEL_SHIFT,
         static_cast<float>(rClip.top) + CVideo3d::SUB_PIXEL_SHIFT,
@@ -2125,6 +2126,8 @@ BOOL CVidInf::SetDisplayMode()
     INT iBestMode = 0;
     DWORD nBestFrequency = 0;
     DEVMODEA dm;
+    // NOTE: The exe stores 0x94 (148) here; `sizeof(dm)` may differ with the
+    // build's DEVMODEA layout.
     dm.dmSize = sizeof(dm);
     dm.dmDriverExtra = 0;
 
@@ -2177,6 +2180,7 @@ BOOL CVidInf::SetDisplayMode()
         EnumDisplaySettingsA(NULL, iBestMode, &dm);
         dm.dmFields = DM_BITSPERPEL;
         if (ChangeDisplaySettingsA(&dm, CDS_RESET | CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL) {
+            ChangeDisplaySettingsA(NULL, 0);
             CString sMessage;
             sMessage.LoadStringA(g_pChitin->GetIDSSetGameBitDepth());
             MessageBoxA(NULL, sMessage, CChitin::m_sGameName, 0);
@@ -2272,10 +2276,10 @@ BOOL CVidInf::DestroySurfaces3d(CVidMode* pNextVidMode)
     CVideo3d::glDeleteTextures(1, &texture1);
     g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
 
-    GLuint texture2 = 5;
+    GLuint texture2 = 6;
     CVideo3d::glDeleteTextures(1, &texture2);
 
-    GLuint texture3 = 6;
+    GLuint texture3 = 7;
     CVideo3d::glDeleteTextures(1, &texture3);
 
     for (int index = 0; index < m_nVRamSurfaces; index++) {
@@ -2590,14 +2594,16 @@ void CVidMode::AddDisposableTexture(INT nTextureId)
     lock.Lock(INFINITE);
 
     POSITION pos = m_lDisposableTextureIds.GetHeadPosition();
+    BOOL bFound = FALSE;
     while (pos != NULL) {
         INT nCurrTextureId = reinterpret_cast<INT>(m_lDisposableTextureIds.GetNext(pos));
         if (nCurrTextureId == nTextureId) {
+            bFound = TRUE;
             break;
         }
     }
 
-    if (pos == NULL) {
+    if (!bFound) {
         m_lDisposableTextureIds.AddTail(reinterpret_cast<INT*>(nTextureId));
     }
 
