@@ -47,6 +47,7 @@ CMemINISection::CMemINISection(const CString& sectionName)
 CMemINISection::~CMemINISection()
 {
     // NOTE: Uninline.
+    ClearSection();
 }
 
 // NOTE: Inlined.
@@ -162,6 +163,7 @@ CMemINISection* CMemINI::GetSection(const CString& sectionName)
         CMemINISection* section = reinterpret_cast<CMemINISection*>(GetNext(pos));
         if (section != NULL) {
             if (section->GetSectionName().CompareNoCase(sectionName) == 0) {
+                mpLastSection = section;
                 return section;
             }
         }
@@ -187,7 +189,7 @@ int CMemINI::Load(const CString& source)
     // NOTE: Uninline.
     res.Rewind();
 
-    CMemINISection* section;
+    CMemINISection* section = NULL;
     while (!res.IsEOF()) {
         CString str = res.GetLine();
         str.TrimLeft();
@@ -229,6 +231,10 @@ int CMemINI::Load(const CString& source)
         mpLastSection = reinterpret_cast<CMemINISection*>(GetHead());
     }
 
+    if (res.pRes != NULL) {
+        res.pRes->Release();
+    }
+
     return values;
 }
 
@@ -268,18 +274,22 @@ CString CMemINIRes::GetLine()
 
     CString str(reinterpret_cast<char*>(mpData + start), end - start);
 
-    while (end < mDataLength) {
-        if (mpData[end] != '\r' && mpData[end] != '\n') {
-            break;
-        }
-        end++;
-    }
-
     if (end >= mDataLength) {
         mEOF = TRUE;
-    }
+    } else {
+        while (end < mDataLength) {
+            if (mpData[end] != '\r' && mpData[end] != '\n') {
+                break;
+            }
+            end++;
+        }
 
-    mFilePosition = end;
+        if (end >= mDataLength) {
+            mEOF = TRUE;
+        }
+
+        mFilePosition = end;
+    }
 
     return str;
 }

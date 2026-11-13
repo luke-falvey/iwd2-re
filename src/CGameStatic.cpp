@@ -27,6 +27,7 @@ CGameStatic::CGameStatic(CGameArea* pArea, CAreaFileStaticObject* pStaticObject)
     if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->Add(&m_id, this, INFINITE) == CGameObjectArray::SUCCESS) {
         CVariable variable;
         variable.SetName(CString(m_header.m_scriptName));
+        variable.m_intValue = m_id;
         pArea->GetNamedCreatures()->AddKey(variable);
 
         AddToArea(pArea,
@@ -60,7 +61,9 @@ BOOLEAN CGameStatic::CompressTime(DWORD deltaTime)
 // 0x4CA840
 BOOLEAN CGameStatic::DoAIUpdate(BOOLEAN active, LONG counter)
 {
-    if (active && (counter & m_AISpeed) == (m_AISpeed & m_id)) {
+    if (active
+        && (counter & m_AISpeed) == (m_AISpeed & m_id)
+        && (m_header.m_dwFlags & 0x1) != 0) {
         return ((m_header.m_timeOfDayVisible >> g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->GetCurrentHour()) & 0x1) != 0;
     } else {
         return FALSE;
@@ -90,6 +93,7 @@ void CGameStatic::RemoveFromArea()
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameStatic.cpp
         // __LINE__: 226
         UTIL_ASSERT(FALSE);
+        return;
     }
 
     delete this;
@@ -132,10 +136,8 @@ void CGameStatic::Render(CGameArea* pArea, CVidMode* pVidMode, INT nSurface)
         CRect rDirty;
         if (rDirty.IntersectRect(rFrame, rClip)) {
             if ((m_header.m_dwFlags & 0x4) != 0) {
-                if (g_pChitin->cVideo.Is3dAccelerated()) {
-                    dwFlags |= 0x80000000;
-                }
-                dwFlags |= 0x30000;
+                // NOTE: Wraps to 0x20000 when 3D accelerated.
+                dwFlags |= (g_pChitin->cVideo.Is3dAccelerated() ? 0xFFFF0000 : 0) + 0x30000;
                 m_vidCell.SetTintColor(m_pArea->GetTintColor(CPoint(m_pos.x, m_pos.y - m_posZ),
                     m_listType));
             }
@@ -173,7 +175,7 @@ void CGameStatic::Render(CGameArea* pArea, CVidMode* pVidMode, INT nSurface)
                         ptReference.x,
                         ptReference.y,
                         dwFlags | 0x2,
-                        m_header.m_translucency);
+                        static_cast<BYTE>(m_header.m_translucency));
                 } else {
                     pInfinity->FXRender(&m_vidCell,
                         ptReference.x,

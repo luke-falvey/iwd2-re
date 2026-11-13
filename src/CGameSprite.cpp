@@ -39808,7 +39808,8 @@ BOOLEAN CGameSprite::RemoveKnownSpell(const BYTE& nClass, const UINT& nSpellLeve
     // NOTE: Uninline.
     CGameSpriteGroupedSpellList* pSpellsByLevel = m_spells.Get(nClassIndex);
 
-    return pSpellsByLevel->Remove(nID, nSpellLevel, a4, a5, a6);
+    // NOTE: The exe reads only the low byte of `a4`.
+    return pSpellsByLevel->Remove(nID, nSpellLevel, static_cast<BOOLEAN>(a4), a5, a6);
 }
 
 // 0x724E00
@@ -39827,7 +39828,8 @@ BOOLEAN CGameSprite::RemoveDomainSpell(const UINT& nSpellLevel, const CResRef& r
         return FALSE;
     }
 
-    return m_domainSpells.Remove(nID, nSpellLevel, a3, a4, a5);
+    // NOTE: The exe reads only the low byte of `a3`.
+    return m_domainSpells.Remove(nID, nSpellLevel, static_cast<BOOLEAN>(a3), a4, a5);
 }
 
 // 0x724EA0
