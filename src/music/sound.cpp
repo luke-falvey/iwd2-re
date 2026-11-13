@@ -527,34 +527,48 @@ int preloadBuffers(Sound* sound)
     unsigned char* data = (unsigned char*)mallocPtr(size);
     int bytesRead = sound->io.read(sound->io.fd, data, size);
     if (bytesRead != size) {
-        if ((sound->soundFlags & SOUND_LOOPING) != 0
-            && (sound->soundFlags & SOUND_FLAG_0x100) == 0) {
-            unsigned char* chunk = data + bytesRead;
-            int remaining = bytesRead;
-            while (size - remaining > bytesRead) {
-                memcpy(chunk, data, bytesRead);
-                remaining += bytesRead;
-                chunk += bytesRead;
-            }
+        // NOTE: Unsigned compare, so a failed read (-1) clears the whole
+        // buffer.
+        if ((unsigned int)bytesRead < (unsigned int)size) {
+            if ((sound->soundFlags & SOUND_LOOPING) != 0
+                && (sound->soundFlags & SOUND_FLAG_0x100) == 0) {
+                unsigned char* chunk = data + bytesRead;
+                int remaining = bytesRead;
+                while (size - remaining > bytesRead) {
+                    memcpy(chunk, data, bytesRead);
+                    remaining += bytesRead;
+                    chunk += bytesRead;
+                }
 
-            if (remaining < size) {
-                memcpy(chunk, data, size - remaining);
+                if (remaining < size) {
+                    memcpy(chunk, data, size - remaining);
+                }
+            } else {
+                memset(data + bytesRead, 0, size - bytesRead);
             }
         } else {
-            memset(data + bytesRead, 0, size - bytesRead);
+            memset(data, 0, size);
         }
     }
 
     sectionsizeAdd(sound->sectionsizes, song, section, 0, bytesRead - musicGetSecondSectionSize(), 0);
 
     if (musicGetSecondSectionSize() > 0) {
+        int firstSectionSize = bytesRead - musicGetSecondSectionSize();
+        int secondSectionSize = musicGetSecondSectionSize();
         sectionsizeAdd(sound->sectionsizes,
             musicGetSong(),
             musicGetSection(),
-            bytesRead - musicGetSecondSectionSize(),
-            musicGetSecondSectionSize(),
+            firstSectionSize,
+            secondSectionSize,
             0);
-        sound->field_6C = musicGetSecondSectionSize();
+        sound->field_6C = secondSectionSize;
+    } else {
+        if (section == musicGetSection()) {
+            sound->field_6C += bytesRead;
+        } else {
+            sound->field_6C = 0;
+        }
     }
 
     int rc = soundSetData(sound, data, size);
@@ -593,6 +607,7 @@ int soundRewind(Sound* sound)
 
     HRESULT hr;
     if ((sound->type & SOUND_TYPE_STREAMING) != 0) {
+        sound->io.seek(sound->io.fd, 0, SEEK_SET);
         sound->soundFlags &= ~(SOUND_FLAG_0x200 | SOUND_FLAG_0x80);
         sound->field_74 = 0;
         sound->lastPosition = 0;
@@ -637,7 +652,7 @@ int soundPlayFromPosition(Sound* sound, int pos)
         pos = 0;
     }
 
-    if ((sound->statusFlags & SOUND_STATUS_DONE) == 0 || pos >= 0) {
+    if ((sound->statusFlags & SOUND_STATUS_DONE) != 0 || pos >= 0) {
         soundRewind(sound);
 
         if (pos >= 0) {
@@ -774,7 +789,7 @@ int soundDelete(Sound* sound)
 
     sound->deleted = 1;
 
-    if (sound->io.fd == -1) {
+    if (sound->io.fd != -1) {
         sound->io.close(sound->io.fd);
         sound->io.fd = -1;
     }
@@ -939,9 +954,11 @@ void refreshSoundBuffers(Sound* sound)
             0);
         if (hr == DSERR_BUFFERLOST) {
             IDirectSoundBuffer_Restore(sound->soundBuffer);
+            // NOTE: The retry takes the length from the global `dataSize`,
+            // not the sound's own.
             hr = IDirectSoundBuffer_Lock(sound->soundBuffer,
                 sound->dataSize * sound->field_74,
-                sound->dataSize * v2,
+                dataSize * v2,
                 &audioPtr1,
                 &audioBytes1,
                 &audioPtr2,
@@ -982,8 +999,11 @@ void refreshSoundBuffers(Sound* sound)
                     bytesRead = sound->io.read(sound->io.fd, sound->data, sound->dataSize);
                 } else {
                     int pos = sound->io.tell(sound->io.fd);
-                    if (sound->dataSize + pos > sound->field_58) {
+                    // NOTE: Unsigned compare.
+                    if ((unsigned int)(sound->dataSize + pos) > (unsigned int)sound->field_58) {
                         bytesRead = sound->io.read(sound->io.fd, sound->data, sound->field_58 - pos);
+                    } else {
+                        bytesRead = sound->io.read(sound->io.fd, sound->data, sound->dataSize);
                     }
                 }
 
@@ -1013,7 +1033,8 @@ void refreshSoundBuffers(Sound* sound)
                     }
                 }
 
-                if (bytesRead > sound->dataSize) {
+                // NOTE: Unsigned compare, so a failed read (-1) lands here.
+                if ((unsigned int)bytesRead > (unsigned int)sound->dataSize) {
                     dword_A0E1C0++;
 
                     bytesRead = sound->dataSize;
@@ -1101,7 +1122,8 @@ void refreshSoundBuffers(Sound* sound)
                                 bytesToRead = sound->dataSize - bytesRead;
                             } else {
                                 int pos = sound->io.tell(sound->io.fd);
-                                if (sound->dataSize + bytesRead + pos <= sound->field_58) {
+                                // NOTE: Unsigned compare.
+                                if ((unsigned int)(sound->dataSize + bytesRead + pos) <= (unsigned int)sound->field_58) {
                                     bytesToRead = sound->dataSize - bytesRead;
                                 } else {
                                     bytesToRead = sound->field_58 - bytesRead - pos;
@@ -1190,7 +1212,7 @@ int soundPlaying(Sound* sound)
         return 0;
     }
 
-    return (sound->statusFlags & SOUND_STATUS_IS_PLAYING) != 0;
+    return sound->statusFlags & SOUND_STATUS_IS_PLAYING;
 }
 
 // 0x7D3290
@@ -1206,7 +1228,7 @@ int soundPaused(Sound* sound)
         return 0;
     }
 
-    return (sound->statusFlags & SOUND_STATUS_IS_PAUSED) != 0;
+    return sound->statusFlags & SOUND_STATUS_IS_PAUSED;
 }
 
 // 0x7D32E0
@@ -1214,7 +1236,8 @@ int soundVolumeHMItoDirectSound(int volume)
 {
     double normalizedVolume;
 
-    if (volume > VOLUME_MAX) {
+    // NOTE: Unsigned compare.
+    if ((unsigned int)volume > VOLUME_MAX) {
         volume = VOLUME_MAX;
     }
 
@@ -1442,6 +1465,8 @@ void soundRemoveFadingSound(Sound* sound)
                 removeFadeSound(fadeSound);
                 break;
             }
+
+            fadeSound = fadeSound->next;
         }
     }
 }
@@ -1460,7 +1485,8 @@ void fadeSounds()
             && (fadeSound->currentVolume < fadeSound->targetVolume
                 || fadeSound->currentVolume + fadeSound->deltaVolume > fadeSound->targetVolume)) {
             fadeSound->currentVolume += fadeSound->deltaVolume;
-            soundVolume(fadeSound->sound, fadeSound->currentVolume);
+            // NOTE: Only the low word of the volume is passed.
+            soundVolume(fadeSound->sound, static_cast<WORD>(fadeSound->currentVolume));
         } else {
             if (fadeSound->targetVolume == 0) {
                 if (fadeSound->pause != 2) {
@@ -1481,7 +1507,8 @@ void fadeSounds()
                             fadeSound->currentVolume = fadeSound->targetVolume;
                             fadeSound->deltaVolume = 0;
 
-                            soundVolume(fadeSound->sound, fadeSound->targetVolume);
+                            // NOTE: Only the low word of the volume is passed.
+                            soundVolume(fadeSound->sound, static_cast<WORD>(fadeSound->targetVolume));
                         }
                     }
                 }
@@ -1582,6 +1609,7 @@ int internalSoundFade(Sound* sound, int millis, int end, int pause)
 
     fadeEventHandle = timeSetEvent(40, 10, doTimerEvent, (DWORD)fadeSounds, 1);
     if (fadeEventHandle == 0) {
+        fadeEventHandle = -1;
         soundErrorno = SOUND_UNKNOWN_ERROR;
         return soundErrorno;
     }
@@ -1805,6 +1833,11 @@ int addSoundData(Sound* sound, unsigned char* data, int size)
     DWORD audioBytes1;
     void* audioPtr2;
     DWORD audioBytes2;
+
+    if (sound->deleted) {
+        soundErrorno = SOUND_NO_SOUND;
+        return soundErrorno;
+    }
 
     hr = IDirectSoundBuffer_Lock(sound->soundBuffer, 0, size, &audioPtr1, &audioBytes1, &audioPtr2, &audioBytes2, DSBLOCK_FROMWRITECURSOR);
     if (hr == DSERR_BUFFERLOST) {
