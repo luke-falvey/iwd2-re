@@ -73,7 +73,7 @@ CGameAnimationTypeMonsterLayeredSpell::CGameAnimationTypeMonsterLayeredSpell(USH
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
         // __LINE__: 14138
-        UTIL_ASSERT(m_currentVidCell != NULL);
+        UTIL_ASSERT(FALSE);
     }
 
     m_g1VidCellBase.SetResRef(CResRef(m_resRef + "G1"), FALSE, TRUE, TRUE);
@@ -291,9 +291,9 @@ void CGameAnimationTypeMonsterLayeredSpell::ChangeDirection(SHORT nDirection)
         }
 
         if (MIRROR_BAM && m_currentBamDirection > m_extendDirectionTest) {
-            m_currentVidCellWeapon->SequenceSet(8 * m_currentBamDirection + ((17 - m_currentBamDirection) % 16) / 2);
+            m_currentVidCellWeapon->SequenceSet(8 * m_currentBamSequence + ((17 - m_currentBamDirection) % 16) / 2);
         } else {
-            m_currentVidCellWeapon->SequenceSet(8 * m_currentBamDirection + m_currentBamDirection / 2);
+            m_currentVidCellWeapon->SequenceSet(8 * m_currentBamSequence + m_currentBamDirection / 2);
         }
     }
 }
@@ -331,12 +331,12 @@ void CGameAnimationTypeMonsterLayeredSpell::EquipWeapon(const CString& resRef, B
                     m_weaponLeftHand = TRUE;
                 }
 
-                m_g1VidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef + "G1"), FALSE, TRUE, TRUE);
-                m_g2VidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef + "G2"), FALSE, TRUE, TRUE);
+                m_g1VidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "G1"), FALSE, TRUE, TRUE);
+                m_g2VidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "G2"), FALSE, TRUE, TRUE);
 
                 if (!MIRROR_BAM) {
-                    m_g1VidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef + "G1E"), FALSE, TRUE, TRUE);
-                    m_g2VidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef + "G2E"), FALSE, TRUE, TRUE);
+                    m_g1VidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "G1E"), FALSE, TRUE, TRUE);
+                    m_g2VidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "G2E"), FALSE, TRUE, TRUE);
                 }
 
                 break;
@@ -371,9 +371,11 @@ void CGameAnimationTypeMonsterLayeredSpell::EquipWeapon(const CString& resRef, B
             m_g1VidCellWeaponBase.CancelRequest();
             m_g2VidCellWeaponBase.CancelRequest();
 
-            m_currentVidCellWeaponExtend = NULL;
-            m_g1VidCellWeaponExtend.CancelRequest();
-            m_g2VidCellWeaponExtend.CancelRequest();
+            if (!MIRROR_BAM) {
+                m_currentVidCellWeaponExtend = NULL;
+                m_g1VidCellWeaponExtend.CancelRequest();
+                m_g2VidCellWeaponExtend.CancelRequest();
+            }
 
             m_currentVidCellWeapon = NULL;
         }
@@ -382,9 +384,11 @@ void CGameAnimationTypeMonsterLayeredSpell::EquipWeapon(const CString& resRef, B
         m_g1VidCellWeaponBase.CancelRequest();
         m_g2VidCellWeaponBase.CancelRequest();
 
-        m_currentVidCellWeaponExtend = NULL;
-        m_g1VidCellWeaponExtend.CancelRequest();
-        m_g2VidCellWeaponExtend.CancelRequest();
+        if (!MIRROR_BAM) {
+            m_currentVidCellWeaponExtend = NULL;
+            m_g1VidCellWeaponExtend.CancelRequest();
+            m_g2VidCellWeaponExtend.CancelRequest();
+        }
 
         m_currentVidCellWeapon = NULL;
     }
@@ -459,9 +463,6 @@ void CGameAnimationTypeMonsterLayeredSpell::ClearColorEffects(BYTE colorRange)
     switch (colorRange & 0xF0) {
     case 0x00:
         if (m_falseColor) {
-            m_g1VidCellBase.SetTintColor(RGB(CVidPalette::NO_TINT, CVidPalette::NO_TINT, CVidPalette::NO_TINT));
-            m_g2VidCellBase.SetTintColor(RGB(CVidPalette::NO_TINT, CVidPalette::NO_TINT, CVidPalette::NO_TINT));
-
             m_g1VidCellBase.DeleteRangeAffects(colorRange & 0xF);
             m_g2VidCellBase.DeleteRangeAffects(colorRange & 0xF);
 
@@ -552,7 +553,7 @@ void CGameAnimationTypeMonsterLayeredSpell::ClearColorEffects(BYTE colorRange)
 void CGameAnimationTypeMonsterLayeredSpell::ClearColorEffectsAll()
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
-    // __LINE__: 13481
+    // __LINE__: 14751
     UTIL_ASSERT(m_currentVidCell != NULL);
 
     if (m_falseColor) {
@@ -741,6 +742,36 @@ void CGameAnimationTypeMonsterLayeredSpell::SetColorEffectAll(BYTE effectType, C
             if (!MIRROR_BAM) {
                 m_g1VidCellExtend.SetTintColor(tintColor);
                 m_g2VidCellExtend.SetTintColor(tintColor);
+            }
+        }
+    }
+
+    if (m_currentVidCellWeapon != NULL) {
+        if (m_falseColor) {
+            for (BYTE colorRange = 0; colorRange < CVidPalette::NUM_RANGES; colorRange++) {
+                SetColorEffect(effectType, colorRange | 0x10, tintColor, periodLength);
+            }
+        } else if (effectType != 0) {
+            m_g1VidCellWeaponBase.AddResPaletteAffect(effectType, tintColor, periodLength);
+            m_g2VidCellWeaponBase.AddResPaletteAffect(effectType, tintColor, periodLength);
+
+            m_g1VidCellWeaponBase.SuppressTint(0);
+            m_g2VidCellWeaponBase.SuppressTint(0);
+
+            if (!MIRROR_BAM) {
+                m_g1VidCellWeaponExtend.AddResPaletteAffect(effectType, tintColor, periodLength);
+                m_g2VidCellWeaponExtend.AddResPaletteAffect(effectType, tintColor, periodLength);
+
+                m_g1VidCellWeaponExtend.SuppressTint(0);
+                m_g2VidCellWeaponExtend.SuppressTint(0);
+            }
+        } else {
+            m_g1VidCellWeaponBase.SetTintColor(tintColor);
+            m_g2VidCellWeaponBase.SetTintColor(tintColor);
+
+            if (!MIRROR_BAM) {
+                m_g1VidCellWeaponExtend.SetTintColor(tintColor);
+                m_g2VidCellWeaponExtend.SetTintColor(tintColor);
             }
         }
     }
@@ -1122,10 +1153,9 @@ SHORT CGameAnimationTypeMonsterLayeredSpell::SetSequence(SHORT nSequence)
             m_currentVidCellWeaponExtend = &m_g2VidCellWeaponExtend;
         }
 
-        if (rand() % 2 == 0) {
+        m_currentBamSequence = 0;
+        if (m_bDualAttack && rand() % 2 == 0) {
             m_currentBamSequence = 2;
-        } else {
-            m_currentBamSequence = 0;
         }
 
         nSequence = 0;
