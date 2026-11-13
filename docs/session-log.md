@@ -2,6 +2,28 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-14 (early morning): play tests S8 and S9, four bugs the audit missed
+
+S1–S9 pass on the rebuild. The two new scenarios pass on the original and each failed on the rebuild when first run.
+
+- **S8, screens tour** (`test_s8_screens_tour.py`, about 4 minutes): area map, journal, record, spellbook (three casters, domain tab), every options sub-panel, inventory. Every input must visibly change the screen, and each number has its own tight checkpoint.
+- **S9, Targos docks** (`test_s9_docks.py`, about 5.5 minutes): view moved through the area map, Reig's whole dialogue, a door, the first goblin fight, a ground item, entering a house (AR1005).
+
+| Found by | File | What was wrong |
+|---|---|---|
+| S8 | `CScreenSpellbook::sub_66A8C0` | Domain slot cap inverted (`== 0` for the exe's unsigned `> 0`): one free domain slot shown where the original shows none |
+| S8 | `CGameArea::AIUpdate` | Day/night song switch lost its `m_nCurrentSong == 1` / `== 0` tests, so the area song was stopped and restarted every 600 ticks with a 500 ms sleep; inputs falling inside the sleep were lost |
+| S9 | `CGameSprite` constructor | `m_spriteEffectPalette` and `m_spriteSplashPalette` not constructed as range palettes: assert in `CVidPalette::SetRange` on the first blood splash |
+| (same check) | `CGame85BFE8` constructor | `m_palette` likewise; found by listing every `CVidPalette` construction in the exe |
+
+All four are in functions the old-code audit or earlier verification had passed. Zero unread functions does not mean zero differences; scenarios that reach new code are the better detector now.
+
+**Also done.** `record-scenario` skill written from the two authoring runs. 811 stale entries removed from `tests/layout/known_mismatches.txt` (1,359 real mismatches remain).
+
+**How the dropped inputs were found.** A click loop outside S8 lost nothing, so temporary tracing went into a worktree copy of `CChitin::AsynchronousUpdate` (tick gaps, button and key states). It showed a 500 ms gap every 20.3 s; 600 ticks pointed at `m_startedMusicCounter`.
+
+**Next.** More scenarios: save, quit to menu and load; rest and spell memorisation; a store; the fight inside AR1005. Then saves loaded across the original and the rebuild.
+
 ## 2026-11-14 (late night): batches 180–183, the old-code audit is complete
 
 Every pre-project function has now been read against the exe: `tools/old_code.py` reports 0 functions, 0 bytes unread. S1–S7 pass on the rebuild after each of the four merges, the last being batch 183.
