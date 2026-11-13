@@ -187,6 +187,10 @@ BOOL CVideo::Initialize(HWND hWnd, BOOLEAN bFullscreen)
 {
     HRESULT result;
 
+    if (hWnd == NULL) {
+        return FALSE;
+    }
+
     result = DirectDrawCreate(NULL, &m_pDirectDraw, NULL);
     if (result != DD_OK) {
         return FALSE;
@@ -229,7 +233,7 @@ BOOL CVideo::Initialize(HWND hWnd, BOOLEAN bFullscreen)
         ddsd.dwSize = sizeof(ddsd);
         ddsd.dwWidth = SCREENWIDTH;
         ddsd.dwHeight = SCREENHEIGHT;
-        m_pDirectDraw2->EnumDisplayModes(0, &ddsd, this, EnumDisplayModesCallback);
+        m_pDirectDraw2->EnumDisplayModes(DDEDM_REFRESHRATES, &ddsd, this, EnumDisplayModesCallback);
 
         if (max(m_dwMipMapCount32, max(m_dwMipMapCount24, m_dwMipMapCount16)) < 60) {
             CVideo::FPS = 60;
@@ -248,6 +252,7 @@ BOOL CVideo::Initialize(HWND hWnd, BOOLEAN bFullscreen)
         UTIL_ASSERT(result == DD_OK);
 
         m_bExclusiveMode = FALSE;
+        m_bFullscreen = FALSE;
 
         DDSURFACEDESC ddsd = { 0 };
         ddsd.dwSize = sizeof(ddsd);
@@ -259,13 +264,16 @@ BOOL CVideo::Initialize(HWND hWnd, BOOLEAN bFullscreen)
             // __FILE__: C:\Projects\Icewind2\src\chitin\ChVideo.cpp
             // __LINE__: 482
             UTIL_ASSERT(FALSE);
+            return FALSE;
         }
 
         if (m_pDirectDrawClipper->SetHWnd(0, hWnd) != DD_OK) {
             m_pDirectDrawClipper->Release();
+            m_pDirectDrawClipper = NULL;
             // __FILE__: C:\Projects\Icewind2\src\chitin\ChVideo.cpp
             // __LINE__: 491
             UTIL_ASSERT(FALSE);
+            return FALSE;
         }
     }
 
@@ -360,7 +368,7 @@ void CVideo::ChangeBppValue()
 }
 
 // 0x795820
-BOOL CVideo::SetNextBpp(USHORT nNewBpp)
+BOOLEAN CVideo::SetNextBpp(USHORT nNewBpp)
 {
     // __FILE__: C:\Projects\Icewind2\src\chitin\ChVideo.cpp
     // __LINE__: 693
@@ -371,23 +379,28 @@ BOOL CVideo::SetNextBpp(USHORT nNewBpp)
         case 16:
             if (m_bSupports16bpp) {
                 m_nNextBpp = nNewBpp;
+                return TRUE;
             }
-            return TRUE;
+            break;
         case 24:
             if (m_bSupports24bpp) {
                 m_nNextBpp = nNewBpp;
+                return TRUE;
             }
-            return TRUE;
+            break;
         case 32:
             if (m_bSupports32bpp) {
                 m_nNextBpp = nNewBpp;
+                return TRUE;
             }
-            return TRUE;
-        default:
-            // __FILE__: C:\Projects\Icewind2\src\chitin\ChVideo.cpp
-            // __LINE__: 700
-            UTIL_ASSERT(FALSE);
+            break;
         }
+
+        // __FILE__: C:\Projects\Icewind2\src\chitin\ChVideo.cpp
+        // __LINE__: 700
+        UTIL_ASSERT(FALSE);
+
+        return 2;
     }
 
     return TRUE;
