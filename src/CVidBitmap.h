@@ -36,6 +36,9 @@ public:
     BOOL RenderDirect3d(INT x, INT y, const CRect& rClip, DWORD dwFlags, BOOLEAN bDemanded);
 
     /* 00B0 */ SHORT m_nBitCount;
+    // NOTE: Constructed by every constructor and destroyed by the destructor,
+    // never used otherwise.
+    /* 00B2 */ CString field_B2;
     /* 00B6 */ BOOL m_bDoubleSize;
 };
 
