@@ -89,7 +89,6 @@ CSearchBitmap::~CSearchBitmap()
 {
     if (m_pDynamicCost != NULL) {
         delete m_pDynamicCost;
-        m_pDynamicCost = NULL;
     }
 }
 
@@ -437,6 +436,7 @@ SHORT CSearchBitmap::GetStructureHeight(SHORT nTableIndex)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CSearchBitmap.cpp
         // __LINE__: 717
         UTIL_ASSERT(FALSE);
+        return 0;
     }
 }
 

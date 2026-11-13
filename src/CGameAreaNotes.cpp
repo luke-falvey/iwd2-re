@@ -63,7 +63,8 @@ void CGameAreaNotes::IntrnlInitialize()
     if (!m_bInitialized) {
         field_8D = 0;
 
-        CVidCell vcFlag(CResRef("FLAG1"), FALSE);
+        CResRef rFlag("FLAG1");
+        CVidCell vcFlag(rFlag, FALSE);
 
         CSize frameSize;
         vcFlag.GetFrameSize(0, 0, frameSize, FALSE);
@@ -80,7 +81,7 @@ void CGameAreaNotes::IntrnlInitialize()
         m_pControlInfo->nPressedFrame = 0;
         m_pControlInfo->nSelectedFrame = 0;
         m_pControlInfo->nNormalFrame = 0;
-        vcFlag.GetResRef().GetResRef(m_pControlInfo->refBam);
+        rFlag.GetResRef(m_pControlInfo->refBam);
 
         memset(&m_cAreaNote, 0, sizeof(m_cAreaNote));
 
@@ -266,7 +267,7 @@ BOOL CGameAreaNotes::sub_47B150(WORD startX, WORD startY, CString szNote, DWORD 
         POSITION pos = m_areaNoteList.GetHeadPosition();
         while (pos != NULL) {
             CAreaUserNote* pNote = m_areaNoteList.GetAt(pos);
-            if (pNote->m_startX == startX || pNote->m_startY == startY) {
+            if (pNote->m_startX == startX && pNote->m_startY == startY) {
                 if (szNote.GetLength() != 0) {
                     pNote->m_dwflags = dwFlags;
                     if (g_pBaldurChitin->GetTlkTable().m_override.Fetch(pNote->m_note, strRes)) {
