@@ -461,7 +461,7 @@ void CScreenSave::OnKeyDown(SHORT nKeysFlags)
     }
 }
 
-// 0x63B9B0
+// 0x66A540
 void CScreenSave::TimerAsynchronousUpdate()
 {
     g_pBaldurChitin->m_pEngineWorld->AsynchronousUpdate(FALSE);
@@ -526,7 +526,7 @@ void CScreenSave::UpdateMainPanel()
         // __LINE__: 813
         UTIL_ASSERT(pButton != NULL);
 
-        pButton->SetEnabled(nGameSlot < m_nNumGameSlots);
+        pButton->SetEnabled(nGameSlot < m_nNumGameSlots && m_aGameSlots[nGameSlot]->m_sFileName != "");
 
         pButton = static_cast<CUIControlButton*>(pPanel->GetControl(1 + nSlot));
 
@@ -665,7 +665,7 @@ BOOL CScreenSave::IsDoneButtonClickable()
     CUIPanel* pPanel = GetTopPopup();
     CString sString;
 
-    BOOL bClickable;
+    BOOL bClickable = FALSE;
     switch (pPanel->m_nID) {
     case 1:
         if (1) {
@@ -682,7 +682,6 @@ BOOL CScreenSave::IsDoneButtonClickable()
             bClickable = sString != "";
         }
         break;
-    case 0:
     case 2:
     case 3:
         bClickable = TRUE;
@@ -736,21 +735,25 @@ void CScreenSave::OnDoneButtonClick()
                 UTIL_ASSERT(pEdit != NULL);
 
                 sSlotName = pEdit->GetText();
+                sSlotName.TrimLeft();
+                sSlotName.TrimRight();
 
                 BOOL bSave;
                 if (sSlotName.FindOneOf(".?:<>|*/\"") < 0) {
-                    if (sSlotName.CompareNoCase("aux") != 0
-                        && sSlotName.CompareNoCase("con") != 0
-                        && sSlotName.CompareNoCase("prn") != 0) {
+                    if (_stricmp(sSlotName, "aux") != 0
+                        && _stricmp(sSlotName, "con") != 0
+                        && _stricmp(sSlotName, "prn") != 0) {
                         DismissPopup();
                         bSave = TRUE;
                     } else {
                         m_dwErrorTextId = 17132;
+                        m_strErrorButtonText[0] = 11973;
                         SummonPopup(3);
                         bSave = FALSE;
                     }
                 } else {
                     m_dwErrorTextId = 17133;
+                    m_strErrorButtonText[0] = 11973;
                     SummonPopup(3);
                     bSave = FALSE;
                 }
@@ -796,7 +799,6 @@ void CScreenSave::OnCancelButtonClick()
     UTIL_ASSERT(pPanel != NULL);
 
     switch (pPanel->m_nID) {
-    case 0:
     case 2:
     case 3:
         DismissPopup();
@@ -1067,7 +1069,7 @@ void CScreenSave::RefreshGameSlots()
 }
 
 // 0x65C850
-BOOL CScreenSave::DrawScreenShot(INT nSlot, const CRect& rArea, const CRect& rClip)
+BOOL CScreenSave::DrawScreenShot(INT nSlot, const CRect& rArea, CRect rClip)
 {
     CVidBitmap vbScreenShot(CResRef(""), g_pBaldurChitin->field_4A28);
 
@@ -1083,14 +1085,14 @@ BOOL CScreenSave::DrawScreenShot(INT nSlot, const CRect& rArea, const CRect& rCl
     } else {
         vbScreenShot.SetResRef(CResRef("ICEWIND2"), TRUE, TRUE);
         vbScreenShot.m_bDoubleSize = g_pBaldurChitin->field_4A28;
-        vbScreenShot.RenderDirect(0, rArea.left, rArea.top, rClip, 0, 1);
+        vbScreenShot.RenderDirect(0, rArea.left, rArea.top, rClip, 0, 0);
     }
 
     return TRUE;
 }
 
 // 0x65CAB0
-BOOL CScreenSave::DrawPortrait(USHORT nPortrait, INT nSlot, const CRect& rArea, const CRect& rClip)
+BOOL CScreenSave::DrawPortrait(USHORT nPortrait, INT nSlot, const CRect& rArea, CRect rClip)
 {
     CVidBitmap vbPortrait(CResRef(""), g_pBaldurChitin->field_4A28);
 
@@ -1146,11 +1148,11 @@ BOOL CScreenSave::DrawPortrait(USHORT nPortrait, INT nSlot, const CRect& rArea, 
 
         return TRUE;
     case 3:
-        if (m_aGameSlots[nSlot]->m_cBmpResPortrait2.m_pData == NULL) {
+        if (m_aGameSlots[nSlot]->m_cBmpResPortrait3.m_pData == NULL) {
             return FALSE;
         }
 
-        vbPortrait.SetRes(&(m_aGameSlots[nSlot]->m_cBmpResPortrait2));
+        vbPortrait.SetRes(&(m_aGameSlots[nSlot]->m_cBmpResPortrait3));
         vbPortrait.pRes->DemandLoadedBitmap();
         bResult = vbPortrait.RenderDirect(0, rArea.left, rArea.top, rClip, 0, 1);
         vbPortrait.pRes->ReleaseLoadedBitmap();
@@ -1263,7 +1265,6 @@ void CScreenSave::ResetPopupPanel(DWORD dwPanelId)
     case 1:
         ResetSaveAsPanel(pPanel);
         break;
-    case 0:
     case 2:
     case 3:
         ResetErrorPanel(pPanel);
@@ -1283,7 +1284,6 @@ void CScreenSave::UpdatePopupPanel(DWORD dwPanelId)
         // NOTE: Uninline.
         UpdateSaveAsPanel();
         break;
-    case 0:
     case 2:
     case 3:
         break;
@@ -1405,8 +1405,12 @@ void CScreenSave::ResetSaveAsPanel(CUIPanel* pPanel)
     if (rc == CGameObjectArray::SUCCESS) {
         m_aGameSlots[nGameSlot]->m_cResPortrait = pSprite->GetBaseStats()->m_portraitSmall;
 
-        // NOTE: Uninline.
-        m_aGameSlots[nGameSlot]->m_sCharacterName = pSprite->GetName();
+        if (pSprite->GetBaseStats()->m_name != 0xFFFFFFFF) {
+            m_aGameSlots[nGameSlot]->m_sCharacterName = FetchString(pSprite->GetBaseStats()->m_name);
+        } else {
+            // NOTE: Uninline.
+            m_aGameSlots[nGameSlot]->m_sCharacterName = pSprite->GetName();
+        }
 
         // FIXME: Unused.
         ULONG nTimeWithParty;
@@ -1448,8 +1452,9 @@ void CScreenSave::ResetSaveAsPanel(CUIPanel* pPanel)
 
     UpdateLabel(pPanel,
         0x10000004,
-        m_aGameSlots[nGameSlot]->m_sChapter,
-        sTime);
+        "%s, %s",
+        (LPCSTR)m_aGameSlots[nGameSlot]->m_sChapter,
+        (LPCSTR)sTime);
 
     CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(7));
 
@@ -1564,6 +1569,7 @@ void CScreenSave::OnErrorButtonClick(INT nButton)
             // __LINE__: 2392
             UTIL_ASSERT(FALSE);
         }
+        break;
     case 17132:
     case 17133:
         switch (nButton) {
@@ -1658,6 +1664,9 @@ void CScreenSave::SaveGame(INT nGameSlot, const CString& sSlotName)
         // __LINE__: 2619
         UTIL_ASSERT(FALSE);
     }
+
+    // NOTE: Uninline.
+    StopSave();
 }
 
 // NOTE: Inlined.
@@ -1860,7 +1869,7 @@ BOOL CUIControlButtonSaveScreenShot::Render(BOOL bForce)
     rArea.left = m_pPanel->m_ptOrigin.x + m_ptOrigin.x;
     rArea.top = m_pPanel->m_ptOrigin.y + m_ptOrigin.y;
 
-    return pSave->DrawScreenShot(m_nID - 1, rArea, rClip);
+    return pSave->DrawScreenShot(nGameSlot, rArea, rClip);
 }
 
 // 0x65EB50

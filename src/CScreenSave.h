@@ -79,8 +79,8 @@ public:
     void StopSave();
     void FreeGameSlots();
     void RefreshGameSlots();
-    BOOL DrawScreenShot(INT nSlot, const CRect& rArea, const CRect& rClip);
-    BOOL DrawPortrait(USHORT nPortrait, INT nSlot, const CRect& rArea, const CRect& rClip);
+    BOOL DrawScreenShot(INT nSlot, const CRect& rArea, CRect rClip);
+    BOOL DrawPortrait(USHORT nPortrait, INT nSlot, const CRect& rArea, CRect rClip);
     void EnableMainPanel(BOOL bEnable);
     CUIPanel* GetTopPopup();
     void ShowPopupPanel(DWORD dwPanelId, BOOL bShow);
