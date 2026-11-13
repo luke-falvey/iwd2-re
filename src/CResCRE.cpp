@@ -28,6 +28,17 @@ void* CResCRE::Demand()
     return pData;
 }
 
+// 0x4022B0
+int CResCRE::Release()
+{
+    int rc = CRes::Release();
+    if (GetDemands() <= 0) {
+        m_bParsed = FALSE;
+    }
+
+    return rc;
+}
+
 // 0x401F50
 BOOL CResCRE::Parse(void* pData)
 {
