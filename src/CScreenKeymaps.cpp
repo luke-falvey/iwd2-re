@@ -446,7 +446,7 @@ void CScreenKeymaps::EngineInitialized()
         m_cUIManager.AddPanel(&(g_pBaldurChitin->m_aBorderPanels[side]));
     }
 
-    // field_776 = 0;
+    m_bFromMainMenu = FALSE;
 
     m_cUIManager.GetPanel(1)->SetActive(FALSE);
 
@@ -1002,10 +1002,9 @@ void CScreenKeymaps::ResetErrorPanel(CUIPanel* pPanel)
 void CScreenKeymaps::OnPageButtonClick(INT nButton)
 {
     m_nPage += nButton != 0 ? 1 : -1;
-    if (m_nPage < 0) {
+    // NOTE: Both underflow and overflow reset the page to 0.
+    if (m_nPage < 0 || m_nPage >= CSCREENKEYMAPS_PAGES) {
         m_nPage = 0;
-    } else if (m_nPage >= CSCREENKEYMAPS_PAGES) {
-        m_nPage = CSCREENKEYMAPS_PAGES - 1;
     }
 
     m_nSelectedKeymapIndex = -1;
@@ -1295,7 +1294,9 @@ void CUIControlButtonKeymap::OnLButtonClick(CPoint pt)
         }
         break;
     case 1:
-        if (m_nID != 0 && m_nID < CSCREENKEYMAPS_ERROR_BUTTONS + 1) {
+        // NOTE: Only ids 1 and 2 are handled, although the popup has three
+        // error buttons.
+        if (m_nID != 0 && m_nID <= 2) {
             pKeymaps->OnErrorButtonClick(m_nID - 1);
         }
         break;

@@ -849,8 +849,27 @@ static void untransform_subband0(unsigned char* prv, unsigned char* buf, int ste
     p += step;
 
     if (count == 2) {
+        int* v9 = (int*)buf;
+        int* v10 = (int*)buf;
+        v10 += step;
+
         int i = step;
         while (i != 0) {
+            int v12 = (int)*(short*)(prv + 2);
+            int v13 = (int)*(short*)prv;
+
+            int v14 = *v9;
+            *v9 = v13 + 2 * v12 + v14;
+
+            int v15 = *v10;
+            *v10 = 2 * v14 - v12 - v15;
+
+            *(short*)prv = (short)v14;
+            *(short*)(prv + 2) = (short)v15;
+
+            v9++;
+            v10++;
+            prv += 4;
             i--;
         }
     } else if (count == 4) {
@@ -903,7 +922,19 @@ static void untransform_subband0(unsigned char* prv, unsigned char* buf, int ste
             int v20;
             int v22;
             if (v30 & 0x01) {
+                int v12 = (int)*(short*)(prv + 2);
+                int v13 = (int)*(short*)prv;
 
+                int v14 = *v19;
+                *v19 = v13 + 2 * v12 + v14;
+                v19 += step;
+
+                int v15 = *v19;
+                *v19 = 2 * v14 - v12 - v15;
+                v19 += step;
+
+                v20 = v14;
+                v22 = v15;
             } else {
                 v20 = (int)*(short*)prv;
                 v22 = *(int*)prv >> 16;
@@ -958,34 +989,33 @@ static void untransform_subband(unsigned char* prv, unsigned char* buf, int step
     v25 = (int*)buf;
 
     if (count == 4) {
-        unsigned char* v4 = buf + 4 * step;
-        unsigned char* v5 = buf + 3 * step;
-        unsigned char* v6 = buf + 2 * step;
         int v7;
         int v8;
         int v9;
         int v10;
         int v11;
-        while (step--) {
-            v7 = *(unsigned int*)(v26 + 4);
-            v8 = *(unsigned int*)v25;
-            *(unsigned int*)v25 = *(unsigned int*)v26 + 2 * v7;
+        int i = step;
+        while (i != 0) {
+            i--;
 
-            v9 = *(unsigned int*)v4;
-            *(unsigned int*)v4 = 2 * v8 - v7 - v9;
+            v7 = v26[1];
+            v8 = *v25;
+            *v25 = 2 * v7 + v26[0] + v8;
 
-            v10 = *(unsigned int*)v6;
-            v5 += 4;
-            *v6 += 2 * v9 + v8;
+            int* r1 = v25 + step;
+            v9 = *r1;
+            *r1 = 2 * v8 - v9 - v7;
 
-            v11 = *(unsigned int*)(v5 - 4);
-            v6 += 4;
+            int* r2 = v25 + 2 * step;
+            v10 = *r2;
+            *r2 = v8 + 2 * v9 + v10;
 
-            *(unsigned int*)(v5 - 4) = 2 * v10 - v9 - v11;
-            v4 += 4;
+            int* r3 = v25 + 3 * step;
+            v11 = *r3;
+            *r3 = 2 * v10 - v9 - v11;
 
-            *(unsigned int*)v26 = v10;
-            *(unsigned int*)(v26 + 4) = v11;
+            v26[0] = v10;
+            v26[1] = v11;
 
             v26 += 2;
             v25 += 1;
@@ -1198,7 +1228,8 @@ AudioDecoder* Create_AudioDecoder(AudioDecoderReadFunc* reader, void* data, int*
     v20 = ad->bits.data;
     dropBits(ad, 8);
 
-    if (v20 != 1) {
+    // NOTE: Only the low byte of the bit buffer is compared.
+    if (static_cast<unsigned char>(v20) != 1) {
         goto out;
     }
 
