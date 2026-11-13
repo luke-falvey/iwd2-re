@@ -1847,6 +1847,9 @@ void CAIGroup::ClearActions()
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
         LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        if (memberId == CGameObjectArray::INVALID_INDEX) {
+            continue;
+        }
 
         CGameSprite* pSprite;
 
@@ -1907,7 +1910,7 @@ void CAIGroup::GroupSetTarget(LONG iObject)
             // they are constructed just for the call which leads to pretty
             // ugly invocation.
             GroupAction(CAIAction(CAIAction::ATTACK, target, 0, 0, 0),
-                TRUE,
+                FALSE,
                 &CAIAction(CAIAction::ATTACK, target, 0, 0, 0));
 
             g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(iObject,
@@ -2010,7 +2013,7 @@ void CAIGroup::FollowLeader(CPoint target, BOOL additive)
                 pSprite->m_interrupt = TRUE;
 
                 while (actions.GetCount() != 0) {
-                    CAIAction* action = actions.RemoveTail();
+                    CAIAction* action = actions.RemoveHead();
                     pSprite->AddAction(*action);
                     delete action;
                 }
