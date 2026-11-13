@@ -1601,7 +1601,7 @@ void CScreenSpellbook::ResetErrorPanel(CUIPanel* pPanel)
     UpdateText(pText, "%s", strRes.szText);
 
     for (INT nButton = 0; nButton < m_nNumErrorButtons; nButton++) {
-        CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButton + 1));
+        CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButton));
 
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
         // __LINE__: 2704
