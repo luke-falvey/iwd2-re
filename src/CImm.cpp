@@ -105,7 +105,7 @@ void CImm::sub_7C27D0(HWND hWnd, BOOL a3)
             // __LINE__: 176
             UTIL_ASSERT(lpResultStr != NULL);
 
-            ImmGetCompositionStringA(hImc, GCS_COMPSTR, lpResultStr, nResultStrLength);
+            ImmGetCompositionStringA(hImc, GCS_RESULTSTR, lpResultStr, nResultStrLength);
             lpResultStr[nResultStrLength] = '\0';
 
             field_130 = lpResultStr;
@@ -134,6 +134,8 @@ void CImm::sub_7C27D0(HWND hWnd, BOOL a3)
                     g_pChitin->pActiveEngine->OnKeyDown(1);
                 }
             }
+        } else {
+            field_130 = "";
         }
 
         ImmReleaseContext(hWnd, hImc);
@@ -192,7 +194,7 @@ void CImm::HandleCandidateList(HWND hWnd, LPARAM lParam)
                     // __LINE__: 306
                     UTIL_ASSERT(lpStr != NULL);
 
-                    ImmGetCandidateListA(hImc, index, (LPCANDIDATELIST)lpStr, lParam);
+                    ImmGetCandidateListA(hImc, index, (LPCANDIDATELIST)lpStr, nLength);
                     m_sCandidateList = ParseCandidateList((LPCANDIDATELIST)lpStr);
 
                     delete lpStr;
@@ -321,6 +323,8 @@ void CImm::sub_7C2E10(HWND hWnd)
         }
 
         ImmReleaseContext(hWnd, hImc);
+
+        field_128 = 0;
 
         m_sCandidateList = "";
         field_134 = "";
