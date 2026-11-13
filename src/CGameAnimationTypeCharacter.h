@@ -89,7 +89,7 @@ public:
     /* 1428 */ BOOLEAN m_renderWeapons;
     /* 142C */ BOOLEAN m_renderHelmet;
     /* 1430 */ BOOL m_bEquipHelmet;
-    /* 1434 */ unsigned char field_1434;
+    /* 1434 */ BOOL field_1434;
     /* 1438 */ BOOL m_falseColor;
     /* 143C */ BYTE m_weaponCode;
     /* 143D */ BYTE m_extendDirectionTest;
@@ -100,7 +100,7 @@ public:
     /* 1442 */ unsigned char field_1442;
     /* 1443 */ unsigned char field_1443;
     /* 1444 */ int field_1444;
-    /* 1448 */ unsigned char field_1448;
+    /* 1448 */ BOOL field_1448;
     /* 144C */ CHAR field_144C;
     /* 144D */ unsigned char field_144D;
 };
