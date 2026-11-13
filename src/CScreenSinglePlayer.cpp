@@ -278,7 +278,7 @@ CKeyInfo* CScreenSinglePlayer::GetVirtualKeys()
     return m_pVirtualKeys;
 }
 
-// 0x668C30
+// 0x699620
 BYTE* CScreenSinglePlayer::GetVirtualKeysFlags()
 {
     return m_pVirtualKeysFlags;
@@ -301,6 +301,7 @@ void CScreenSinglePlayer::EngineActivated()
     m_preLoadFontTool.SetResRef(CResRef("TOOLFONT"), FALSE, TRUE);
     m_preLoadFontTool.RegisterFont();
 
+    UpdateCursorShape(0);
     CheckEnableCharacters();
 
     g_pBaldurChitin->GetObjectCursor()->SetCursor(0, FALSE);
@@ -404,13 +405,15 @@ void CScreenSinglePlayer::OnKeyDown(SHORT nKeysFlags)
                     if (GetTopPopup() != NULL) {
                         OnCancelButtonClick();
                     } else {
-                        if (field_45C != 1 && field_45C != 2) {
+                        if (field_45C == 1) {
+                            // Nothing.
+                        } else if (field_45C == 2) {
+                            SelectEngine(g_pBaldurChitin->m_pEngineWorld);
+                        } else {
                             // __FILE__: C:\Projects\Icewind2\src\Baldur\infscreensingleplayer.cpp
                             // __LINE__: 2626
                             UTIL_ASSERT(FALSE);
                         }
-
-                        SelectEngine(g_pBaldurChitin->m_pEngineWorld);
                     }
                     break;
                 case VK_SNAPSHOT:
@@ -431,11 +434,6 @@ void CScreenSinglePlayer::TimerAsynchronousUpdate()
 
     CSingleLock renderLock(&(m_cUIManager.field_36), FALSE);
     renderLock.Lock(INFINITE);
-
-    if (pPanel != NULL) {
-        // NOTE: Uninline.
-        UpdatePopupPanel(pPanel->m_nID);
-    }
 
     CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
@@ -769,15 +767,20 @@ void CScreenSinglePlayer::SummonPopup(DWORD dwPopupId)
 // 0x661640
 void CScreenSinglePlayer::DismissPopup()
 {
-    CUIPanel* pOldPanel = GetTopPopup();
+    CUIPanel* pOldPanel = GetTopPopup() != NULL ? GetTopPopup() : m_cUIManager.GetPanel(0);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\infscreensingleplayer.cpp
     // __LINE__: 1318
     UTIL_ASSERT(pOldPanel != NULL);
 
-    CUIPanel* pNewPanel = m_lPopupStack.GetCount() - 2 >= 0
-        ? m_lPopupStack.GetAt(m_lPopupStack.FindIndex(m_lPopupStack.GetCount() - 2))
-        : m_cUIManager.GetPanel(0);
+    POSITION pos = NULL;
+    CUIPanel* pNewPanel;
+    if (m_lPopupStack.GetCount() - 2 >= 0
+        && (pos = m_lPopupStack.FindIndex(m_lPopupStack.GetCount() - 2)) != NULL) {
+        pNewPanel = m_lPopupStack.GetAt(pos);
+    } else {
+        pNewPanel = m_cUIManager.GetPanel(0);
+    }
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\infscreensingleplayer.cpp
     // __LINE__: 1327
@@ -953,6 +956,11 @@ void CScreenSinglePlayer::OnCancelButtonClick()
     case 10:
         // NOTE: Uninline.
         OnLogoutButtonClick();
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\infscreensingleplayer.cpp
+        // __LINE__: 1587
+        UTIL_ASSERT(FALSE);
         break;
     }
 
@@ -1172,8 +1180,13 @@ void CScreenSinglePlayer::UpdateMainPanelCharacter(CUIPanel* pPanel, INT nCharac
             if (rc == CGameObjectArray::SUCCESS) {
                 portraitResRef = pSprite->GetBaseStats()->m_portraitSmall;
 
-                // NOTE: Uninline.
-                sCharacterName = pSprite->GetName();
+                STRREF strName = pSprite->GetBaseStats()->m_name;
+                if (strName != -1) {
+                    sCharacterName = FetchString(strName);
+                } else {
+                    // NOTE: Uninline.
+                    sCharacterName = pSprite->GetName();
+                }
 
                 g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
                     CGameObjectArray::THREAD_ASYNCH,
@@ -1208,8 +1221,8 @@ void CScreenSinglePlayer::UpdateMainPanelCharacter(CUIPanel* pPanel, INT nCharac
         pButton->SetActive(bModifyCharacterActive);
         pButton->SetInactiveRender(bModifyCharacterActive);
 
-        pLabel->SetActive(bModifyCharacterActive);
-        pLabel->SetInactiveRender(bModifyCharacterActive);
+        pLabel->SetActive(!bModifyCharacterActive);
+        pLabel->SetInactiveRender(!bModifyCharacterActive);
 
         if (bModifyCharacterActive) {
             if (bSlotFree) {
@@ -1240,7 +1253,7 @@ void CScreenSinglePlayer::UpdateMainPanelCharacter(CUIPanel* pPanel, INT nCharac
             pPanel->InvalidateRect(&rButtonFrame);
 
             CRect rLabelFrame(pPanel->m_ptOrigin + pLabel->m_ptOrigin,
-                pButton->m_size);
+                pLabel->m_size);
             pPanel->InvalidateRect(&rLabelFrame);
         }
     } else {
@@ -1448,10 +1461,10 @@ void CScreenSinglePlayer::OnMainDoneButtonClick()
                 }
 
                 if (nPlayerCount > 1) {
-                    while (v2 > 0) {
+                    while (v1 > 0) {
                         g_pChitin->m_bDisplayStale = TRUE;
                         Sleep(60);
-                        v2--;
+                        v1--;
                     }
                 }
 
@@ -1708,6 +1721,8 @@ void CScreenSinglePlayer::OnModifyButtonClick()
             if (g_pBaldurChitin->cNetwork.GetSessionHosting()) {
                 pGame->MultiplayerSetCharacterCreationLocation();
                 pGame->GetMultiplayerSettings()->SetArbitrationLockStatus(TRUE, 0);
+            } else {
+                g_pBaldurChitin->m_cBaldurMessage.SendArbitrationLockRequestToServer(TRUE);
             }
         } else {
             CSingleLock renderLock(&(GetManager()->field_36), FALSE);
@@ -1831,7 +1846,7 @@ void CScreenSinglePlayer::ResetErrorPanel(CUIPanel* pPanel)
 
     strRes.cSound.SetChannel(0, 0);
     strRes.cSound.SetFireForget(TRUE);
-    strRes.cSound.Play(TRUE);
+    strRes.cSound.Play(FALSE);
 
     CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(pPanel->GetControl(0));
 
@@ -2067,7 +2082,7 @@ void CScreenSinglePlayer::OnPartySelectionDoneButtonClick()
             CString sFileName = byte_8F64E0;
             sFileName.MakeUpper();
             if (pCharacters->Find(sFileName) != NULL) {
-                LONG nCharacterId = pGame->ImportCharacter(CString(byte_8F64E0), m_nTopParty + m_nParty);
+                LONG nCharacterId = pGame->ImportCharacter(CString(byte_8F64E0), nCharacterSlot);
                 if (nCharacterId != 0) {
                     CMultiplayerSettings* pSettings = pGame->GetMultiplayerSettings();
 
@@ -2151,8 +2166,12 @@ void CScreenSinglePlayer::ResetViewCharacterPanel(CUIPanel* pPanel)
             CCreatureFileHeader* pBStats = pSprite->GetBaseStats();
             CAIObjectType& typeAI = pSprite->m_startTypeAI;
 
-            // NOTE: Uninline.
-            sName = pSprite->GetName();
+            if (pBStats->m_name != -1) {
+                sName = FetchString(pBStats->m_name);
+            } else {
+                // NOTE: Uninline.
+                sName = pSprite->GetName();
+            }
 
             UpdateText(pTextLeft,
                 "%s: %s",
@@ -2175,7 +2194,9 @@ void CScreenSinglePlayer::ResetViewCharacterPanel(CUIPanel* pPanel)
             UpdateText(pTextLeft,
                 "%s: %s",
                 FetchString(1049), // "Alignment"
-                sRace);
+                sAlignment);
+
+            UpdateText(pTextLeft, "");
 
             // NOTE: Uninline.
             UpdateExperience(pTextLeft, pSprite);
@@ -2357,19 +2378,21 @@ BOOL CScreenSinglePlayer::IsPortraitButtonClickable(INT nCharacterSlot)
 
     return !pSettings->m_bFirstConnected
         && bSlotFull
-        && pSettings->m_bArbitrationLockStatus;
+        && pSettings->m_bArbitrationLockAllowInput;
 }
 
 // 0x665340
 void CScreenSinglePlayer::OnPortraitButtonClick(INT nButton)
 {
-    CSingleLock renderLock(&(GetManager()->field_36), FALSE);
-    renderLock.Lock(INFINITE);
+    if (IsPortraitButtonClickable(nButton)) {
+        CSingleLock renderLock(&(GetManager()->field_36), FALSE);
+        renderLock.Lock(INFINITE);
 
-    field_484 = nButton;
-    SummonPopup(8);
+        field_484 = nButton;
+        SummonPopup(8);
 
-    renderLock.Unlock();
+        renderLock.Unlock();
+    }
 }
 
 // 0x6653D0
@@ -2713,12 +2736,12 @@ void CUIControlButtonSinglePlayerModifyCharacterCreate::OnLButtonClick(CPoint pt
             TRUE,
             TRUE);
 
-        INT nLocalPlayer = cNetwork.m_nLocalPlayer;
-        INT nHostPlayer = cNetwork.m_nHostPlayer;
+        BYTE nLocalPlayer = cNetwork.m_nLocalPlayer;
+        BYTE nHostPlayer = cNetwork.m_nHostPlayer;
         CString sPlayerName;
 
-        if (nHostPlayer != -1) {
-            sPlayerName = cNetwork.m_psPlayerName[nHostPlayer];
+        if (cNetwork.m_nHostPlayer != -1) {
+            sPlayerName = cNetwork.m_psPlayerName[cNetwork.m_nHostPlayer];
         } else {
             sPlayerName = "";
         }
@@ -2819,12 +2842,12 @@ void CUIControlButtonSinglePlayerModifyCharacterDelete::OnLButtonClick(CPoint pt
             TRUE,
             TRUE);
 
-        INT nLocalPlayer = cNetwork.m_nLocalPlayer;
-        INT nHostPlayer = cNetwork.m_nHostPlayer;
+        BYTE nLocalPlayer = cNetwork.m_nLocalPlayer;
+        BYTE nHostPlayer = cNetwork.m_nHostPlayer;
         CString sPlayerName;
 
-        if (nHostPlayer != -1) {
-            sPlayerName = cNetwork.m_psPlayerName[nHostPlayer];
+        if (cNetwork.m_nHostPlayer != -1) {
+            sPlayerName = cNetwork.m_psPlayerName[cNetwork.m_nHostPlayer];
         } else {
             sPlayerName = "";
         }
