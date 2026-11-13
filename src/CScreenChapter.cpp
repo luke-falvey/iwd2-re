@@ -30,7 +30,7 @@ CScreenChapter::CScreenChapter()
     m_pVirtualKeys[1] = CKeyInfo(VK_RETURN, -1, 0);
     m_pVirtualKeys[2] = CKeyInfo(VK_SNAPSHOT, -1, 0);
     m_pVirtualKeys[3] = CKeyInfo('8', 0, 0);
-    m_pVirtualKeys[4] = CKeyInfo(VK_TAB, 0, 0);
+    m_pVirtualKeys[4] = CKeyInfo(VK_TAB, -1, 0);
 
     m_nParagraph = -1;
     m_nChapter = -1;
