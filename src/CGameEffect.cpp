@@ -550,7 +550,7 @@ CGameEffect* CGameEffect::DecodeEffect(ITEM_EFFECT* effect, const CPoint& source
     case 137:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 1056
-        UTIL_ASSERT_MSG(FALSE, "CGameEffectNon_CumulativeChantBad game effect not supported in Icewind II (-rjf)");
+        UTIL_ASSERT_MSG(FALSE, "CGameEffectNon_CumulativeChantBad not supported in Icewind II (-rjf)");
     case CGAMEEFFECT_SETSEQUENCE:
         return new CGameEffectSetSequence(effect, source, sourceID, target);
     case CGAMEEFFECT_DISPLAYSTRING:
@@ -588,11 +588,11 @@ CGameEffect* CGameEffect::DecodeEffect(ITEM_EFFECT* effect, const CPoint& source
     case 155:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 818
-        UTIL_ASSERT_MSG(FALSE, "CGameEffectMinorGlobe game effect not supported in Icewind II (-rjf)");
+        UTIL_ASSERT_MSG(FALSE, "CGameEffectMinorGlobe not supported in Icewind II (-rjf)");
     case 156:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 822
-        UTIL_ASSERT_MSG(FALSE, "CGameEffectShieldGlobe game effect not supported in Icewind II (-rjf)");
+        UTIL_ASSERT_MSG(FALSE, "CGameEffectShieldGlobe not supported in Icewind II (-rjf)");
     case CGAMEEFFECT_WEBHOLD:
         return new CGameEffectWebHold(effect, source, sourceID, target);
     case CGAMEEFFECT_GREASEPOOL:
@@ -750,7 +750,7 @@ CGameEffect* CGameEffect::DecodeEffect(ITEM_EFFECT* effect, const CPoint& source
     case ICEWIND_CGAMEEFFECT_SNILLOCSSNOWBALLSWARMDAMAGE:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 1329
-        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectSnillocsSnowballSwarmDamage game effect not supported in Icewind II (-rjf)");
+        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectSnillocsSnowballSwarmDamage not supported in Icewind II (-rjf)");
     case ICEWIND_CGAMEEFFECT_CASTINGGLOW:
         return new IcewindCGameEffectCastingGlow(effect, source, sourceID, target);
     case ICEWIND_CGAMEEFFECT_PANIC:
@@ -758,7 +758,7 @@ CGameEffect* CGameEffect::DecodeEffect(ITEM_EFFECT* effect, const CPoint& source
     case ICEWIND_CGAMEEFFECT_MAGICALSTONEDAMAGE:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 1340
-        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectMagicalStoneDamage game effect not supported in Icewind II (-rjf)");
+        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectMagicalStoneDamage not supported in Icewind II (-rjf)");
     case ICEWIND_CGAMEEFFECT_SAVINGTHROWCHANGE:
         return new IcewindCGameEffectSavingThrowChange(effect, source, sourceID, target);
     case ICEWIND_CGAMEEFFECT_SLOWPOISON:
@@ -782,7 +782,7 @@ CGameEffect* CGameEffect::DecodeEffect(ITEM_EFFECT* effect, const CPoint& source
     case ICEWIND_CGAMEEFFECT_PRAYERBAD:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 1368
-        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectPrayerBad game effect not supported in Icewind II (-rjf)");
+        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectPrayerBad not supported in Icewind II (-rjf)");
     case ICEWIND_CGAMEEFFECT_SUMMONINGSPELLMIXED:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 1372
@@ -798,15 +798,15 @@ CGameEffect* CGameEffect::DecodeEffect(ITEM_EFFECT* effect, const CPoint& source
     case ICEWIND_CGAMEEFFECT_RECITATIONBAD:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 1386
-        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectRecitationBad game effect not supported in Icewind II (-rjf)");
+        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectRecitationBad not supported in Icewind II (-rjf)");
     case ICEWIND_CGAMEEFFECT_LICHTOUCH:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 1390
-        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectLichTouch game effect not supported in Icewind II (-rjf)");
+        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectLichTouch not supported in Icewind II (-rjf)");
     case ICEWIND_CGAMEEFFECT_SOLSSEARINGORB:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 1394
-        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectSolsSearingOrb game effect not supported in Icewind II (-rjf)");
+        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectSolsSearingOrb not supported in Icewind II (-rjf)");
     case ICEWIND_CGAMEEFFECT_OILOFSERPENTSSCALES:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 1398
@@ -820,14 +820,14 @@ CGameEffect* CGameEffect::DecodeEffect(ITEM_EFFECT* effect, const CPoint& source
     case ICEWIND_CGAMEEFFECT_ZOMBIELORDAURA:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 1411
-        UTIL_ASSERT_MSG(FALSE, "Zombie Lord Aura game effect not supported in Icewind II (-rjf)");
+        UTIL_ASSERT_MSG(FALSE, "Zombie Lord Aura effect unsupported in icewind II (-rjf)");
         (effect, source, sourceID, target);
     case ICEWIND_CGAMEEFFECT_IMMUNITYTORESOURCE:
         return new IcewindCGameEffectImmunityToResource(effect, source, sourceID, target);
     case ICEWIND_CGAMEEFFECT_SUMMONCREATURE:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 1418
-        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectSummonCreature game effect not supported in Icewind II (-rjf)");
+        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectSummonCreature unsupported in icewind II (-rjf)");
         (effect, source, sourceID, target);
     case ICEWIND_CGAMEEFFECT_ANIMATIONREMOVE:
         return new IcewindCGameEffectAnimationRemove(effect, source, sourceID, target);
@@ -836,7 +836,7 @@ CGameEffect* CGameEffect::DecodeEffect(ITEM_EFFECT* effect, const CPoint& source
     case ICEWIND_CGAMEEFFECT_SUMMONPOMABS:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 1428
-        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectSummonPomabs game effect not supported in Icewind II (-rjf)");
+        UTIL_ASSERT_MSG(FALSE, "IcewindCGameEffectSummonPomabs unsupported in icewind II (-rjf)");
         (effect, source, sourceID, target);
     case ICEWIND_CGAMEEFFECT_DOMINATE:
         return new IcewindCGameEffectDominate(effect, source, sourceID, target);
@@ -1016,7 +1016,7 @@ CGameEffect* CGameEffect::DecodeEffect(ITEM_EFFECT* effect, const CPoint& source
     case ICEWIND_CGAMEEFFECT_BANISH:
         if (1) {
             CGameEffectDeath* pEffect = new CGameEffectDeath(effect, source, sourceID, target);
-            pEffect->SetEffectID(ICEWIND_CGAMEEFFECT_MAGIC_DEATH);
+            pEffect->SetEffectID(ICEWIND_CGAMEEFFECT_BANISH);
             pEffect->SetDWFlags(0x800);
             return pEffect;
         }
@@ -1161,6 +1161,7 @@ CGameEffect* CGameEffect::Copy()
     // __FILE__: .\Include\CGameEffect.h
     // __LINE__: 496
     UTIL_ASSERT(FALSE);
+    return NULL;
 }
 
 // 0x452E40
@@ -1169,6 +1170,7 @@ BOOL CGameEffect::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: .\Include\CGameEffect.h
     // __LINE__: 565
     UTIL_ASSERT(FALSE);
+    return TRUE;
 }
 
 // 0x4A3030
@@ -2522,13 +2524,13 @@ BOOL CGameEffectAC::ApplyEffect(CGameSprite* pSprite)
         pSprite->GetDerivedStats()->field_C += static_cast<SHORT>(m_effectAmount);
         break;
     case 1:
-        pSprite->GetDerivedStats()->field_6 = max(pSprite->GetDerivedStats()->field_6, static_cast<SHORT>(m_effectAmount));
+        pSprite->GetDerivedStats()->field_6 = static_cast<SHORT>(max(static_cast<LONG>(pSprite->GetDerivedStats()->field_6), m_effectAmount));
         break;
     case 2:
-        pSprite->GetDerivedStats()->field_8 = max(pSprite->GetDerivedStats()->field_8, static_cast<SHORT>(m_effectAmount));
+        pSprite->GetDerivedStats()->field_8 = static_cast<SHORT>(max(static_cast<LONG>(pSprite->GetDerivedStats()->field_8), m_effectAmount));
         break;
     case 3:
-        pSprite->GetDerivedStats()->field_A = max(pSprite->GetDerivedStats()->field_A, static_cast<SHORT>(m_effectAmount));
+        pSprite->GetDerivedStats()->field_A = static_cast<SHORT>(max(static_cast<LONG>(pSprite->GetDerivedStats()->field_A), m_effectAmount));
         break;
     case 4:
         pSprite->GetDerivedStats()->m_nACCrushingMod += static_cast<SHORT>(m_effectAmount);
@@ -2898,7 +2900,7 @@ BOOL CGameEffectCalm::ApplyEffect(CGameSprite* pSprite)
         CGAMEEFFECT_BERSERK,
         pSprite->GetEquipedEffectList()->GetPosCurrent(),
         -1);
-    pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+    pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
         CGAMEEFFECT_BERSERK,
         pSprite->GetTimedEffectList()->GetPosCurrent(),
         -1);
@@ -2907,7 +2909,7 @@ BOOL CGameEffectCalm::ApplyEffect(CGameSprite* pSprite)
         CGAMEEFFECT_PORTRAITICON,
         pSprite->GetEquipedEffectList()->GetPosCurrent(),
         4);
-    pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+    pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
         CGAMEEFFECT_PORTRAITICON,
         pSprite->GetTimedEffectList()->GetPosCurrent(),
         4);
@@ -3457,9 +3459,22 @@ BOOL CGameEffectCON::ApplyEffect(CGameSprite* pSprite)
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            // NOTE: Uninline.
-            AdjustCON(pSprite, m_effectAmount);
-            m_done = FALSE;
+            // NOTE: Inlined `AdjustCON`.
+            if (m_effectAmount > 0) {
+                if (m_effectAmount > pSprite->GetDerivedStats()->field_130) {
+                    pSprite->m_bonusStats.m_nCON += static_cast<SHORT>(m_effectAmount) - static_cast<SHORT>(pSprite->GetDerivedStats()->field_130);
+                    pSprite->GetDerivedStats()->field_130 = m_effectAmount;
+                    m_done = FALSE;
+                }
+            } else if (m_effectAmount < 0) {
+                if (m_effectAmount < pSprite->GetDerivedStats()->field_130) {
+                    pSprite->m_bonusStats.m_nCON += static_cast<SHORT>(m_effectAmount) - static_cast<SHORT>(pSprite->GetDerivedStats()->field_130);
+                    pSprite->GetDerivedStats()->field_130 = m_effectAmount;
+                    m_done = FALSE;
+                }
+            } else {
+                m_done = FALSE;
+            }
         }
         break;
     case 1:
@@ -3474,11 +3489,11 @@ BOOL CGameEffectCON::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_CONBase = min(max(pSprite->GetBaseStats()->m_CONBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetBaseStats()->m_CONBase = min(max(static_cast<SHORT>(pSprite->GetBaseStats()->m_CONBase * static_cast<SHORT>(m_effectAmount) / 100), 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->GetDerivedStats()->m_nCON = min(max(pSprite->GetBaseStats()->m_CONBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetDerivedStats()->m_nCON = min(max(static_cast<SHORT>(pSprite->GetBaseStats()->m_CONBase * static_cast<SHORT>(m_effectAmount) / 100), 1), 40);
             m_done = FALSE;
         }
         break;
@@ -4953,6 +4968,7 @@ CGameEffectDeath::CGameEffectDeath(ITEM_EFFECT* effect, const CPoint& source, LO
 
 // 0x494150
 CGameEffectDeath::CGameEffectDeath(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target, int a5)
+    : CGameEffect(effect, source, sourceID, target, FALSE)
 {
     field_18C = a5;
 }
@@ -5749,11 +5765,11 @@ BOOL CGameEffectDEX::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_DEXBase = min(max(pSprite->GetBaseStats()->m_DEXBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetBaseStats()->m_DEXBase = min(max(static_cast<SHORT>(pSprite->GetBaseStats()->m_DEXBase * static_cast<SHORT>(m_effectAmount) / 100), 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->GetDerivedStats()->m_nDEX = min(max(pSprite->GetBaseStats()->m_DEXBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetDerivedStats()->m_nDEX = min(max(static_cast<SHORT>(pSprite->GetBaseStats()->m_DEXBase * static_cast<SHORT>(m_effectAmount) / 100), 1), 40);
             m_done = FALSE;
         }
         break;
@@ -5775,6 +5791,8 @@ BOOL CGameEffectDEX::ApplyEffect(CGameSprite* pSprite)
             AddPortraitIcon(pSprite, 75);
 
             pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_CATS_GRACE] = true;
+
+            m_done = FALSE;
         } else {
             m_done = FALSE;
         }
@@ -6222,9 +6240,22 @@ BOOL CGameEffectINT::ApplyEffect(CGameSprite* pSprite)
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            // NOTE: Uninline.
-            AdjustINT(pSprite, m_effectAmount);
-            m_done = FALSE;
+            // NOTE: Inlined `AdjustINT`.
+            if (m_effectAmount > 0) {
+                if (m_effectAmount > pSprite->GetDerivedStats()->field_134) {
+                    pSprite->m_bonusStats.m_nINT += static_cast<SHORT>(m_effectAmount) - static_cast<SHORT>(pSprite->GetDerivedStats()->field_134);
+                    pSprite->GetDerivedStats()->field_134 = m_effectAmount;
+                    m_done = FALSE;
+                }
+            } else if (m_effectAmount < 0) {
+                if (m_effectAmount < pSprite->GetDerivedStats()->field_134) {
+                    pSprite->m_bonusStats.m_nINT += static_cast<SHORT>(m_effectAmount) - static_cast<SHORT>(pSprite->GetDerivedStats()->field_134);
+                    pSprite->GetDerivedStats()->field_134 = m_effectAmount;
+                    m_done = FALSE;
+                }
+            } else {
+                m_done = FALSE;
+            }
         }
         break;
     case 1:
@@ -6239,11 +6270,11 @@ BOOL CGameEffectINT::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_INTBase = min(max(pSprite->GetBaseStats()->m_INTBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetBaseStats()->m_INTBase = min(max(static_cast<SHORT>(pSprite->GetBaseStats()->m_INTBase * static_cast<SHORT>(m_effectAmount) / 100), 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->GetDerivedStats()->m_nINT = min(max(pSprite->GetBaseStats()->m_INTBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetDerivedStats()->m_nINT = min(max(static_cast<SHORT>(pSprite->GetBaseStats()->m_INTBase * static_cast<SHORT>(m_effectAmount) / 100), 1), 40);
             m_done = FALSE;
         }
         break;
@@ -6549,7 +6580,7 @@ BOOL CGameEffectMorale::ApplyEffect(CGameSprite* pSprite)
         pSprite->GetBaseStats()->m_morale = static_cast<BYTE>(m_effectAmount);
         break;
     case 2:
-        pSprite->GetBaseStats()->m_morale = pSprite->GetBaseStats()->m_morale * static_cast<BYTE>(m_effectAmount) / 100;
+        pSprite->GetBaseStats()->m_morale = pSprite->GetBaseStats()->m_morale * static_cast<SHORT>(m_effectAmount) / 100;
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
@@ -6568,7 +6599,7 @@ BOOL CGameEffectMorale::ApplyEffect(CGameSprite* pSprite)
 
 // -----------------------------------------------------------------------------
 
-// NOTE: Inlined.
+// 0x494920
 CGameEffectPanic::CGameEffectPanic(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target)
     : CGameEffect(effect, source, sourceID, target, FALSE)
 {
@@ -6942,7 +6973,7 @@ BOOL CGameEffectResistAcid::ApplyEffect(CGameSprite* pSprite)
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->m_bonusStats.m_nResistAcid += static_cast<BYTE>(m_effectAmount);
+            pSprite->m_bonusStats.m_nResistAcid += static_cast<SHORT>(m_effectAmount);
             m_done = FALSE;
         }
         break;
@@ -6966,7 +6997,7 @@ BOOL CGameEffectResistAcid::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_resistAcidBase = static_cast<BYTE>(m_effectAmount) * pSprite->GetBaseStats()->m_resistAcidBase / 100;
+            pSprite->GetBaseStats()->m_resistAcidBase = static_cast<SHORT>(m_effectAmount) * pSprite->GetBaseStats()->m_resistAcidBase / 100;
             if (pSprite->GetBaseStats()->m_resistAcidBase > 100) {
                 pSprite->GetBaseStats()->m_resistAcidBase = 100;
             }
@@ -7022,7 +7053,7 @@ BOOL CGameEffectResistCold::ApplyEffect(CGameSprite* pSprite)
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->m_bonusStats.m_nResistCold += static_cast<BYTE>(m_effectAmount);
+            pSprite->m_bonusStats.m_nResistCold += static_cast<SHORT>(m_effectAmount);
             m_done = FALSE;
         }
         break;
@@ -7046,7 +7077,7 @@ BOOL CGameEffectResistCold::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_resistColdBase = static_cast<BYTE>(m_effectAmount) * pSprite->GetBaseStats()->m_resistColdBase / 100;
+            pSprite->GetBaseStats()->m_resistColdBase = static_cast<SHORT>(m_effectAmount) * pSprite->GetBaseStats()->m_resistColdBase / 100;
             if (pSprite->GetBaseStats()->m_resistColdBase > 100) {
                 pSprite->GetBaseStats()->m_resistColdBase = 100;
             }
@@ -7102,7 +7133,7 @@ BOOL CGameEffectResistElectricity::ApplyEffect(CGameSprite* pSprite)
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->m_bonusStats.m_nResistElectricity += static_cast<BYTE>(m_effectAmount);
+            pSprite->m_bonusStats.m_nResistElectricity += static_cast<SHORT>(m_effectAmount);
             m_done = FALSE;
         }
         break;
@@ -7126,7 +7157,7 @@ BOOL CGameEffectResistElectricity::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_resistElectricityBase = static_cast<BYTE>(m_effectAmount) * pSprite->GetBaseStats()->m_resistElectricityBase / 100;
+            pSprite->GetBaseStats()->m_resistElectricityBase = static_cast<SHORT>(m_effectAmount) * pSprite->GetBaseStats()->m_resistElectricityBase / 100;
             if (pSprite->GetBaseStats()->m_resistElectricityBase > 100) {
                 pSprite->GetBaseStats()->m_resistElectricityBase = 100;
             }
@@ -7259,12 +7290,12 @@ BOOL CGameEffectResistMagic::ApplyEffect(CGameSprite* pSprite)
         break;
     case 1:
         if (pSprite->GetDerivedStats()->m_nMagicDamageResistance < m_effectAmount) {
-            pSprite->GetDerivedStats()->m_nMagicDamageResistance = static_cast<SHORT>(m_effectAmount);
+            pSprite->GetDerivedStats()->m_nMagicDamageResistance = static_cast<BYTE>(m_effectAmount);
         }
         m_done = FALSE;
         break;
     case 2:
-        pSprite->GetDerivedStats()->m_nMagicDamageResistance = static_cast<SHORT>(m_effectAmount) * pSprite->GetDerivedStats()->m_nMagicDamageResistance / 100;
+        pSprite->GetDerivedStats()->m_nMagicDamageResistance = static_cast<SHORT>(m_effectAmount) * pSprite->m_tempStats.m_nMagicDamageResistance / 100;
         m_done = FALSE;
         break;
     default:
@@ -8011,22 +8042,23 @@ BOOL CGameEffectSleep::ApplyEffect(CGameSprite* pSprite)
         if (m_secondaryType) {
             // NOTE: Uninline.
             DisplayStringRef(pSprite, 14001);
+
+            ITEM_EFFECT* effect = new ITEM_EFFECT;
+
+            // NOTE: Uninline.
+            ClearItemEffect(effect, CGAMEEFFECT_SETSEQUENCE);
+
+            effect->dwFlags = CGameSprite::SEQ_AWAKE;
+            effect->durationType = 4;
+            effect->duration = (m_duration - g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime) / 15;
+            CGameEffect* pEffect = CGameEffect::DecodeEffect(effect,
+                CPoint(-1, -1),
+                -1,
+                CPoint(-1, -1));
+            delete effect;
+            pEffect->m_casterLevel = m_casterLevel;
+            pSprite->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
         }
-
-        ITEM_EFFECT* effect = new ITEM_EFFECT;
-
-        // NOTE: Uninline.
-        ClearItemEffect(effect, CGAMEEFFECT_SETSEQUENCE);
-
-        effect->dwFlags = CGameSprite::SEQ_AWAKE;
-        effect->durationType = 4;
-        effect->duration = (m_duration - g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime) / 15;
-        CGameEffect* pEffect = CGameEffect::DecodeEffect(effect,
-            CPoint(-1, -1),
-            -1,
-            CPoint(-1, -1));
-        delete effect;
-        pSprite->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, TRUE);
     }
 
     if (pSprite->m_nSequence != CGameSprite::SEQ_DIE
@@ -8327,9 +8359,22 @@ BOOL CGameEffectSTR::ApplyEffect(CGameSprite* pSprite)
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            // NOTE: Uninline.
-            AdjustSTR(pSprite, m_effectAmount);
-            m_done = FALSE;
+            // NOTE: Inlined `AdjustSTR`.
+            if (m_effectAmount > 0) {
+                if (m_effectAmount > pSprite->GetDerivedStats()->field_128) {
+                    pSprite->m_bonusStats.m_nSTR += static_cast<SHORT>(m_effectAmount) - static_cast<SHORT>(pSprite->GetDerivedStats()->field_128);
+                    pSprite->GetDerivedStats()->field_128 = m_effectAmount;
+                    m_done = FALSE;
+                }
+            } else if (m_effectAmount < 0) {
+                if (m_effectAmount < pSprite->GetDerivedStats()->field_128) {
+                    pSprite->m_bonusStats.m_nSTR += static_cast<SHORT>(m_effectAmount) - static_cast<SHORT>(pSprite->GetDerivedStats()->field_128);
+                    pSprite->GetDerivedStats()->field_128 = m_effectAmount;
+                    m_done = FALSE;
+                }
+            } else {
+                m_done = FALSE;
+            }
         }
         break;
     case 1:
@@ -8344,11 +8389,11 @@ BOOL CGameEffectSTR::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_STRBase = min(max(pSprite->GetBaseStats()->m_STRBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetBaseStats()->m_STRBase = min(max(static_cast<SHORT>(pSprite->GetBaseStats()->m_STRBase * static_cast<SHORT>(m_effectAmount) / 100), 1), 40);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->GetDerivedStats()->m_nSTR = min(max(pSprite->GetBaseStats()->m_STRBase * static_cast<SHORT>(m_effectAmount) / 100, 1), 40);
+            pSprite->GetDerivedStats()->m_nSTR = min(max(static_cast<SHORT>(pSprite->GetBaseStats()->m_STRBase * static_cast<SHORT>(m_effectAmount) / 100), 1), 40);
             m_done = FALSE;
         }
         break;
@@ -8547,6 +8592,32 @@ CGameEffect* CGameEffectVisible::Copy()
     delete effect;
     copy->CopyFromBase(this);
     return copy;
+}
+
+// NOTE: The exe's vtable for this class points at the same code (0x4B2900) as
+// `CGameEffectDispelInvisible::ApplyEffect` (identical code folding).
+BOOL CGameEffectVisible::ApplyEffect(CGameSprite* pSprite)
+{
+    if ((pSprite->m_tempStats.m_generalState & STATE_NONDETECTION) == 0) {
+        pSprite->GetBaseStats()->m_generalState &= ~STATE_INVISIBLE;
+        pSprite->GetDerivedStats()->m_generalState &= ~STATE_INVISIBLE;
+
+        pSprite->GetBaseStats()->m_generalState &= ~STATE_IMPROVEDINVISIBILITY;
+        pSprite->GetDerivedStats()->m_generalState &= ~STATE_IMPROVEDINVISIBILITY;
+
+        pSprite->GetTimedEffectList()->RemoveAllOfType(pSprite,
+            CGAMEEFFECT_INVISIBLE,
+            pSprite->GetTimedEffectList()->GetPosCurrent(),
+            -1);
+        pSprite->GetEquipedEffectList()->RemoveAllOfType(pSprite,
+            CGAMEEFFECT_INVISIBLE,
+            pSprite->GetEquipedEffectList()->GetPosCurrent(),
+            -1);
+    }
+
+    m_done = TRUE;
+
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -9379,11 +9450,11 @@ BOOL CGameEffectSkillStealth::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_MOVE_SILENTLY] = pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_MOVE_SILENTLY] * static_cast<SHORT>(m_effectAmount) / 100;
+            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_MOVE_SILENTLY] = static_cast<char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_MOVE_SILENTLY]) * static_cast<SHORT>(m_effectAmount) / 100;
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_MOVE_SILENTLY] = pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_MOVE_SILENTLY] * static_cast<SHORT>(m_effectAmount) / 100;
+            pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_MOVE_SILENTLY] = static_cast<char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_MOVE_SILENTLY]) * static_cast<SHORT>(m_effectAmount) / 100;
             m_done = FALSE;
         }
         break;
@@ -9434,7 +9505,7 @@ BOOL CGameEffectHideInShadows::ApplyEffect(CGameSprite* pSprite)
         pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_HIDE] = static_cast<BYTE>(m_effectAmount);
         break;
     case 2:
-        pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_HIDE] = pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_HIDE] * static_cast<SHORT>(m_effectAmount) / 100;
+        pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_HIDE] = static_cast<char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_HIDE]) * static_cast<SHORT>(m_effectAmount) / 100;
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
@@ -10437,7 +10508,7 @@ BOOL CGameEffectDisease::ApplyEffect(CGameSprite* pSprite)
         pSprite->m_bonusStats.m_nINT -= static_cast<SHORT>(m_effectAmount);
         return TRUE;
     case 8:
-        pSprite->m_bonusStats.m_nINT -= static_cast<SHORT>(m_effectAmount);
+        pSprite->m_bonusStats.m_nWIS -= static_cast<SHORT>(m_effectAmount);
         return TRUE;
     case 9:
         pSprite->m_bonusStats.m_nCHR -= static_cast<SHORT>(m_effectAmount);
@@ -10540,6 +10611,7 @@ void CGameEffectDisease::sub_4B5BF0(CGameSprite* pSprite)
                 3,
                 static_cast<BYTE>(m_spellLevel),
                 0);
+            pEffect->m_flags |= 0x2;
 
             CMessage* message = new CMessageAddEffect(pEffect,
                 pSprite->GetId(),
@@ -10576,6 +10648,8 @@ void CGameEffectDisease::sub_4B5E50(CGameSprite* pSprite)
     if (IcewindMisc::IsDead(pSprite) != TRUE
         && !pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_MOLD_TOUCH]) {
         if (m_secondaryType != 0) {
+            m_special = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+
             // NOTE: Uninline.
             DisplayStringRef(pSprite, 11501); // "Afflicted with Mold Touch"
         }
@@ -10602,7 +10676,7 @@ void CGameEffectDisease::sub_4B5E50(CGameSprite* pSprite)
 void CGameEffectDisease::sub_4B5FF0(CGameSprite* pSprite)
 {
     if (IcewindMisc::IsDead(pSprite) != TRUE) {
-        for (int index = 0; index < m_effectAmount; index += 7) {
+        for (int index = 0; index < m_effectAmount; index++) {
             CGameEffect* copy = Copy();
             copy->m_dwFlags = 11;
             copy->m_durationType = 4;
@@ -10839,7 +10913,7 @@ BOOL CGameEffectResistSlashing::ApplyEffect(CGameSprite* pSprite)
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->m_bonusStats.m_nResistSlashing += static_cast<BYTE>(m_effectAmount);
+            pSprite->m_bonusStats.m_nResistSlashing += static_cast<SHORT>(m_effectAmount);
             m_done = FALSE;
         }
         break;
@@ -10863,7 +10937,7 @@ BOOL CGameEffectResistSlashing::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_resistSlashingBase = static_cast<BYTE>(m_effectAmount) * pSprite->GetBaseStats()->m_resistSlashingBase / 100;
+            pSprite->GetBaseStats()->m_resistSlashingBase = static_cast<SHORT>(m_effectAmount) * pSprite->GetBaseStats()->m_resistSlashingBase / 100;
             if (pSprite->GetBaseStats()->m_resistSlashingBase > 100) {
                 pSprite->GetBaseStats()->m_resistSlashingBase = 100;
             }
@@ -10919,7 +10993,7 @@ BOOL CGameEffectResistCrushing::ApplyEffect(CGameSprite* pSprite)
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->m_bonusStats.m_nResistCrushing += static_cast<BYTE>(m_effectAmount);
+            pSprite->m_bonusStats.m_nResistCrushing += static_cast<SHORT>(m_effectAmount);
             m_done = FALSE;
         }
         break;
@@ -10943,7 +11017,7 @@ BOOL CGameEffectResistCrushing::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_resistCrushingBase = static_cast<BYTE>(m_effectAmount) * pSprite->GetBaseStats()->m_resistCrushingBase / 100;
+            pSprite->GetBaseStats()->m_resistCrushingBase = static_cast<SHORT>(m_effectAmount) * pSprite->GetBaseStats()->m_resistCrushingBase / 100;
             if (pSprite->GetBaseStats()->m_resistCrushingBase > 100) {
                 pSprite->GetBaseStats()->m_resistCrushingBase = 100;
             }
@@ -10999,7 +11073,7 @@ BOOL CGameEffectResistPiercing::ApplyEffect(CGameSprite* pSprite)
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->m_bonusStats.m_nResistPiercing += static_cast<BYTE>(m_effectAmount);
+            pSprite->m_bonusStats.m_nResistPiercing += static_cast<SHORT>(m_effectAmount);
             m_done = FALSE;
         }
         break;
@@ -11023,7 +11097,7 @@ BOOL CGameEffectResistPiercing::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_resistPiercingBase = static_cast<BYTE>(m_effectAmount) * pSprite->GetBaseStats()->m_resistPiercingBase / 100;
+            pSprite->GetBaseStats()->m_resistPiercingBase = static_cast<SHORT>(m_effectAmount) * pSprite->GetBaseStats()->m_resistPiercingBase / 100;
             if (pSprite->GetBaseStats()->m_resistPiercingBase > 100) {
                 pSprite->GetBaseStats()->m_resistPiercingBase = 100;
             }
@@ -11079,7 +11153,7 @@ BOOL CGameEffectResistMissile::ApplyEffect(CGameSprite* pSprite)
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
-            pSprite->m_bonusStats.m_nResistMissile += static_cast<BYTE>(m_effectAmount);
+            pSprite->m_bonusStats.m_nResistMissile += static_cast<SHORT>(m_effectAmount);
             m_done = FALSE;
         }
         break;
@@ -11103,7 +11177,7 @@ BOOL CGameEffectResistMissile::ApplyEffect(CGameSprite* pSprite)
         break;
     case 2:
         if (m_durationType == 1) {
-            pSprite->GetBaseStats()->m_resistMissileBase = static_cast<BYTE>(m_effectAmount) * pSprite->GetBaseStats()->m_resistMissileBase / 100;
+            pSprite->GetBaseStats()->m_resistMissileBase = static_cast<SHORT>(m_effectAmount) * pSprite->GetBaseStats()->m_resistMissileBase / 100;
             if (pSprite->GetBaseStats()->m_resistMissileBase > 100) {
                 pSprite->GetBaseStats()->m_resistMissileBase = 100;
             }
@@ -11150,7 +11224,10 @@ BOOL CGameEffectSkillLockPicking::ApplyEffect(CGameSprite* pSprite)
     case 0:
         if (m_durationType == 1) {
             // NOTE: Signed compare.
-            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_OPEN_LOCK] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_OPEN_LOCK]) + static_cast<signed char>(m_effectAmount), 0);
+            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_OPEN_LOCK] += static_cast<BYTE>(m_effectAmount);
+            if (static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_OPEN_LOCK]) < 0) {
+                pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_OPEN_LOCK] = 0;
+            }
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
@@ -11173,12 +11250,12 @@ BOOL CGameEffectSkillLockPicking::ApplyEffect(CGameSprite* pSprite)
     case 2:
         if (m_durationType == 1) {
             // NOTE: Signed compare.
-            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_OPEN_LOCK] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_OPEN_LOCK] * static_cast<SHORT>(m_effectAmount) / 100), 0);
+            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_OPEN_LOCK] = max(static_cast<signed char>(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_OPEN_LOCK]) * static_cast<SHORT>(m_effectAmount) / 100), 0);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
             // NOTE: Signed compare.
-            pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_OPEN_LOCK] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_OPEN_LOCK] * static_cast<SHORT>(m_effectAmount) / 100), 0);
+            pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_OPEN_LOCK] = max(static_cast<signed char>(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_OPEN_LOCK]) * static_cast<SHORT>(m_effectAmount) / 100), 0);
             m_done = FALSE;
         }
         break;
@@ -11221,7 +11298,10 @@ BOOL CGameEffectSkillTraps::ApplyEffect(CGameSprite* pSprite)
     case 0:
         if (m_durationType == 1) {
             // NOTE: Signed compare.
-            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_SEARCH] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_SEARCH]) + static_cast<signed char>(m_effectAmount), 0);
+            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_SEARCH] += static_cast<BYTE>(m_effectAmount);
+            if (static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_SEARCH]) < 0) {
+                pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_SEARCH] = 0;
+            }
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
@@ -11244,12 +11324,12 @@ BOOL CGameEffectSkillTraps::ApplyEffect(CGameSprite* pSprite)
     case 2:
         if (m_durationType == 1) {
             // NOTE: Signed compare.
-            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_SEARCH] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_SEARCH] * static_cast<SHORT>(m_effectAmount) / 100), 0);
+            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_SEARCH] = max(static_cast<signed char>(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_SEARCH]) * static_cast<SHORT>(m_effectAmount) / 100), 0);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
             // NOTE: Signed compare.
-            pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_SEARCH] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_SEARCH] * static_cast<SHORT>(m_effectAmount) / 100), 0);
+            pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_SEARCH] = max(static_cast<signed char>(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_SEARCH]) * static_cast<SHORT>(m_effectAmount) / 100), 0);
             m_done = FALSE;
         }
         break;
@@ -11292,7 +11372,10 @@ BOOL CGameEffectSkillPickPocket::ApplyEffect(CGameSprite* pSprite)
     case 0:
         if (m_durationType == 1) {
             // NOTE: Signed compare.
-            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_PICK_POCKET] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_PICK_POCKET]) + static_cast<signed char>(m_effectAmount), 0);
+            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_PICK_POCKET] += static_cast<BYTE>(m_effectAmount);
+            if (static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_PICK_POCKET]) < 0) {
+                pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_PICK_POCKET] = 0;
+            }
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
@@ -11315,12 +11398,12 @@ BOOL CGameEffectSkillPickPocket::ApplyEffect(CGameSprite* pSprite)
     case 2:
         if (m_durationType == 1) {
             // NOTE: Signed compare.
-            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_PICK_POCKET] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_PICK_POCKET] * static_cast<SHORT>(m_effectAmount) / 100), 0);
+            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_PICK_POCKET] = max(static_cast<signed char>(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_PICK_POCKET]) * static_cast<SHORT>(m_effectAmount) / 100), 0);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
             // NOTE: Signed compare.
-            pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_PICK_POCKET] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_PICK_POCKET] * static_cast<SHORT>(m_effectAmount) / 100), 0);
+            pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_PICK_POCKET] = max(static_cast<signed char>(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_PICK_POCKET]) * static_cast<SHORT>(m_effectAmount) / 100), 0);
             m_done = FALSE;
         }
         break;
@@ -11363,7 +11446,10 @@ BOOL CGameEffectSkillUseMagicDevice::ApplyEffect(CGameSprite* pSprite)
     case 0:
         if (m_durationType == 1) {
             // NOTE: Signed compare.
-            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE]) + static_cast<signed char>(m_effectAmount), 0);
+            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE] += static_cast<BYTE>(m_effectAmount);
+            if (static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE]) < 0) {
+                pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE] = 0;
+            }
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
@@ -11386,12 +11472,12 @@ BOOL CGameEffectSkillUseMagicDevice::ApplyEffect(CGameSprite* pSprite)
     case 2:
         if (m_durationType == 1) {
             // NOTE: Signed compare.
-            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE] * static_cast<SHORT>(m_effectAmount) / 100), 0);
+            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE] = max(static_cast<signed char>(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE]) * static_cast<SHORT>(m_effectAmount) / 100), 0);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
             // NOTE: Signed compare.
-            pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE] * static_cast<SHORT>(m_effectAmount) / 100), 0);
+            pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE] = max(static_cast<signed char>(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_USE_MAGIC_DEVICE]) * static_cast<SHORT>(m_effectAmount) / 100), 0);
             m_done = FALSE;
         }
         break;
@@ -11462,7 +11548,7 @@ BOOL CGameEffectFatigue::ApplyEffect(CGameSprite* pSprite)
             m_done = TRUE;
             break;
         default:
-            pSprite->GetDerivedStats()->m_nFatigue += static_cast<BYTE>(m_effectAmount);
+            pSprite->GetDerivedStats()->m_nFatigue = static_cast<BYTE>(m_effectAmount);
 
             if (pSprite->GetDerivedStats()->m_nFatigue > 100) {
                 pSprite->GetDerivedStats()->m_nFatigue = 100;
@@ -11479,7 +11565,7 @@ BOOL CGameEffectFatigue::ApplyEffect(CGameSprite* pSprite)
     case 2:
         switch (m_durationType) {
         case 1:
-            pSprite->GetBaseStats()->m_fatigue = pSprite->GetBaseStats()->m_fatigue * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetBaseStats()->m_fatigue = pSprite->GetBaseStats()->m_fatigue * static_cast<SHORT>(m_effectAmount) / 100;
 
             if (pSprite->GetBaseStats()->m_fatigue > 100) {
                 pSprite->GetBaseStats()->m_fatigue = 100;
@@ -11489,7 +11575,7 @@ BOOL CGameEffectFatigue::ApplyEffect(CGameSprite* pSprite)
             m_done = TRUE;
             break;
         default:
-            pSprite->GetDerivedStats()->m_nFatigue = pSprite->GetBaseStats()->m_fatigue * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetDerivedStats()->m_nFatigue = pSprite->GetBaseStats()->m_fatigue * static_cast<SHORT>(m_effectAmount) / 100;
 
             if (pSprite->GetDerivedStats()->m_nFatigue > 100) {
                 pSprite->GetDerivedStats()->m_nFatigue = 100;
@@ -11565,7 +11651,7 @@ BOOL CGameEffectIntoxication::ApplyEffect(CGameSprite* pSprite)
             m_done = TRUE;
             break;
         default:
-            pSprite->GetDerivedStats()->m_nIntoxication += static_cast<BYTE>(m_effectAmount);
+            pSprite->GetDerivedStats()->m_nIntoxication = static_cast<BYTE>(m_effectAmount);
 
             if (pSprite->GetDerivedStats()->m_nIntoxication > 100) {
                 pSprite->GetDerivedStats()->m_nIntoxication = 100;
@@ -11582,7 +11668,7 @@ BOOL CGameEffectIntoxication::ApplyEffect(CGameSprite* pSprite)
     case 2:
         switch (m_durationType) {
         case 1:
-            pSprite->GetBaseStats()->m_intoxication = pSprite->GetBaseStats()->m_intoxication * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetBaseStats()->m_intoxication = pSprite->GetBaseStats()->m_intoxication * static_cast<SHORT>(m_effectAmount) / 100;
 
             if (pSprite->GetBaseStats()->m_intoxication > 100) {
                 pSprite->GetBaseStats()->m_intoxication = 100;
@@ -11592,7 +11678,7 @@ BOOL CGameEffectIntoxication::ApplyEffect(CGameSprite* pSprite)
             m_done = TRUE;
             break;
         default:
-            pSprite->GetDerivedStats()->m_nIntoxication = pSprite->GetBaseStats()->m_intoxication * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetDerivedStats()->m_nIntoxication = pSprite->GetBaseStats()->m_intoxication * static_cast<SHORT>(m_effectAmount) / 100;
 
             if (pSprite->GetDerivedStats()->m_nIntoxication > 100) {
                 pSprite->GetDerivedStats()->m_nIntoxication = 100;
@@ -11640,7 +11726,10 @@ BOOL CGameEffectSkillTracking::ApplyEffect(CGameSprite* pSprite)
     case 0:
         if (m_durationType == 1) {
             // NOTE: Signed compare.
-            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_WILDERNESS_LORE] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_WILDERNESS_LORE]) + static_cast<signed char>(m_effectAmount), 0);
+            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_WILDERNESS_LORE] += static_cast<BYTE>(m_effectAmount);
+            if (static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_WILDERNESS_LORE]) < 0) {
+                pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_WILDERNESS_LORE] = 0;
+            }
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
@@ -11663,12 +11752,12 @@ BOOL CGameEffectSkillTracking::ApplyEffect(CGameSprite* pSprite)
     case 2:
         if (m_durationType == 1) {
             // NOTE: Signed compare.
-            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_WILDERNESS_LORE] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_WILDERNESS_LORE] * static_cast<SHORT>(m_effectAmount) / 100), 0);
+            pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_WILDERNESS_LORE] = max(static_cast<signed char>(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_WILDERNESS_LORE]) * static_cast<SHORT>(m_effectAmount) / 100), 0);
             m_forceRepass = TRUE;
             m_done = TRUE;
         } else {
             // NOTE: Signed compare.
-            pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_WILDERNESS_LORE] = max(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_WILDERNESS_LORE] * static_cast<SHORT>(m_effectAmount) / 100), 0);
+            pSprite->GetDerivedStats()->m_nSkills[CGAMESPRITE_SKILL_WILDERNESS_LORE] = max(static_cast<signed char>(static_cast<signed char>(pSprite->GetBaseStats()->m_skills[CGAMESPRITE_SKILL_WILDERNESS_LORE]) * static_cast<SHORT>(m_effectAmount) / 100), 0);
             m_done = FALSE;
         }
         break;
@@ -12158,7 +12247,7 @@ BOOL CGameEffectGold::ApplyEffect(CGameSprite* pSprite)
             m_done = TRUE;
             break;
         default:
-            pSprite->m_bonusStats.m_nXP += static_cast<SHORT>(m_effectAmount);
+            pSprite->m_bonusStats.m_nGold += static_cast<SHORT>(m_effectAmount);
             m_done = FALSE;
             break;
         }
@@ -12171,7 +12260,7 @@ BOOL CGameEffectGold::ApplyEffect(CGameSprite* pSprite)
             m_done = TRUE;
             break;
         default:
-            pSprite->GetDerivedStats()->m_nXP = static_cast<BYTE>(m_effectAmount);
+            pSprite->GetDerivedStats()->m_nGold = static_cast<BYTE>(m_effectAmount);
             m_done = FALSE;
             break;
         }
@@ -12184,7 +12273,7 @@ BOOL CGameEffectGold::ApplyEffect(CGameSprite* pSprite)
             m_done = TRUE;
             break;
         default:
-            pSprite->GetDerivedStats()->m_nXP = pSprite->GetBaseStats()->m_gold * static_cast<SHORT>(m_effectAmount) / 100;
+            pSprite->GetDerivedStats()->m_nGold = pSprite->GetBaseStats()->m_gold * static_cast<SHORT>(m_effectAmount) / 100;
             m_done = FALSE;
             break;
         }
@@ -12249,12 +12338,12 @@ BOOL CGameEffectMoralBreak::ApplyEffect(CGameSprite* pSprite)
     case 2:
         switch (m_durationType) {
         case 1:
-            pSprite->GetBaseStats()->m_moraleBreak = pSprite->GetBaseStats()->m_moraleBreak * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetBaseStats()->m_moraleBreak = pSprite->GetBaseStats()->m_moraleBreak * static_cast<SHORT>(m_effectAmount) / 100;
             m_forceRepass = TRUE;
             m_done = TRUE;
             break;
         default:
-            pSprite->GetDerivedStats()->m_nMoraleBreak = pSprite->GetBaseStats()->m_moraleBreak * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetDerivedStats()->m_nMoraleBreak = pSprite->GetBaseStats()->m_moraleBreak * static_cast<SHORT>(m_effectAmount) / 100;
             m_done = FALSE;
             break;
         }
@@ -12359,12 +12448,17 @@ BOOL CGameEffectReputation::ApplyEffect(CGameSprite* pSprite)
     case 2:
         switch (m_durationType) {
         case 1:
-            pSprite->GetBaseStats()->m_reputation = pSprite->GetBaseStats()->m_reputation * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetBaseStats()->m_reputation = pSprite->GetBaseStats()->m_reputation * static_cast<SHORT>(m_effectAmount) / 100;
             m_forceRepass = TRUE;
             m_done = TRUE;
             break;
         default:
-            pSprite->GetDerivedStats()->m_nReputation = pSprite->GetBaseStats()->m_reputation * static_cast<BYTE>(m_effectAmount) / 100;
+            pSprite->GetDerivedStats()->m_nReputation = pSprite->GetBaseStats()->m_reputation * static_cast<SHORT>(m_effectAmount) / 100;
+
+            if (pSprite->GetDerivedStats()->m_nReputation < 0) {
+                pSprite->GetDerivedStats()->m_nReputation = 0;
+            }
+
             m_done = FALSE;
             break;
         }
@@ -12776,7 +12870,7 @@ CGameEffect* CGameEffectMirrorImage::Copy()
 // 0x4B8850
 BOOL CGameEffectMirrorImage::ApplyEffect(CGameSprite* pSprite)
 {
-    if (pSprite->GetDerivedStats()->m_nMirrorImages < 8) {
+    if (static_cast<BYTE>(pSprite->GetDerivedStats()->m_nMirrorImages) < 8) {
         if (m_secondaryType != 0) {
             // NOTE: Uninline.
             DisplayStringRef(pSprite, 14774);
@@ -13243,7 +13337,7 @@ BOOL CGameEffectMovementRate::ApplyEffect(CGameSprite* pSprite)
             pSprite->GetAnimation()->SetMoveScale(static_cast<BYTE>(m_effectAmount));
             break;
         case 2:
-            pSprite->GetAnimation()->SetMoveScale(pSprite->GetAnimation()->GetMoveScaleDefault() * static_cast<BYTE>(m_effectAmount) / 100);
+            pSprite->GetAnimation()->SetMoveScale(static_cast<BYTE>(pSprite->GetAnimation()->GetMoveScaleDefault() * m_effectAmount / 100));
             break;
         default:
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
@@ -13290,7 +13384,7 @@ BOOL CGameEffectMovementRateWithPortrait::ApplyEffect(CGameSprite* pSprite)
             pSprite->GetAnimation()->SetMoveScale(static_cast<BYTE>(m_effectAmount));
             break;
         case 2:
-            pSprite->GetAnimation()->SetMoveScale(pSprite->GetAnimation()->GetMoveScaleDefault() * static_cast<BYTE>(m_effectAmount) / 100);
+            pSprite->GetAnimation()->SetMoveScale(static_cast<BYTE>(pSprite->GetAnimation()->GetMoveScaleDefault() * m_effectAmount / 100));
             break;
         default:
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
@@ -13612,7 +13706,7 @@ CGameEffect* CGameEffectNon_CumulativeLuck::Copy()
 // 0x4BAFC0
 BOOL CGameEffectNon_CumulativeLuck::ApplyEffect(CGameSprite* pSprite)
 {
-    pSprite->GetDerivedStats()->m_nLuck += static_cast<BYTE>(m_effectAmount);
+    pSprite->GetDerivedStats()->m_nLuck += static_cast<signed char>(m_effectAmount);
 
     return TRUE;
 }
@@ -13667,10 +13761,17 @@ BOOL CGameEffectPetrification::ApplyEffect(CGameSprite* pSprite)
             pSprite->GetId(),
             CPoint(-1, -1));
 
-        CMessage* message = new CMessageAddEffect(pEffect,
+        CGameEffect* pCopy = pEffect->Copy();
+        pCopy->m_sourceID = m_sourceID;
+
+        CMessage* message = new CMessageAddEffect(pCopy,
             pSprite->GetId(),
             pSprite->GetId());
         g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+        if (pEffect != NULL) {
+            delete pEffect;
+        }
 
         delete effect;
     }
@@ -14737,7 +14838,7 @@ CGameEffect* CGameEffectSanctuary::Copy()
 // 0x4BD5E0
 BOOL CGameEffectSanctuary::ApplyEffect(CGameSprite* pSprite)
 {
-    pSprite->GetDerivedStats()->m_visualEffects |= IWD_VFX_SANCTUARY;
+    pSprite->GetDerivedStats()->m_visualEffects.set(IWD_VFX_SANCTUARY, true);
     pSprite->GetDerivedStats()->m_spellStates.set(SPLSTATE_SANCTUARY);
 
     // NOTE: Uninline.
@@ -14822,6 +14923,8 @@ BOOL CGameEffectWebHold::ApplyEffect(CGameSprite* pSprite)
 
             pSprite->GetDerivedStats()->m_spellStates[SPLSTATE_WEB] = true;
 
+            pSprite->GetDerivedStats()->m_nTHAC0 -= 2;
+
             AdjustDEX(pSprite, -4);
 
             // NOTE: Uninline
@@ -14877,7 +14980,7 @@ BOOL CGameEffectGreasePool::ApplyEffect(CGameSprite* pSprite)
     AddPortraitIcon(pSprite, 94);
 
     if (pSprite->GetAnimation()->GetMoveScale() != 0) {
-        pSprite->GetAnimation()->SetMoveScale(0);
+        pSprite->GetAnimation()->SetMoveScale(1);
     }
 
     if (m_secondaryType) {
@@ -14912,7 +15015,7 @@ BOOL CGameEffectMirrorImageRun::ApplyEffect(CGameSprite* pSprite)
 {
     if ((pSprite->GetBaseStats()->m_generalState & STATE_DEAD) == 0) {
         pSprite->GetDerivedStats()->m_generalState |= STATE_MIRRORIMAGE;
-        if (pSprite->GetDerivedStats()->m_nMirrorImages != m_effectAmount
+        if (static_cast<BYTE>(pSprite->GetDerivedStats()->m_nMirrorImages) != m_effectAmount
             || pSprite->m_bForceVisualEffects) {
             CMessage* message = new CMessageVisualEffect(3,
                 static_cast<BYTE>(m_effectAmount),
@@ -14967,7 +15070,7 @@ BOOL CGameEffectDispelSanctuary::ApplyEffect(CGameSprite* pSprite)
 
 // -----------------------------------------------------------------------------
 
-// 0x494920
+// NOTE: Inlined.
 CGameEffectRemovePanic::CGameEffectRemovePanic(ITEM_EFFECT* effect, const CPoint& source, LONG sourceID, CPoint target)
     : CGameEffect(effect, source, sourceID, target, FALSE)
 {
@@ -16101,7 +16204,7 @@ CGameEffect* CGameEffectMentalSpeed::Copy()
 // 0x4BEFE0
 BOOL CGameEffectMentalSpeed::ApplyEffect(CGameSprite* pSprite)
 {
-    pSprite->GetDerivedStats()->m_nMentalSpeed = static_cast<BYTE>(m_effectAmount);
+    pSprite->GetDerivedStats()->m_nMentalSpeed = static_cast<signed char>(m_effectAmount);
 
     return TRUE;
 }
@@ -16127,7 +16230,7 @@ CGameEffect* CGameEffectPhysicalSpeed::Copy()
 // 0x4BF000
 BOOL CGameEffectPhysicalSpeed::ApplyEffect(CGameSprite* pSprite)
 {
-    pSprite->GetDerivedStats()->m_nPhysicalSpeed = static_cast<BYTE>(m_effectAmount);
+    pSprite->GetDerivedStats()->m_nPhysicalSpeed = static_cast<signed char>(m_effectAmount);
 
     return TRUE;
 }
@@ -16155,10 +16258,10 @@ BOOL CGameEffectCastingLevelBonus::ApplyEffect(CGameSprite* pSprite)
 {
     switch (m_dwFlags) {
     case 0:
-        pSprite->GetDerivedStats()->m_nCastingLevelBonusMage = static_cast<BYTE>(m_effectAmount);
+        pSprite->GetDerivedStats()->m_nCastingLevelBonusMage = static_cast<signed char>(m_effectAmount);
         break;
     case 1:
-        pSprite->GetDerivedStats()->m_nCastingLevelBonusCleric = static_cast<BYTE>(m_effectAmount);
+        pSprite->GetDerivedStats()->m_nCastingLevelBonusCleric = static_cast<signed char>(m_effectAmount);
         break;
     }
 
@@ -16533,6 +16636,7 @@ BOOL CGameEffectIgnoreDialogPause::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 22409
     UTIL_ASSERT_MSG(FALSE, "CGameEffectIgnoreDialogPause game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -16642,6 +16746,8 @@ BOOL CGameEffectHitPointsOnDeath::ApplyEffect(CGameSprite* pSprite)
 
             delete effect;
         }
+
+        m_done = TRUE;
     } else {
         m_done = FALSE;
     }
@@ -16801,6 +16907,7 @@ BOOL CGameEffectImmunityLevelDecrement::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 22530
     UTIL_ASSERT_MSG(FALSE, "CGameEffectImmunityLevelDecrement game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -16875,6 +16982,7 @@ BOOL CGameEffectImmunitySchool::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 22603
     UTIL_ASSERT_MSG(FALSE, "CGameEffectImmunitySchool game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -16901,6 +17009,7 @@ BOOL CGameEffectImmunitySecondaryType::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 22629
     UTIL_ASSERT_MSG(FALSE, "CGameEffectImmunitySecondaryType game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17183,10 +17292,12 @@ BOOL CGameEffectImmunitySpell::Evaluate(CGameSprite* pSprite)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 23134
         UTIL_ASSERT_MSG(FALSE, "CGameEffectImmunitySpell::ApplyEffect - Test for IF_BARD_SKALD is obsolete");
+        return FALSE;
     case 79:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 23137
-        UTIL_ASSERT_MSG(FALSE, "CGameEffectImmunitySpell::ApplyEffect - Test for IF_BARD_SKALD is obsolete");
+        UTIL_ASSERT_MSG(FALSE, "CGameEffectImmunitySpell::ApplyEffect - Test for IF_NOT_BARD_SKALD is obsolete");
+        return FALSE;
     case 80:
         return !IcewindMisc::IsEnemyNearby(pSprite);
     case 81:
@@ -17204,9 +17315,9 @@ BOOL CGameEffectImmunitySpell::Evaluate(CGameSprite* pSprite)
     case 87:
         return g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->IsDay() || g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->IsDawn();
     case 88:
-        return !(pSprite->GetArea() != NULL && (pSprite->GetArea()->GetHeader()->m_areaType & 0x3) != 0);
+        return pSprite->GetArea() != NULL && (pSprite->GetArea()->GetHeader()->m_areaType & 0x3) == 0;
     case 89:
-        return pSprite->GetArea() != NULL && (pSprite->GetArea()->GetHeader()->m_areaType & 0x3) != 0;
+        return pSprite->GetArea() != NULL && (pSprite->GetArea()->GetHeader()->m_areaType & 0x3) == 0x3;
     case 90:
         return pSprite->GetAIType().GetRace() != CAIOBJECTTYPE_R_190;
     case 91:
@@ -17219,6 +17330,7 @@ BOOL CGameEffectImmunitySpell::Evaluate(CGameSprite* pSprite)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
         // __LINE__: 23214
         UTIL_ASSERT(FALSE);
+        return FALSE;
     }
 }
 
@@ -17300,6 +17412,7 @@ BOOL CGameEffectPowerWordKill::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24032
     UTIL_ASSERT_MSG(FALSE, "CGameEffectPowerWordKill game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17326,6 +17439,7 @@ BOOL CGameEffectPowerWordStun::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24057
     UTIL_ASSERT_MSG(FALSE, "CGameEffectPowerWordStun game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17352,6 +17466,7 @@ BOOL CGameEffectImprisonment::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24141
     UTIL_ASSERT_MSG(FALSE, "CGameEffectImprisonment game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17378,6 +17493,7 @@ BOOL CGameEffectFreedom::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24166
     UTIL_ASSERT_MSG(FALSE, "CGameEffectFreedom game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17409,6 +17525,7 @@ BOOL CGameEffectMaze::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24214
     UTIL_ASSERT_MSG(FALSE, "CGameEffectMaze game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17512,6 +17629,7 @@ BOOL CGameEffectPowerWordSleep::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24337
     UTIL_ASSERT_MSG(FALSE, "CGameEffectPowerWordSleep game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17625,6 +17743,7 @@ BOOL CGameEffectProtectionCircle::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24445
     UTIL_ASSERT_MSG(FALSE, "CGameEffectProtectionCircle game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17723,6 +17842,7 @@ BOOL CGameEffectImmunitySchoolDecrement::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24543
     UTIL_ASSERT_MSG(FALSE, "CGameEffectImmunitySchoolDecrement game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17773,6 +17893,7 @@ BOOL CGameEffectRevealMagic::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24592
     UTIL_ASSERT_MSG(FALSE, "CGameEffectRevealMagic game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17798,7 +17919,8 @@ BOOL CGameEffectSecondaryTypeDecrement::ApplyEffect(CGameSprite* pSprite)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24620
-    UTIL_ASSERT_MSG(FALSE, "CGameEffectSecondaryTypeDecrement game effect not supported in Icewind II (-rjf)");
+    UTIL_ASSERT_MSG(FALSE, "CGameEffectImmunitySecondaryTypeDecrement game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17825,6 +17947,7 @@ BOOL CGameEffectBounceSchoolDecrement::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24645
     UTIL_ASSERT_MSG(FALSE, "CGameEffectBounceSchoolDecrement game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17851,6 +17974,7 @@ BOOL CGameEffectBounceSecondaryTypeDecrement::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24671
     UTIL_ASSERT_MSG(FALSE, "CGameEffectBounceSecondaryTypeDecrement game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17877,6 +18001,7 @@ BOOL CGameEffectDispelSchoolOne::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24696
     UTIL_ASSERT_MSG(FALSE, "CGameEffectDispelSchoolOne game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17901,8 +18026,9 @@ CGameEffect* CGameEffectDispelSecondaryTypeOne::Copy()
 BOOL CGameEffectDispelSecondaryTypeOne::ApplyEffect(CGameSprite* pSprite)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
-    // __LINE__: 24696
+    // __LINE__: 24721
     UTIL_ASSERT_MSG(FALSE, "CGameEffectDispelSecondaryTypeOne game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -17929,6 +18055,7 @@ BOOL CGameEffectTimeStop::ApplyEffect(CGameSprite* pSprite)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameEffect.cpp
     // __LINE__: 24747
     UTIL_ASSERT_MSG(FALSE, "CGameEffectTimeStop game effect not supported in Icewind II (-rjf)");
+    return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -18296,6 +18423,7 @@ CPersistantEffectBurningDeath::CPersistantEffectBurningDeath()
 {
     m_charredDegree = CVidPalette::NO_TINT;
     m_charredIncrement = 0;
+    m_persistantType = 1;
 }
 
 // 0x4AD2C0
@@ -18448,7 +18576,7 @@ void CPersistantEffectColorEffect::AIUpdate(CGameSprite* pSprite, LONG deltaT)
             break;
         }
     } else {
-        if (m_counter + 1 < m_period) {
+        if (m_counter < m_period) {
             pSprite->GetAnimation()->SetColorEffectAll(m_colorEffect,
                 RGB(m_effectDegreeRed, m_effectDegreeGreen, m_effectDegreeBlue),
                 1);
@@ -18488,7 +18616,7 @@ CPersistantEffect84C4A4::CPersistantEffect84C4A4(int a1, int a2, int a3)
     field_24 = a1;
     field_28 = 1;
 
-    ULONG delta = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime - a2;
+    int delta = static_cast<int>(g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime) - a2;
     if (delta == 0 || delta == 1) {
         field_20 = a2;
     } else {
