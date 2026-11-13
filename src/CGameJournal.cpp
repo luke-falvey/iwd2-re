@@ -241,10 +241,10 @@ BOOL CGameJournal::InsertEntryAfter(CString szText, DWORD nIndex, INT nChapter, 
     }
 
     if ((g_pBaldurChitin->GetObjectGame()->GetCharactersControlled() & nCharacter) != 0
-        && (!g_pChitin->cNetwork.GetSessionOpen() || g_pChitin->cNetwork.GetSessionOpen())) {
+        && (!g_pChitin->cNetwork.GetSessionOpen() || g_pChitin->cNetwork.GetSessionHosting())) {
         g_pBaldurChitin->GetObjectGame()->FeedBack(CInfGame::FEEDBACK_JOURNAL_UPDATE,
             0,
-            FALSE);
+            TRUE);
     }
 
     if (g_pChitin->cNetwork.GetSessionOpen() == TRUE
@@ -255,7 +255,7 @@ BOOL CGameJournal::InsertEntryAfter(CString szText, DWORD nIndex, INT nChapter, 
             static_cast<CUIControlTextDisplay*>(g_pBaldurChitin->m_pEngineJournal->GetManager()->GetPanel(2)->GetControl(1)));
     }
 
-    return FALSE;
+    return TRUE;
 }
 
 // 0x4C6970
@@ -367,6 +367,7 @@ void CGameJournal::Marshal(CSavedGameJournalEntry* pSavedEntry)
             pSavedEntry->m_strEntry = pEntry->m_strText;
             pSavedEntry->m_time = pEntry->m_nTime;
             pSavedEntry->m_chapter = static_cast<BYTE>(cnt);
+            pSavedEntry->m_read = 0;
             pSavedEntry->m_type = static_cast<BYTE>(pEntry->m_wType);
             pSavedEntry->m_character = pEntry->m_bCharacter;
             pSavedEntry++;
@@ -436,10 +437,13 @@ void CGameJournal::ChangeEntry(DWORD nIndex, CString szNewText, INT nChapter, BY
 
     CGameJournalEntry* pEntry;
     POSITION pos = m_aChapters[nChapter]->GetHeadPosition();
+    DWORD nCount = 0;
     while (pos != NULL) {
         pEntry = m_aChapters[nChapter]->GetAt(pos);
         if ((nCharacter & pEntry->m_bCharacter) != 0) {
-            break;
+            if (nCount++ == nIndex) {
+                break;
+            }
         }
         m_aChapters[nChapter]->GetNext(pos);
     }
@@ -639,7 +643,9 @@ void CGameJournal::sub_4C7600(FILE* stream, const CString& sString)
 void CGameJournal::SaveAll()
 {
     for (INT iChapter = 0; iChapter < NUM_CHAPTERS; iChapter++) {
-        Save(iChapter);
+        if (m_aChapters[iChapter]->GetHeadPosition() != NULL) {
+            Save(iChapter);
+        }
     }
 }
 
@@ -689,7 +695,7 @@ void CGameJournal::Save(INT iChapter)
                 CTimerWorld::GetCurrentTimeString(pEntry->m_nTime, 15980, sTime);
                 g_pBaldurChitin->m_cTlkTable.Fetch(pEntry->m_strText, strRes);
 
-                sTime += strRes.szText;
+                sTime += " : " + strRes.szText;
 
                 sub_4C7600(stream, sTime);
                 fputs("\n\n", stream);
