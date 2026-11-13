@@ -162,16 +162,16 @@ public:
     /* 04BE */ BOOLEAN m_bJoinReturnValue;
     /* 04C0 */ CVidFont m_preLoadFontRealms;
     /* 09C0 */ CVidFont m_preLoadFontStnSml;
+    /* 0EC0 */ CVidCell m_vcTorch;
     /* 0F9A */ BOOL m_bIsNight;
     /* 0F9E */ BOOL m_bPlayEndCredits;
     /* 0FA2 */ BOOL m_bExitProgram;
     /* 0FA6 */ unsigned char field_FA6;
     /* 0FA8 */ int field_FA8;
     /* 0FAC */ int field_FAC;
+    /* 0FB0 */ int field_FB0;
     /* 0FB4 */ int field_FB4;
     /* 0FB8 */ int field_FB8;
-    /* 0EC0 */ CVidCell m_vcTorch;
-    /* 0FB0 */ int field_FB0;
 };
 
 class CUIControlButtonConnectionGameMode : public CUIControlButton {
