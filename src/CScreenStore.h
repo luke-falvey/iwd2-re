@@ -212,7 +212,7 @@ public:
     INT GetNumErrorButtons() { return m_nNumErrorButtons; }
 
     /* 0106 */ CKeyInfo m_pVirtualKeys[CSCREENSTORE_VIRTUAL_KEYS];
-    /* 039E */ BYTE m_pVirtualKeysFlags[CSCREENSTORE_VIRTUAL_KEYS];
+    /* 03DE */ BYTE m_pVirtualKeysFlags[CSCREENSTORE_VIRTUAL_KEYS];
     /* 0439 */ BOOLEAN m_bCtrlKeyDown;
     /* 043A */ BOOLEAN m_bShiftKeyDown;
     /* 043C */ BOOL m_bCapsLockKeyOn;
