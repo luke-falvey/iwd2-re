@@ -897,6 +897,7 @@
       "src/CScreenCharacter.cpp",
       "src/CScreenCreateChar.cpp",
       "src/CScreenInventory.cpp",
+      "src/CScreenMap.cpp",
       "src/CScreenMultiPlayer.cpp",
       "src/CScreenOptions.cpp",
       "src/CScreenWorldMap.cpp"
@@ -989,7 +990,6 @@
     "0x686660": [
       "src/CScreenJournal.cpp",
       "src/CScreenKeymaps.cpp",
-      "src/CScreenMap.cpp",
       "src/CScreenSinglePlayer.cpp",
       "src/CScreenSpellbook.cpp",
       "src/CScreenWorld.cpp"
@@ -997,8 +997,6 @@
     "0x668C30": [
       "src/CScreenJournal.cpp",
       "src/CScreenKeymaps.cpp",
-      "src/CScreenMap.cpp",
-      "src/CScreenSinglePlayer.cpp",
       "src/CScreenSpellbook.cpp"
     ],
     "0x63BAA0": [
@@ -1017,6 +1015,13 @@
     "0x63B9B0": [
       "src/CScreenLoad.cpp",
       "src/CScreenSave.cpp"
+    ],
+    "0x699620": [
+      "src/CScreenMap.cpp",
+      "src/CScreenMultiPlayer.cpp",
+      "src/CScreenOptions.cpp",
+      "src/CScreenSinglePlayer.cpp",
+      "src/CScreenWorldMap.cpp"
     ],
     "0x647540": [
       "src/CScreenMovies.cpp",
@@ -1050,11 +1055,6 @@
     "0x660780": [
       "src/CScreenMultiPlayer.cpp",
       "src/CScreenSinglePlayer.cpp"
-    ],
-    "0x699620": [
-      "src/CScreenMultiPlayer.cpp",
-      "src/CScreenOptions.cpp",
-      "src/CScreenWorldMap.cpp"
     ],
     "0x661480": [
       "src/CScreenMultiPlayer.cpp",

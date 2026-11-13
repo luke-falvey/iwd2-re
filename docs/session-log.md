@@ -2,6 +2,37 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-14 (early): batches 123–131, ten more files read against the exe; S7 added
+
+Same method on `CScreenCreateChar.cpp`, `CGameArea.cpp`, `CRuleTables.cpp`, `CScreenJournal.cpp`, `CGameAIBase.cpp`, `IcewindCGameEffects.cpp`, `CGameContainer.cpp`, `CScreenMap.cpp`, `CScreenSpellbook.cpp` and `CScreenSinglePlayer.cpp`: 1,133 pre-project functions, 138 with a real difference. One verifier claim was wrong (a `CGameContainer::SetCursor` switch table misread) and was caught by the fix translator reading the table from the exe.
+
+| File | Old functions read | With a real difference | Batch |
+|---|---|---|---|
+| `CScreenCreateChar.cpp` | 239 | 33 | 123 |
+| `CGameArea.cpp` | 57 | 18 | 124 |
+| `CRuleTables.cpp` | 71 | 13 | 125 |
+| `CScreenJournal.cpp` | 33 | 5 | 126 |
+| `CGameAIBase.cpp` | 77 | 14 | 127 |
+| `IcewindCGameEffects.cpp` | 192 | 14 | 128 |
+| `CGameContainer.cpp` | 24 | 7 | 129 |
+| `CScreenMap.cpp` | 79 | 8 | 130 |
+| `CScreenSpellbook.cpp` | 60 | 10 | 130 |
+| `CScreenSinglePlayer.cpp` | 99 | 15 | 131 |
+
+- **Character creation.** Ability rolls were computed and never stored; negative racial adjustments read as 254; a new sorcerer's spell picks tested the class number against the class mask and used the bard's level; feats were cleared through the skill-id table; Evoker and Illusionist were swapped (also in `CRuleTables::GetSpecializationIndex/Mask`, with Helm and Mystra); the appearance preview equipped the wrong animation; export did not replace spaces and compared names case-sensitively.
+- **Area.** Ambient loops never played outside low-memory mode (missing "extended" branch); dusk and dawn faded the night volume the wrong way and dawn called the dusk transition; `OnActivation` stopped the timer when paused instead of when not paused; `GetAllInPoly` had the dead test inverted; the travel click queued "leave" twice; `SetSong` stored -1 as 255.
+- **Rule tables.** `DSMonst` was loaded as `DSMonste`; `SLizard` was never loaded; intoxication read the reputation table; druid shapeshifts indexed by column; Lay on Hands tested the wrong class mask.
+- **AI base.** `ApplyTriggers` ATTACKEDBY party test inverted; `ApplyEffectToParty` shared one effect object across the party; four spawn-point/static actions had inverted NULL tests; `MoveView` finished when one axis arrived.
+- **Icewind effects.** Entropy Shield saves +10 for +2; Recitation and Righteous Wrath added damage bonuses the exe does not; Slow Poison switched on its own flags; Bane removed Aid instead of Bless; Rapid Shot's copy built a Stoneskin effect; Arterial Strike used the feat number as a spell-state bit.
+- **Containers.** Own script-name buffer at 0x86C added (the exe never uses the base one for containers); cursor for "no party selected" inverted; loot-pile bounding box and polygon clean-up wrong; `SetItem` refreshed every slot.
+- **Screens.** Keymap loops that never increment in the journal, map, spellbook, multiplayer and world-map screens (a hang on an unmapped key), all fixed; keys not offered to the UI manager first in the map and spellbook; premade-party import passed the party-list position where the exe passes the slot (all six biographies landed in one string slot).
+
+**S7 (new play test).** `test_s7_hedron_branches.py` takes the branches of the Hedron conversation S3–S5 skip (twelve nodes, including the reply that adds a journal entry), then opens the journal. Recorded twice on the original. On the rebuild every dialogue checkpoint matched at once; the journal checkpoint failed with an empty text area. Cause: `CGameJournal::AddEntry` built entries with the default constructor, so the character mask was garbage and `UpdateTextDisplay` hid them (exe 0x4C6440 stores text, time, type and 0xFF). Fixed in batch 126; `Unmarshal` had the same fault and a mask that was never copied from the save (batch 127). S7 passes since batch 126. A first design (talk to a dock NPC) was dropped: nobody on the docks is talkable in the reachable part of AR1000.
+
+**State.** 0.94 MB of old code unread (3,270 functions). Largest: `CUIControlFactory.cpp` (54 KB), the character animation files (48, 44, 28 KB), `CScreenConnection.cpp` (39 KB), `CScreenMultiPlayer.cpp` (33 KB), `CNetwork.cpp` (27 KB), `CDimm.cpp` (23 KB), `CInfinity.cpp` (22 KB), `CScreenOptions.cpp` (21 KB), `CBaldurChitin.cpp` (20 KB).
+
+**Open items.** `CScreenCreateChar::OnDoneButtonClick` has a second bad-character string no finding covered. `CScreenSinglePlayer::OnCancelButtonClick` unlocks explicitly in three cases where the exe leaves it to the destructor.
+
 ## 2026-11-13 (late night): batches 118–121, old code in the four main screens read against the exe
 
 Same method as the entry below, on `CScreenInventory.cpp`, `CScreenStore.cpp`, `CScreenCharacter.cpp` and `CScreenWorld.cpp`: 637 pre-project functions, 117 with a real difference. Every verifier claim held when re-checked; fix translators now read switch tables from the exe with `peek.py` instead of taking them on trust.
