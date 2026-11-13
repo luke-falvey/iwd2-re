@@ -178,7 +178,7 @@ void CNetworkWindow::AddToIncomingQueue(PLAYER_ID idFrom, PLAYER_ID idTo, BYTE* 
         DWORD dwRemainingSize = dwDataSize;
         while (1) {
             DWORD dwChunkSize = (pData[dwOffset + CNetwork::dword_85E69C + CNetwork::dword_85E698 + CNetwork::dword_85E6A0] << 8)
-                + pData[CNetwork::dword_85E69C + CNetwork::dword_85E698 + CNetwork::dword_85E6A0 + 1]
+                + pData[dwOffset + CNetwork::dword_85E69C + CNetwork::dword_85E698 + CNetwork::dword_85E6A0 + 1]
                 + CNetwork::dword_85E68C;
             if (dwChunkSize > dwRemainingSize) {
                 break;
@@ -239,7 +239,7 @@ BOOLEAN CNetworkWindow::CheckIncomingQueue()
     if (memcmp(pData + CNetwork::dword_85E698, (LPCSTR)CNetwork::JM, CNetwork::dword_85E69C) == 0) {
         int cnt = 0;
         for (int offset = CNetwork::dword_85E69C + CNetwork::dword_85E698; offset < CNetwork::dword_85E69C + CNetwork::dword_85E698 + CNetwork::dword_85E6A0; offset++) {
-            cnt = pData[offset] + (cnt << 8);
+            cnt = static_cast<char>(pData[offset]) + (cnt << 8);
         }
 
         while (pos != NULL && cnt > 0) {
@@ -296,7 +296,7 @@ BOOLEAN CNetworkWindow::CheckIncomingQueueSpecific(BYTE nSpecMsgType, BYTE nSpec
     if (!m_lQueueIncomingMessages.IsEmpty()) {
         POSITION pos = m_lQueueIncomingMessages.GetHeadPosition();
         while (pos != NULL) {
-            BYTE* pData = m_lQueueIncomingMessages.GetNext(pos)->pData;
+            BYTE* pData = m_lQueueIncomingMessages.GetAt(pos)->pData;
 
             if (memcmp(pData + CNetwork::dword_85E698, (LPCSTR)CNetwork::MG, CNetwork::dword_85E69C) == 0) {
                 pData += CNetwork::dword_85E694;
@@ -311,7 +311,7 @@ BOOLEAN CNetworkWindow::CheckIncomingQueueSpecific(BYTE nSpecMsgType, BYTE nSpec
             if (memcmp(pData + CNetwork::dword_85E698, (LPCSTR)CNetwork::JM, CNetwork::dword_85E69C) == 0) {
                 int cnt = 0;
                 for (int offset = CNetwork::dword_85E69C + CNetwork::dword_85E698; offset < CNetwork::dword_85E69C + CNetwork::dword_85E698 + CNetwork::dword_85E6A0; offset++) {
-                    cnt = pData[offset] + (cnt << 8);
+                    cnt = static_cast<char>(pData[offset]) + (cnt << 8);
                 }
 
                 pData += CNetwork::dword_85E68C;
@@ -326,7 +326,19 @@ BOOLEAN CNetworkWindow::CheckIncomingQueueSpecific(BYTE nSpecMsgType, BYTE nSpec
                     LeaveCriticalSection(&(g_pChitin->cNetwork.field_F52));
                     return cnt == 0;
                 }
+
+                cnt--;
+                while (cnt > 0) {
+                    m_lQueueIncomingMessages.GetNext(pos);
+                    cnt--;
+                    if (pos == NULL) {
+                        LeaveCriticalSection(&(g_pChitin->cNetwork.field_F52));
+                        return FALSE;
+                    }
+                }
             }
+
+            m_lQueueIncomingMessages.GetNext(pos);
         }
     }
 
@@ -364,6 +376,9 @@ void CNetworkWindow::FrameSend(BYTE nFrameKind, WORD nFrameNumber)
     if (nFrameKind != 0) {
         pData = new BYTE[CNetwork::dword_85E698];
         dwSize = CNetwork::dword_85E698;
+        if (pData != NULL) {
+            pData[5] = 0;
+        }
     } else {
         pData = m_pOutgoingBuffers[0].pData;
         dwSize = m_pOutgoingBuffers[0].dwSize;
@@ -373,6 +388,7 @@ void CNetworkWindow::FrameSend(BYTE nFrameKind, WORD nFrameNumber)
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
         // __LINE__ 913
         UTIL_ASSERT_MSG(FALSE, "FrameSend:: Null Message!\n");
+        return;
     }
 
     pData[0] = nFrameKind;
@@ -400,7 +416,7 @@ void CNetworkWindow::FrameSend(BYTE nFrameKind, WORD nFrameNumber)
     }
 
     if (nFrameKind == 2) {
-        m_bNoNak = TRUE;
+        m_bNoNak = FALSE;
     }
 
     PLAYER_ID idTo = g_pChitin->cNetwork.GetPlayerID(m_nPlayerNumber);
@@ -493,10 +509,12 @@ void CNetworkWindow::ShutDown()
             DWORD dwRemainingSize = dwDataSize;
             while (1) {
                 DWORD dwChunkSize = (pData[dwOffset + CNetwork::dword_85E69C + CNetwork::dword_85E698 + CNetwork::dword_85E6A0] << 8)
-                    + pData[CNetwork::dword_85E69C + CNetwork::dword_85E698 + CNetwork::dword_85E6A0 + 1]
+                    + pData[dwOffset + CNetwork::dword_85E69C + CNetwork::dword_85E698 + CNetwork::dword_85E6A0 + 1]
                     + CNetwork::dword_85E68C;
                 if (dwChunkSize > dwRemainingSize) {
-                    break;
+                    // NOTE: Original code returns here with `field_F52` still
+                    // locked.
+                    return;
                 }
 
                 BYTE* pChunkData = new BYTE[dwChunkSize];
@@ -505,6 +523,10 @@ void CNetworkWindow::ShutDown()
                     // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
                     // __LINE__: 1194
                     UTIL_ASSERT(FALSE);
+
+                    // NOTE: Original code returns here with `field_F52` still
+                    // locked.
+                    return;
                 }
 
                 memcpy(pChunkData, pData + dwOffset, dwChunkSize);
@@ -515,7 +537,7 @@ void CNetworkWindow::ShutDown()
                     pEntry->idTo = nServerID;
                     pEntry->pData = pChunkData;
                     pEntry->dwSize = dwChunkSize;
-                    m_lQueueIncomingMessages.AddTail(pEntry);
+                    g_pChitin->cNetwork.m_pSlidingWindow[nServerLocation].m_lQueueOutgoingMessages.AddTail(pEntry);
                 } else {
                     delete pChunkData;
                 }
@@ -549,7 +571,7 @@ void CNetworkWindow::ShutDown()
                     newNode->idTo = nServerID;
                     newNode->pData = pData;
                     newNode->dwSize = dwDataSize;
-                    m_lQueueOutgoingMessages.AddTail(newNode);
+                    g_pChitin->cNetwork.m_pSlidingWindow[nServerLocation].m_lQueueOutgoingMessages.AddTail(newNode);
                 } else {
                     delete m_pOutgoingBuffers[0].pData;
                 }
@@ -584,7 +606,7 @@ void CNetworkWindow::ShutDown()
                 newNode->idTo = nServerID;
                 newNode->pData = node->pData;
                 newNode->dwSize = node->dwSize;
-                m_lQueueOutgoingMessages.AddTail(newNode);
+                g_pChitin->cNetwork.m_pSlidingWindow[nServerLocation].m_lQueueOutgoingMessages.AddTail(newNode);
             }
         } else {
             delete node->pData;
@@ -592,6 +614,7 @@ void CNetworkWindow::ShutDown()
         }
 
         m_lQueueOutgoingMessages.RemoveAt(posOld);
+        node->pData = NULL;
         delete node;
     }
 
@@ -651,6 +674,7 @@ void CNetworkWindow::RemoveFromAllQueues()
         oldPos = pos;
         node = m_lQueueIncomingMessages.GetNext(pos);
         m_lQueueIncomingMessages.RemoveAt(oldPos);
+        delete node->pData;
         delete node;
     }
 
@@ -659,6 +683,7 @@ void CNetworkWindow::RemoveFromAllQueues()
         oldPos = pos;
         node = m_lQueueOutgoingMessages.GetNext(pos);
         m_lQueueOutgoingMessages.RemoveAt(oldPos);
+        delete node->pData;
         delete node;
     }
 
@@ -711,12 +736,13 @@ BYTE* CNetworkWindow::RemoveFromIncomingQueue(PLAYER_ID& idDPFrom, PLAYER_ID& id
         dwDataSize = 0;
 
         while (pos != NULL && remaining > 0) {
-            dwDataSize += node->dwSize;
+            CNETWORKWINDOW_QUEUEENTRY* pEntry = m_lQueueIncomingMessages.GetAt(pos);
+            dwDataSize += pEntry->dwSize;
 
             if (remaining == cnt) {
                 dwDataSize -= CNetwork::dword_85E68C;
             } else {
-                if (memcmp(node->pData + CNetwork::dword_85E698, (LPCSTR)CNetwork::JB, CNetwork::dword_85E69C) != 0) {
+                if (memcmp(pEntry->pData + CNetwork::dword_85E698, (LPCSTR)CNetwork::JB, CNetwork::dword_85E69C) != 0) {
                     CString v1;
                     CString v2;
                     CString v3;
@@ -733,14 +759,14 @@ BYTE* CNetworkWindow::RemoveFromIncomingQueue(PLAYER_ID& idDPFrom, PLAYER_ID& id
                         m_nNumBuffered,
                         m_nFrameExpected);
                     v4.Format("Message Prefix: %x %x %x %x %x %x %x %x\n",
-                        node->pData[0],
-                        node->pData[1],
-                        node->pData[2],
-                        node->pData[3],
-                        node->pData[4],
-                        node->pData[5],
-                        node->pData[6],
-                        node->pData[7]);
+                        pEntry->pData[0],
+                        pEntry->pData[1],
+                        pEntry->pData[2],
+                        pEntry->pData[3],
+                        pEntry->pData[4],
+                        pEntry->pData[5],
+                        pEntry->pData[6],
+                        pEntry->pData[7]);
                     v5.Format("%s %s %s %s",
                         (LPCSTR)v1,
                         (LPCSTR)v2,
@@ -895,7 +921,7 @@ BYTE* CNetworkWindow::RemoveFromIncomingQueueSpecific(BYTE nSpecMsgType, BYTE nS
 
                 while (otherPos != NULL && remaining > 0) {
                     node = m_lQueueIncomingMessages.GetAt(otherPos);
-                    dwDataSize += node->dwSize + CNetwork::SPEC_MSG_HEADER_LENGTH;
+                    dwDataSize += node->dwSize;
 
                     if (remaining == cnt) {
                         dwDataSize -= CNetwork::dword_85E68C;
@@ -940,6 +966,7 @@ BYTE* CNetworkWindow::RemoveFromIncomingQueueSpecific(BYTE nSpecMsgType, BYTE nS
                     }
 
                     remaining--;
+                    m_lQueueIncomingMessages.GetNext(otherPos);
                 }
 
                 if (remaining == 0) {
@@ -985,6 +1012,10 @@ BYTE* CNetworkWindow::RemoveFromIncomingQueueSpecific(BYTE nSpecMsgType, BYTE nS
                 while (cnt - 1 > 0) {
                     m_lQueueIncomingMessages.GetNext(pos);
                     cnt--;
+                    if (pos == NULL) {
+                        LeaveCriticalSection(&(g_pChitin->cNetwork.field_F52));
+                        return NULL;
+                    }
                 }
             }
         }
@@ -1038,15 +1069,15 @@ void CNetworkWindow::SendCall()
                             break;
                         }
 
-                        CNETWORKWINDOW_QUEUEENTRY* newNode = !m_lQueueOutgoingMessages.IsEmpty()
+                        CNETWORKWINDOW_QUEUEENTRY* pNewNode = !m_lQueueOutgoingMessages.IsEmpty()
                             ? m_lQueueOutgoingMessages.RemoveHead()
                             : NULL;
 
                         // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
                         // __LINE__: 2380
-                        UTIL_ASSERT(newNode != NULL);
+                        UTIL_ASSERT(pNewNode != NULL);
 
-                        DWORD dwNewSize = m_pOutgoingBuffers[0].dwSize + newNode->dwSize;
+                        DWORD dwNewSize = m_pOutgoingBuffers[0].dwSize + pNewNode->dwSize;
                         BYTE* pNewData = new BYTE[dwNewSize];
                         if (pNewData == NULL) {
                             // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
@@ -1058,18 +1089,18 @@ void CNetworkWindow::SendCall()
                             m_pOutgoingBuffers[0].pData,
                             m_pOutgoingBuffers[0].dwSize);
                         memcpy(pNewData + m_pOutgoingBuffers[0].dwSize,
-                            newNode->pData,
-                            newNode->dwSize);
+                            pNewNode->pData,
+                            pNewNode->dwSize);
 
                         delete m_pOutgoingBuffers[0].pData;
                         m_pOutgoingBuffers[0].pData = NULL;
 
-                        if (newNode->pData != NULL) {
-                            delete newNode->pData;
-                            newNode->pData = NULL;
+                        if (pNewNode->pData != NULL) {
+                            delete pNewNode->pData;
+                            pNewNode->pData = NULL;
                         }
 
-                        delete newNode;
+                        delete pNewNode;
 
                         m_pOutgoingBuffers[0].pData = pNewData;
                         m_pOutgoingBuffers[0].dwSize = dwNewSize;
@@ -1147,10 +1178,11 @@ void CNetworkWindow::ReceiveCall(BYTE* pData, DWORD dwSize)
                 }
             }
         } else if (pData[0] == 2) {
-            if ((m_nAckExpected <= nAck && nAck < m_nNextFrameToSend)
-                || (m_nNextFrameToSend < m_nAckExpected && m_nAckExpected <= nAck)
-                || (nAck < m_nNextFrameToSend && m_nNextFrameToSend < m_nAckExpected)) {
-                FrameSend(0, nAck);
+            WORD nNakFrame = static_cast<WORD>(nAck + 1);
+            if ((m_nAckExpected <= nNakFrame && nNakFrame < m_nNextFrameToSend)
+                || (m_nNextFrameToSend < m_nAckExpected && m_nAckExpected <= nNakFrame)
+                || (nNakFrame < m_nNextFrameToSend && m_nNextFrameToSend < m_nAckExpected)) {
+                FrameSend(0, nNakFrame);
             }
         }
 
@@ -1427,14 +1459,16 @@ void CNetwork::AddServiceProviderToList(const CString& sServiceProviderName, con
     }
 
     m_pServiceProviderConnections[m_nTotalServiceProviders] = operator new(size);
-    if (m_pServiceProviderConnections[m_nTotalServiceProviders] != NULL) {
-        memcpy(m_pServiceProviderConnections[m_nTotalServiceProviders], lpConnection, size);
 
-        m_serviceProviderGuids[m_nTotalServiceProviders] = sServiceProviderGuid;
-        m_serviceProviderNames[m_nTotalServiceProviders] = sServiceProviderName;
+    // NOTE: The original tests the address of the array
+    // (`m_pServiceProviderConnections`), not the new element, so this always
+    // runs, even when the allocation fails.
+    memcpy(m_pServiceProviderConnections[m_nTotalServiceProviders], lpConnection, size);
 
-        m_nTotalServiceProviders++;
-    }
+    m_serviceProviderGuids[m_nTotalServiceProviders] = sServiceProviderGuid;
+    m_serviceProviderNames[m_nTotalServiceProviders] = sServiceProviderName;
+
+    m_nTotalServiceProviders++;
 }
 
 // 0x7A4780
@@ -1689,7 +1723,7 @@ BOOLEAN CNetwork::HasModems()
         return FALSE;
     }
 
-    if (RegOpenKeyExA(hSystem, "Services", 0, KEY_READ, &hServices) != ERROR_SUCCESS) {
+    if (RegOpenKeyExA(hCurrentControlSet, "Services", 0, KEY_READ, &hServices) != ERROR_SUCCESS) {
         RegCloseKey(hCurrentControlSet);
         RegCloseKey(hSystem);
         return FALSE;
@@ -2310,21 +2344,32 @@ BOOLEAN CNetwork::CheckSessionStatus(BOOLEAN bInThreadLoop)
         }
 
         if (m_pLastSessionBuffer == NULL) {
+            // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
+            // __LINE__: 5709
             UTIL_ASSERT_MSG(FALSE, "CNetwork::CheckSessionStatus: Can't create session descriptor.");
+
+            hr = DPERR_NOMEMORY;
+            nCurrentPlayers = 0;
+            nMaxPlayers = CNETWORK_MAX_PLAYERS;
+        } else {
+            EnterCriticalSection(&field_F6A);
+
+            hr = m_lpDirectPlay->GetSessionDesc(m_pLastSessionBuffer, &dwSize);
+
+            LeaveCriticalSection(&field_F6A);
+
+            nCurrentPlayers = reinterpret_cast<DPSESSIONDESC2*>(m_pLastSessionBuffer)->dwCurrentPlayers;
+            nMaxPlayers = reinterpret_cast<DPSESSIONDESC2*>(m_pLastSessionBuffer)->dwMaxPlayers;
         }
-
-        EnterCriticalSection(&field_F6A);
-
-        hr = m_lpDirectPlay->GetSessionDesc(m_pLastSessionBuffer, &dwSize);
-
-        LeaveCriticalSection(&field_F6A);
-
-        nCurrentPlayers = reinterpret_cast<DPSESSIONDESC2*>(m_pLastSessionBuffer)->dwCurrentPlayers;
-        nMaxPlayers = reinterpret_cast<DPSESSIONDESC2*>(m_pLastSessionBuffer)->dwMaxPlayers;
     } else {
-        if (m_nServiceProvider != 0) {
+        if (m_nServiceProvider == 0) {
             nCurrentPlayers = 1;
             nMaxPlayers = 1;
+        } else {
+            // NOTE: The original loads both counts from the `bInThreadLoop`
+            // argument's stack slot here (as a full dword).
+            nCurrentPlayers = bInThreadLoop;
+            nMaxPlayers = bInThreadLoop;
         }
     }
 
@@ -2338,11 +2383,10 @@ BOOLEAN CNetwork::CheckSessionStatus(BOOLEAN bInThreadLoop)
     }
 
     if (bInThreadLoop == TRUE && m_bIsHost == TRUE && hr == DP_OK) {
-        // TODO: Check.
-        if ((nCurrentPlayers != CNETWORK_MAX_PLAYERS
-                || nMaxPlayers != CNETWORK_MAX_PLAYERS)
-            && nMaxPlayers != nCurrentPlayers + 1) {
-            m_nMaxPlayers = max(nCurrentPlayers + 1, CNETWORK_MAX_PLAYERS);
+        if (nCurrentPlayers == CNETWORK_MAX_PLAYERS
+                ? nMaxPlayers != CNETWORK_MAX_PLAYERS
+                : nMaxPlayers != nCurrentPlayers + 1) {
+            m_nMaxPlayers = min(nCurrentPlayers + 1, CNETWORK_MAX_PLAYERS);
             SetInSessionOptions();
         }
     }
@@ -2466,7 +2510,7 @@ BOOLEAN CNetwork::EnumerateSessions(BOOLEAN a1, BOOLEAN a2)
     if (m_bSessionSelected == TRUE) {
         m_bSessionSelected = FALSE;
 
-        for (INT nSession = 0; nSession < CNETWORK_MAX_SESSIONS; nSession++) {
+        for (SHORT nSession = 0; nSession < m_nTotalSessions; nSession++) {
             if (IsEqualGUID(m_pSessionGuid[nSession], m_guidSession)) {
                 m_nSession = nSession;
                 m_bSessionSelected = TRUE;
@@ -2810,8 +2854,6 @@ BOOLEAN CNetwork::CreatePlayer(INT& nErrorCode)
             nErrorCode = ERROR_CANNOTCREATEPLAYER;
             return FALSE;
         }
-
-        AddPlayerToList(m_idLocalPlayer, m_sLocalPlayerName, m_bIsHost, TRUE);
     } else {
         INT nSlot;
         for (nSlot = 0; nSlot < CNETWORK_MAX_PLAYERS; nSlot++) {
@@ -2912,8 +2954,8 @@ BOOLEAN CNetwork::AddPlayerToList(PLAYER_ID dpID, const CString& sPlayerName, BO
 // 0x7A6D10
 BOOLEAN CNetwork::KickPlayer(PLAYER_ID dpID, BOOLEAN bAIResponsible)
 {
-    BOOLEAN v1;
-    BOOLEAN v2;
+    BOOLEAN v1 = FALSE;
+    BOOLEAN v2 = FALSE;
     CString sKickedPlayerName;
     INT nPlayer;
 
@@ -2975,7 +3017,7 @@ BOOLEAN CNetwork::RemovePlayerFromList(PLAYER_ID dpID, BOOLEAN bAIResponsible)
     INT nPlayerToRemove = -1;
     BOOLEAN bFound = FALSE;
 
-    for (INT nPlayer = 0; nPlayer < CNETWORK_MAX_PLAYERS; nPlayer++) {
+    for (INT nPlayer = 0; nPlayer < CNETWORK_MAX_PLAYERS && !bFound; nPlayer++) {
         if (m_pPlayerID[nPlayer] == dpID) {
             nPlayerToRemove = nPlayer;
             bFound = TRUE;
@@ -3160,6 +3202,10 @@ void CNetwork::GetRawPlayerName(INT nPlayerNumber, CString& sPlayerName)
 // 0x7A72B0
 PLAYER_ID CNetwork::FindPlayerIDByName(const CString& sPlayerName, BOOLEAN bInvisible)
 {
+    if (sPlayerName.Compare("") == 0) {
+        return 0;
+    }
+
     for (INT nPlayerNumber = 0; nPlayerNumber < CNETWORK_MAX_PLAYERS; nPlayerNumber++) {
         if (m_psPlayerName[nPlayerNumber].Compare(sPlayerName) == 0) {
             if (bInvisible || m_pbPlayerVisible[nPlayerNumber]) {
@@ -3182,10 +3228,8 @@ INT CNetwork::FindPlayerLocationByID(PLAYER_ID playerID, BOOLEAN bInvisible)
 
     for (INT nPlayerNumber = 0; nPlayerNumber < CNETWORK_MAX_PLAYERS; nPlayerNumber++) {
         if (m_pPlayerID[nPlayerNumber] == playerID) {
-            if (bInvisible || m_pbPlayerVisible[nPlayerNumber]) {
+            if (bInvisible == TRUE || m_pbPlayerVisible[nPlayerNumber] == TRUE) {
                 return nPlayerNumber;
-            } else {
-                return -1;
             }
         }
     }
@@ -3202,10 +3246,8 @@ INT CNetwork::FindPlayerLocationByName(const CString& sPlayerName, BOOLEAN bInvi
 
     for (INT nPlayerNumber = 0; nPlayerNumber < CNETWORK_MAX_PLAYERS; nPlayerNumber++) {
         if (m_psPlayerName[nPlayerNumber].Compare(sPlayerName) == 0) {
-            if (bInvisible || m_pbPlayerVisible[nPlayerNumber]) {
+            if (bInvisible == TRUE || m_pbPlayerVisible[nPlayerNumber] == TRUE) {
                 return nPlayerNumber;
-            } else {
-                return -1;
             }
         }
     }
@@ -3504,13 +3546,20 @@ BOOLEAN CNetwork::HandleSystemMessage(BYTE* pData, DWORD dwSize)
 // 0x7A7BF0
 void CNetwork::AddMessageToWindow(PLAYER_ID idTo, DWORD dwFlags, BYTE* pData, DWORD dwSize)
 {
-    // NOTE: Uninline.
-    INT nPlayer = FindPlayerLocationByID(idTo, TRUE);
+    // NOTE: Not `FindPlayerLocationByID`: no zero ID check, no visibility
+    // test, and the last match wins.
+    INT nPlayer = -1;
+    for (INT nIndex = 0; nIndex < CNETWORK_MAX_PLAYERS; nIndex++) {
+        if (m_pPlayerID[nIndex] == idTo) {
+            nPlayer = nIndex;
+        }
+    }
 
     if (nPlayer == -1) {
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
         // __LINE__: 8339
         UTIL_ASSERT_MSG(FALSE, "CNetwork::AddMessageToWindow: Invalid SendTo ID.");
+        return;
     }
 
     BOOLEAN bRaw = (dwFlags & SEND_RAW) != 0;
@@ -3694,19 +3743,18 @@ BYTE* CNetwork::FetchSpecificMessage(const CString& sPlayerName, BYTE nSpecMsgTy
 
     PLAYER_ID idDPFrom;
     PLAYER_ID idDPTo;
-    DWORD dwDataSize;
     BOOLEAN bCompressed;
     BYTE* pData = m_pSlidingWindow[nPlayer].RemoveFromIncomingQueueSpecific(nSpecMsgType,
         nSpecMsgSubType,
         idDPFrom,
         idDPTo,
-        dwDataSize,
+        dwSize,
         bCompressed);
     if (!bCompressed) {
         return pData;
     }
 
-    BYTE* pUncompressedData = UncompressMessage(pData, dwDataSize);
+    BYTE* pUncompressedData = UncompressMessage(pData, dwSize);
     delete pData;
     return pUncompressedData;
 }
@@ -3772,6 +3820,7 @@ BOOLEAN CNetwork::SendMessage_(const CString& sPlayerName, DWORD dwFlags, BYTE* 
     }
 
     BYTE* pCompressedData;
+    DWORD nCompressedLength;
     BOOLEAN bCompressed = FALSE;
 
     PLAYER_ID idTo = 0;
@@ -3785,7 +3834,7 @@ BOOLEAN CNetwork::SendMessage_(const CString& sPlayerName, DWORD dwFlags, BYTE* 
     }
 
     if ((dwFlags & SEND_RAW) == 0 && dwSize >= MINIMAL_PACKET_SIZE) {
-        DWORD nCompressedLength = dwSize + 16;
+        nCompressedLength = dwSize + 16;
 
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
         // __LINE__: 8937
@@ -3818,7 +3867,7 @@ BOOLEAN CNetwork::SendMessage_(const CString& sPlayerName, DWORD dwFlags, BYTE* 
 
     if (idTo != 0) {
         if (bCompressed) {
-            AddMessageToWindow(idTo, dwFlags | SEND_RAW, pCompressedData, dwSize);
+            AddMessageToWindow(idTo, dwFlags | SEND_RAW, pCompressedData, nCompressedLength);
         } else {
             AddMessageToWindow(idTo, dwFlags, pData, dwSize);
         }
@@ -3831,7 +3880,7 @@ BOOLEAN CNetwork::SendMessage_(const CString& sPlayerName, DWORD dwFlags, BYTE* 
                     AddMessageToWindow(m_pPlayerID[nPlayer],
                         dwFlags | SEND_RAW,
                         pCompressedData,
-                        dwSize);
+                        nCompressedLength);
                 } else {
                     AddMessageToWindow(m_pPlayerID[nPlayer],
                         dwFlags,
@@ -3857,7 +3906,7 @@ BOOLEAN CNetwork::SendSpecificMessage(const CString& sPlayerName, DWORD dwFlags,
     BYTE* pMessage = STATIC_MESSAGE_BUFFER;
     BYTE* pMessageDynamicBuffer = NULL;
     DWORD dwSize = nDataSize + SPEC_MSG_HEADER_LENGTH;
-    if ((dwFlags & SEND_RAW) == 0 && nDataSize >= MINIMAL_PACKET_SIZE) {
+    if ((dwFlags & SEND_RAW) == 0 && dwSize >= MINIMAL_PACKET_SIZE) {
         dwSize += 16;
         if (dwSize > STATIC_MESSAGE_SIZE) {
             pMessageDynamicBuffer = new BYTE[dwSize];
@@ -3901,6 +3950,10 @@ BOOLEAN CNetwork::SendSpecificMessage(const CString& sPlayerName, DWORD dwFlags,
             // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
             // __LINE__: 9191
             UTIL_ASSERT(pMessage != NULL);
+
+            if (pMessage == NULL) {
+                return FALSE;
+            }
         }
 
         pMessage[SPEC_MSG_FLAG] = SPEC_MSG_FLAG_ENABLED;
@@ -3941,6 +3994,11 @@ BYTE* CNetwork::UncompressMessage(BYTE* pData, DWORD& dwSize)
             + pData[SPEC_MSG_HEADER_LENGTH + 3];
 
         pUncompressedData = new BYTE[dwUncompressedSize + SPEC_MSG_HEADER_LENGTH];
+
+        // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
+        // __LINE__: 9305
+        UTIL_ASSERT(pUncompressedData != NULL);
+
         pUncompressedData[SPEC_MSG_FLAG] = pData[SPEC_MSG_FLAG];
         pUncompressedData[SPEC_MSG_TYPE] = pData[SPEC_MSG_TYPE];
         pUncompressedData[SPEC_MSG_SUBTYPE] = pData[SPEC_MSG_SUBTYPE];
@@ -3952,30 +4010,6 @@ BYTE* CNetwork::UncompressMessage(BYTE* pData, DWORD& dwSize)
         if (err != 0) {
             if (err != -5) {
                 CString sError;
-                sError.Format("z_uncompress returned %d", err);
-                sError.Format("Uncompress in network layer failed.  Error code %d.\n", err);
-                sError += "Please report this error and look at icewind2.log file, too!";
-
-                // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
-                // __LINE__: 9320
-                UTIL_ASSERT_MSG(FALSE, (LPCSTR)sError);
-            }
-
-            delete pUncompressedData;
-
-            dwUncompressedSize = 2 * ((pData[SPEC_MSG_HEADER_LENGTH] << 24) + (pData[SPEC_MSG_HEADER_LENGTH + 1] << 16) + (pData[SPEC_MSG_HEADER_LENGTH + 2] << 8) + pData[SPEC_MSG_HEADER_LENGTH + 3]);
-
-            pUncompressedData = new BYTE[dwUncompressedSize + SPEC_MSG_HEADER_LENGTH];
-            pUncompressedData[SPEC_MSG_FLAG] = pData[SPEC_MSG_FLAG];
-            pUncompressedData[SPEC_MSG_TYPE] = pData[SPEC_MSG_TYPE];
-            pUncompressedData[SPEC_MSG_SUBTYPE] = pData[SPEC_MSG_SUBTYPE];
-
-            err = CUtil::Uncompress(pUncompressedData + SPEC_MSG_HEADER_LENGTH,
-                &dwUncompressedSize,
-                pData + 7,
-                dwSize - 7);
-            if (err != 0) {
-                CString sError;
 
                 // FIXME: Useless.
                 sError.Format("z_uncompress returned %d", err);
@@ -3984,13 +4018,45 @@ BYTE* CNetwork::UncompressMessage(BYTE* pData, DWORD& dwSize)
                 sError += "Please report this error and look at icewind2.log file, too!";
 
                 // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
-                // __LINE__: 9359
+                // __LINE__: 9320
                 UTIL_ASSERT_MSG(FALSE, (LPCSTR)sError);
-            }
+            } else {
+                delete pUncompressedData;
 
-            // FIXME: Not used.
-            CString sError;
-            sError.Format("Network Layer: size of %d succeeded, half size failed\n", err);
+                dwUncompressedSize = 2 * ((pData[SPEC_MSG_HEADER_LENGTH] << 24) + (pData[SPEC_MSG_HEADER_LENGTH + 1] << 16) + (pData[SPEC_MSG_HEADER_LENGTH + 2] << 8) + pData[SPEC_MSG_HEADER_LENGTH + 3]);
+
+                pUncompressedData = new BYTE[dwUncompressedSize + SPEC_MSG_HEADER_LENGTH];
+
+                // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
+                // __LINE__: 9344
+                UTIL_ASSERT(pUncompressedData != NULL);
+
+                pUncompressedData[SPEC_MSG_FLAG] = pData[SPEC_MSG_FLAG];
+                pUncompressedData[SPEC_MSG_TYPE] = pData[SPEC_MSG_TYPE];
+                pUncompressedData[SPEC_MSG_SUBTYPE] = pData[SPEC_MSG_SUBTYPE];
+
+                err = CUtil::Uncompress(pUncompressedData + SPEC_MSG_HEADER_LENGTH,
+                    &dwUncompressedSize,
+                    pData + 7,
+                    dwSize - 7);
+                if (err != 0) {
+                    CString sError;
+
+                    // FIXME: Useless.
+                    sError.Format("z_uncompress returned %d", err);
+
+                    sError.Format("Uncompress in network layer failed.  Error code %d.\n", err);
+                    sError += "Please report this error and look at icewind2.log file, too!";
+
+                    // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
+                    // __LINE__: 9359
+                    UTIL_ASSERT_MSG(FALSE, (LPCSTR)sError);
+                } else {
+                    // FIXME: Not used.
+                    CString sError;
+                    sError.Format("Network Layer: size of %d succeeded, half size failed\n", dwUncompressedSize);
+                }
+            }
         }
 
         dwSize = dwUncompressedSize + SPEC_MSG_HEADER_LENGTH;
@@ -4001,7 +4067,7 @@ BYTE* CNetwork::UncompressMessage(BYTE* pData, DWORD& dwSize)
             + (pData[2] << 8)
             + pData[3];
 
-        pUncompressedData = new BYTE[dwUncompressedSize + SPEC_MSG_HEADER_LENGTH];
+        pUncompressedData = new BYTE[dwUncompressedSize];
 
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
         // __LINE__: 9384
@@ -4024,39 +4090,39 @@ BYTE* CNetwork::UncompressMessage(BYTE* pData, DWORD& dwSize)
                 // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
                 // __LINE__: 9396
                 UTIL_ASSERT_MSG(FALSE, (LPCSTR)sError);
-            }
+            } else {
+                delete pUncompressedData;
 
-            delete pUncompressedData;
+                dwUncompressedSize = 2 * ((pData[0] << 24) + (pData[1] << 16) + (pData[2] << 8) + pData[3]);
 
-            dwUncompressedSize = 2 * ((pData[0] << 24) + (pData[1] << 16) + (pData[2] << 8) + pData[3]);
-
-            pUncompressedData = new BYTE[dwUncompressedSize];
-
-            // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
-            // __LINE__: 9419
-            UTIL_ASSERT(pUncompressedData != NULL);
-
-            err = CUtil::Uncompress(pUncompressedData,
-                &dwUncompressedSize,
-                pData + 4,
-                dwSize - 4);
-            if (err != 0) {
-                CString sError;
-
-                // FIXME: Useless.
-                sError.Format("z_uncompress returned %d", err);
-
-                sError.Format("Uncompress in network layer failed.  Error code %d.\n", err);
-                sError += "Please report this error and look at icewind2.log file, too!";
+                pUncompressedData = new BYTE[dwUncompressedSize];
 
                 // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
-                // __LINE__: 9431
-                UTIL_ASSERT_MSG(FALSE, (LPCSTR)sError);
-            }
+                // __LINE__: 9419
+                UTIL_ASSERT(pUncompressedData != NULL);
 
-            // FIXME: Not used.
-            CString sError;
-            sError.Format("Network Layer: size of %d succeeded, half size failed\n", err);
+                err = CUtil::Uncompress(pUncompressedData,
+                    &dwUncompressedSize,
+                    pData + 4,
+                    dwSize - 4);
+                if (err != 0) {
+                    CString sError;
+
+                    // FIXME: Useless.
+                    sError.Format("z_uncompress returned %d", err);
+
+                    sError.Format("Uncompress in network layer failed.  Error code %d.\n", err);
+                    sError += "Please report this error and look at icewind2.log file, too!";
+
+                    // __FILE__: C:\Projects\Icewind2\src\chitin\ChNetwork.cpp
+                    // __LINE__: 9431
+                    UTIL_ASSERT_MSG(FALSE, (LPCSTR)sError);
+                } else {
+                    // FIXME: Not used.
+                    CString sError;
+                    sError.Format("Network Layer: size of %d succeeded, half size failed\n", dwUncompressedSize);
+                }
+            }
         }
 
         dwSize = dwUncompressedSize;
