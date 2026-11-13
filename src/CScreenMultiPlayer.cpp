@@ -283,6 +283,7 @@ void CScreenMultiPlayer::EngineActivated()
     m_preLoadFontTool.SetResRef(CResRef("TOOLFONT"), FALSE, TRUE);
     m_preLoadFontTool.RegisterFont();
 
+    UpdateCursorShape(0);
     CheckEnableCharacters();
 
     g_pBaldurChitin->GetObjectCursor()->SetCursor(0, FALSE);
@@ -392,10 +393,10 @@ void CScreenMultiPlayer::EngineInitialized()
         pLabel->m_nTextFlags &= ~CUIControlLabel::TYPE_WORD_WRAP;
 
         pButton = static_cast<CUIControlButton*>(pPanel0->GetControl(v1 + 12));
-        pButton->m_nTextFlags &= ~CUIControlButton::TYPE_WORD_WRAP;
+        pButton->field_654 &= ~CUIControlButton::TYPE_WORD_WRAP;
 
         pButton = static_cast<CUIControlButton*>(pPanel4_1->GetControl(v1));
-        pButton->m_nTextFlags &= ~CUIControlButton::TYPE_WORD_WRAP;
+        pButton->field_654 &= ~CUIControlButton::TYPE_WORD_WRAP;
     }
 
     // FIXME: Unused.
@@ -408,7 +409,7 @@ void CScreenMultiPlayer::EngineInitialized()
     // been removed in the loop above.
     for (int v2 = 0; v2 < 6; v2++) {
         CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel4_2->GetControl(v2));
-        pButton->m_nTextFlags &= ~CUIControlButton::TYPE_WORD_WRAP;
+        pButton->field_654 &= ~CUIControlButton::TYPE_WORD_WRAP;
     }
 }
 
@@ -556,9 +557,11 @@ void CScreenMultiPlayer::TimerAsynchronousUpdate()
                 INT nRetries = 0;
 
                 while (!bFinishedCharacter) {
+                    // NOTE: The exe passes the host player number truncated
+                    // to a byte.
                     g_pBaldurChitin->GetBaldurMessage()->DemandCharacterSlot(cnt,
                         FALSE,
-                        g_pChitin->cNetwork.m_nHostPlayer);
+                        static_cast<BYTE>(g_pChitin->cNetwork.m_nHostPlayer));
 
                     DWORD dwStartTickCount = GetTickCount();
                     BOOLEAN bFinished = FALSE;
@@ -608,7 +611,7 @@ void CScreenMultiPlayer::TimerAsynchronousUpdate()
                                 CBaldurMessage::MSG_SUBTYPE_PLAYERCHAR_DEMAND_REPLY,
                                 dwSize);
 
-                            g_pBaldurChitin->GetBaldurMessage()->OnDemandCharacterSlotReply(g_pChitin->cNetwork.m_nHostPlayer,
+                            g_pBaldurChitin->GetBaldurMessage()->OnDemandCharacterSlotReply(static_cast<BYTE>(g_pChitin->cNetwork.m_nHostPlayer),
                                 pMessage,
                                 dwSize);
 
@@ -743,6 +746,7 @@ void CScreenMultiPlayer::ResetPopupPanel(DWORD dwPanelId)
             UTIL_ASSERT(pText != NULL);
 
             m_nPermissionsChatMessageCount = pChatBuffer->UpdateTextDisplay(pText, m_nPermissionsChatMessageCount);
+            pText->ScrollToBottom();
         }
         break;
     case 2:
@@ -838,7 +842,13 @@ void CScreenMultiPlayer::SummonPopup(DWORD dwPopupId)
     // __LINE__: 1379
     UTIL_ASSERT(pOldPanel != NULL);
 
-    CopyChatEditBox(pOldPanel, m_cUIManager.GetPanel(dwPopupId));
+    CUIPanel* pNewPanel = m_cUIManager.GetPanel(dwPopupId);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
+    // __LINE__: 1381
+    UTIL_ASSERT(pOldPanel != NULL);
+
+    CopyChatEditBox(pOldPanel, pNewPanel);
 
     if (m_cUIManager.m_pFocusedControl != NULL
         && m_cUIManager.m_pFocusedControl->m_pPanel == pOldPanel) {
@@ -892,9 +902,15 @@ void CScreenMultiPlayer::DismissPopup()
     // __LINE__: 1444
     UTIL_ASSERT(pOldPanel != NULL);
 
-    CUIPanel* pNewPanel = m_lPopupStack.GetCount() - 2 >= 0
-        ? m_lPopupStack.GetAt(m_lPopupStack.FindIndex(m_lPopupStack.GetCount() - 2))
-        : m_cUIManager.GetPanel(0);
+    CUIPanel* pNewPanel;
+    POSITION posNew = m_lPopupStack.GetCount() - 2 >= 0
+        ? m_lPopupStack.FindIndex(m_lPopupStack.GetCount() - 2)
+        : NULL;
+    if (posNew != NULL) {
+        pNewPanel = m_lPopupStack.GetAt(posNew);
+    } else {
+        pNewPanel = m_cUIManager.GetPanel(0);
+    }
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
     // __LINE__: 1453
@@ -908,7 +924,9 @@ void CScreenMultiPlayer::DismissPopup()
         m_cUIManager.m_pFocusedControl = NULL;
     }
 
-    CUIPanel* pPanel = m_lPopupStack.RemoveTail();
+    POSITION posTail = m_lPopupStack.GetTailPosition();
+    CUIPanel* pPanel = m_lPopupStack.GetAt(posTail);
+    m_lPopupStack.RemoveAt(posTail);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
     // __LINE__: 1466
@@ -1006,6 +1024,8 @@ BOOL CScreenMultiPlayer::IsMainDoneButtonClickable()
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
         // __LINE__: 1592
         UTIL_ASSERT(FALSE);
+
+        return FALSE;
     }
 
     return bResult;
@@ -1123,7 +1143,7 @@ void CScreenMultiPlayer::EnableMainPanel(BOOL bEnable)
 
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
         // __LINE__: 1793
-        UTIL_ASSERT(pPanel != NULL);
+        UTIL_ASSERT(pText != NULL);
 
         m_nChatMessageCount = g_pBaldurChitin->GetBaldurMessage()->m_cChatBuffer.UpdateTextDisplay(pText, m_nChatMessageCount);
 
@@ -1226,7 +1246,7 @@ void CScreenMultiPlayer::UpdateMainPanel()
     pButton = static_cast<CUIControlButton*>(pPanel->GetControl(43));
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
-    // __LINE__: 13930
+    // __LINE__: 1930
     UTIL_ASSERT(pButton != NULL);
 
     pButton->SetEnabled(IsModifyButtonClickable());
@@ -1263,14 +1283,16 @@ void CScreenMultiPlayer::CheckEnableCharacters()
         pButton->SetInactiveRender(TRUE);
 
         pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nCharacterSlot + 12));
+        pLabel = static_cast<CUIControlLabel*>(pPanel->GetControl(nCharacterSlot + 0x1000001E));
         pButton->SetActive(bModifyPlayerActive);
-        pButton->SetInactiveRender(TRUE);
+        pButton->SetInactiveRender(bModifyPlayerActive);
+        pLabel->SetActive(!bModifyPlayerActive);
+        pLabel->SetInactiveRender(!bModifyPlayerActive);
 
         pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nCharacterSlot + 18));
-        pButton->SetActive(bModifyCharacterActive);
-        pButton->SetInactiveRender(TRUE);
-
         pLabel = static_cast<CUIControlLabel*>(pPanel->GetControl(nCharacterSlot + 0x10000024));
+        pButton->SetActive(bModifyCharacterActive);
+        pButton->SetInactiveRender(bModifyCharacterActive);
         pLabel->SetActive(!bModifyCharacterActive);
         pLabel->SetInactiveRender(!bModifyCharacterActive);
     }
@@ -1410,8 +1432,11 @@ void CScreenMultiPlayer::UpdateMainPanelCharacter(CUIPanel* pPanel, INT nCharact
             if (rc == CGameObjectArray::SUCCESS) {
                 portraitResRef = pSprite->GetBaseStats()->m_portraitSmall;
 
-                // NOTE: Uninline.
-                sCharacterName = pSprite->GetName();
+                if (pSprite->m_baseStats.m_name != 0xFFFFFFFF) {
+                    sCharacterName = FetchString(pSprite->m_baseStats.m_name);
+                } else {
+                    sCharacterName = pSprite->GetName();
+                }
 
                 g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nCharacterId,
                     CGameObjectArray::THREAD_ASYNCH,
@@ -1492,7 +1517,7 @@ void CScreenMultiPlayer::UpdateMainPanelCharacter(CUIPanel* pPanel, INT nCharact
             pPanel->InvalidateRect(&rButtonFrame);
 
             CRect rLabelFrame(pPanel->m_ptOrigin + pLabel->m_ptOrigin,
-                pButton->m_size);
+                pLabel->m_size);
             pPanel->InvalidateRect(&rLabelFrame);
         }
     } else {
@@ -1546,7 +1571,7 @@ void CScreenMultiPlayer::UpdateMainPanelCharacter(CUIPanel* pPanel, INT nCharact
             pPanel->InvalidateRect(&rButtonFrame);
 
             CRect rLabelFrame(pPanel->m_ptOrigin + pLabel->m_ptOrigin,
-                pButton->m_size);
+                pLabel->m_size);
             pPanel->InvalidateRect(&rLabelFrame);
         }
     } else {
@@ -1633,7 +1658,7 @@ void CScreenMultiPlayer::UpdatePermissionsPanelPlayer(CUIPanel* pPanel, INT nPla
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
     // __LINE__: 2443
-    UTIL_ASSERT(pPanel != NULL);
+    UTIL_ASSERT(pSettings != NULL);
 
     INT nLocalPlayer = g_pBaldurChitin->cNetwork.FindPlayerLocationByID(g_pBaldurChitin->cNetwork.m_idLocalPlayer, FALSE);
 
@@ -1701,7 +1726,8 @@ void CScreenMultiPlayer::UpdateModifyPlayerPanel()
     // __LINE__: 2553
     UTIL_ASSERT(pSettings != NULL);
 
-    BOOL bLeader = pSettings->GetPermission(g_pBaldurChitin->cNetwork.m_nLocalPlayer, CGamePermission::LEADER);
+    // NOTE: The exe passes the local player number truncated to a byte.
+    BOOL bLeader = pSettings->GetPermission(static_cast<BYTE>(g_pBaldurChitin->cNetwork.m_nLocalPlayer), CGamePermission::LEADER);
     BOOL bIsHost = g_pBaldurChitin->cNetwork.GetSessionHosting();
 
     for (INT nPlayerNumber = 0; nPlayerNumber < 6; nPlayerNumber++) {
@@ -2248,6 +2274,11 @@ BOOL CScreenMultiPlayer::IsModifyButtonClickable()
         return FALSE;
     }
 
+    STRREF strError;
+    if (!pGame->CanSaveGame(strError, FALSE, FALSE)) {
+        return FALSE;
+    }
+
     if (field_45C != 2) {
         return FALSE;
     }
@@ -2269,26 +2300,29 @@ void CScreenMultiPlayer::OnModifyButtonClick()
     UTIL_ASSERT(pGame != NULL);
 
     if (IsModifyButtonClickable()) {
-        CSingleLock renderLock(&(GetManager()->field_36), FALSE);
-        renderLock.Lock(INFINITE);
+        STRREF strError;
+        if (!pGame->CanSaveGame(strError, FALSE, FALSE)) {
+            CSingleLock renderLock(&(GetManager()->field_36), FALSE);
+            renderLock.Lock(INFINITE);
 
-        m_nErrorState = 2;
-        m_dwErrorTextId = 101317;
-        m_strErrorButtonText[0] = 10316;
-        m_strErrorButtonText[1] = 13727;
-        SummonPopup(7);
+            m_nErrorState = 0;
+            m_dwErrorTextId = 10133;
+            m_strErrorButtonText[0] = 11973;
+            SummonPopup(5);
 
-        renderLock.Unlock();
-    } else {
-        CSingleLock renderLock(&(GetManager()->field_36), FALSE);
-        renderLock.Lock(INFINITE);
+            renderLock.Unlock();
+        } else {
+            CSingleLock renderLock(&(GetManager()->field_36), FALSE);
+            renderLock.Lock(INFINITE);
 
-        m_nErrorState = 0;
-        m_dwErrorTextId = 10133;
-        m_strErrorButtonText[0] = 11973;
-        SummonPopup(5);
+            m_nErrorState = 2;
+            m_dwErrorTextId = 10317;
+            m_strErrorButtonText[0] = 10316;
+            m_strErrorButtonText[1] = 13727;
+            SummonPopup(7);
 
-        renderLock.Unlock();
+            renderLock.Unlock();
+        }
     }
 }
 
@@ -2478,21 +2512,7 @@ void CScreenMultiPlayer::FocusChatEditBox()
     CUIPanel* pPanel;
     CUIControlEdit* pEdit;
 
-    if (GetTopPopup() != NULL && GetTopPopup()->m_nID == 1) {
-        pPanel = m_cUIManager.GetPanel(1);
-
-        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
-        // __LINE__: 3882
-        UTIL_ASSERT(pPanel != NULL);
-
-        pEdit = static_cast<CUIControlEdit*>(pPanel->GetControl(74));
-
-        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
-        // __LINE__: 3884
-        UTIL_ASSERT(pEdit != NULL);
-
-        m_cUIManager.SetCapture(pEdit, CUIManager::KEYBOARD);
-    } else {
+    if (GetTopPopup() == NULL) {
         pPanel = m_cUIManager.GetPanel(0);
 
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
@@ -2503,6 +2523,20 @@ void CScreenMultiPlayer::FocusChatEditBox()
 
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
         // __LINE__: 3877
+        UTIL_ASSERT(pEdit != NULL);
+
+        m_cUIManager.SetCapture(pEdit, CUIManager::KEYBOARD);
+    } else if (GetTopPopup()->m_nID == 1) {
+        pPanel = m_cUIManager.GetPanel(1);
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
+        // __LINE__: 3882
+        UTIL_ASSERT(pPanel != NULL);
+
+        pEdit = static_cast<CUIControlEdit*>(pPanel->GetControl(74));
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
+        // __LINE__: 3884
         UTIL_ASSERT(pEdit != NULL);
 
         m_cUIManager.SetCapture(pEdit, CUIManager::KEYBOARD);
@@ -2835,7 +2869,7 @@ BOOL CScreenMultiPlayer::IsPortraitButtonClickable(INT nCharacterSlot)
     return !pSettings->m_bFirstConnected
         && bSlotFull
         && (bLeader || bIsHost)
-        && pSettings->m_bArbitrationLockStatus;
+        && pSettings->m_bArbitrationLockAllowInput;
 }
 
 // 0x64F170
@@ -2846,7 +2880,7 @@ void CScreenMultiPlayer::OnPortraitButtonClick(INT nButton)
         renderLock.Lock(INFINITE);
 
         m_nCharacterSlot = nButton;
-        SummonPopup(7);
+        SummonPopup(8);
 
         renderLock.Unlock();
     }
@@ -2940,7 +2974,7 @@ void CScreenMultiPlayer::GetChatEditBoxStatus(CString& sChatText, BOOL& bInputCa
     }
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
-    // __LINE__: 4683
+    // __LINE__: 4642
     UTIL_ASSERT(pPanel != NULL);
 
     DWORD dwTextId = -1;
@@ -3118,7 +3152,7 @@ BOOL CUIControlButtonMultiPlayerPortrait::Render(BOOL bForce)
 
         // FIXME: Calls `GetBitCount` two times.
         if (vbPortrait.GetBitCount(FALSE) != 24 && vbPortrait.GetBitCount(FALSE) != 8) {
-            vbPortrait.SetResRef(CInfGame::SILHOUETTE_PORTRAIT_SM, TRUE, FALSE);
+            vbPortrait.SetResRef(CInfGame::SILHOUETTE_PORTRAIT_SM, TRUE, TRUE);
             vbPortrait.m_bDoubleSize = m_pPanel->m_pManager->m_bDoubleSize;
         }
 
@@ -3336,7 +3370,7 @@ CUIControlEditMultiPlayerChat::~CUIControlEditMultiPlayerChat()
 void CUIControlEditMultiPlayerChat::OnEditReturn(CString sText)
 {
     g_pBaldurChitin->GetBaldurMessage()->SendChatMessage(sText);
-    field_868 = sText;
+    field_868 = "";
     SetText(CString(""));
 }
 
@@ -3796,12 +3830,14 @@ void CUIControlButtonMultiPlayerModifyCharacterCreate::OnLButtonClick(CPoint pt)
             TRUE,
             TRUE);
 
-        INT nLocalPlayer = cNetwork.m_nLocalPlayer;
-        INT nHostPlayer = cNetwork.m_nHostPlayer;
+        // NOTE: The exe keeps the local and host player numbers as bytes,
+        // but tests and indexes with the full host player number.
+        BYTE nLocalPlayer = static_cast<BYTE>(cNetwork.m_nLocalPlayer);
+        BYTE nHostPlayer = static_cast<BYTE>(cNetwork.m_nHostPlayer);
         CString sPlayerName;
 
-        if (nHostPlayer != -1) {
-            sPlayerName = cNetwork.m_psPlayerName[nHostPlayer];
+        if (cNetwork.m_nHostPlayer != -1) {
+            sPlayerName = cNetwork.m_psPlayerName[cNetwork.m_nHostPlayer];
         } else {
             sPlayerName = "";
         }
@@ -3899,12 +3935,14 @@ void CUIControlButtonMultiPlayerModifyCharacterDelete::OnLButtonClick(CPoint pt)
             TRUE,
             TRUE);
 
-        INT nLocalPlayer = cNetwork.m_nLocalPlayer;
-        INT nHostPlayer = cNetwork.m_nHostPlayer;
+        // NOTE: The exe keeps the local and host player numbers as bytes,
+        // but tests and indexes with the full host player number.
+        BYTE nLocalPlayer = static_cast<BYTE>(cNetwork.m_nLocalPlayer);
+        BYTE nHostPlayer = static_cast<BYTE>(cNetwork.m_nHostPlayer);
         CString sPlayerName;
 
-        if (nHostPlayer != -1) {
-            sPlayerName = cNetwork.m_psPlayerName[nHostPlayer];
+        if (cNetwork.m_nHostPlayer != -1) {
+            sPlayerName = cNetwork.m_psPlayerName[cNetwork.m_nHostPlayer];
         } else {
             sPlayerName = "";
         }
@@ -4247,6 +4285,8 @@ void CUIControlButtonMultiPlayerSelection::OnLButtonClick(CPoint pt)
 
     CMultiplayerSettings* pSettings = pGame->GetMultiplayerSettings();
 
+    STRREF strDescription = -1;
+
     CUIControlButton3State::OnLButtonClick(pt);
 
     switch (m_pPanel->m_nID) {
@@ -4254,22 +4294,24 @@ void CUIControlButtonMultiPlayerSelection::OnLButtonClick(CPoint pt)
         switch (m_nID) {
         case 18:
             pSettings->SetRestrictStoreOption(!pSettings->m_bRestrictStoreOption);
-            pMultiPlayer->UpdateHelp(m_pPanel->m_nID, 14, 20717);
-
-            // NOTE: Uninline.
-            pMultiPlayer->UpdatePopupPanel(m_pPanel->m_nID);
+            strDescription = 20717;
             break;
         default:
             // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
             // __LINE__: 6870
             UTIL_ASSERT(FALSE);
         }
+
+        pMultiPlayer->UpdateHelp(m_pPanel->m_nID, 14, strDescription);
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMultiPlayer.cpp
         // __LINE__: 6876
         UTIL_ASSERT(FALSE);
     }
+
+    // NOTE: Uninline.
+    pMultiPlayer->UpdatePopupPanel(m_pPanel->m_nID);
 }
 
 // 0x6512D0
