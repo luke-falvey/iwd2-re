@@ -155,11 +155,7 @@ public:
     /* 014E */ int field_14E;
     /* 0152 */ BOOL m_bPausedBeforePickParty;
     /* 0156 */ int field_156;
-    // NOTE: The exe accesses this as a WORD. It is kept 4 bytes wide because
-    // everything from `field_106` on is currently 2 bytes too low (the base
-    // class is 2 bytes short), and the extra 2 bytes keep `field_15C` onwards
-    // at their correct offsets.
-    /* 015A */ int field_15A;
+    /* 015A */ WORD field_15A;
     /* 015C */ unsigned char field_15C;
     /* 015D */ unsigned char field_15D;
     /* 015E */ short field_15E;

@@ -18,6 +18,7 @@
 #include "CGameAnimationTypeMonsterOld.h"
 #include "CGameAnimationTypeMonsterQuadrant.h"
 #include "CGameAnimationTypeTownStatic.h"
+#include "CUtil.h"
 
 // 0x8F8E10
 const CString CGameAnimationType::ROUND_BASE("RNDBASE");
@@ -68,7 +69,7 @@ CGameAnimationType::CGameAnimationType()
 // 0x6A1800
 CGameAnimationType* CGameAnimationType::SetAnimationType(USHORT animationID, BYTE* colorRangeValues, WORD facing)
 {
-    CGameAnimationType* pAnimation;
+    CGameAnimationType* pAnimation = NULL;
 
     switch (animationID & 0xF000) {
     case 0x0000:
@@ -132,6 +133,11 @@ CGameAnimationType* CGameAnimationType::SetAnimationType(USHORT animationID, BYT
         break;
     case 0xF000:
         pAnimation = new CGameAnimationTypeMonsterIcewindNew(animationID, colorRangeValues, facing & 0xF);
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+        // __LINE__: 463
+        UTIL_ASSERT(FALSE);
         break;
     }
 

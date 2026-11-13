@@ -53,8 +53,8 @@ public:
     /* 0024 */ int field_24;
     /* 0028 */ int field_28;
     /* 002C */ unsigned char m_nCaptureType;
-    /* 002E */ unsigned char field_2E;
     /* 002D */ unsigned char field_2D;
+    /* 002E */ BOOL field_2E;
     /* 0032 */ int field_32;
     /* 0036 */ CCriticalSection field_36;
     /* 0056 */ CCriticalSection field_56;
