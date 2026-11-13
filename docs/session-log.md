@@ -2,6 +2,30 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-13 (night): batches 114–117, old code in four more files read against the exe
+
+The old-code audit went on to `CGameEffect.cpp`, `CMessage.cpp`, `CAIScriptFile.cpp` and `CInfGame.cpp`: 1,165 pre-project functions (about 330 KB), read in tranches of about 10 KB by Sonnet verifiers, fixes confirmed against the asm and applied by a translator per file. About 130 functions had a real difference. Every verifier claim held when re-checked, apart from small adjustments.
+
+| File | Old functions read | With a real difference | Batch |
+|---|---|---|---|
+| `CGameEffect.cpp` | 433 | about 51 (plus 21 assert stubs missing a return) | 114 |
+| `CMessage.cpp` | 554 | 53 | 115 |
+| `CInfGame.cpp` | 152 | 17 | 116 |
+| `CAIScriptFile.cpp` | 26 | 7, two of them the big parsers | 117 |
+
+- **`CGameEffect.cpp`.** Gold wrote to the XP stats; disease drained INT for WIS and its escalating variant stepped by 7; sanctuary never set its visual bit; web lacked the to-hit penalty; calm removed from the wrong list; seven resistances and several skill and percent modes truncated or mis-signed the amount; `CGameEffectVisible` had no `ApplyEffect` (the exe shares 0x4B2900 with `CGameEffectDispelInvisible`); Banish set effect id 420 instead of 428.
+- **`CMessage.cpp`.** Mostly multiplayer: misplaced `else` in four settings handlers, inverted host/client tests in four senders, `ObjectAdd` never sent, GameSpy loops that never incremented, a dozen marshal/unmarshal width, size and lookup-failure differences. Single-player: `CMessageVisualEffect` never stored its property, `CMessageContainerItems::Run` used the wrong loop bound, `CMessageFireProjectile` stores type + 1. `CMessageMoveGlobal::MarshalMessage` now mirrors an original bug (copies from the string object's address), with a note.
+- **`CInfGame.cpp`.** `SelectAll` selected one character (stray `break`), `SelectCharacter` used `||` for `&&`, `RemoveCharacterFromParty` did not compact the portrait list, `CompressContainer` never ran (`=` for `==`), `FindItemInStore` searched an empty store, `LoadOptions` had five wrong defaults or range tests, the constructor did not write the default quick formations, `SetProtagonist` ignored its argument. `CSpellList::GetSpellLevel` returns an index one before the match in the exe; mirrored with a note.
+- **`CAIScriptFile.cpp`.** `ParseOneLine` parsed only comment lines. `ParseAction` (31 KB) was wrong in 15 action forms (parameter cut from the wrong string or stored in the wrong field), returned an empty action from 77 error paths where the exe returns the partly filled one, and called itself where the exe calls `ParseError`. `ParseTrigger` had five differences of the same kind. The header had the trigger and action lists swapped.
+
+**Regression found by the play tests.** After batch 116, S2, S4 and S6 failed intermittently with an access violation in `SetProtagonist`. The function reads `CGameDialogSprite::field_54` first, and the repo never initialised it (the exe zeroes it in the inlined constructor at 0x6856CD). The old code hid this by ignoring its argument. Fixed in 827e679.
+
+After batch 117, S2–S6 all died with heap corruption (0xC0000374) at the opening dialog. With `ParseOneLine` fixed, dialogue trigger and action strings are compiled for the first time, and `ParseInt` builds a `CAIIdList` from an empty resref on every call; the resref constructor left `m_faster` and `m_pIdArray` uninitialised (the exe zeroes them at 0x40A2F5), so the destructor freed garbage. Fixed in 98604be. The crash handler now also writes `iwd2re-crash.txt` for heap corruption (first-chance handler), which is how the stack was found. Both regressions were old-code defects that the audit fixes exposed; S1–S6 pass on the final state.
+
+**State.** `tools/old_code.py` reports 1.44 MB of old code still unread (5,020 functions). Largest: `CScreenCreateChar.cpp` (93 KB), `CUIControlFactory.cpp` (54 KB), `CScreenCharacter.cpp` (53 KB), `CScreenStore.cpp` (52 KB), the two character animation files (48 and 44 KB), `CScreenInventory.cpp` (43 KB). Cost so far is about 110–160k tokens per 10 KB verified and 120–190k per fix round, all Sonnet except the `CAIScriptFile.cpp` fix round (Opus).
+
+**Open items.** `CSpellList::GetSpellLevel` keeps its name although it returns an index. `CMessageSetProtagonist` and `CMessageStartCombatMusic` constructors take their arguments in a different order from the exe (callers agree; note only). `CAIScriptFile` still has a size problem before `m_actions` (known mismatch). `CMessage.cpp` 0x42F750 keeps some odd creature-offset handling worth a later look.
+
 ## 2026-11-13 (evening): batches 109–110, listing holes closed, old code sampled
 
 **Code outside functions.** Batch 109 checked the 11 chunks inside known functions and the five standalone runs against the repo and found five real bugs in older code (monster constructor `animationID & 0xFF`, `CInfGame::StepAnimation` cases '4'–'7', Icewind `ClearColorEffectsAll`, the music `deleteSound` callback). Four functions also had bytes Ghidra left undefined; `tools/ghidra/RangeListing.java` writes a gap-free listing of an address range for those. Three were verified from it (monster constructor: missing `break` after group 0x300 and `m_falseColor = FALSE` for MTAS; world map 0x69D0F0; `EquipHelmet` 0x6D62E0); the fourth, 0x426B20, is the CD check that this exe has patched to return 1. Batch 110 re-derived the `CGameAnimationTypeCharacterOld` constructor.
