@@ -125,3 +125,34 @@ skill.
 - Reading game files: the S9 author's `res.py` / `are.py` (scratchpad `s9`)
   read a resource from CHITIN.KEY and list an area's actors, regions,
   containers and doors.
+
+## Notes from S10 and S11
+
+- Correction to rule 6 above: on the original, clicking a portrait inside the
+  inventory or spellbook does not change the world selection.
+- Saves go to `C:\iwd2-play\mpsave\<number>-<name>\` for single player too.
+  A test that saves must clean up in a fixture requested before `game` (so it
+  tears down after the game exits); see `test_s10_save_load.py`.
+- Type names in lowercase letters that are not shortcuts, one key at a time,
+  each proved by a change in the edit box. The original drops "s" in edit
+  boxes and R on the world screen now and then: prefer buttons to keys.
+- Message lines are not at a fixed height when a multi-line hint is above
+  them; find the line by colour.
+- Weather (snow) varies between runs on the original: a world-view variant
+  that differs only by snow is acceptable.
+- Options panel in game: Load (612,81), Save (612,111), Quit (612,141). Quit
+  prompt: Save (398,230), Quit (398,260), Cancel (398,290). Save/load slot
+  rows are 102 px apart with their button at (684,101+102*i).
+- Inventory: ground slots at x 590/630, y 318/356/394; backpack row at y 318,
+  x = 270 + 37.5*i; armour slot (272,40); weapon set 1 (618,65)/(659,65),
+  set 2 (618,105). Ground slots show only items under the character.
+- Action bar: quick weapon (63,463), right-click for weapon sets; Cast Spell
+  for a cleric (174,463), then class, then spell icons from (26,463).
+- Spellbook: memorised grid at (305+79*k, 95); known rows at x 615,
+  y = 95 + 42.3*row; remove prompt Cancel (334,258), Remove (455,258).
+- Resting on the docks at the start is refused ("You may not rest at this
+  time."). AR1000 has no merchant.
+- Parks to avoid: (430,465) shows a tooltip when a caster is selected.
+- Beyond screenshots: compare what the two targets write to disk (S10's
+  saves were unpacked and diffed, which found a bug no checkpoint showed).
+  Random loot and gold differ between any two runs.

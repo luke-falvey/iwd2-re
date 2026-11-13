@@ -2,6 +2,26 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-14 (morning): play tests S10 and S11, two more bugs
+
+S1–S11 pass on the rebuild in one full run (about 30 minutes).
+
+- **S10, save and load** (`test_s10_save_load.py`): changes formation and moves an item, quick-saves, saves under a typed name, quits to the menu, loads, and compares inventory, record, journal, area map, action bar and portraits before and after. Cleans up its save folders. Passed on the rebuild as written.
+- **S11, items, spells, rest** (`test_s11_items_spells_rest.py`): drops an item on the ground, walks away and back, picks it up; unequips and re-equips armour and shield (AC 14, 12, 11, 14); switches weapon sets; casts Cure Light Wounds; removes a memorised spell and memorises another; rest refused on the docks.
+
+| Found by | File | What was wrong |
+|---|---|---|
+| S10's save files, unpacked and compared | `CInfGame::GetGroundPile` | Test inverted: a pile was created when one already existed and not when none did |
+| S11 | `CScreenSpellbook::ResetErrorPanel` | Buttons fetched as control `nButton + 1` for the exe's `nButton`; clicking a memorised spell asserted |
+
+**Save comparison.** `WORLDMAP.WMP` is byte-identical between the original and the rebuild; `ICEWIND2.GAM` is the same size with time, positions and gold differing; the saved `AR1000.ARE` differed by the missing pile (now fixed) and by goblins' random loot, which differs between any two runs.
+
+**Open.**
+- S8's R key was ignored once in eight rebuild runs after the music fix; seven traced runs showed nothing. The original ignored it once too. S8 now uses the dial button.
+- Once, on the rebuild, a new game stopped at "Paused for chapter text" and Hedron's dialogue never started; the autosave was not rewritten in that run. Not reproduced since.
+
+**Next.** The fight inside AR1005 and its footlocker; travel to AR1100; a store and a successful rest once reachable; saves loaded across the original and the rebuild.
+
 ## 2026-11-14 (early morning): play tests S8 and S9, four bugs the audit missed
 
 S1–S9 pass on the rebuild. The two new scenarios pass on the original and each failed on the rebuild when first run.
