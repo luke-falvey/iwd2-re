@@ -109,8 +109,7 @@ CGameAnimationTypeMonsterQuadrant::CGameAnimationTypeMonsterQuadrant(USHORT anim
         m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g3VidCellBase);
     }
 
-    m_currentVidCellBase = m_g2VidCellBase;
-    m_currentVidCell = m_g2VidCellBase;
+    m_currentVidCellBase = m_g1VidCellBase;
 
     if (m_bExtendDir && !MIRROR_BAM) {
         m_g1VidCellExtend = new CVidCell[3 * m_nQuadrants];
@@ -134,6 +133,9 @@ CGameAnimationTypeMonsterQuadrant::CGameAnimationTypeMonsterQuadrant(USHORT anim
             m_g3VidCellExtend[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g3VidCellExtend);
         }
     }
+
+    m_currentVidCellExtend = m_g1VidCellExtend;
+    m_currentVidCell = m_currentVidCellBase;
 
     if (m_falseColor) {
         for (BYTE colorRange = 0; colorRange < CVidPalette::NUM_RANGES; colorRange++) {
@@ -971,7 +973,7 @@ SHORT CGameAnimationTypeMonsterQuadrant::SetSequence(SHORT nSequence)
         if (m_bCaster) {
             m_currentBamSequence = 0;
         } else {
-            m_currentBamDirection = 2;
+            m_currentBamSequence = 2;
         }
 
         nSequence = 0;

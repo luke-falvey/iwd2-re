@@ -463,7 +463,8 @@ char* CGameAnimationTypeMonsterMulti::GetSndReady()
     // __LINE__: 10507
     UTIL_ASSERT(szTemp != NULL);
 
-    strcpy(szTemp, "WAL_77");
+    // NOTE: The exe copies 8 bytes, including two NULs.
+    memcpy(szTemp, "WAL_77 ", 8);
 
     szTemp[6] = rand() % 2 + 'a';
     if (szTemp[6] == 'b') {
@@ -553,11 +554,13 @@ SHORT CGameAnimationTypeMonsterMulti::GetCastHeight()
             // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
             // __LINE__: 10641
             UTIL_ASSERT(FALSE);
+            return 35;
         }
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
         // __LINE__: 10646
         UTIL_ASSERT(FALSE);
+        return 35;
     }
 }
 
@@ -637,6 +640,10 @@ void CGameAnimationTypeMonsterMulti::GetCastingOffset(CPoint& ptOffset)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
         // __LINE__: 10749
         UTIL_ASSERT(FALSE);
+    }
+
+    if (m_currentBamDirection > m_extendDirectionTest) {
+        ptOffset.x = -ptOffset.x;
     }
 }
 
