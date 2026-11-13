@@ -1266,7 +1266,7 @@ CRuleTables::CRuleTables()
     m_tAnimalSummon2.Load(CResRef("ASummo2"));
     m_tAnimalSummon3.Load(CResRef("ASummo3"));
     m_tSMonste.Load(CResRef("SMonste"));
-    m_tDSMonste.Load(CResRef("DSMonste"));
+    m_tDSMonste.Load(CResRef("DSMonst"));
     m_tShades.Load(CResRef("Shades"));
     m_tADead.Load(CResRef("aDead"));
     m_tADeadL.Load(CResRef("ADeadL"));
@@ -1280,6 +1280,7 @@ CRuleTables::CRuleTables()
     m_tCEElemP.Load(CResRef("CEElemP"));
     m_tSShadow.Load(CResRef("SShadow"));
     m_tIStalke.Load(CResRef("IStalke"));
+    m_tSLizard.Load(CResRef("SLizard"));
     m_tSTrolls.Load(CResRef("STrolls"));
 
     m_tStrengthMod.Load(CResRef(STRENGTH_MODIFIERS));
@@ -1447,14 +1448,11 @@ const CString CRuleTables::GetRaceString(BYTE nRace, BYTE nSubRace) const
         // __LINE__: 1080
         UTIL_ASSERT(FALSE);
     case CAIOBJECTTYPE_R_HALF_ELF:
-        switch (nSubRace) {
-        case 0:
-            return HALF_ELF;
-        }
-
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CRuleTables.cpp
         // __LINE__: 1086
-        UTIL_ASSERT(FALSE);
+        UTIL_ASSERT(nSubRace == CAIOBJECTTYPE_SUBRACE_PURERACE);
+
+        return HALF_ELF;
     case CAIOBJECTTYPE_R_DWARF:
         switch (nSubRace) {
         case 0:
@@ -1493,14 +1491,11 @@ const CString CRuleTables::GetRaceString(BYTE nRace, BYTE nSubRace) const
         // __LINE__: 1136
         UTIL_ASSERT(FALSE);
     case CAIOBJECTTYPE_R_HALF_ORC:
-        switch (nSubRace) {
-        case 0:
-            return HALF_ORC;
-        }
-
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CRuleTables.cpp
         // __LINE__: 1142
-        UTIL_ASSERT(FALSE);
+        UTIL_ASSERT(nSubRace == CAIOBJECTTYPE_SUBRACE_PURERACE);
+
+        return HALF_ORC;
     }
 
     return CString("");
@@ -2325,7 +2320,7 @@ INT CRuleTables::GetMaxDruidShapeshifts(CCreatureFileHeader& BStats, INT nLevel)
     INT nShapeshifts = 0;
 
     if (BStats.m_druidLevel != 0) {
-        nShapeshifts = atol(m_tMaxDruidShapeshifts.GetAt(CPoint(nLevel - 1, 0)));
+        nShapeshifts = atol(m_tMaxDruidShapeshifts.GetAt(CPoint(0, nLevel - 1)));
 
         if (nShapeshifts != 0) {
             nShapeshifts += BStats.m_featExtraShapeshifting;
@@ -2495,10 +2490,8 @@ void CRuleTables::GetClassStringLower(BYTE nClass, DWORD nSpecialist, DWORD dwFl
         break;
     }
 
-    if (strMageSchool != -1) {
-        g_pBaldurChitin->GetTlkTable().Fetch(strMageSchool, strRes);
-        g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_MAGESCHOOL, strRes.szText);
-    }
+    g_pBaldurChitin->GetTlkTable().Fetch(strMageSchool, strRes);
+    g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_MAGESCHOOL, strRes.szText);
 
     STRREF strFighterType;
     if ((dwFlags & 0x200) != 0) {
@@ -2548,6 +2541,8 @@ void CRuleTables::GetClassStringLower(BYTE nClass, DWORD nSpecialist, DWORD dwFl
         strClass = 7203; // "<MAGESCHOOL>"
         break;
     default:
+        strClass = -1;
+
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CRuleTables.cpp
         // __LINE__: 3690
         UTIL_ASSERT(FALSE);
@@ -2588,6 +2583,7 @@ void CRuleTables::GetClassStringMixed(BYTE nClass, DWORD nSpecialist, DWORD dwFl
     case SPECMASK_WIZARD_TRANSMUTER:
         strMageSchool = 12788; // "Transmuter"
         break;
+    case 0:
     case SPECMASK_WIZARD_UNIVERSAL:
         strMageSchool = 9987; // "Wizard"
         break;
@@ -2596,10 +2592,8 @@ void CRuleTables::GetClassStringMixed(BYTE nClass, DWORD nSpecialist, DWORD dwFl
         break;
     }
 
-    if (strMageSchool != -1) {
-        g_pBaldurChitin->GetTlkTable().Fetch(strMageSchool, strRes);
-        g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_MAGESCHOOL, strRes.szText);
-    }
+    g_pBaldurChitin->GetTlkTable().Fetch(strMageSchool, strRes);
+    g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_MAGESCHOOL, strRes.szText);
 
     STRREF strFighterType;
     if ((dwFlags & 0x200) != 0) {
@@ -2609,10 +2603,10 @@ void CRuleTables::GetClassStringMixed(BYTE nClass, DWORD nSpecialist, DWORD dwFl
     } else {
         switch (nClass) {
         case CAIOBJECTTYPE_C_BARBARIAN:
-            strFighterType = 16799; // "Fighter"
+            strFighterType = 34; // "Barbarian"
             break;
         default:
-            strFighterType = 34; // "Barbarian"
+            strFighterType = 16799; // "Fighter"
             break;
         }
     }
@@ -2801,7 +2795,7 @@ void CRuleTables::GetSpellDescription(const CString& sSpell, CString& sDescripti
 // 0x544930
 SHORT CRuleTables::GetLayOnHandsAmount(const CAIObjectType& typeAI, CDerivedStats& DStats) const
 {
-    if ((DStats.m_classMask & CLASSMASK_PALADIN) == 0) {
+    if ((typeAI.m_nClassMask & CLASSMASK_PALADIN) == 0) {
         return 0;
     }
 
@@ -3091,7 +3085,7 @@ void CRuleTables::GetClassStringGameSpy(BYTE nClass, DWORD nSpecialist, CString&
     switch (nClass) {
     case CAIOBJECTTYPE_C_BARBARIAN:
         // "Barbarian"
-        strClass = 10;
+        strClass = 40;
         break;
     case CAIOBJECTTYPE_C_BARD:
         // "Bard"
@@ -3168,9 +3162,9 @@ DWORD CRuleTables::GetReputationDescription(SHORT nReputation) const
 // 0x545310
 void CRuleTables::GetIntoxicationInfo(BYTE nCON, INT& nIntoxicationRate, INT& nRecoveryRate, INT& nIntoxicationCap) const
 {
-    nIntoxicationRate = atol(m_tReputationDescription.GetAt(CPoint(0, nCON - 1)));
-    nRecoveryRate = atol(m_tReputationDescription.GetAt(CPoint(1, nCON - 1)));
-    nIntoxicationCap = atol(m_tReputationDescription.GetAt(CPoint(2, nCON - 1)));
+    nIntoxicationRate = atol(m_tIntoxication.GetAt(CPoint(0, nCON - 1)));
+    nRecoveryRate = atol(m_tIntoxication.GetAt(CPoint(1, nCON - 1)));
+    nIntoxicationCap = atol(m_tIntoxication.GetAt(CPoint(2, nCON - 1)));
 }
 
 // 0x5453F0
@@ -3180,10 +3174,10 @@ BOOL CRuleTables::GetCustomSound(CString& sName, BYTE nSoundId) const
     LONG value;
 
     value = m_tCustomSound.GetAtLong(CPoint(0, nSoundId));
-    if (value < 10) {
-        sName.Format("0%d", value);
+    if (nSoundId + 1 < 10) {
+        sName.Format("0%d", nSoundId + 1);
     } else {
-        sName.Format("%d", value);
+        sName.Format("%d", nSoundId + 1);
     }
 
     return value;
@@ -3306,7 +3300,7 @@ float CRuleTables::GetSoundReverbMix(int nSoundChannel, int nReverb) const
 // 0x545890
 int CRuleTables::GetSoundEnvironment(EAXPRESET& preset, int nReverb) const
 {
-    int nPreset = nReverb % m_tReverb.GetWidth();
+    int nPreset = nReverb % m_tReverb.GetHeight();
 
     CString sEnvironment = m_tReverb.GetAt(CPoint(0, nPreset));
 
@@ -3445,7 +3439,8 @@ CResRef CRuleTables::GetAutomaticSpellPicker(BYTE nLevel, BYTE nIndex) const
 // 0x545FD0
 INT CRuleTables::GetLoadingHint(INT nHintNumber) const
 {
-    return atol(m_tLoadingHints.GetAt(CPoint(0, nHintNumber)));
+    sscanf(m_tLoadingHints.GetAt(CPoint(0, nHintNumber)), "%d", &nHintNumber);
+    return nHintNumber;
 }
 
 // 0x546020
@@ -4058,9 +4053,9 @@ BYTE CRuleTables::GetSpecializationIndex(BYTE nClass, DWORD nSpecialization) con
         case SPECMASK_PALADIN_ILMATER:
             return 1;
         case SPECMASK_PALADIN_HELM:
-            return 2;
-        case SPECMASK_PALADIN_MYSTRA:
             return 3;
+        case SPECMASK_PALADIN_MYSTRA:
+            return 2;
         }
         break;
     case CAIOBJECTTYPE_C_WIZARD:
@@ -4074,9 +4069,9 @@ BYTE CRuleTables::GetSpecializationIndex(BYTE nClass, DWORD nSpecialization) con
         case SPECMASK_WIZARD_ENCHANTER:
             return 4;
         case SPECMASK_WIZARD_ILLUSIONIST:
-            return 5;
-        case SPECMASK_WIZARD_EVOKER:
             return 6;
+        case SPECMASK_WIZARD_EVOKER:
+            return 5;
         case SPECMASK_WIZARD_NECROMANCER:
             return 7;
         case SPECMASK_WIZARD_TRANSMUTER:
@@ -4131,9 +4126,9 @@ DWORD CRuleTables::GetSpecializationMask(BYTE nClass, BYTE nIndex) const
         case 1:
             return SPECMASK_PALADIN_ILMATER;
         case 2:
-            return SPECMASK_PALADIN_HELM;
-        case 3:
             return SPECMASK_PALADIN_MYSTRA;
+        case 3:
+            return SPECMASK_PALADIN_HELM;
         }
         break;
     case CAIOBJECTTYPE_C_WIZARD:
@@ -4147,9 +4142,9 @@ DWORD CRuleTables::GetSpecializationMask(BYTE nClass, BYTE nIndex) const
         case 4:
             return SPECMASK_WIZARD_ENCHANTER;
         case 5:
-            return SPECMASK_WIZARD_ILLUSIONIST;
-        case 6:
             return SPECMASK_WIZARD_EVOKER;
+        case 6:
+            return SPECMASK_WIZARD_ILLUSIONIST;
         case 7:
             return SPECMASK_WIZARD_NECROMANCER;
         case 8:
