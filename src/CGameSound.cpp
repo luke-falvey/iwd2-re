@@ -231,6 +231,7 @@ void CGameSound::RemoveFromArea()
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameSound.cpp
         // __LINE__: 346
         UTIL_ASSERT(FALSE);
+        return;
     }
 
     delete this;
