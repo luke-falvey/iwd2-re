@@ -713,6 +713,10 @@ BOOL CInfTileSet::ReadyTexture(INT nTextureId, INT nTile, INT nStencilTile, cons
         // __FILE__: C:\Projects\Icewind2\src\Baldur\Infinity3d.cpp
         // __LINE__: 271
         UTIL_ASSERT(FALSE);
+
+        // NOTE: The original returns here without readying the texture (the
+        // return value is whatever the assert call left in EAX).
+        return FALSE;
     }
 
     if (nStencilTile != -1) {
