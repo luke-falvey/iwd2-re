@@ -6160,7 +6160,7 @@ SHORT CGameAIBase::SetMusic()
         return ACTION_ERROR;
     }
 
-    if (!m_pArea->SetSong(static_cast<SHORT>(m_curAction.m_specificID), static_cast<BYTE>(m_curAction.m_specificID2))) {
+    if (!m_pArea->SetSong(static_cast<SHORT>(m_curAction.m_specificID), static_cast<signed char>(m_curAction.m_specificID2))) {
         return ACTION_ERROR;
     }
 
