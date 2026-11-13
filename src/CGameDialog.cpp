@@ -22,6 +22,10 @@
 CGameDialogSprite::CGameDialogSprite()
 {
     ClearMarshal();
+
+    // NOTE: Stored by the inlined constructor in `CScreenWorld::CScreenWorld`
+    // (0x6856CD). `CInfGame::SetProtagonist` reads it before any dialog runs.
+    field_54 = 0;
 }
 
 // 0x67CB50
