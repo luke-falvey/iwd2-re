@@ -105,6 +105,7 @@ void CVidBlitter::Reset()
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidSoftBlt.cpp
         // __LINE__: 342
         UTIL_ASSERT_MSG(FALSE, "Software Blitter re-initialization failed.");
+        g_pChitin->ShutDown(-1, NULL, NULL);
     }
 
     g_pChitin->Resume();

@@ -72,21 +72,24 @@ DWORD CSoundProperties::Init(LPDIRECTSOUND lpDirectSound)
     }
 
     if (SUCCEEDED(m_pKsPropertySet->QuerySupport(stru_8BD7D8, DSPROPERTY_EAX_ALL, &support))) {
-        if ((support & KSPROPERTY_SUPPORT_SETGET) == KSPROPERTY_SUPPORT_SETGET) {
+        // NOTE: Original is `support & SET | GET`, passes whenever SET is set.
+        if (((support & KSPROPERTY_SUPPORT_SET) | KSPROPERTY_SUPPORT_GET) == KSPROPERTY_SUPPORT_SETGET) {
             m_dwEAXProperties |= CSOUNDPROPERTIES_EAX_SUPPORTS_VMANAGEMENT_MODE;
             SetVManagmentMode(1);
         }
     }
 
     if (SUCCEEDED(m_pKsPropertySet->QuerySupport(stru_8BD7C8, DSPROPERTY_EAX_ALL, &support))) {
-        if ((support & KSPROPERTY_SUPPORT_SETGET) == KSPROPERTY_SUPPORT_SETGET) {
+        // NOTE: Original is `support & SET | GET`, passes whenever SET is set.
+        if (((support & KSPROPERTY_SUPPORT_SET) | KSPROPERTY_SUPPORT_GET) == KSPROPERTY_SUPPORT_SETGET) {
             m_dwEAXProperties |= CSOUNDPROPERTIES_EAX_SUPPORTS_ENVIRONMENT;
             SetEnvironmentPreset(EAX_ENVIRONMENT_GENERIC);
         }
     }
 
     if (SUCCEEDED(m_pKsPropertySet->QuerySupport(stru_8BD7E8, DSPROPERTY_EAX_REVERBMIX, &support))) {
-        if ((support & KSPROPERTY_SUPPORT_SETGET) == KSPROPERTY_SUPPORT_SETGET) {
+        // NOTE: Original is `support & SET | GET`, passes whenever SET is set.
+        if (((support & KSPROPERTY_SUPPORT_SET) | KSPROPERTY_SUPPORT_GET) == KSPROPERTY_SUPPORT_SETGET) {
             m_dwEAXProperties |= CSOUNDPROPERTIES_EAX_SUPPORTS_REVERBMIX;
         } else {
             return 0;

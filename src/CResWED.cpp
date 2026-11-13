@@ -106,7 +106,8 @@ WED_TILEDATA* CResWED::GetTileData(UINT nLayer, int nTile)
 WED_TILEDOBJECT* CResWED::GetTiledObject(USHORT nTile)
 {
     if (m_bParsed) {
-        if (nTile < m_pHeader->nTiledObjects) {
+        // NOTE: Off by one in the original, nTile == nTiledObjects passes.
+        if (nTile <= m_pHeader->nTiledObjects) {
             return reinterpret_cast<WED_TILEDOBJECT*>(reinterpret_cast<unsigned char*>(m_pHeader) + m_pHeader->nOffsetToTiledObjects + sizeof(WED_TILEDOBJECT) * nTile);
         }
     }

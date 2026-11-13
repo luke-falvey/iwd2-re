@@ -25,7 +25,7 @@ public:
 
 class CColorRanges : public CTypedPtrList<CPtrList, CColorRange*> {
 public:
-    CColorRanges();
+    CColorRanges(INT_PTR nBlockSize = 10);
     ~CColorRanges() override;
     void ClearAll();
     ULONG Marshal(BYTE** ppData);
@@ -36,7 +36,7 @@ public:
 
 class CColorEffects : public CTypedPtrList<CPtrList, CColorEffect*> {
 public:
-    CColorEffects();
+    CColorEffects(INT_PTR nBlockSize = 10);
     ~CColorEffects() override;
     void ClearAll();
     ULONG Marshal(BYTE** ppData);

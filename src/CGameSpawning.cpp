@@ -21,6 +21,7 @@ CGameSpawning::CGameSpawning(CGameArea* pArea, CAreaFileRandomMonsterSpawningPoi
 
     CVariable variable;
     variable.SetName(m_spawningObject.m_scriptName);
+    variable.m_intValue = m_id;
     pArea->GetNamedCreatures()->AddKey(variable);
 
     if (m_spawningObject.m_probDay == 0) {
@@ -192,6 +193,7 @@ void CGameSpawning::RemoveFromArea()
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameSpawning.cpp
         // __LINE__: 352
         UTIL_ASSERT(FALSE);
+        return;
     }
 
     delete this;
