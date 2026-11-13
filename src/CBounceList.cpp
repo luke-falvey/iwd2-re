@@ -13,9 +13,11 @@ void CBounceList::Process(CGameSprite* pSprite)
 
         CGameSprite* pTarget;
 
+        LONG nTargetId = node->m_pProjectile->m_targetId;
+
         BYTE rc;
         do {
-            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(node->m_pProjectile->m_targetId,
+            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
                 CGameObjectArray::THREAD_ASYNCH,
                 reinterpret_cast<CGameObject**>(&pTarget),
                 INFINITE);
@@ -35,7 +37,7 @@ void CBounceList::Process(CGameSprite* pSprite)
             if (!node->m_decrementOnly) {
                 CMessage* message = new CMessageFireProjectile(node->m_pProjectile->m_projectileType,
                     pTarget->GetId(),
-                    pSprite->GetPos(),
+                    pTarget->GetPos(),
                     node->m_pProjectile->DetermineHeight(pSprite),
                     pSprite->GetId(),
                     pSprite->GetId(),
@@ -52,12 +54,14 @@ void CBounceList::Process(CGameSprite* pSprite)
                 node->m_pProjectile = NULL;
             }
 
-            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(node->m_pProjectile->m_targetId,
+            delete node;
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nTargetId,
                 CGameObjectArray::THREAD_ASYNCH,
                 INFINITE);
+        } else {
+            delete node;
         }
-
-        delete node;
     }
     RemoveAll();
 }

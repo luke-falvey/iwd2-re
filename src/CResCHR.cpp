@@ -42,7 +42,7 @@ int CResCHR::Release()
 BOOL CResCHR::Parse(void* pData)
 {
     if (pData == NULL) {
-        return FALSE;
+        return m_bParsed;
     }
 
     EXPORT_CHARACTER_HEADER* header = reinterpret_cast<EXPORT_CHARACTER_HEADER*>(pData);

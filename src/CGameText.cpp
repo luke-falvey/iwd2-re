@@ -118,7 +118,7 @@ void CGameText::AIUpdate()
 
     if (m_vidCell.GetRes() == NULL) {
         if (m_nDuration < m_nBeginFade) {
-            LONG nScale = 144 * m_nDuration / m_nBeginFade + 100;
+            LONG nScale = 155 * m_nDuration / m_nBeginFade + 100;
             m_textFont.SetColor(RGB(nScale, nScale, nScale), 0, TRUE);
         }
     }

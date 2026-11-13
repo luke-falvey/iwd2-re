@@ -80,7 +80,7 @@ BOOL CCrypt::DecryptText(CHAR* pszText, INT& nSize)
     INT nKeySize = static_cast<INT>(sizeof(ENCRYPT_KEY));
     INT nHeaderSize = static_cast<INT>(sizeof(ENCRYPT_HEADER));
 
-    if (nSize < nKeySize) {
+    if (nSize < nHeaderSize) {
         return FALSE;
     }
 

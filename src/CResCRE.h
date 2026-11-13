@@ -9,6 +9,7 @@ public:
     CResCRE();
     ~CResCRE();
     void* Demand();
+    int Release();
     BOOL Parse(void* pData);
 
     /* 0050 */ BOOL m_bParsed;
