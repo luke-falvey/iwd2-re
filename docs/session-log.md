@@ -2,6 +2,30 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-13 (late night): batches 118–121, old code in the four main screens read against the exe
+
+Same method as the entry below, on `CScreenInventory.cpp`, `CScreenStore.cpp`, `CScreenCharacter.cpp` and `CScreenWorld.cpp`: 637 pre-project functions, 117 with a real difference. Every verifier claim held when re-checked; fix translators now read switch tables from the exe with `peek.py` instead of taking them on trust.
+
+| File | Old functions read | With a real difference | Batch |
+|---|---|---|---|
+| `CScreenInventory.cpp` | 137 | 33 | 118 |
+| `CScreenStore.cpp` | 186 | 36 | 119 |
+| `CScreenCharacter.cpp` | 204 | 29 | 120 |
+| `CScreenWorld.cpp` | 110 | 19 | 121 |
+
+- **Inventory.** Requester plus/minus button ids swapped; right-click on a slot used a portrait number as a character id; Cancel missing for the rest-confirm panel; ground piles never flushed; abilities panel updated two of three buttons; paper doll tested the wrong animation and leaked a share lock; two item types missing from the appearance swap.
+- **Store.** Every item-button click handler switched on the control id instead of the panel id, so buying, selling and identifying could not select anything; `StartStore` lacked store type 2; the sell button ran one of three handlers; all four sell handlers reset the list position; identify left paid items selected; the store timer skipped its closing checks in the normal case; `EnableMainPanel` never enabled the main panel.
+- **Character.** Negative racial ability adjustments read as 254; Evoker and Illusionist swapped; the ability minus button changed the wrong value; the feat circle renderer was a copy from character creation; the Level Up button's enable logic was commented out; the race label was never written; the script picker sorted backwards and listed every script twice.
+- **World.** Numpad direction keys had no repeat, Page Up/Down swapped, two wrong key codes; three viewport fields never set in the constructor; container scroll bar two rows too long and page-up read the wrong position; `CancelEngine` had two wrong cases; `MoveToArea`'s action carried an uninitialised `m_specificID3` (fixed in the `CAIAction` constructor). `AsynchronousUpdate` (6.8 KB) matches.
+
+**Key tables.** Three screens each had a different slip in their `CKeyInfo` table, so a translator decoded every table in the other 16 screens by script (1,019 entries): four more files had wrong entries (`CScreenChapter`, `CScreenCreateChar`, `CScreenKeymaps`, `CScreenSave`), fixed in 5a2f72e. The script is in the session scratchpad (`dec.py`), not in `tools/`.
+
+**Process note.** Asking verifiers to re-emit their reports into scratch files tripped the model's safeguards on two agents (one write interrupted, one agent stopped). Dropped; verifiers stay read-only and report in their final message.
+
+**State.** 1.25 MB of old code unread (4,257 functions). Largest: `CScreenCreateChar.cpp` (93 KB), `CUIControlFactory.cpp` (54 KB), the two character animation files (48 and 44 KB), `CScreenConnection.cpp` (39 KB), `CRuleTables.cpp` (36 KB). No play test opens a store, the character record or a container, so batches 119–121 are checked by the disassembly only.
+
+**Open items.** `CScreenWorld::field_15A` is a WORD in the exe; narrowing it needs the 2-byte base-class shift before `field_106` fixed first. `CUIControlScrollBarCharGenHatedRace::OnPageUp/Down` in `CScreenCreateChar.cpp` probably have the paging defect fixed in the character screen. `CScreenWorld::EngineActivated` calls `TogglePauseGame` on `m_pEngineWorld` where the asm uses `this`.
+
 ## 2026-11-13 (night): batches 114–117, old code in four more files read against the exe
 
 The old-code audit went on to `CGameEffect.cpp`, `CMessage.cpp`, `CAIScriptFile.cpp` and `CInfGame.cpp`: 1,165 pre-project functions (about 330 KB), read in tranches of about 10 KB by Sonnet verifiers, fixes confirmed against the asm and applied by a translator per file. About 130 functions had a real difference. Every verifier claim held when re-checked, apart from small adjustments.
