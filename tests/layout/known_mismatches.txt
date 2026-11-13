@@ -1436,6 +1436,20 @@ CProjectileSingleTarget850DDC::field_2DA
 CProjectileSingleTarget850DDC::field_2DE
 CProjectileSingleTarget850DDC::field_2EE
 CProjectileSingleTarget850DDC::field_2F2
+# Off by 4 because of the std::string/std::vector sizes in this class (see CProjectilePart6.h), not because of CVidBitmap::field_B2.
+CProjectileSingleTarget850DDC::field_302
+CProjectileSingleTarget850DDC::field_306
+CProjectileSingleTarget850DDC::field_30A
+CProjectileSingleTarget850DDC::field_30E
+CProjectileSingleTarget850DDC::field_312
+CProjectileSingleTarget850DDC::field_316
+CProjectileSingleTarget850DDC::field_317
+CProjectileSingleTarget850DDC::field_318
+CProjectileSingleTarget850DDC::field_320
+CProjectileSingleTarget850DDC::field_328
+CProjectileSingleTarget850DDC::field_32C
+CProjectileSingleTarget850DDC::field_32E
+CProjectileSingleTarget850DDC::field_332
 CProjectileSingleTarget850E84::field_2AE
 CProjectileSingleTarget850E84::field_2AF
 CProjectileSingleTarget850E84::field_2B0
@@ -2461,7 +2475,6 @@ CUIManager::field_9A
 CUIManager::m_bDoubleSize
 CUIManager::m_lPanels
 CUIPanel::m_ptBaseOrigin
-CVidBitmap::m_bDoubleSize
 CVidBlitter::field_DE
 CVidBlitter::field_E2
 CVidBlitter::field_E6

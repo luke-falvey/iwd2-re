@@ -361,6 +361,7 @@ BOOL CVidTile::Render(LPDIRECTDRAWSURFACE pSurface, INT x, INT y, const CRect& r
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidImage.cpp
         // __LINE__: 6159
         UTIL_ASSERT_MSG(FALSE, "Tile data accessed when not loaded");
+        return FALSE;
     }
 
     INT nTileSize = pRes->GetTileSize();
@@ -368,26 +369,26 @@ BOOL CVidTile::Render(LPDIRECTDRAWSURFACE pSurface, INT x, INT y, const CRect& r
 
     CRect rTileRect(x, y, x + nTileSize, y + nTileSize);
 
-    INT nSkipTop = rClip.top - rTileRect.top;
+    SHORT nSkipTop = static_cast<SHORT>(rClip.top - rTileRect.top);
     if (nSkipTop > 0) {
         rTileRect.top += nSkipTop;
         pData += nTileSize * nSkipTop;
         blitSize.cy -= nSkipTop;
     }
 
-    INT nSkipBottom = rTileRect.bottom - rClip.bottom;
+    SHORT nSkipBottom = static_cast<SHORT>(rTileRect.bottom - rClip.bottom);
     if (nSkipBottom > 0) {
         blitSize.cy -= nSkipBottom;
         rTileRect.bottom -= nSkipBottom;
     }
 
-    INT nSkipRight = rTileRect.right - rClip.right;
+    SHORT nSkipRight = static_cast<SHORT>(rTileRect.right - rClip.right);
     if (nSkipRight > 0) {
         blitSize.cx -= nSkipRight;
         rTileRect.right -= nSkipRight;
     }
 
-    INT nSkipLeft = rClip.left - rTileRect.left;
+    SHORT nSkipLeft = static_cast<SHORT>(rClip.left - rTileRect.left);
     if (nSkipLeft > 0) {
         blitSize.cx -= nSkipLeft;
         pData += nSkipLeft;
@@ -462,12 +463,16 @@ BOOL CVidTile::Render(LPDIRECTDRAWSURFACE pSurface, INT x, INT y, const CRect& r
             nDataJump,
             dwFlags);
         break;
+    default:
+        pSurface->Unlock(ddsd.lpSurface);
+        pRes->Release();
+        return FALSE;
     }
 
     pSurface->Unlock(ddsd.lpSurface);
 
     pRes->Release();
-    return TRUE;
+    return bSuccess;
 }
 
 // 0x7B1B30
@@ -488,12 +493,14 @@ BOOL CVidTile::Render(LPDIRECTDRAWSURFACE pSurface, INT x, INT y, CResTile* pRes
     }
 
     pRes->Demand();
+    pResStencil->Demand();
 
     BYTE* pData = pRes->GetTileData();
     if (pData == NULL) {
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidImage.cpp
         // __LINE__: 6344
         UTIL_ASSERT_MSG(FALSE, "Tile data accessed when not loaded");
+        return FALSE;
     }
 
     BYTE* pStencilData = pResStencil->GetTileData();
@@ -501,6 +508,9 @@ BOOL CVidTile::Render(LPDIRECTDRAWSURFACE pSurface, INT x, INT y, CResTile* pRes
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidImage.cpp
         // __LINE__: 6351
         UTIL_ASSERT_MSG(FALSE, "Tile stencil data accessed when not loaded");
+        pRes->Release();
+        pResStencil->Release();
+        return FALSE;
     }
 
     INT nTileSize = pRes->GetTileSize();
@@ -508,26 +518,26 @@ BOOL CVidTile::Render(LPDIRECTDRAWSURFACE pSurface, INT x, INT y, CResTile* pRes
 
     CRect rTileRect(x, y, x + nTileSize, y + nTileSize);
 
-    INT nSkipTop = rClip.top - rTileRect.top;
+    SHORT nSkipTop = static_cast<SHORT>(rClip.top - rTileRect.top);
     if (nSkipTop > 0) {
         rTileRect.top += nSkipTop;
         pData += nTileSize * nSkipTop;
         blitSize.cy -= nSkipTop;
     }
 
-    INT nSkipBottom = rTileRect.bottom - rClip.bottom;
+    SHORT nSkipBottom = static_cast<SHORT>(rTileRect.bottom - rClip.bottom);
     if (nSkipBottom > 0) {
         blitSize.cy -= nSkipBottom;
         rTileRect.bottom -= nSkipBottom;
     }
 
-    INT nSkipRight = rTileRect.right - rClip.right;
+    SHORT nSkipRight = static_cast<SHORT>(rTileRect.right - rClip.right);
     if (nSkipRight > 0) {
         blitSize.cx -= nSkipRight;
         rTileRect.right -= nSkipRight;
     }
 
-    INT nSkipLeft = rClip.left - rTileRect.left;
+    SHORT nSkipLeft = static_cast<SHORT>(rClip.left - rTileRect.left);
     if (nSkipLeft > 0) {
         blitSize.cx -= nSkipLeft;
         pData += nSkipLeft;
@@ -607,13 +617,18 @@ BOOL CVidTile::Render(LPDIRECTDRAWSURFACE pSurface, INT x, INT y, CResTile* pRes
             nDataJump,
             dwFlags);
         break;
+    default:
+        pSurface->Unlock(ddsd.lpSurface);
+        // NOTE: The stencil is not released on this path.
+        pRes->Release();
+        return FALSE;
     }
 
     pSurface->Unlock(ddsd.lpSurface);
 
     pRes->Release();
     pResStencil->Release();
-    return TRUE;
+    return bSuccess;
 }
 
 // 0x7B1F70
@@ -1289,26 +1304,24 @@ BOOL CVidTile::BltBlendTile8To32(DWORD* pSurface, LONG lPitch, BYTE* pData, BYTE
 // NOTE: Inlined.
 BOOL CVidTile::BltStencilTile8to32_3d(DWORD* pSurface, LONG lPitch, BYTE* pData, BYTE* pStencilData, const CSize& blitSize, LONG nDataJump, DWORD dwAlpha, DWORD dwFlags)
 {
-    INT nDataIndex = 0;
-    INT nSurfaceJump = lPitch - 4 * blitSize.cx;
-
-    if ((blitSize.cx & 1) != 0) {
-        return FALSE;
-    }
+    // NOTE: The row jump is counted in pixels (`lPitch / 4 - cx`) but added
+    // to the surface pointer in bytes (0x7C6391). The tiles are 64 pixels
+    // wide, so the jump is 0 in practice.
+    INT nSurfaceJump = lPitch / 4 - blitSize.cx;
 
     for (int y = 0; y < blitSize.cy; y++) {
         for (int x = 0; x < blitSize.cx; x++) {
-            *pSurface = rgbTempPal[pData[nDataIndex]];
-            if (pStencilData[nDataIndex] == CVidPalette::CLEAR_ENTRY) {
-                *pSurface &= (dwAlpha << 24) | 0xFFFFFF;
+            DWORD dwPixel = rgbTempPal[*pData++];
+            if (*pStencilData == CVidPalette::CLEAR_ENTRY) {
+                dwPixel &= (dwAlpha << 24) | 0xFFFFFF;
             }
-            pSurface++;
-            nDataIndex++;
+            *pSurface++ = dwPixel;
+            pStencilData++;
         }
 
         pSurface = reinterpret_cast<DWORD*>(reinterpret_cast<BYTE*>(pSurface) + nSurfaceJump);
+        // NOTE: Only the tile data skips nDataJump, the stencil data does not.
         pData += nDataJump;
-        pStencilData += nDataJump;
     }
 
     return TRUE;
@@ -1398,6 +1411,9 @@ BOOL CVidTile::ReadyTexture(INT nTextureId, CResTile* pResStencil, DWORD dwFlags
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidImage3d.cpp
         // __LINE__: 1564
         UTIL_ASSERT_MSG(FALSE, "Tile data accessed when not loaded");
+        // NOTE: The stencil is not released on this path.
+        pRes->Release();
+        return FALSE;
     }
 
     BYTE* pStencilData = pResStencil->GetTileData();
@@ -1405,6 +1421,9 @@ BOOL CVidTile::ReadyTexture(INT nTextureId, CResTile* pResStencil, DWORD dwFlags
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidImage3d.cpp
         // __LINE__: 1573
         UTIL_ASSERT_MSG(FALSE, "Tile stencil data accessed when not loaded");
+        pRes->Release();
+        pResStencil->Release();
+        return FALSE;
     }
 
     m_dwFlags = dwFlags;
@@ -1491,6 +1510,9 @@ void CVidTile::RenderTexture(INT nTextureId, const CRect& rDest, INT x, INT y, D
     CVideo3d::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
 
+    CVideo3d::glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
+
     if ((dwFlags & 0x3) != 0) {
         CVideo3d::glEnable(GL_BLEND);
         g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
@@ -1519,10 +1541,8 @@ void CVidTile::RenderTexture(INT nTextureId, const CRect& rDest, INT x, INT y, D
     CVideo3d::glEnd();
     g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
 
-    CVideo3d::glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
-
     if ((dwFlags & 0x3) != 0) {
         CVideo3d::glDisable(GL_BLEND);
+        g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
     }
 }

@@ -1218,7 +1218,7 @@ BOOL CVidBitmap::Render3d(INT x, INT y, const CRect& rClip, DWORD dwFlags, BOOLE
     m_nBitCount = pRes->GetBitDepth();
 
     CSize bmpSize;
-    GetImageDimensions(bmpSize, m_bDoubleSize);
+    pRes->GetImageDimensions(bmpSize, m_bDoubleSize);
 
     INT nBytesPerPixel;
     switch (m_nBitCount) {
@@ -1288,7 +1288,7 @@ BOOL CVidBitmap::Render3d(INT x, INT y, const CRect& rClip, DWORD dwFlags, BOOLE
                 break;
             case 24:
                 if ((dwFlags & 0xFFFF0000) != 0
-                    && g_pChitin->GetCurrentVideoMode()->ApplyBrightnessContrast(RGB(128, 128, 128)) != RGB(128, 128, 128)) {
+                    || g_pChitin->GetCurrentVideoMode()->ApplyBrightnessContrast(RGB(128, 128, 128)) != RGB(128, 128, 128)) {
                     bResult = BltBmp24To32Tint(&(CVideo3d::texImageData[lTilePitch * (tileSize.cy - 1) / CVidTile::BYTES_PER_TEXEL]),
                         lTilePitch,
                         pTileData,
@@ -1311,7 +1311,7 @@ BOOL CVidBitmap::Render3d(INT x, INT y, const CRect& rClip, DWORD dwFlags, BOOLE
             }
 
             if (!bResult) {
-                if (bDemanded) {
+                if (!bDemanded) {
                     pRes->Release();
                 }
                 return FALSE;
