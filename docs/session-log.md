@@ -2,6 +2,37 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-13 (afternoon): batches 88–108, every counted function done; code outside functions found
+
+**State.** The inventory counts 8,020 functions and all are translated or excluded; no `TODO: Incomplete` function stub is left (one marker remains on a struct in `BalDataTypes.h`). S1–S5 and S6 pass on each merged build.
+
+**The count is not the whole exe.** The inventory only knows functions Ghidra defined. `tools/ghidra/OrphanCode.java` asks Ghidra for instructions that belong to no function and for bytes that are neither code nor data: about 36 KB of code in 867 runs and 12 KB of undefined bytes. By pattern, about 24 KB of the code is static initialisers and guarded initialisers and most of the rest is short thunks. What matters: 11 chunks that sit inside known functions but were never in their listings (4.9 KB; the largest are 2.5 KB of `CInfGame::StepAnimation` and 1.1 KB of the `CGameAnimationTypeMonster` constructor) and five standalone runs that look like real code. Batch 109 is checking those against the repo. Not yet done: the 700 short runs have only been classified by pattern, the 12 KB of undefined bytes has not been looked at (the largest pieces are in the zlib range), and the static initialisers have not been compared with the repo's constant values.
+
+**Snowflakes.** The missing flakes were not the particle code: `CSnowStorm::Render` (0x558310) multiplied the tint by the base colour without the `>> 8`, so flakes were drawn near-black. Found by forcing the snow roll with a temporary local patch (not committed); the fixed build draws 221 flake pixels of the original's colour against 228 in the golden. Waiting for a 15% roll had cost 26 S6 runs.
+
+**Scripted exclusions.** `tools/exclude_thunks.py` excludes compiler-generated thunks by exact instruction pattern: scalar deleting destructors (498), static-object thunks (238), guarded static initialisers (534), initialisers with atexit (6). A translator had spent 150k tokens excluding 36 of these by hand.
+
+**Opus for large functions.** Trial: the same two functions (6.2 KB) on Opus and Sonnet in separate worktrees: 244k against 252k tokens, 15 against 23 minutes, 0 against 1 behavioural error. Opus batches since then ran at 14k–25k tokens per KB (Sonnet averaged about 25k this morning) and 43 verified functions had one behavioural error (an extra `cnt += 2` in `CMessageSpriteUpdate::MarshalMessage`). Opus also caught what Sonnet runs had missed: a group assigned as "blitter" was the statically linked GLSetup loader (excluded, 17 KB), zlib and STL in the video range, and several bugs in neighbouring old code. Sonnet remains the verifier and does small functions.
+
+**Functions that were missing and ran as base-class versions:** `CGameSprite` `DoAIUpdate`, `ApplyTriggers`, `CompressTime`, `DebugDump`; door, trigger and container `Render`, `AddEffect`, `OnActionButton`, `CompressTime`, `DoAIUpdate` and their polygon highlights; `CGameAnimationTypeMonster`, `MonsterOld` and `MonsterMulti` `Render`, `SetSequence`, `ChangeDirection`, `GetSndWalk`; `CGameSound` and `CGameSpawning` `DoAIUpdate`; `CGameText::Render`; `CVisualEffect` update and destructor; all `MarshalMessage` functions of 17 message classes; the cheat console (17 commands, parser, edit control); save thumbnails; blended tiles; `CVidMode::ShadowRect` (the header was one virtual slot short at 0xAC).
+
+**Bugs fixed in older hand-written code (each confirmed by a verifier first):** red tint channel computed from the blue byte in four monster renderers; `MonsterQuadrant::Render` used the first quadrant's cell and the wrong bounds for every quadrant; `CInfCursor::SetCursor` case 100 lacked two statements; `CResCache::CopyFile` lacked the capacity check, grew the cache by the wrong amount and tested the wrong buffer; twelve functions in the string-table, override-text, cache and file code lacked their try/catch; `CTlkFileOverrideHeader::Unmarshal` always returned FALSE; the session callback copied the password instead of the session name; the inventory history icon ignored the control origin; `CScreenLoad::RefreshGameSlots` path separator; about 25 wrong or missing address annotations.
+
+**Original bugs kept, with a NOTE:** `CMessageSetLastObject` writes one field two bytes away from where its reader expects it; the 24-bit blended tile blit falls one index behind per row; several loops that cannot terminate under DBCS.
+
+**Tooling fixes.** `packet.py` printed nothing for a string that contains a newline or is shorter than three characters (a translator dropped `" does not exist\n"` from five messages because of it); it now prints strings as Python literals. Agent definitions: builds in the foreground only (two translators left a background build running and re-sent their report up to five times), one report, one line per matching function from verifiers.
+
+**Process notes**
+- A verifier can be wrong about where something is: one placed a loop in `~CInfGame` that is in `DestroyGame`; applying its "remove the redundant loop" would have changed behaviour. Read the diff before committing a suggested clean-up.
+- Give `sed` nothing with `\n` in the replacement on this machine; it wrote real newlines into string literals. Use a script that writes bytes.
+- The S6 world checkpoint tolerance is 4.5%; idle characters alone move it between 2.0% and 3.4%.
+
+**Open**
+- Batch 109 results (code outside functions), then the short runs, the undefined bytes and a comparison of static initialisers with the repo's constants.
+- `CVisualEffectObject` is a placeholder class: the constructor of visual-effect child objects was never found.
+- `CVidInf::DestroySurfaces3d` is declared as an override but is not in the original vtable; `CInfCursor` `field_5E2` is a byte in the original; `CUIPanel::m_ptBaseOrigin` and `CStore::m_bLocalCopy` offset comments are wrong; `CCreatureFile::ReleaseData` takes one ignored argument in the original.
+- Earlier items below still stand.
+
 ## 2026-11-13 (morning): batches 65–87, snow confirmed on the original, 21 markers left
 
 **S6 weather.** Eight S6 runs on the original produced one snow start (dark world with snowflakes), so the "dark world" is the original's own 15% roll. `checkpoints.py` now records a `name.altN.png` variant when the original shows a screen that matches no golden, and S6 has snow variants for the dock and world regions. On the rebuild a snow start matched the snow golden except that no snowflakes were drawn: `CParticle::Render` had only the 32-bit cases. Batch 80 added the 16- and 24-bit cases. Not yet seen in a play test: 20 S6 runs since the merge rolled no snow.
