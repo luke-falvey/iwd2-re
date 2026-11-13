@@ -128,8 +128,8 @@ void yfSectionSizeManager::Add(int song, int section, int start, int size, int o
 
                 int v1 = curr->start;
                 int v2 = curr->size;
-                curr->start += size;
-                curr->size = curr->start - start - size + v2;
+                curr->start = start + size;
+                curr->size = v1 - start - size + v2;
                 curr->startoffset = start + size - v1;
             }
 

@@ -259,7 +259,7 @@ public:
     CAITrigger(SHORT triggerID, const CAIObjectType& cause, LONG specificID);
     CAITrigger(SHORT triggerID, LONG specificID);
     ~CAITrigger();
-    BOOL OfType(const CAITrigger& trigger) const;
+    BOOLEAN OfType(const CAITrigger& trigger) const;
     void Read(const CString& sData);
     CAITrigger& operator=(const CAITrigger& other);
 

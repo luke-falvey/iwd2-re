@@ -73,14 +73,18 @@ void* CRes::Demand()
             CSingleLock lock(&field_20, FALSE);
             lock.Lock(INFINITE);
 
-            unsigned char* pBytes = reinterpret_cast<unsigned char*>(m_pData);
+            // NOTE: The exe returns `m_pData` read under the lock, not the
+            // pointer returned by `CDimm::Demand`.
+            pData = m_pData;
+
+            unsigned char* pBytes = reinterpret_cast<unsigned char*>(pData);
             if (*(pBytes + 3) == 'C') {
                 DWORD nSizeNew = *(reinterpret_cast<DWORD*>(pBytes + 8)) + 1;
                 void* pDataNew = malloc(nSizeNew);
 
                 // __FILE__: C:\Projects\Icewind2\src\chitin\ChDataTypes.cpp
                 // __LINE__: 251
-                UTIL_ASSERT(pDataNew != NULL && nSizeNew > 0);
+                UTIL_ASSERT(pDataNew!=NULL && nSizeNew > 0);
 
                 DWORD nResSizeActual = nSizeNew;
                 int err = CUtil::Uncompress(reinterpret_cast<BYTE*>(pDataNew),
@@ -100,7 +104,7 @@ void* CRes::Demand()
 
                 // __FILE__: C:\Projects\Icewind2\src\chitin\ChDataTypes.cpp
                 // __LINE__: 263
-                UTIL_ASSERT_MSG(nSizeNew - 1 == nResSizeActual, "Uncompression Error: uncompressed data size does not match requested size");
+                UTIL_ASSERT_MSG(nSizeNew-1 == nResSizeActual, "Uncompression Error: uncompressed data size does not match requested size");
 
                 pData = pDataNew;
                 m_pData = pDataNew;
@@ -138,7 +142,7 @@ CResRef CRes::GetResRef()
 {
     CResRef resRef;
 
-    if (m_pDimmKeyTableEntry != NULL && m_pDimmKeyTableEntry->resRef.IsValid()) {
+    if (m_pDimmKeyTableEntry != NULL) {
         resRef = m_pDimmKeyTableEntry->resRef;
     } else {
         resRef = "";
