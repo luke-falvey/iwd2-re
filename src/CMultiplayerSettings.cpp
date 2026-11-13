@@ -357,7 +357,7 @@ void CMultiplayerSettings::Unmarshal(BYTE* pData, DWORD dwSize)
                     && (m_bFirstConnected != TRUE || m_bArbitrationLockStatus)) {
                     g_pBaldurChitin->GetBaldurMessage()->DemandCharacterSlot(nIndexCharacter,
                         FALSE,
-                        g_pChitin->cNetwork.m_nHostPlayer);
+                        static_cast<BYTE>(g_pChitin->cNetwork.m_nHostPlayer));
                 }
             } else {
                 if (m_pnCharacterStatus[nIndexCharacter] == CHARSTATUS_CHARACTER) {
@@ -409,7 +409,8 @@ void CMultiplayerSettings::Unmarshal(BYTE* pData, DWORD dwSize)
         bGoreTooHigh = TRUE;
     }
 
-    g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nGoreOption = nGoreOption;
+    // NOTE: The received value is discarded, only used in the compare above.
+    g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nGoreOption = 0;
 
     nStringLength = *reinterpret_cast<BYTE*>(pData + nMsgPtr);
     nMsgPtr += sizeof(BYTE);
@@ -446,7 +447,12 @@ void CMultiplayerSettings::Unmarshal(BYTE* pData, DWORD dwSize)
 // 0x517FE0
 BOOLEAN CMultiplayerSettings::GetPermission(INT nPlayerSlot, INT nPermission)
 {
-    if (!(nPermission >= 0 && nPermission < CGamePermission::TOTAL_PERMISSIONS)) {
+    // NOTE: Both original range checks use `&&` and so can never be true.
+    if (nPlayerSlot < -1 && nPlayerSlot >= MAX_PLAYERS) {
+        return FALSE;
+    }
+
+    if (nPermission < 0 && nPermission >= CGamePermission::TOTAL_PERMISSIONS) {
         return FALSE;
     }
 
@@ -470,22 +476,27 @@ void CMultiplayerSettings::SetPermission(INT nPlayerSlot, INT nPermission, BOOLE
                 pPermission = &m_cDefaultPermissions;
             }
 
+            // NOTE: The local player always gets the permission, but the
+            // cascades below are gated by the original argument.
+            BOOLEAN bValue;
             if (g_pChitin->cNetwork.GetPlayerID(nPlayerSlot) == g_pChitin->cNetwork.m_idLocalPlayer) {
-                bPermissionValue = TRUE;
-                g_pBaldurChitin->GetObjectGame()->m_singlePlayerPermissions.SetSinglePermission(nPermission, bPermissionValue);
+                bValue = TRUE;
+                g_pBaldurChitin->GetObjectGame()->m_singlePlayerPermissions.SetSinglePermission(nPermission, TRUE);
+            } else {
+                bValue = bPermissionValue;
             }
 
-            pPermission->SetSinglePermission(nPermission, bPermissionValue);
+            pPermission->SetSinglePermission(nPermission, bValue);
 
             if (bPermissionValue == TRUE) {
                 if (nPermission == CGamePermission::LEADER) {
-                    for (INT nOtherPermission = 0; nOtherPermission < CGamePermission::TOTAL_PERMISSIONS; nOtherPermission++) {
-                        pPermission->SetSinglePermission(nOtherPermission, bPermissionValue);
+                    for (BYTE nOtherPermission = 0; nOtherPermission < CGamePermission::TOTAL_PERMISSIONS; nOtherPermission++) {
+                        pPermission->SetSinglePermission(nOtherPermission, bValue);
                     }
                 }
 
                 if (nPermission == CGamePermission::PURCHASING) {
-                    pPermission->SetSinglePermission(CGamePermission::DIALOG, bPermissionValue);
+                    pPermission->SetSinglePermission(CGamePermission::DIALOG, bValue);
                 }
             }
 
@@ -713,11 +724,12 @@ void CMultiplayerSettings::SetCharacterControlledByPlayer(INT nCharacterSlot, IN
 
     if (g_pChitin->cNetwork.GetSessionOpen()) {
         if (g_pChitin->cNetwork.GetSessionHosting()) {
-            if (m_pnCharacterStatus[nCharacterSlot] == CHARSTATUS_CREATING_CHARACTER
+            if (m_pnCharacterStatus[nCharacterSlot] != CHARSTATUS_CREATING_CHARACTER
                 && g_pChitin->cNetwork.GetPlayerID(nPlayerSlot) != 0) {
                 if (m_pnCharacterControlledByPlayer[nCharacterSlot] != g_pChitin->cNetwork.GetPlayerID(nPlayerSlot)) {
                     if (g_pBaldurChitin->GetObjectGame()->m_bGameLoaded == TRUE) {
-                        LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterId(nCharacterSlot);
+                        // NOTE: Uninline.
+                        LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetFixedOrderCharacterId(nCharacterSlot);
                         CMessage* message = new CMessage101(FALSE,
                             nCharacterId,
                             nCharacterId,
@@ -762,7 +774,7 @@ void CMultiplayerSettings::SetCharacterControlledByPlayer(INT nCharacterSlot, IN
                 if (!m_bArbitrationLockStatus) {
                     if (g_pBaldurChitin->GetObjectGame()->m_bGameLoaded == TRUE) {
                         g_pBaldurChitin->GetBaldurMessage()->ObjectControlSuggestion(m_pnCharacterControlledByPlayer[nCharacterSlot],
-                            g_pBaldurChitin->GetObjectGame()->GetCharacterId(nCharacterSlot));
+                            g_pBaldurChitin->GetObjectGame()->GetFixedOrderCharacterId(nCharacterSlot)); // NOTE: Uninline.
                     }
                 }
             }
@@ -841,18 +853,21 @@ void CMultiplayerSettings::SignalCharacterStatus(INT nCharacterSlot, BYTE nStatu
                     m_pnCharacterStatus[nCharacterSlot] = 0;
                 }
 
-                if (g_pChitin->cNetwork.m_nLocalPlayer != g_pChitin->cNetwork.FindPlayerLocationByID(m_pnCharacterControlledByPlayer[nCharacterSlot], FALSE)) {
+                // NOTE: Uninline `GetCharacterControlledByPlayer`.
+                if (static_cast<BYTE>(g_pChitin->cNetwork.m_nLocalPlayer) != GetCharacterControlledByPlayer(nCharacterSlot)) {
                     g_pBaldurChitin->GetObjectGame()->ClearCharacterSlot(nCharacterSlot);
                 }
             } else if (nStatus == CHARSTATUS_SIGNAL_CREATION_COMPLETE
                 || nStatus == CHARSTATUS_SIGNAL_IMPORTED) {
-                if (g_pChitin->cNetwork.m_nLocalPlayer == g_pChitin->cNetwork.FindPlayerLocationByID(m_pnCharacterControlledByPlayer[nCharacterSlot], FALSE)
+                // NOTE: Uninline `GetCharacterControlledByPlayer`.
+                if (static_cast<BYTE>(g_pChitin->cNetwork.m_nLocalPlayer) == GetCharacterControlledByPlayer(nCharacterSlot)
                     || bLocalMessage) {
                     m_pnCharacterStatus[nCharacterSlot] = 1;
                 } else {
+                    // NOTE: Uninline `GetCharacterControlledByPlayer`.
                     g_pBaldurChitin->GetBaldurMessage()->DemandCharacterSlot(nCharacterSlot,
                         FALSE,
-                        g_pChitin->cNetwork.FindPlayerLocationByID(m_pnCharacterControlledByPlayer[nCharacterSlot], FALSE));
+                        GetCharacterControlledByPlayer(nCharacterSlot));
                 }
             }
 
@@ -860,7 +875,8 @@ void CMultiplayerSettings::SignalCharacterStatus(INT nCharacterSlot, BYTE nStatu
                 g_pBaldurChitin->GetBaldurMessage()->SendFullSettingsToClients(CString(""));
             }
         } else {
-            INT v1 = g_pChitin->cNetwork.FindPlayerLocationByID(m_pnCharacterControlledByPlayer[nCharacterSlot], FALSE);
+            // NOTE: Uninline.
+            INT v1 = GetCharacterControlledByPlayer(nCharacterSlot);
             INT v2 = g_pChitin->cNetwork.FindPlayerLocationByID(g_pChitin->cNetwork.m_idLocalPlayer, FALSE);
             if (v2 == v1) {
                 g_pBaldurChitin->GetBaldurMessage()->SendCharacterSlotStatusToServer(nCharacterSlot, nStatus);
@@ -1006,6 +1022,7 @@ void CMultiplayerSettings::OnDropPlayer(PLAYER_ID idDroppedPlayer)
 
         if (g_pBaldurChitin->GetActiveEngine() == g_pBaldurChitin->m_pEngineWorldMap
             && g_pBaldurChitin->GetScreenWorld()->m_idPendingMapWorldController == idDroppedPlayer) {
+            g_pBaldurChitin->m_pEngineWorldMap->m_bInControl = TRUE;
             g_pBaldurChitin->GetScreenWorld()->m_idPendingMapWorldController = g_pChitin->cNetwork.m_idLocalPlayer;
 
             // FIXME: Redundant.
