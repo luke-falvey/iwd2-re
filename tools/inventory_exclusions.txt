@@ -2402,3 +2402,7 @@
 # now written out in the repo body (pairs of pixels as DWORDs).
 0x7B623C
 0x7B3FF8
+# Split pieces of CGameAnimationTypeMonsterIcewind functions that the repo bodies cover: 0x6E6F63 is the tail of
+# SetColorEffect (0x6E6A60, a function Ghidra had not defined), 0x6E7553 the tail of SetColorEffectAll (0x6E73B0).
+0x6E6F63
+0x6E7553

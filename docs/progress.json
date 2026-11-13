@@ -4,15 +4,15 @@
     "0x401000",
     "0x7DA200"
   ],
-  "functions_total": 8020,
-  "functions_done": 8018,
-  "functions_complete": 8018,
+  "functions_total": 8019,
+  "functions_done": 8019,
+  "functions_complete": 8019,
   "incomplete_markers": 1,
   "incomplete_by_file": {
     "src/BalDataTypes.h": 1
   },
   "annotations_total": 10649,
-  "annotations_not_function_start": 2608,
+  "annotations_not_function_start": 2607,
   "duplicate_annotations": {
     "0x7ACD60": [
       "src/CAIObjectType.cpp",
@@ -3760,22 +3760,9 @@
     "0xA19178",
     "0xA1917C"
   ],
-  "bytes_total": 3704626,
-  "bytes_done": 3704376,
-  "bytes_complete": 3704376,
+  "bytes_total": 3706493,
+  "bytes_done": 3706493,
+  "bytes_complete": 3706493,
   "largest_stubs": [],
-  "next": [
-    {
-      "addr": "0x6E6F63",
-      "name": "FUN_006e6f63",
-      "translated_callers": 0,
-      "size": 169
-    },
-    {
-      "addr": "0x6E7553",
-      "name": "FUN_006e7553",
-      "translated_callers": 0,
-      "size": 81
-    }
-  ]
+  "next": []
 }
