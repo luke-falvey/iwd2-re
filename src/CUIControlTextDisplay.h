@@ -82,7 +82,7 @@ public:
     /* 0A66 */ unsigned char field_A66;
     /* 0A67 */ unsigned char field_A67;
     /* 0A68 */ short field_A68;
-    /* 0A6C */ short field_A6A;
+    /* 0A6A */ short field_A6A;
     /* 0A6C */ short field_A6C;
     /* 0A6E */ DWORD m_nScrollBarID;
     /* 0A72 */ COLORREF m_rgbLabelColor;

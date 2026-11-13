@@ -224,6 +224,8 @@ POSITION CUIControlTextDisplay::DisplayString(const CString& sLabel, const CStri
         posTopString,
         bTrim);
 
+    field_A65 = 0;
+
     if (a6 || nOldCount == 0) {
         m_posTopString = posTopString;
         field_5A = m_plstStrings->GetCount() - v1;
@@ -398,15 +400,17 @@ void CUIControlTextDisplay::OnMouseMove(CPoint pt)
             // __LINE__: 6168
             UTIL_ASSERT(ptMouseClick.y >= 0);
 
-            if (m_plstStrings != NULL) {
-                INT nIndex = field_5A + (ptMouseClick.y + field_A62) / m_nFontHeight;
-                if (nIndex >= 0 && nIndex < m_plstStrings->GetCount()) {
-                    CDisplayString* pDisplayString = m_plstStrings->GetAt(m_plstStrings->FindIndex(nIndex));
-                    if (pDisplayString->m_lMarker != -1) {
-                        UnHighlightItem();
-                        HighlightItem(pDisplayString->GetBossPos());
-                        bHighlighted = TRUE;
-                    }
+            if (m_plstStrings == NULL) {
+                return;
+            }
+
+            INT nIndex = field_5A + static_cast<SHORT>((ptMouseClick.y + field_A62) / m_nFontHeight);
+            if (nIndex >= 0 && nIndex < m_plstStrings->GetCount()) {
+                CDisplayString* pDisplayString = m_plstStrings->GetAt(m_plstStrings->FindIndex(nIndex));
+                if (pDisplayString->m_lMarker != -1) {
+                    UnHighlightItem();
+                    HighlightItem(pDisplayString->GetBossPos());
+                    bHighlighted = TRUE;
                 }
             }
         }
@@ -465,8 +469,7 @@ void CUIControlTextDisplay::OnPageDown(DWORD nLines)
 {
     if (m_plstStrings->GetCount() > field_A6A) {
         SHORT nOldIndex = field_5A;
-        // TODO: Check casts.
-        SHORT v1 = static_cast<SHORT> min(nLines, static_cast<DWORD>(field_A6A - 1));
+        SHORT v1 = static_cast<SHORT>(nLines >= static_cast<DWORD>(field_A6A) ? field_A6A - 1 : nLines);
         field_5A = min(field_5A + v1, m_plstStrings->GetCount() - field_A6A);
         if (nOldIndex != field_5A) {
             m_posTopString = m_plstStrings->FindIndex(field_5A);
@@ -486,8 +489,7 @@ void CUIControlTextDisplay::OnPageUp(DWORD nLines)
 {
     if (!m_plstStrings->IsEmpty()) {
         SHORT nOldIndex = field_5A;
-        // TODO: Check casts.
-        SHORT v1 = static_cast<SHORT> min(nLines, static_cast<DWORD>(field_A6A - 1));
+        SHORT v1 = static_cast<SHORT>(nLines >= static_cast<DWORD>(field_A6A) ? field_A6A - 1 : nLines);
         field_5A = max(field_5A - v1, 0);
         if (nOldIndex != field_5A) {
             m_posTopString = m_plstStrings->FindIndex(field_5A);
@@ -649,7 +651,8 @@ SHORT CUIControlTextDisplay::ParseAndInsertStringAfter(POSITION posInsertAfter, 
     }
 
     while (!sStringCopy.IsEmpty()) {
-        if (field_AB4 != 0 && nNumLines >= field_AB4) {
+        // NOTE: The exe zero-extends `field_AB4` before the signed compare.
+        if (field_AB4 != 0 && nNumLines >= static_cast<WORD>(field_AB4)) {
             nOffset = 3 * (m_pPanel->m_pManager->m_bDoubleSize ? 2 : 1);
         }
 
@@ -681,7 +684,7 @@ SHORT CUIControlTextDisplay::ParseAndInsertStringAfter(POSITION posInsertAfter, 
         if (bFirstLine) {
             posInsertAfter = m_plstStrings->InsertAfter(posInsertAfter, pDisplayString);
             posBoss = posInsertAfter;
-            pDisplayString->m_posBoss = posBoss;
+            sLabelCopy = "";
 
             pLastDisplayString = pDisplayString;
         } else {
@@ -871,6 +874,8 @@ void CUIControlTextDisplay::SetItemMarker(POSITION posBossItem, LONG lMarker)
 // 0x4E3770
 void CUIControlTextDisplay::SetItemTextColor(POSITION posBossItem, COLORREF rgbColor)
 {
+    // NOTE: The guard tests the text font flag (`field_AAF`) but the assert
+    // checks the label font's resref, as in the exe.
     if (field_AAF) {
         if (g_pChitin->m_sFontName.Compare("") == 0
             || m_labelFont.GetResRef() == "STATES2") {
@@ -1078,14 +1083,16 @@ BOOLEAN CUIControlTextDisplay::GetItem(INT nItemIndex, CString& sLabel, CString&
     POSITION pos = posBossItem;
     m_plstStrings->GetNext(pos);
 
-    // TODO: Loop looks odd, might be broken. Check.
+    // NOTE: The loop condition reads the line just appended, which is not
+    // the boss line and has zero lines, so at most one continuation line is
+    // appended.
     INT nLine = 0;
     if (m_plstStrings->GetAt(posBossItem)->GetNumLines() - 1 > 0) {
         CDisplayString* pDisplayString;
         do {
             pDisplayString = m_plstStrings->GetNext(pos);
             sString += " ";
-            sString += m_plstStrings->GetAt(pos)->GetString();
+            sString += pDisplayString->GetString();
             nLine++;
         } while (nLine < pDisplayString->GetNumLines() - 1);
     }

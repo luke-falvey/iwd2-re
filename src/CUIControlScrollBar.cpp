@@ -12,6 +12,12 @@
 CUIControlScrollBar::CUIControlScrollBar(CUIPanel* panel, UI_CONTROL_SCROLLBAR* controlInfo)
     : CUIControlBase(panel, &(controlInfo->base), 1)
 {
+    field_148 = 0;
+
+    // NOTE: The exe loads this value from the constant byte at 0x84C899
+    // (which is 1).
+    field_4 = 1;
+
     // NOTE: Uninline.
     m_cVidCell.SetResRef(CResRef(controlInfo->refBam), m_pPanel->m_pManager->m_bDoubleSize, FALSE, TRUE);
 
@@ -365,7 +371,7 @@ BOOL CUIControlScrollBar::Render(BOOL bForce)
     }
 
     m_cVidCell.pRes->Demand();
-    m_cVidCell.RealizePalette(0);
+    m_cVidCell.RealizePalette(1);
 
     CRect rControlRect(m_pPanel->m_ptOrigin + m_ptOrigin, m_size);
 
@@ -381,7 +387,7 @@ BOOL CUIControlScrollBar::Render(BOOL bForce)
     rDirtyRect.OffsetRect(-rDirtyRect.left, -rDirtyRect.top);
 
     CRect rUp;
-    rUp.left = pt.x + (m_size.cx - m_pScrollUpButton->m_size.cx) / 2;
+    rUp.left = pt.x + ((m_size.cx - m_pScrollUpButton->m_size.cx) >> 1);
     rUp.top = pt.y;
     rUp.right = rUp.left + m_pScrollUpButton->m_size.cx;
     rUp.bottom = rUp.top + m_pScrollUpButton->m_size.cy;
@@ -403,37 +409,45 @@ BOOL CUIControlScrollBar::Render(BOOL bForce)
 
     m_cVidCell.FrameSet(m_nTrackFrame);
 
-    int y = 0;
-    while (y < field_140) {
-        CRect rTrack;
-        rTrack.left = pt.x + (m_size.cx - trackSize.cx) / 2;
-        rTrack.top = y + m_pScrollUpButton->m_size.cy + pt.y;
-        rTrack.right = rTrack.left + trackSize.cx;
-        rTrack.bottom = min(rTrack.top + trackSize.cy, field_140);
+    SHORT y = 0;
+    if (y < field_140) {
+        SHORT nTrackTop = static_cast<SHORT>(m_pScrollUpButton->m_size.cy + pt.y);
+        do {
+            CRect rTrack;
+            rTrack.left = pt.x + ((m_size.cx - trackSize.cx) >> 1);
+            rTrack.top = nTrackTop + y;
+            rTrack.right = rTrack.left + trackSize.cx;
+            if (y + trackSize.cy < field_140) {
+                rTrack.bottom = rTrack.top + trackSize.cy;
+            } else {
+                rTrack.bottom = field_140 + nTrackTop;
+            }
 
-        CRect rTrackClip;
-        if (rTrackClip.IntersectRect(rTrack, rDirtyRect)) {
-            pVidInf->BKRender(&m_cVidCell,
-                rTrack.left + trackCenter.cx,
-                rTrack.top + trackCenter.cy,
-                rTrackClip,
-                TRUE,
-                0);
-        }
+            CRect rTrackClip;
+            if (rTrackClip.IntersectRect(rTrack, rDirtyRect)) {
+                pVidInf->BKRender(&m_cVidCell,
+                    rTrack.left + trackCenter.cx,
+                    rTrack.top + trackCenter.cy,
+                    rTrackClip,
+                    TRUE,
+                    0);
+            }
 
-        y += trackSize.cy;
+            y += static_cast<SHORT>(trackSize.cy);
+        } while (y < field_140);
     }
 
     CRect rDown;
-    rDown.left = pt.x + (m_size.cx - m_pScrollDownButton->m_size.cx) / 2;
+    rDown.left = pt.x + ((m_size.cx - m_pScrollDownButton->m_size.cx) >> 1);
     rDown.top = pt.y + m_pScrollUpButton->m_size.cy + field_140;
     rDown.right = rDown.left + m_pScrollDownButton->m_size.cx;
     rDown.bottom = rDown.top + m_pScrollDownButton->m_size.cy;
 
     CRect rDownClip;
     if (rDownClip.IntersectRect(rDown, rDirtyRect)) {
+        // NOTE: The x here halves each width separately, unlike `rDown.left`.
         m_pScrollDownButton->BKRender(pVidInf,
-            rDown.left,
+            (m_size.cx >> 1) - (m_pScrollDownButton->m_size.cx >> 1) + pt.x,
             rDown.top,
             rDownClip,
             TRUE);
@@ -449,7 +463,7 @@ BOOL CUIControlScrollBar::Render(BOOL bForce)
         m_cVidCell.FrameSet(m_nThumbFrame);
 
         CRect rThumb;
-        rThumb.left = pt.x + m_size.cx / 2 - thumbSize.cx / 2;
+        rThumb.left = pt.x + (m_size.cx >> 1) - (thumbSize.cx >> 1);
         rThumb.top = pt.y + m_pScrollUpButton->m_size.cy + field_144;
         rThumb.right = rThumb.left + thumbSize.cx;
         rThumb.bottom = rThumb.top + thumbSize.cy;
@@ -489,6 +503,8 @@ void CUIControlScrollBar::TimerAsynchronousUpdate(BOOLEAN bInside)
             return;
         }
     }
+
+    CUIControlBase::TimerAsynchronousUpdate(bInside);
 }
 
 // -----------------------------------------------------------------------------
@@ -630,17 +646,17 @@ BOOL CUIControlButtonScrollBar::OnLButtonDown(CPoint pt)
     switch (m_nDirection) {
     case CUICONTROLBUTTONSCROLLBAR_DIRECTION_UP:
         m_pScrollBar->OnScrollUp();
-        m_nAUCounter = 1;
         break;
     case CUICONTROLBUTTONSCROLLBAR_DIRECTION_DOWN:
         m_pScrollBar->OnScrollDown();
-        m_nAUCounter = 1;
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ChUIControls.cpp
         // __LINE__: 9132
         UTIL_ASSERT(FALSE);
     }
+
+    m_nAUCounter = 1;
 
     return TRUE;
 }
