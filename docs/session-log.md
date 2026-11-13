@@ -2,6 +2,27 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-14 (late night): batches 180–183, the old-code audit is complete
+
+Every pre-project function has now been read against the exe: `tools/old_code.py` reports 0 functions, 0 bytes unread. S1–S7 pass on the rebuild after each of the four merges, the last being batch 183.
+
+| Batch | File | What was wrong |
+|---|---|---|
+| 180 | `CMultiplayerSettings` | Slot assignment status test and character id; permission cascade; gore option on unmarshal; world map control when a player drops |
+| 181 | `CNetwork` | Left-game and dropped-game strings swapped in the header; sliding-window queue walks used the wrong node, a stray `+3` and missed offsets; shutdown re-queued to the wrong window; session status counts uninitialised; player lookups returned on an invisible duplicate; compressed sends passed the uncompressed size; uncompress retried on every error; modem check opened the wrong registry key |
+| 182 | `CScreenConnection` | Popup enable passed the panel id as the flag; quick load tested a portrait index as a slot; player name setting written from the password; protocol switch fell through; serial settings never fell back to COM1/38400; session index not reset after a join; null provider could be auto-selected; `m_vcTorch` and `field_FB0` declared out of order (10 known mismatches removed) |
+| 183 | `CScreenMultiPlayer` | Modify-character skipped the can-save check and had string id 101317 for 10317; portrait click opened popup 7 for 8 and read the neighbouring lock flag; character enable loop never touched one label; word wrap cleared on the wrong member; chat box kept the last line; label redraw rect used the button's size |
+
+**What the tests do not show.** None of batches 180–183 is exercised by S1–S7 beyond start-up and game load, which pass through `CScreenConnection::EngineActivated`, the "finding network devices" popup and `CNetwork` under the null provider. The multiplayer screens themselves have no play test.
+
+**Open notes.**
+- `CScreenConnection::EngineActivated` now closes the game if `GetDiskFreeSpaceA` fails, as the exe does. The free-sector product is 32-bit in the exe and can wrap on very large volumes; a false "low space" needs the wrapped value to land under the threshold.
+- `CNetwork::CheckSessionStatus` reads its BOOLEAN argument slot as a dword in the exe; the repo uses the BOOLEAN's value. Which result the single-player DirectPlay path returns from `GetSessionDesc(NULL)` was not checked.
+- `CUIControlBase.h`: the `/* 0008 */ m_pPanel` offset comment is stale (the asm reads the panel at +6, the id at +0xA).
+- `UpdateProtocolPanel` and one protocol button constructor read a reused stack slot in unreachable cases in the exe; the repo leaves the value unset with a `// NOTE:`.
+
+**Next.** Play tests for what nothing covers yet (audio, monsters, combat, doors, stores, options screens), starting with a `record-scenario` skill; prune stale known-mismatch entries.
+
 ## 2026-11-14 (night): batches 149–179, every single-player file's old code read against the exe
 
 All pre-project code outside the four multiplayer files has now been read against the exe and fixed. S1–S7 pass on the rebuild after batch 179. Unread old code: 105,776 bytes in 347 functions, all in `CScreenConnection.cpp`, `CScreenMultiPlayer.cpp`, `CNetwork.cpp` and `CMultiplayerSettings.cpp` (audits and fixes for those are in progress).
