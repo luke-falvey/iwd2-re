@@ -73,17 +73,29 @@ CSound::~CSound()
 {
     if (m_pSoundMixer->GetMixerInitialized()) {
         if (m_bFireForget) {
+            // NOTE: The buffer now belongs to the voice, so it is not
+            // released here.
             m_pSoundMixer->TransferBuffer(this);
-        } else {
-            if (m_nLooping) {
-                m_pSoundMixer->RemoveFromLoopingList(this);
-            }
-
-            ExclusiveStop();
+            return;
         }
-    } else {
+
+        if (m_nLooping) {
+            // NOTE: Uninline.
+            m_pSoundMixer->RemoveFromLoopingList(this);
+        }
+
+        // NOTE: Uninline.
         ExclusiveStop();
+    } else {
+        if (m_nLooping) {
+            // NOTE: Uninline.
+            m_pSoundMixer->RemoveFromLoopingList(this);
+        }
     }
+
+    // NOTE: Usually NULL by now: `ExclusiveStop` updates the sound list, and
+    // the voice's destructor releases this buffer and clears the pointer.
+    DestroyBuffer(&pSoundBuffer);
 }
 
 // 0x7A8F60
@@ -107,7 +119,7 @@ BOOL CSound::SetFireForget(BOOL bNewFireForget)
 
     m_bFireForget = bNewFireForget;
 
-    return FALSE;
+    return TRUE;
 }
 
 // 0x7A9020
@@ -137,23 +149,26 @@ BOOL CSound::CopyData()
 BOOL CSound::Create2DBuffer(LPWAVEFORMATEX waveFormat)
 {
     DSBUFFERDESC desc = { 0 };
+    // NOTE: The original stores 20 (the DirectX 5 `DSBUFFERDESC` without
+    // `guid3DAlgorithm`). With the current SDK headers `sizeof` gives 36;
+    // the extra GUID is zero (`DS3DALG_DEFAULT`).
     desc.dwSize = sizeof(desc);
     desc.dwFlags = DSBCAPS_CTRLFREQUENCY | DSBCAPS_CTRLPAN | DSBCAPS_CTRLVOLUME;
     desc.dwBufferBytes = pRes->GetWaveSize();
     desc.lpwfxFormat = waveFormat;
 
-    if (FAILED(m_pSoundMixer->m_pDirectSound->CreateSoundBuffer(&desc, &pSoundBuffer, NULL))) {
+    if (m_pSoundMixer->m_pDirectSound->CreateSoundBuffer(&desc, &pSoundBuffer, NULL) != DS_OK) {
         return FALSE;
     }
 
     int nChannelVolume = m_pSoundMixer->GetChannelVolumeFast(m_nChannel);
     if (m_bPositionedSound) {
-        if (FAILED(pSoundBuffer->SetVolume(30 * (m_nRangeVolume * (nChannelVolume * m_nVolume / 100) / 100 - 100)))) {
+        if (pSoundBuffer->SetVolume(30 * (m_nRangeVolume * (nChannelVolume * m_nVolume / 100) / 100 - 100)) != DS_OK) {
             DestroyBuffer(&pSoundBuffer);
             return FALSE;
         }
     } else {
-        if (FAILED(pSoundBuffer->SetVolume(30 * (nChannelVolume * m_nVolume / 100 - 100)))) {
+        if (pSoundBuffer->SetVolume(30 * (nChannelVolume * m_nVolume / 100 - 100)) != DS_OK) {
             DestroyBuffer(&pSoundBuffer);
             return FALSE;
         }
@@ -180,12 +195,13 @@ BOOL CSound::Create3DBuffer(LPWAVEFORMATEX waveFormat, float mix)
     LPDIRECTSOUND3DBUFFER soundBuffer3D;
 
     DSBUFFERDESC desc = { 0 };
+    // NOTE: The original stores 20 here, see `Create2DBuffer`.
     desc.dwSize = sizeof(desc);
     desc.dwFlags = DSBCAPS_CTRL3D | DSBCAPS_CTRLFREQUENCY | DSBCAPS_CTRLVOLUME;
     desc.dwBufferBytes = pRes->GetWaveSize();
     desc.lpwfxFormat = waveFormat;
 
-    if (FAILED(m_pSoundMixer->m_pDirectSound->CreateSoundBuffer(&desc, &pSoundBuffer, NULL))) {
+    if (m_pSoundMixer->m_pDirectSound->CreateSoundBuffer(&desc, &pSoundBuffer, NULL) != DS_OK) {
         return Create2DBuffer(waveFormat);
     }
 
@@ -205,7 +221,7 @@ BOOL CSound::Create3DBuffer(LPWAVEFORMATEX waveFormat, float mix)
                 DS3D_IMMEDIATE);
             soundBuffer3D->Release();
         } else {
-            hr = pSoundBuffer->SetVolume(30 * ((nChannelVolume * m_nVolume / 100) / 100 - 100));
+            hr = pSoundBuffer->SetVolume(30 * (m_nRangeVolume * (nChannelVolume * m_nVolume / 100) / 100 - 100));
             m_b3DPositioning = FALSE;
         }
     } else {
@@ -218,7 +234,7 @@ BOOL CSound::Create3DBuffer(LPWAVEFORMATEX waveFormat, float mix)
         m_b3DPositioning = FALSE;
     }
 
-    if (FAILED(hr)) {
+    if (hr != DS_OK) {
         DestroyBuffer(&pSoundBuffer);
         return Create2DBuffer(waveFormat);
     }
@@ -240,7 +256,7 @@ BOOL CSound::Create3DBuffer(LPWAVEFORMATEX waveFormat, float mix)
 // NOTE: Inlined.
 void CSound::DestroyBuffer(LPDIRECTSOUNDBUFFER* soundBufferPtr)
 {
-    if (soundBufferPtr != NULL) {
+    if (*soundBufferPtr != NULL) {
         (*soundBufferPtr)->Release();
         *soundBufferPtr = NULL;
     }
@@ -256,6 +272,10 @@ BOOL CSound::ExclusivePlay(BOOL bReplay)
     }
 
     if (GetRes() == NULL) {
+        return FALSE;
+    }
+
+    if (m_pSoundMixer->m_pDirectSound == NULL) {
         return FALSE;
     }
 
@@ -276,6 +296,7 @@ BOOL CSound::ExclusivePlay(BOOL bReplay)
                 CVoice* pVoice = static_cast<CVoice*>(m_pSoundMixer->m_lVoices.GetNext(pos));
                 if (pVoice->m_pSound == this) {
                     bFound = TRUE;
+                    break;
                 }
             }
 
@@ -284,7 +305,7 @@ BOOL CSound::ExclusivePlay(BOOL bReplay)
 
         if (bFound) {
             // NOTE: Uninline.
-            if (IsSoundPlaying() && bReplay) {
+            if (IsSoundPlaying() && !bReplay) {
                 return TRUE;
             }
 
@@ -402,21 +423,29 @@ BOOL CSound::ExclusiveStop()
 // 0x7A9A20
 DWORD CSound::GetPlayTime()
 {
-    // FIXME: This value is uninitialized in the original code.
+    // FIXME: This value is uninitialized in the original code (it returns
+    // whatever the stack slot holds when the wave format is missing).
     DWORD playTime = 0;
 
-    if (Request()) {
-        LPWAVEFORMATEX waveFormat = pRes->GetWaveFormatPtr();
-        if (waveFormat != NULL) {
-            DWORD size = pRes->GetWaveSize();
-            if (size >= 4294967) {
-                playTime = 1000 * (size / waveFormat->nAvgBytesPerSec);
-            } else {
-                playTime = 1000 * size / waveFormat->nAvgBytesPerSec;
-            }
-        }
-        Release();
+    if (pRes == NULL) {
+        return 0;
     }
+
+    if (pRes->Demand() == NULL) {
+        return 0;
+    }
+
+    LPWAVEFORMATEX waveFormat = pRes->GetWaveFormatPtr();
+    if (waveFormat != NULL) {
+        DWORD size = pRes->GetWaveSize();
+        if (size >= 4294967) {
+            playTime = 1000 * (size / waveFormat->nAvgBytesPerSec);
+        } else {
+            playTime = 1000 * size / waveFormat->nAvgBytesPerSec;
+        }
+    }
+
+    pRes->Release();
 
     return playTime;
 }
@@ -487,20 +516,24 @@ BOOL CSound::ResetVolume()
 
     int dx = m_nXCoordinate - m_pSoundMixer->m_nXCoordinate;
     int dy = m_nYCoordinate - m_pSoundMixer->m_nYCoordinate;
-    int distance = dx * dx + dy + dy;
-    if (distance < m_nRange * m_nRange) {
-        int v1 = 10000 * distance / (m_nRange * m_nRange);
-        if (v1 > 10000) {
+    __int64 distance = dx * dx + dy * dy;
+    __int64 rangeSquared = m_nRange * m_nRange;
+    if (distance < rangeSquared) {
+        // NOTE: 64-bit arithmetic (`__allmul`, `__alldiv`).
+        __int64 v1 = distance * 10000 / rangeSquared;
+        __int64 nSqrt;
+        if (v1 > 10000 || (nSqrt = CSoundMixer::m_tSqrtTable[v1]) < 0) {
             m_nRangeVolume = 0;
         } else {
-            m_nRangeVolume = 100 * (CSoundMixer::m_tSqrtTable[10000] - CSoundMixer::m_tSqrtTable[v1]) / CSoundMixer::m_tSqrtTable[10000];
+            __int64 nMaxSqrt = CSoundMixer::m_tSqrtTable[10000];
+            m_nRangeVolume = static_cast<int>((nMaxSqrt - nSqrt) * 100 / nMaxSqrt);
         }
 
         m_nPan = 100 * dx / m_pSoundMixer->m_nPanRange;
 
         IDirectSoundBuffer_SetPan(pSoundBuffer, 50 * m_nPan);
 
-        HRESULT hr = IDirectSoundBuffer_SetVolume(pSoundBuffer, 30 * (nChannelVolume * m_nVolume / 100 - 100));
+        HRESULT hr = IDirectSoundBuffer_SetVolume(pSoundBuffer, 30 * (m_nRangeVolume * (nChannelVolume * m_nVolume / 100) / 100 - 100));
         if (hr != DS_OK) {
             return FALSE;
         }
@@ -567,6 +600,8 @@ BOOL CSound::Play(BOOL bReplay)
         return FALSE;
     }
 
+    m_bPositionedSound = FALSE;
+
     m_pSoundMixer->Lock();
 
     if (m_nLooping != 0) {
@@ -579,6 +614,7 @@ BOOL CSound::Play(BOOL bReplay)
             CSound* pSound = static_cast<CSound*>(m_pSoundMixer->m_lLooping.GetNext(pos));
             if (this == pSound) {
                 bFound = TRUE;
+                break;
             }
         }
 
@@ -610,13 +646,9 @@ BOOL CSound::Play(BOOL bReplay)
         POSITION pos = m_pSoundMixer->m_lVoices.GetHeadPosition();
         while (pos != NULL) {
             CVoice* pVoice = static_cast<CVoice*>(m_pSoundMixer->m_lVoices.GetNext(pos));
-            if (pVoice != NULL) {
-                if (!pVoice->GetLooping()) {
-                    if (pVoice->IsSoundPlaying()) {
-                        bPlaying = TRUE;
-                        break;
-                    }
-                }
+            if (pVoice->GetChannel() == m_nChannel && pVoice->IsSoundPlaying()) {
+                bPlaying = TRUE;
+                break;
             }
         }
 
@@ -654,7 +686,7 @@ BOOL CSound::Play(BOOL bReplay)
 // 0x7A9DB0
 BOOL CSound::Play(int nNewXCoordinate, int nNewYCoordinate, int nNewZCoordinate, BOOL bReplay)
 {
-    if (m_pSoundMixer->m_bMixerInitialized) {
+    if (!m_pSoundMixer->m_bMixerInitialized) {
         return FALSE;
     }
 
@@ -663,6 +695,7 @@ BOOL CSound::Play(int nNewXCoordinate, int nNewYCoordinate, int nNewZCoordinate,
     }
 
     m_nXCoordinate = nNewXCoordinate;
+    m_bPositionedSound = TRUE;
     m_nYCoordinate = nNewYCoordinate;
     m_nZCoordinate = nNewZCoordinate;
 
@@ -676,6 +709,7 @@ BOOL CSound::Play(int nNewXCoordinate, int nNewYCoordinate, int nNewZCoordinate,
             CSound* pSound = static_cast<CSound*>(m_pSoundMixer->m_lLooping.GetNext(pos));
             if (this == pSound) {
                 bFound = TRUE;
+                break;
             }
         }
 
@@ -747,13 +781,9 @@ BOOL CSound::Play(int nNewXCoordinate, int nNewYCoordinate, int nNewZCoordinate,
         POSITION pos = m_pSoundMixer->m_lVoices.GetHeadPosition();
         while (pos != NULL) {
             CVoice* pVoice = static_cast<CVoice*>(m_pSoundMixer->m_lVoices.GetNext(pos));
-            if (pVoice != NULL) {
-                if (!pVoice->GetLooping()) {
-                    if (pVoice->IsSoundPlaying()) {
-                        bPlaying = TRUE;
-                        break;
-                    }
-                }
+            if (pVoice->GetChannel() == m_nChannel && pVoice->IsSoundPlaying()) {
+                bPlaying = TRUE;
+                break;
             }
         }
 
@@ -812,7 +842,7 @@ BOOL CSound::SetChannel(int nNewChannel, DWORD nArea)
     }
 
     m_nChannel = nNewChannel;
-    m_nPriority = 25 * (g_pChitin->GetNumberSoundChannels() - m_nChannel - 1);
+    m_nPriority = 100 * (g_pChitin->GetNumberSoundChannels() - m_nChannel - 1);
 
     return TRUE;
 }
@@ -891,11 +921,11 @@ BOOL CSound::SetVolume(int nNewVolume)
     if (pSoundBuffer != NULL) {
         if (m_nVolume != 0 && nChannelVolume != 0) {
             if (m_bPositionedSound) {
-                if (FAILED(pSoundBuffer->SetVolume(30 * (m_nRangeVolume * (nChannelVolume * m_nVolume / 100) / 100 - 100)))) {
+                if (pSoundBuffer->SetVolume(30 * (m_nRangeVolume * (nChannelVolume * m_nVolume / 100) / 100 - 100)) != DS_OK) {
                     return FALSE;
                 }
             } else {
-                if (FAILED(pSoundBuffer->SetVolume(30 * (nChannelVolume * m_nVolume / 100 - 100)))) {
+                if (pSoundBuffer->SetVolume(30 * (nChannelVolume * m_nVolume / 100 - 100)) != DS_OK) {
                     return FALSE;
                 }
             }
