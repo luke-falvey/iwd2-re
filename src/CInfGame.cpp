@@ -786,7 +786,7 @@ CInfGame::CInfGame()
 
     if (!g_pChitin->cDimm.DirectoryRemoveFiles(m_sTempSaveDir)) {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
-        // __LINE__: 2608
+        // __LINE__: 2610
         UTIL_ASSERT_MSG(FALSE, "Problems removing files from TempSave directory, delete the directory and try again");
     }
 
@@ -797,6 +797,12 @@ CInfGame::CInfGame()
 
     m_gameSave.m_curFormation = TRUE;
     m_gameSave.field_1AC = FALSE;
+
+    // 0x8AFC3C
+    static const DWORD s_quickFormations[5] = { 6, 8, 1, 9, 5 };
+    for (int nFormation = 0; nFormation < 5; nFormation++) {
+        m_gameSave.m_quickFormations[nFormation] = static_cast<SHORT>(s_quickFormations[nFormation]);
+    }
 
     field_4A42 = 48;
     field_4A44 = 48;
@@ -1151,7 +1157,7 @@ void CInfGame::sub_59FA00(BOOL a1)
             }
 
             while (g_pChitin->m_bDisplayStale == TRUE
-                || (g_pChitin->m_bDisplayStale == TRUE && a1)) {
+                || (g_pChitin->m_bInSynchronousUpdate == TRUE && a1)) {
                 SleepEx(5, FALSE);
             }
 
@@ -1275,9 +1281,11 @@ void CInfGame::DestroyGame(BOOLEAN bProgressBarRequired, BOOLEAN bProgressBarInP
         }
     }
 
-    for (cnt = 0; cnt < 9; cnt++) {
-        while (!m_familiarResRefs[cnt]->IsEmpty()) {
-            delete m_familiarResRefs[cnt]->RemoveHead();
+    for (BYTE nAlignment = 0; nAlignment < 9; nAlignment++) {
+        for (BYTE nLevel = 0; nLevel < 9; nLevel++) {
+            while (!m_familiarResRefs[nAlignment][nLevel].IsEmpty()) {
+                delete m_familiarResRefs[nAlignment][nLevel].RemoveHead();
+            }
         }
     }
 
@@ -1331,7 +1339,7 @@ void CInfGame::DestroyGame(BOOLEAN bProgressBarRequired, BOOLEAN bProgressBarInP
 
     if (!g_pChitin->cDimm.DirectoryRemoveFiles(m_sTempSaveDir)) {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
-        // __LINE__: 3296
+        // __LINE__: 3596
         UTIL_ASSERT_MSG(FALSE, "Could not remove files from TempSave directory");
     }
 
@@ -5325,7 +5333,7 @@ void CInfGame::LoadOptions()
     if (m_cOptions.m_nGoreOption) {
         m_cOptions.m_nGore = GetPrivateProfileIntA("Game Options",
             "Chucknomitron",
-            0,
+            1,
             g_pBaldurChitin->GetIniFileName());
     } else {
         m_cOptions.m_nGore = 0;
@@ -5350,17 +5358,17 @@ void CInfGame::LoadOptions()
         5,
         g_pBaldurChitin->GetIniFileName());
 
-    if (m_cOptions.m_nGuiFeedbackLevel != 0 || m_cOptions.m_nGuiFeedbackLevel > 5) {
+    if (m_cOptions.m_nGuiFeedbackLevel < 1 || m_cOptions.m_nGuiFeedbackLevel > 5) {
         m_cOptions.m_nGuiFeedbackLevel = 5;
     }
 
     m_cOptions.m_nLocatorFeedbackLevel = GetPrivateProfileIntA("Game Options",
         "Locator Feedback Level",
-        5,
+        3,
         g_pBaldurChitin->GetIniFileName());
 
-    if (m_cOptions.m_nLocatorFeedbackLevel != 0 || m_cOptions.m_nLocatorFeedbackLevel > 5) {
-        m_cOptions.m_nLocatorFeedbackLevel = 5;
+    if (m_cOptions.m_nLocatorFeedbackLevel < 1 || m_cOptions.m_nLocatorFeedbackLevel > 5) {
+        m_cOptions.m_nLocatorFeedbackLevel = 3;
     }
 
     m_cOptions.m_nBoredTime = GetPrivateProfileIntA("Game Options",
@@ -5533,10 +5541,13 @@ void CInfGame::LoadOptions()
         1,
         g_pBaldurChitin->GetIniFileName());
 
-    m_cOptions.m_bSuppressExtraDifficultyDamage = GetPrivateProfileIntA("Game Options",
+    GetPrivateProfileIntA("Game Options",
         "Suppress Extra Difficulty Damage",
         0,
         g_pBaldurChitin->GetIniFileName());
+
+    // NOTE: The INI value is read and discarded.
+    m_cOptions.m_bSuppressExtraDifficultyDamage = 0;
 
     if (!g_pBaldurChitin->cNetwork.GetSessionHosting()) {
         g_pBaldurChitin->m_cBaldurMessage.DemandSettingsNightmareMode(FALSE);
@@ -5567,10 +5578,11 @@ void CInfGame::LoadOptions()
 
     g_pBaldurChitin->m_cBaldurMessage.SetSignalDefaultSecondsToTimeout();
 
-    m_cOptions.m_bAllScreenShake = GetPrivateProfileIntA("Game Options",
-        "All Screen Shake",
-        1,
-        g_pBaldurChitin->GetIniFileName());
+    m_cOptions.m_bAllScreenShake = (GetPrivateProfileIntA("Game Options",
+                                        "All Screen Shake",
+                                        1,
+                                        g_pBaldurChitin->GetIniFileName())
+        == 1);
 
     m_cOptions.m_nOldPortraitHealth = GetPrivateProfileIntA("Game Options",
         "Old Portrait Health",
@@ -6242,7 +6254,6 @@ void CInfGame::SelectAll(BOOLEAN bPlaySound)
                 CGameObjectArray::THREAD_ASYNCH,
                 INFINITE);
         }
-        break;
     }
 
     pos = m_familiars.GetHeadPosition();
@@ -6357,7 +6368,7 @@ BOOL CInfGame::SelectCharacter(LONG characterId, BOOLEAN bPlaySelectSound)
     SHORT nPortrait = GetCharacterPortraitNum(characterId);
 
     if (nPortrait == -1) {
-        if (!IsAlly(characterId) || !IsFamiliar(characterId)) {
+        if (!IsAlly(characterId) && !IsFamiliar(characterId)) {
             return FALSE;
         }
     }
@@ -6564,6 +6575,8 @@ void CInfGame::ReleaseServerStore(const CResRef& store)
 
                 m_aServerStore[cnt] = NULL;
             }
+
+            return;
         }
     }
 }
@@ -6769,10 +6782,13 @@ void CInfGame::RenderPortrait(DWORD portraitId, const CPoint& cpRenderPosition, 
     if (iSprite != CGameObjectArray::INVALID_INDEX) {
         CGameSprite* pSprite;
 
-        BYTE rc = m_cObjectArray.GetShare(iSprite,
-            CGameObjectArray::THREAD_ASYNCH,
-            reinterpret_cast<CGameObject**>(&pSprite),
-            INFINITE);
+        BYTE rc;
+        do {
+            rc = m_cObjectArray.GetShare(iSprite,
+                CGameObjectArray::THREAD_1,
+                reinterpret_cast<CGameObject**>(&pSprite),
+                INFINITE);
+        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
 
         if (rc == CGameObjectArray::SUCCESS) {
             pSprite->RenderPortrait(cpRenderPosition,
@@ -6784,7 +6800,7 @@ void CInfGame::RenderPortrait(DWORD portraitId, const CPoint& cpRenderPosition, 
                 bDoubleSize);
 
             m_cObjectArray.ReleaseShare(iSprite,
-                CGameObjectArray::THREAD_ASYNCH,
+                CGameObjectArray::THREAD_1,
                 INFINITE);
         }
     }
@@ -6922,7 +6938,7 @@ void CInfGame::EnablePortrait(BYTE nControlId, BOOL bEnable)
 BOOLEAN CInfGame::ExtendedDayNightAreaActive()
 {
     for (int index = 0; index < CINFGAME_MAX_AREAS; index++) {
-        if ((m_gameAreas[index]->m_header.m_areaType & 0x40) != 0) {
+        if (m_gameAreas[index] != NULL && (m_gameAreas[index]->m_header.m_areaType & 0x40) != 0) {
             return TRUE;
         }
     }
@@ -8059,7 +8075,7 @@ void CInfGame::CompressContainer(LONG nContainerId)
         CGameObjectArray::THREAD_ASYNCH,
         reinterpret_cast<CGameObject**>(&pContainer),
         INFINITE);
-    if (rc = CGameObjectArray::SUCCESS) {
+    if (rc == CGameObjectArray::SUCCESS) {
         pContainer->CompressContainer();
 
         m_cObjectArray.ReleaseDeny(nContainerId,
@@ -8828,11 +8844,11 @@ SHORT CInfGame::GetNumQuickWeaponSlots(SHORT nPortrait)
             INFINITE);
     } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
 
-    if (rc == CGameObjectArray::SUCCESS) {
-        nSlots = static_cast<SHORT>(pSprite->GetNumQuickWeaponSlots());
-    } else {
-        nSlots = 0;
+    if (rc != CGameObjectArray::SUCCESS) {
+        return 0;
     }
+
+    nSlots = static_cast<SHORT>(pSprite->GetNumQuickWeaponSlots());
 
     m_cObjectArray.ReleaseShare(nCharacterId,
         CGameObjectArray::THREAD_ASYNCH,
@@ -10334,7 +10350,7 @@ void CInfGame::ApplyVolumeSliders(BOOLEAN a2)
     g_pBaldurChitin->cSoundMixer.SetChannelVolumeFast(3, m_cOptions.m_nVolumeSFX);
     g_pBaldurChitin->cSoundMixer.SetChannelVolumeFast(4, m_cOptions.m_nVolumeSFX);
     g_pBaldurChitin->cSoundMixer.SetChannelVolumeFast(5, m_cOptions.m_nVolumeSFX);
-    g_pBaldurChitin->cSoundMixer.SetChannelVolumeFast(2, m_cOptions.m_nVolumeVoices);
+    g_pBaldurChitin->cSoundMixer.SetChannelVolumeFast(6, m_cOptions.m_nVolumeVoices);
 
     for (int k = 7; k < 13; k++) {
         g_pBaldurChitin->cSoundMixer.SetChannelVolumeFast(k, m_cOptions.m_nVolumeVoices);
@@ -10678,6 +10694,8 @@ BOOL CInfGame::RemoveCharacterFromParty(LONG id, BOOL& overflow)
                         INFINITE);
 
                     return TRUE;
+                } else {
+                    return FALSE;
                 }
             }
         }
@@ -10709,7 +10727,9 @@ BOOL CInfGame::RemoveCharacterFromParty(LONG id, BOOL& overflow)
         CGameObjectArray::THREAD_ASYNCH,
         INFINITE);
 
-    for (cnt = 0; cnt < m_nCharacters - 1; cnt++) {
+    for (cnt = nPortrait; cnt < m_nCharacters - 1; cnt++) {
+        m_characterPortraits[cnt] = m_characterPortraits[cnt + 1];
+
         do {
             rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(m_characterPortraits[cnt],
                 CGameObjectArray::THREAD_ASYNCH,
@@ -11996,7 +12016,7 @@ void CInfGame::SetProtagonist(LONG nId)
 
     BYTE rc;
     do {
-        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(g_pBaldurChitin->GetObjectGame()->m_characters[0],
+        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nId,
             CGameObjectArray::THREAD_ASYNCH,
             reinterpret_cast<CGameObject**>(&pSprite),
             INFINITE);
@@ -12018,6 +12038,9 @@ void CInfGame::SetProtagonist(LONG nId)
         break;
     case CAIOBJECTTYPE_R_ELF:
         strRace = 7194;
+        if (pSprite->GetAIType().m_nSubRace == 1) {
+            strSurfaceUnderdark = 25689; // "outsider"
+        }
         break;
     case CAIOBJECTTYPE_R_HALF_ELF:
         strRace = 7197;
@@ -12110,7 +12133,7 @@ void CInfGame::SetProtagonist(LONG nId)
 
     m_nProtagonistId = nId;
 
-    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(g_pBaldurChitin->GetObjectGame()->m_characters[0],
+    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nId,
         CGameObjectArray::THREAD_ASYNCH,
         INFINITE);
 }
@@ -12261,10 +12284,6 @@ CStringList* CInfGame::GetScripts()
                     POSITION pos = pList->GetHeadPosition();
                     while (pos != NULL) {
                         sTemp = pList->GetAt(pos);
-                        if (sFileName == sTemp) {
-                            break;
-                        }
-
                         if (sFileName < pList->GetAt(pos)) {
                             pList->InsertBefore(pos, sFileName);
                             nCount++;
@@ -13087,10 +13106,6 @@ CStringList* CInfGame::GetPortraits()
                     POSITION pos = pList->GetHeadPosition();
                     while (pos != NULL) {
                         sTemp = pList->GetAt(pos);
-                        if (sFileName == sTemp) {
-                            break;
-                        }
-
                         if (sFileName < pList->GetAt(pos)) {
                             pList->InsertBefore(pos, sFileName);
                             nCount++;
@@ -13149,10 +13164,6 @@ CStringList* CInfGame::GetImportCharacters()
                             POSITION pos = pList->GetHeadPosition();
                             while (pos != NULL) {
                                 sTemp = pList->GetAt(pos);
-                                if (sFileName == sTemp) {
-                                    break;
-                                }
-
                                 if (sFileName < pList->GetAt(pos)) {
                                     pList->InsertBefore(pos, sFileName);
                                     nCount++;
@@ -15016,7 +15027,7 @@ DWORD CInfGame::FindItemInStore(const CResRef& cResStore, const CResRef& cResIte
 
         return inStock;
     } else {
-        CStore cStore;
+        CStore cStore(cResStore);
         CResRef curItemRef;
         DWORD inStock = 0;
 
@@ -15386,64 +15397,64 @@ INT CInfGame::GetNumberOfItemsInBag(const CResRef& storeResRef, CString a2)
     CMessage* message;
     INT nNumberOfItemsInBag = 0;
 
-    if (!g_pChitin->cNetwork.GetSessionOpen()) {
+    if (g_pChitin->cNetwork.GetSessionOpen()) {
+        BOOL demanded = FALSE;
+        CStore store;
+        if (g_pChitin->cNetwork.GetSessionHosting()) {
+            DemandServerStore(storeResRef, TRUE);
+            store.SetResRef(storeResRef);
+        } else {
+            store.SetResRef(storeResRef);
+            if (!store.m_bLocalCopy || memcmp(store.m_pVersion, "STORV9.0", 8) != 0) {
+                if (!g_pBaldurChitin->GetBaldurMessage()->DemandResourceFromServer(storeResRef.GetResRefStr(),
+                        1014,
+                        TRUE,
+                        TRUE,
+                        TRUE)) {
+                    g_pChitin->cNetwork.CloseSession(TRUE);
+                    return FALSE;
+                }
+
+                store.SetResRef(storeResRef);
+                demanded = TRUE;
+            }
+        }
+
+        CResRef itemResRef;
+
+        if (g_pChitin->cNetwork.GetSessionHosting() || demanded) {
+            store.InvalidateStore(storeResRef);
+        } else {
+            demanded = TRUE;
+            message = new CMessageStoreDemand(storeResRef, -1, -1);
+            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+        }
+
+        for (INT nIndex = 0; nIndex < store.GetNumItems(); nIndex++) {
+            itemResRef = store.GetItemId(nIndex);
+
+            // FIXME: Temporary instance, should be on stack.
+            CItem* pItem = new CItem();
+            store.GetItem(nIndex, *pItem);
+            if (pItem->GetResRef() != a2) {
+                nNumberOfItemsInBag += store.GetItemNumInStock(nIndex);
+            }
+
+            // FIXME: Probably leaking `pItem`.
+        }
+
+        if (g_pChitin->cNetwork.GetSessionHosting()) {
+            g_pBaldurChitin->GetObjectGame()->ReleaseServerStore(storeResRef);
+        } else {
+            if (demanded) {
+                message = new CMessageStoreRelease(storeResRef, -1, -1);
+                g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+            }
+        }
+    } else {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
         // __LINE__: 23072
         UTIL_ASSERT_MSG(FALSE, "Very bad things are about to happen in GetNumberOfItemsInBag");
-    }
-
-    BOOL demanded = FALSE;
-    CStore store;
-    if (g_pChitin->cNetwork.GetSessionHosting()) {
-        DemandServerStore(storeResRef, TRUE);
-        store.SetResRef(storeResRef);
-    } else {
-        store.SetResRef(storeResRef);
-        if (!store.m_bLocalCopy || memcmp(store.m_pVersion, "STORV9.0", 8) != 0) {
-            if (!g_pBaldurChitin->GetBaldurMessage()->DemandResourceFromServer(storeResRef.GetResRefStr(),
-                    1014,
-                    TRUE,
-                    TRUE,
-                    TRUE)) {
-                g_pChitin->cNetwork.CloseSession(TRUE);
-                return FALSE;
-            }
-
-            store.SetResRef(storeResRef);
-            demanded = TRUE;
-        }
-    }
-
-    CResRef itemResRef;
-
-    if (g_pChitin->cNetwork.GetSessionHosting() || demanded) {
-        store.InvalidateStore(storeResRef);
-    } else {
-        demanded = TRUE;
-        message = new CMessageStoreDemand(storeResRef, -1, -1);
-        g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
-    }
-
-    for (INT nIndex = 0; nIndex < store.GetNumItems(); nIndex++) {
-        itemResRef = store.GetItemId(nIndex);
-
-        // FIXME: Temporary instance, should be on stack.
-        CItem* pItem = new CItem();
-        store.GetItem(nIndex, *pItem);
-        if (pItem->GetResRef() != a2) {
-            nNumberOfItemsInBag += store.GetItemNumInStock(nIndex);
-        }
-
-        // FIXME: Probably leaking `pItem`.
-    }
-
-    if (g_pChitin->cNetwork.GetSessionHosting()) {
-        g_pBaldurChitin->GetObjectGame()->ReleaseServerStore(storeResRef);
-    } else {
-        if (demanded) {
-            message = new CMessageStoreRelease(storeResRef, -1, -1);
-            g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
-        }
     }
 
     return nNumberOfItemsInBag;
@@ -15700,6 +15711,8 @@ DWORD CInfGame::GetClassMask(const BYTE& nClass)
 // 0x5CAAD0
 BYTE CInfGame::GetSpellType(const CResRef& resRef)
 {
+    // NOTE: The exe uses the global game (`g_pBaldurChitin->GetObjectGame()`)
+    // here, not `this`.
     UINT nID;
 
     // NOTE: Uninline.
@@ -15731,6 +15744,8 @@ BYTE CInfGame::GetSpellType(const CResRef& resRef)
 // 0x5CAC30
 INT CInfGame::GetSpellLevel(const CResRef& resRef, BYTE nClass, DWORD nSpecialization)
 {
+    // NOTE: The exe uses the global game (`g_pBaldurChitin->GetObjectGame()`)
+    // here, not `this`.
     UINT nID;
 
     // NOTE: Uninline.
@@ -15741,12 +15756,13 @@ INT CInfGame::GetSpellLevel(const CResRef& resRef, BYTE nClass, DWORD nSpecializ
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
         // __LINE__: 23940
         UTIL_ASSERT_MSG(FALSE, (LPCSTR)sError);
+        return CSPELLLIST_MAX_LEVELS;
     }
 
     if (nSpecialization != 0) {
         UINT nDomainIndex = GetSpellcasterDomainIndex(nSpecialization);
 
-        for (UINT nLevel = 0; nLevel < m_spellsByDomain[nDomainIndex].m_nHighestLevel; nLevel++) {
+        for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
             CSpellList* pSpells = &(m_spellsByDomain[nDomainIndex].m_lists[nLevel]);
             for (UINT nIndex = 0; nIndex < pSpells->m_nCount; nIndex++) {
                 if (pSpells->m_pList[nIndex].m_nID == nID) {
@@ -15757,7 +15773,7 @@ INT CInfGame::GetSpellLevel(const CResRef& resRef, BYTE nClass, DWORD nSpecializ
     } else {
         UINT nClassIndex = GetSpellcasterIndex(nClass);
 
-        for (UINT nLevel = 0; nLevel < m_spellsByClass[nClassIndex].m_nHighestLevel; nLevel++) {
+        for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
             CSpellList* pSpells = &(m_spellsByClass[nClassIndex].m_lists[nLevel]);
             for (UINT nIndex = 0; nIndex < pSpells->m_nCount; nIndex++) {
                 if (pSpells->m_pList[nIndex].m_nID == nID) {
@@ -16103,6 +16119,7 @@ CSpellResRefList::~CSpellResRefList()
 {
     if (m_pList != NULL) {
         delete m_pList;
+        m_pList = NULL;
     }
     m_nCount = 0;
 }
@@ -16232,16 +16249,23 @@ void CSpellList::Load(const std::vector<CSpellListEntry>& spells)
 }
 
 // 0x5CA250
-bool CSpellList::GetSpellLevel(const UINT& nID, UINT& nLevel)
+bool CSpellList::GetSpellLevel(const UINT& nID, UINT& nIndex)
 {
-    for (UINT nIndex = 0; nIndex < m_nCount; nIndex++) {
-        if (m_pList[nIndex].m_nID == nID) {
-            nLevel = m_pList[nIndex].m_nLevel;
+    // NOTE: The exe never reads `m_nLevel` here. The out value is an index
+    // into the list (the caller uses it as `m_pList[nIndex]`), but it is only
+    // stored for entries that do not match, so on a match at position `k` it
+    // is `k - 1` (or 0 for `k == 0`).
+    nIndex = 0;
+
+    for (UINT nCurrent = 0; nCurrent < m_nCount; nCurrent++) {
+        if (m_pList[nCurrent].m_nID == nID) {
             return true;
         }
+
+        nIndex = nCurrent;
     }
 
-    nLevel = 0;
+    nIndex = 0;
     return false;
 }
 
