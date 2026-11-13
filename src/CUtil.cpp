@@ -28,7 +28,12 @@ int CUtil::Uncompress(BYTE* dest, DWORD* destLen, const BYTE* source, DWORD sour
     CSingleLock decompressionLock(&ZLIB_CRITICAL_SECTION, FALSE);
     decompressionLock.Lock(INFINITE);
 
-    int err = uncompress(dest, destLen, source, sourceLen);
+    int err;
+    DWORD nTries = 0;
+    do {
+        err = uncompress(dest, destLen, source, sourceLen);
+        nTries++;
+    } while (err != 0 && nTries < 3);
 
     decompressionLock.Unlock();
 
@@ -39,12 +44,10 @@ int CUtil::Uncompress(BYTE* dest, DWORD* destLen, const BYTE* source, DWORD sour
 void CUtil::UtilAssert(int nLineNumber, const char* szFileName, const char* pExp, const char* pText)
 {
     const char* fileName = strrchr(szFileName, '\\') + 1;
-    if (pText == NULL) {
-        pText = "no msg.";
-    }
+    const char* pMsg = pText != NULL ? pText : "no msg.";
 
     char buffer[1024];
-    sprintf(buffer, "ASSERTION FAILED!\nFile: %s\nLine: %d\n\nExp: %s\n\nMsg: %s\nRun Debugger?", fileName, nLineNumber, pExp, pText);
+    sprintf(buffer, "ASSERTION FAILED!\nFile: %s\nLine: %d\n\nExp: %s\n\nMsg: %s\nRun Debugger?", fileName, nLineNumber, pExp, pMsg);
 
     g_pChitin->SuspendThreads();
     g_pChitin->ShutDown(nLineNumber, fileName, pText);
@@ -174,6 +177,10 @@ BYTE CUtil::SplitString(CVidFont* pTextFont, const CString& sSource, WORD nLineL
 // 0x781100
 int CUtil::Find(const CString& sString, char ch, int start)
 {
+    if (g_pChitin->field_1A0 && IsDBCSLeadByte(ch)) {
+        return -1;
+    }
+
     int nIndex = start;
     while (nIndex < sString.GetLength()) {
         if (g_pChitin->field_1A0 && IsDBCSLeadByte(sString[nIndex])) {
@@ -196,9 +203,13 @@ int CUtil::FindOneOf(const CString& sString, const CString& sSeparators, int sta
     CString sMutableSeparators(sSeparators);
 
     if (g_pChitin->field_1A0) {
+        // NOTE: The bound is the original length, so after a lead byte is
+        // removed the loop reads past the end of the shortened string. Read
+        // through the buffer as the original does, `GetAt` would assert.
+        int nLength = sMutableSeparators.GetLength();
         int nIndex = 0;
-        while (nIndex < sMutableSeparators.GetLength()) {
-            if (IsDBCSLeadByte(sMutableSeparators[nIndex])) {
+        while (nIndex < nLength) {
+            if (IsDBCSLeadByte(static_cast<LPCTSTR>(sMutableSeparators)[nIndex])) {
                 sMutableSeparators = sMutableSeparators.Left(nIndex) + sMutableSeparators.Mid(nIndex + 1);
                 nIndex--;
             }
@@ -212,7 +223,7 @@ int CUtil::FindOneOf(const CString& sString, const CString& sSeparators, int sta
 
     int nIndex = start;
     while (nIndex < sString.GetLength()) {
-        if (IsDBCSLeadByte(sMutableSeparators[nIndex])) {
+        if (g_pChitin->field_1A0 && IsDBCSLeadByte(sString[nIndex])) {
             nIndex++;
         } else {
             for (int pos = 0; pos < sMutableSeparators.GetLength(); pos++) {
@@ -251,6 +262,10 @@ void CUtil::MakeReverse(CString& sString)
 // 0x7815D0
 BOOL CUtil::IsDBCSTrailByte(const CString& sString, int end)
 {
+    if (end >= sString.GetLength()) {
+        return FALSE;
+    }
+
     // NOTE: Looks odd.
     int v1 = -2;
 

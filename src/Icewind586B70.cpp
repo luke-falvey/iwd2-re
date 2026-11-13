@@ -82,6 +82,7 @@ void Icewind586B70::sub_586D60(CGameSprite* sprite1, CGameSprite* sprite2)
                 mEntries[index].field_4 = sprite1->GetId();
                 mEntries[index].field_8 = false;
             }
+            break;
         }
     }
 }
@@ -150,6 +151,7 @@ void Icewind586B70::sub_586F20(CGameSprite* sprite1, CGameSprite* sprite2)
                 mEntries[index].field_4 = sprite1->GetId();
                 mEntries[index].field_8 = true;
             }
+            break;
         }
     }
 }
@@ -157,12 +159,17 @@ void Icewind586B70::sub_586F20(CGameSprite* sprite1, CGameSprite* sprite2)
 // 0x586F80
 void Icewind586B70::Remove(CGameSprite* sprite)
 {
-    for (std::vector<Entry>::iterator it = mEntries.begin(); it < mEntries.end(); it++) {
-        if (sprite->GetId() == it->field_0) {
-            it->field_0 = 0;
-            it->field_4 = 0;
-            it->field_8 = false;
-        }
+    LONG nId = sprite->GetId();
+
+    std::vector<Entry>::iterator it = mEntries.begin();
+    while (it != mEntries.end() && nId != it->field_0) {
+        it++;
+    }
+
+    if (it != mEntries.end() && it->field_8) {
+        it->field_0 = 0;
+        it->field_4 = 0;
+        it->field_8 = false;
     }
 }
 
@@ -170,8 +177,11 @@ void Icewind586B70::Remove(CGameSprite* sprite)
 void Icewind586B70::sub_586FC0(CGameSprite* sprite)
 {
     if (sprite->GetBaseStats()->field_2E9) {
-        mEntries[sprite->GetBaseStats()->field_2E9].field_0 = sprite->GetId();
-        mEntries[sprite->GetBaseStats()->field_2E9].field_8 = sprite->GetBaseStats()->field_2F7 != 0;
+        // NOTE: `field_2E9` is the slot index plus one.
+        int slot = sprite->GetBaseStats()->field_2E9 - 1;
+        mEntries[slot].field_0 = sprite->GetId();
+        bool bUnsummoned = sprite->GetBaseStats()->field_2F7 != 0;
+        mEntries[slot].field_8 = bUnsummoned;
         sprite->GetBaseStats()->field_2E9 = 0;
         sprite->GetBaseStats()->field_2F7 = 0;
 
@@ -181,8 +191,8 @@ void Icewind586B70::sub_586FC0(CGameSprite* sprite)
 
         g_pBaldurChitin->GetObjectGame()->AddCharacterToAllies(sprite->GetId());
 
-        if (!mEntries[sprite->GetBaseStats()->field_2E9].field_8) {
-            startTypeAI.SetEnemyAlly(CAIObjectType::EA_ALL);
+        if (!bUnsummoned) {
+            startTypeAI.SetEnemyAlly(CAIObjectType::EA_ALLY);
             sprite->m_startTypeAI.Set(startTypeAI);
         }
 

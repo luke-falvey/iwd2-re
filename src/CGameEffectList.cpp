@@ -53,7 +53,9 @@ void CGameEffectList::RemoveAllOfType(CGameSprite* pSprite, WORD effectID, POSIT
         }
 
         if (pEffect->m_effectID == effectID
-            && (effectAmount == -1 || effectAmount == pEffect->m_effectAmount)) {
+            // NOTE: Compares `effectAmount` with `m_dwFlags`, not with
+            // `m_effectAmount`.
+            && (effectAmount == -1 || static_cast<DWORD>(effectAmount) == pEffect->m_dwFlags)) {
             RemoveAt(posOld);
             pEffect->OnRemove(pSprite);
             delete pEffect;
@@ -109,37 +111,36 @@ ULONG CGameEffectList::Marshal(BYTE** ptrPtr, BYTE version, BOOL moreThenPermane
 
         if (numEffects > 0) {
             ITEM_EFFECT* effects = new ITEM_EFFECT[numEffects];
-            if (effects != NULL) {
-                index = 0;
-                pos = GetHeadPosition();
-                while (pos != NULL) {
-                    node = GetNext(pos);
-                    if (!moreThenPermanentOnly || node->m_durationType == 9) {
-                        effect.effectID = static_cast<WORD>(node->m_effectID);
-                        effect.spellLevel = static_cast<BYTE>(node->m_spellLevel);
-                        effect.targetType = static_cast<BYTE>(node->m_targetType);
-                        effect.dwFlags = node->m_dwFlags;
-                        effect.durationType = static_cast<WORD>(node->m_durationType);
-                        effect.duration = node->m_duration;
-                        effect.probabilityUpper = static_cast<BYTE>(node->m_probabilityUpper);
-                        effect.probabilityLower = static_cast<BYTE>(node->m_probabilityLower);
-                        node->m_res.GetResRef(effect.res);
+            index = 0;
+            pos = GetHeadPosition();
+            while (pos != NULL) {
+                node = GetNext(pos);
+                if (!moreThenPermanentOnly || node->m_durationType == 9) {
+                    effect.effectID = static_cast<WORD>(node->m_effectID);
+                    effect.spellLevel = static_cast<BYTE>(node->m_spellLevel);
+                    effect.targetType = static_cast<BYTE>(node->m_targetType);
+                    effect.effectAmount = node->m_effectAmount;
+                    effect.dwFlags = node->m_dwFlags;
+                    effect.durationType = static_cast<WORD>(node->m_durationType);
+                    effect.duration = node->m_duration;
+                    effect.probabilityUpper = static_cast<BYTE>(node->m_probabilityUpper);
+                    effect.probabilityLower = static_cast<BYTE>(node->m_probabilityLower);
+                    node->m_res.GetResRef(effect.res);
 
-                        if (node->UsesDice()) {
-                            effect.numDice = node->m_numDice;
-                            effect.diceSize = node->m_diceSize;
-                        } else {
-                            effect.numDice = node->m_maxLevel;
-                            effect.diceSize = node->m_diceSize;
-                        }
-
-                        effect.savingThrow = node->m_savingThrow;
-                        effect.saveMod = node->m_saveMod;
-                        effect.special = node->m_special;
-
-                        effects[index] = effect;
-                        index++;
+                    if (node->UsesDice()) {
+                        effect.numDice = node->m_numDice;
+                        effect.diceSize = node->m_diceSize;
+                    } else {
+                        effect.numDice = node->m_maxLevel;
+                        effect.diceSize = node->m_minLevel;
                     }
+
+                    effect.savingThrow = node->m_savingThrow;
+                    effect.saveMod = node->m_saveMod;
+                    effect.special = node->m_special;
+
+                    effects[index] = effect;
+                    index++;
                 }
             }
             *ptrPtr = reinterpret_cast<BYTE*>(effects);
@@ -160,7 +161,8 @@ ULONG CGameEffectList::Marshal(BYTE** ptrPtr, BYTE version, BOOL moreThenPermane
         }
 
         if (numEffects > 0) {
-            CGameEffectBase* effects = new CGameEffectBase[numEffects];
+            // NOTE: Raw allocation, the elements are not constructed.
+            CGameEffectBase* effects = reinterpret_cast<CGameEffectBase*>(new BYTE[size]);
 
             // NOTE: Unused.
             CGameEffectBase v1;
@@ -257,7 +259,7 @@ BOOL CGameEffectList::HandleList(CGameSprite* pSprite)
         CGameEffect* pEffect = GetNext(m_posNext);
 
         if (cont) {
-            cont = pEffect->ResolveEffect(pSprite);
+            cont = pEffect->ResolveEffect(pSprite) ? TRUE : FALSE;
         }
 
         if (pEffect->m_forceRepass) {
