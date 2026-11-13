@@ -62,8 +62,8 @@ public:
     /* 0016 */ CString m_errors;
     /* 001A */ CFile m_file;
     /* 002A */ CString m_decompiledText;
-    /* 002E */ CAIIdList m_triggers;
-    /* 006E */ CAIIdList m_actions;
+    /* 002E */ CAIIdList m_actions;
+    /* 006E */ CAIIdList m_triggers;
     /* 00AE */ CAIIdList m_objects;
 };
 

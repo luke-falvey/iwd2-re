@@ -186,23 +186,23 @@ SHORT CAIScriptFile::ParseOneLine(CString sLine)
             ParseError("Misplaced END.");
         }
     } else if (sLine == COMMENT) {
-        if (sLine.GetLength() != 0) {
-            switch (m_parseMode) {
-            case 0:
-                ParseError("Statement out side of IF END.");
-                break;
-            case 1:
-                ParseTrigger(sLine);
-                break;
-            case 2:
-                action = ParseAction(sLine);
-                m_curResponse->Add(action);
-                break;
-            default:
-                ParseError("Unknown Mode");
-                m_parseMode = -1;
-                break;
-            }
+        // Skip comment line.
+    } else if (sLine.GetLength() != 0) {
+        switch (m_parseMode) {
+        case 0:
+            ParseError("Statement out side of IF END.");
+            break;
+        case 1:
+            ParseTrigger(sLine);
+            break;
+        case 2:
+            action = ParseAction(sLine);
+            m_curResponse->Add(action);
+            break;
+        default:
+            ParseError("Unknown Mode");
+            m_parseMode = -1;
+            break;
         }
     }
 
@@ -251,8 +251,8 @@ SHORT CAIScriptFile::ParseTrigger(CString sData)
         return -1;
     }
 
-    element = ReadAfterChar(element, '(');
-    if (element.IsEmpty()) {
+    restOfLine = ReadAfterChar(sData, '(');
+    if (restOfLine.IsEmpty()) {
         ParseError("Invalid trigger: Nothing after opening bracket '('");
         return -1;
     }
@@ -260,24 +260,24 @@ SHORT CAIScriptFile::ParseTrigger(CString sData)
     triggerType = DecodeTriggerType(triggerIdLine, paramCount);
     if (paramCount != -1) {
         LONG commaCount = 0;
-        for (int index = 0; index < triggerIdLine.GetLength(); index++) {
-            if (triggerIdLine[index] == ',') {
+        for (int index = 0; index < sData.GetLength(); index++) {
+            if (sData[index] == ',') {
                 commaCount++;
             }
         }
 
         if ((commaCount > paramCount - 1 && paramCount > 0)
             || (paramCount == 0 && commaCount != 0)) {
-            ParseError(CString("Warning: Too many parameters:" + triggerIdLine));
+            ParseError(CString("Warning: Too many parameters:" + sData));
         } else if (commaCount < paramCount - 1 && paramCount > 0) {
-            ParseError(CString("Warning: Too few parameters:" + triggerIdLine));
+            ParseError(CString("Warning: Too few parameters:" + sData));
         }
     }
 
     switch (triggerType) {
     case 4:
-        triggerIdLine = triggerIdLine.Left(triggerIdLine.GetLength() - 1);
-        if (triggerIdLine.IsEmpty()) {
+        element = restOfLine.Left(restOfLine.GetLength() - 1);
+        if (element.IsEmpty()) {
             ParseError(CString("Missing First Parameter"));
             return -1;
         }
@@ -451,7 +451,7 @@ SHORT CAIScriptFile::ParseTrigger(CString sData)
         specifics = ParseInt(element, constFile);
 
         restOfLine = ReadAfterChar(restOfLine, ',');
-        element = ReadToChar(restOfLine, ',');
+        element = restOfLine.Left(restOfLine.GetLength() - 1);
 
         if (element.IsEmpty()) {
             // FIXME: Typo - should be "Third".
@@ -592,7 +592,7 @@ SHORT CAIScriptFile::ParseTrigger(CString sData)
         }
 
         constFile = GetConstFile(GetParameter(4, triggerIdLine));
-        specifics2 = ParseInt(element, constFile);
+        specifics3 = ParseInt(element, constFile);
         break;
     case 30:
         element = ReadToChar(restOfLine, ',');
@@ -749,7 +749,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
     if (element.IsEmpty()) {
         ParseError(CString("Invalid action: No Opening bracket '('"));
-        return nullAction;
+        return action;
     }
 
     action.m_actionID = DecodeActionID(element);
@@ -764,7 +764,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
     if (restOfLine.IsEmpty()) {
         ParseError(CString("Invalid action: Nothing after opening bracket '('"));
-        return nullAction;
+        return action;
     }
 
     restOfLine = restOfLine.Left(restOfLine.GetLength() - 1);
@@ -779,7 +779,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         }
 
         if ((commaCount > paramCount - 1 && paramCount > 0)
-            || (paramCount != 0 && commaCount == 0)) {
+            || (paramCount == 0 && commaCount != 0)) {
             ParseError(CString("Warning: Too many parameters:") + sData);
         } else if (commaCount < paramCount - 1 && paramCount > 0) {
             ParseError(CString("Warning: Too few parameters:") + sData);
@@ -794,7 +794,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         point = ParsePoint(element);
@@ -808,7 +808,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError("Too few Parameters");
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -818,7 +818,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(2, actionIdLine));
@@ -826,6 +826,11 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         restOfLine = ReadAfterChar(restOfLine, ',');
         element = ReadToChar(restOfLine, ',');
+
+        if (element.IsEmpty()) {
+            ParseError(CString("Too few Parameters"));
+            return action;
+        }
 
         actee2 = ParseObjectType(element);
         break;
@@ -842,17 +847,16 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
 
-        restOfLine = ReadAfterChar(restOfLine, ',');
-        element = ReadToChar(restOfLine, ',');
+        element = ReadAfterChar(restOfLine, ',');
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         point = ParsePoint(element);
@@ -861,17 +865,16 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError("Too few Parameters");
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
 
-        restOfLine = ReadAfterChar(restOfLine, ',');
-        element = ReadToChar(restOfLine, ',');
+        element = ReadAfterChar(restOfLine, ',');
 
         if (element.IsEmpty()) {
             ParseError("Too few Parameters");
-            return nullAction;
+            return action;
         }
 
         actee2 = ParseObjectType(element);
@@ -880,17 +883,16 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError("Too few Parameters");
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
 
-        restOfLine = ReadAfterChar(restOfLine, ',');
-        element = ReadToChar(restOfLine, ',');
+        element = ReadAfterChar(restOfLine, ',');
 
         if (element.IsEmpty()) {
             ParseError("Too few Parameters");
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(2, actionIdLine));
@@ -900,17 +902,16 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError("Too few Parameters");
-            return nullAction;
+            return action;
         }
 
         actor = ParseObjectType(element);
 
-        restOfLine = ReadAfterChar(restOfLine, ',');
-        element = ReadToChar(restOfLine, ',');
+        element = ReadAfterChar(restOfLine, ',');
 
         if (element.IsEmpty()) {
             ParseError("Too few Parameters");
-            return nullAction;
+            return action;
         }
 
         action = ParseAction(element);
@@ -960,24 +961,24 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         constFile = GetConstFile(GetParameter(3, actionIdLine));
         specifics = ParseInt(restOfLine, constFile);
-        string1 = area + name;
+        name = area + name;
+        string1 = name;
         break;
     case 14:
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(1, actionIdLine));
         specifics = ParseInt(element, constFile);
 
-        restOfLine = ReadAfterChar(restOfLine, ',');
-        element = ReadToChar(name, '"');
+        element = ReadAfterChar(restOfLine, ',');
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(2, actionIdLine));
@@ -996,7 +997,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadAfterChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1005,7 +1006,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1015,7 +1016,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadAfterChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         point = ParsePoint(element);
@@ -1024,7 +1025,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1036,7 +1037,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         point = ParsePoint(element);
@@ -1074,7 +1075,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1084,7 +1085,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(2, actionIdLine));
@@ -1093,7 +1094,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadAfterChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(3, actionIdLine));
@@ -1163,14 +1164,14 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
 
         if (element.IsEmpty()) {
-            ParseAction(CString("Too few Parameters"));
-            return nullAction;
+            ParseError(CString("Too few Parameters"));
+            return action;
         }
 
         actee1 = ParseObjectType(element);
 
         restOfLine = ReadAfterChar(restOfLine, ',');
-        element = ReadToChar(restOfLine, ',');
+        element = restOfLine;
 
         constFile = GetConstFile(GetParameter(3, actionIdLine));
         specifics = ParseInt(element, constFile);
@@ -1189,8 +1190,8 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
 
         if (element.IsEmpty()) {
-            ParseAction(CString("Too few Parameters"));
-            return nullAction;
+            ParseError(CString("Too few Parameters"));
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1202,10 +1203,10 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         specifics = ParseInt(element, constFile);
 
         restOfLine = ReadAfterChar(restOfLine, ',');
-        element = ReadToChar(restOfLine, ',');
+        element = restOfLine;
 
         constFile = GetConstFile(GetParameter(4, actionIdLine));
-        specifics = ParseInt(element, constFile);
+        specifics2 = ParseInt(element, constFile);
         break;
     case 24:
         element = ReadToChar(restOfLine, ',');
@@ -1222,7 +1223,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1240,7 +1241,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         specifics2 = ParseInt(element, constFile);
 
         restOfLine = ReadAfterChar(restOfLine, ',');
-        element = ReadToChar(restOfLine, ',');
+        element = restOfLine;
 
         constFile = GetConstFile(GetParameter(5, actionIdLine));
         specifics3 = ParseInt(element, constFile);
@@ -1249,7 +1250,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1261,7 +1262,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1273,10 +1274,12 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         point = ParsePoint(element);
+
+        element = ReadAfterChar(restOfLine, ',');
 
         constFile = GetConstFile(GetParameter(4, actionIdLine));
         specifics = ParseInt(element, constFile);
@@ -1296,7 +1299,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1309,7 +1312,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(1, actionIdLine));
@@ -1320,7 +1323,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(2, actionIdLine));
@@ -1330,7 +1333,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(3, actionIdLine));
@@ -1340,7 +1343,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1358,7 +1361,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         specifics2 = ParseInt(element, constFile);
 
         restOfLine = ReadAfterChar(restOfLine, ',');
-        element = ReadToChar(restOfLine, ',');
+        element = restOfLine;
 
         constFile = GetConstFile(GetParameter(4, actionIdLine));
         specifics3 = ParseInt(element, constFile);
@@ -1367,7 +1370,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1383,14 +1386,15 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         area = element.Right(element.GetLength() - 1);
         area = ReadToChar(area, '"');
         area += ':';
-        string1 = area + name;
+        name = area + name;
+        string1 = name;
 
         restOfLine = ReadAfterChar(restOfLine, ',');
         element = ReadToChar(restOfLine, ',');
 
         if (element.IsEmpty()) {
             ParseError(CString("Must specify third string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1401,14 +1405,15 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Must specify fourth string"));
-            return nullAction;
         }
 
         area = element.Right(element.GetLength() - 1);
         area = ReadToChar(area, '"');
         area += ':';
-        string2 = area + name;
+        name = area + name;
+        string2 = name;
 
+        restOfLine = ReadAfterChar(restOfLine, ',');
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Must specify integer!"));
@@ -1421,7 +1426,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1437,7 +1442,11 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         area = element.Right(element.GetLength() - 1);
         area = ReadToChar(area, '"');
         area += ':';
-        string1 = area + name;
+        name = area + name;
+        string1 = name;
+
+        restOfLine = ReadAfterChar(restOfLine, ',');
+        element = ReadToChar(restOfLine, ',');
 
         constFile = GetConstFile(GetParameter(3, actionIdLine));
         specifics = ParseInt(element, constFile);
@@ -1452,7 +1461,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1468,14 +1477,15 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         area = element.Right(element.GetLength() - 1);
         area = ReadToChar(area, '"');
         area += ':';
-        string1 = area + name;
+        name = area + name;
+        string1 = name;
 
         restOfLine = ReadAfterChar(restOfLine, ',');
         element = ReadToChar(restOfLine, ',');
 
         if (element.IsEmpty()) {
             ParseError(CString("Must specify third string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1491,15 +1501,17 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         area = element.Right(element.GetLength() - 1);
         area = ReadToChar(area, '"');
         area += ':';
-        string2 = area + name;
+        name = area + name;
+        string2 = name;
 
         restOfLine = ReadAfterChar(restOfLine, ',');
         element = ReadToChar(restOfLine, ',');
 
         constFile = GetConstFile(GetParameter(5, actionIdLine));
-        specifics2 = ParseInt(element, constFile);
+        specifics = ParseInt(element, constFile);
 
-        element = ReadAfterChar(restOfLine, ',');
+        restOfLine = ReadAfterChar(restOfLine, ',');
+        element = ReadToChar(restOfLine, ',');
 
         constFile = GetConstFile(GetParameter(6, actionIdLine));
         specifics2 = ParseInt(element, constFile);
@@ -1508,7 +1520,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1518,7 +1530,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee2 = ParseObjectType(element);
@@ -1528,7 +1540,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(3, actionIdLine));
@@ -1538,7 +1550,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1548,7 +1560,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee2 = ParseObjectType(element);
@@ -1558,7 +1570,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(3, actionIdLine));
@@ -1569,7 +1581,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(4, actionIdLine));
@@ -1579,7 +1591,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1589,8 +1601,11 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
+
+        // NOTE: Unused.
+        restOfLine = ReadAfterChar(restOfLine, ',');
 
         name = element.Right(element.GetLength() - 1);
         name = ReadToChar(name, '"');
@@ -1600,7 +1615,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1610,7 +1625,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1623,8 +1638,11 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         if (element.IsEmpty()) {
             // FIXME: Typo - should be "second".
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
+
+        // NOTE: Unused.
+        restOfLine = ReadAfterChar(restOfLine, ',');
 
         name = element.Right(element.GetLength() - 1);
         name = ReadToChar(name, '"');
@@ -1634,7 +1652,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1644,7 +1662,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1657,7 +1675,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         if (element.IsEmpty()) {
             // FIXME: Typo - should be "second".
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1670,8 +1688,11 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         if (element.IsEmpty()) {
             // FIXME: Typo - should be "third".
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
+
+        // NOTE: Unused.
+        restOfLine = ReadAfterChar(restOfLine, ',');
 
         name = element.Right(element.GetLength() - 1);
         name = ReadToChar(name, '"');
@@ -1681,7 +1702,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1691,7 +1712,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1704,7 +1725,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         if (element.IsEmpty()) {
             // FIXME: Typo - should be "second".
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1717,7 +1738,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         if (element.IsEmpty()) {
             // FIXME: Typo - should be "third".
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1729,8 +1750,11 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
+
+        // NOTE: Unused.
+        restOfLine = ReadAfterChar(restOfLine, ',');
 
         constFile = GetConstFile(GetParameter(5, actionIdLine));
         specifics = ParseInt(element, constFile);
@@ -1739,7 +1763,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1749,7 +1773,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1762,7 +1786,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         if (element.IsEmpty()) {
             // FIXME: Typo - should be "second".
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1775,7 +1799,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         if (element.IsEmpty()) {
             // FIXME: Typo - should be "third".
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1787,7 +1811,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(5, actionIdLine));
@@ -1798,8 +1822,11 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
+
+        // NOTE: Unused.
+        restOfLine = ReadAfterChar(restOfLine, ',');
 
         constFile = GetConstFile(GetParameter(6, actionIdLine));
         specifics2 = ParseInt(element, constFile);
@@ -1808,7 +1835,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1818,7 +1845,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1831,7 +1858,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         if (element.IsEmpty()) {
             // FIXME: Typo - should be "second".
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1844,7 +1871,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         if (element.IsEmpty()) {
             // FIXME: Typo - should be "third".
             ParseError(CString("Must specify first string"));
-            return nullAction;
+            return action;
         }
 
         name = element.Right(element.GetLength() - 1);
@@ -1856,7 +1883,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(5, actionIdLine));
@@ -1867,7 +1894,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(6, actionIdLine));
@@ -1878,7 +1905,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         // FIXME: Should be 7?
@@ -1889,7 +1916,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1899,7 +1926,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         point = ParsePoint(element);
@@ -1909,7 +1936,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(3, actionIdLine));
@@ -1919,7 +1946,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         element = ReadToChar(restOfLine, ',');
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         actee1 = ParseObjectType(element);
@@ -1929,7 +1956,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         point = ParsePoint(element);
@@ -1939,7 +1966,7 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
 
         if (element.IsEmpty()) {
             ParseError(CString("Too few Parameters"));
-            return nullAction;
+            return action;
         }
 
         constFile = GetConstFile(GetParameter(3, actionIdLine));
@@ -1948,8 +1975,13 @@ CAIAction CAIScriptFile::ParseAction(CString sData)
         restOfLine = ReadAfterChar(restOfLine, ',');
         element = ReadToChar(restOfLine, ',');
 
+        if (element.IsEmpty()) {
+            ParseError(CString("Too few Parameters"));
+            return action;
+        }
+
         constFile = GetConstFile(GetParameter(4, actionIdLine));
-        specifics = ParseInt(element, constFile);
+        specifics2 = ParseInt(element, constFile);
         break;
     default:
         ParseError(CString("Unknown Action:") + element);
@@ -2030,7 +2062,7 @@ CPoint CAIScriptFile::ParsePoint(CString sLine)
             restOfString = ReadAfterChar(restOfString, '.');
             if (restOfString.GetLength() != 0) {
                 element = restOfString.Left(restOfString.GetLength() - 1);
-                if (element.GetString() != 0) {
+                if (element.GetLength() != 0) {
                     y = static_cast<SHORT>(strtol(element, NULL, 10));
 
                     return CPoint(x, y);
@@ -2107,7 +2139,7 @@ CAIObjectType CAIScriptFile::ParseObjectType(CString& sLine)
     CAIObjectType object;
 
     if (sLine == "") {
-        sLine = "MYSELF";
+        sLine = "Myself";
     }
 
     if (sLine[0] == '"') {
@@ -2309,6 +2341,8 @@ SHORT CAIScriptFile::DecodeActionType(CString IDLine, LONG& paramCount)
     }
 
     paramType = GetParameterType(param);
+    paramType.TrimLeft();
+    paramType.TrimRight();
     if (paramType == "") {
         return -1;
     }
@@ -2492,7 +2526,9 @@ SHORT CAIScriptFile::DecodeActionType(CString IDLine, LONG& paramCount)
                 return 14;
             }
         }
-    } else if (paramType == CString('S')) {
+    } else if (static_cast<LPCTSTR>(paramType = 'S') != NULL) {
+        // NOTE: Original code is `paramType = 'S'` (assignment instead of
+        // comparison), which is always true.
         param = GetParameter(2, IDLine);
         if (param == "") {
             paramCount = 1;
@@ -2657,11 +2693,11 @@ CString CAIScriptFile::GetParameter(SHORT parNum, CString IDLine)
     if (parameters != "") {
         parameters = parameters.Left(parameters.GetLength() - 1);
         curParNum = 0;
-        while (curParNum < parNum) {
+        do {
             curPar = ReadToChar(parameters, ',');
             parameters = ReadAfterChar(parameters, ',');
             curParNum++;
-        }
+        } while (curParNum < parNum);
 
         curPar.TrimLeft();
         curPar.TrimRight();
