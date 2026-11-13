@@ -3673,7 +3673,8 @@ BOOL CGameSprite::sub_6FB440()
             pItem->Demand();
             const ITEM_ABILITY* ability = pItem->GetAbility(m_equipment.m_selectedWeaponAbility);
             if (ability != NULL) {
-                wType = ability->type;
+                // NOTE: The exe reads one byte.
+                wType = static_cast<BYTE>(ability->type);
             }
             pItem->Release();
         }
@@ -3714,24 +3715,18 @@ void CGameSprite::AIUpdateFly()
             m_pos.x = m_posOld.x + static_cast<LONG>(cos(fAngle) * static_cast<double>(m_radius));
             m_pos.y = m_posOld.y - static_cast<LONG>(sin(fAngle) * static_cast<double>(m_radius) * 3.0 / 4.0);
 
-            if (m_circleFacing == FLY_LEFT) {
-                if (m_pos != m_posOld) {
-                    SetDirection((GetDirection(CPoint(m_pos.x, 4 * m_pos.y / 3),
-                                      CPoint(m_posOld.x, 4 * m_posOld.y / 3))
-                                     + 4)
-                        % 16);
-                } else {
-                    SetDirection(m_nNewDirection);
-                }
+            SHORT direction;
+            if (m_pos != m_posOld) {
+                direction = GetDirection(CPoint(m_pos.x, 4 * m_pos.y / 3),
+                    CPoint(m_posOld.x, 4 * m_posOld.y / 3));
             } else {
-                if (m_pos != m_posOld) {
-                    SetDirection((GetDirection(CPoint(m_pos.x, 4 * m_pos.y / 3),
-                                      CPoint(m_posOld.x, 4 * m_posOld.y / 3))
-                                     + 12)
-                        % 16);
-                } else {
-                    SetDirection(m_nNewDirection);
-                }
+                direction = m_nNewDirection;
+            }
+
+            if (m_circleFacing == FLY_LEFT) {
+                SetDirection((direction + 4) % 16);
+            } else {
+                SetDirection((direction + 12) % 16);
             }
         } else {
             switch (m_nDirection) {
@@ -3755,7 +3750,8 @@ void CGameSprite::AIUpdateFly()
         }
 
         m_fCurrCircleChange += 1.0;
-        if (m_fCurrCircleChange >= m_fCircleChange) {
+        // NOTE: The exe compares the incremented value plus 1.0 again.
+        if (m_fCurrCircleChange + 1.0 >= m_fCircleChange) {
             SetSequence(SEQ_READY);
         }
     }
@@ -3777,11 +3773,24 @@ void CGameSprite::GetNextWaypoint(CPoint* pt)
     }
 }
 
+// 0x85AB4C
+static const BYTE byte_85AB4C = 6;
+
 // 0x6FBAD0
 void CGameSprite::ChangeDirection()
 {
     if (m_nNewDirection == m_nDirection) {
         return;
+    }
+
+    if (m_animation.GetMoveScale() < 2 * byte_85AB4C) {
+        CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
+
+        ULONG nIdMod = m_id % static_cast<ULONG>(2 - m_animation.GetMoveScale() / byte_85AB4C);
+        ULONG nTimeMod = pGame->GetWorldTimer()->m_gameTime % static_cast<ULONG>(2 - m_animation.GetMoveScale() / byte_85AB4C);
+        if (nTimeMod != nIdMod) {
+            return;
+        }
     }
 
     if (m_skipDeltaDirection > 0) {
@@ -3854,7 +3863,7 @@ void CGameSprite::CheckIfVisible()
                     && !m_baseStats.field_294
                     && (m_baseStats.m_flags & 0x8000) == 0) {
                     if (m_pArea->m_nVisibleMonster == 0) {
-                        AutoPause(0x200);
+                        pSprite->AutoPause(0x200);
                     }
 
                     m_bVisibleMonster = TRUE;
@@ -4670,6 +4679,8 @@ void CGameSprite::DropSearchRequest()
 // 0x6FF410
 BOOL CGameSprite::MoveToBack()
 {
+    // NOTE: The exe's inlined `RemoveFromMarkers` has no test for a NULL marker
+    // list.
     if (m_animation.CanLieDown()) {
         if (m_listType == LIST_BACK) {
             if ((m_derivedStats.m_generalState & STATE_SLEEPING) == 0) {
@@ -4732,6 +4743,7 @@ BOOL CGameSprite::MoveToBack()
 // 0x6FF6D0
 BOOL CGameSprite::MoveToFront()
 {
+    // NOTE: The exe's inlined `AddToMarkers` has no test for a NULL marker list.
     if (m_animation.CanLieDown()) {
         if (m_listType == LIST_FRONT) {
             return FALSE;
@@ -4786,40 +4798,39 @@ void CGameSprite::OnActionButton(const CPoint& pt)
 
         switch (pGame->GetState()) {
         case 0:
-            if (pGame->GetCharacterPortraitNum(m_id) != -1
-                || pGame->IsAlly(m_id)
-                || pGame->IsFamiliar(m_id)) {
-                if (!pGame->GetGameSave()->field_1AC || InControl()) {
-                    if (InControl()) {
-                        // NOTE: Uninline.
-                        pGame->SetLastTarget(CGameObjectArray::INVALID_INDEX);
+            if ((pGame->GetCharacterPortraitNum(m_id) != -1
+                    || pGame->IsAlly(m_id)
+                    || pGame->IsFamiliar(m_id))
+                && (!pGame->GetGameSave()->field_1AC || InControl())) {
+                if (InControl()) {
+                    // NOTE: Uninline.
+                    pGame->SetLastTarget(CGameObjectArray::INVALID_INDEX);
 
-                        if (!m_moraleFailure) {
-                            if (!g_pBaldurChitin->GetScreenWorld()->GetCtrlKey()
-                                && !g_pBaldurChitin->GetScreenWorld()->GetShiftKey()) {
-                                pGame->UnselectAll();
-                            }
-                            pGame->SelectCharacter(m_id, !m_bSelected);
-                            pGame->SelectToolbar();
-                        }
-                    } else {
-                        if (pGroup->GetCount() > 0
-                            && m_pArea == pGame->GetVisibleArea()) {
-                            action1 = CAIAction(CAIAction::MOVETOOBJECTFOLLOW,
-                                targetType,
-                                0,
-                                0,
-                                0);
-                            pGroup->GroupAction(action1, TRUE, NULL);
-                        } else {
+                    if (!m_moraleFailure) {
+                        if (!g_pBaldurChitin->GetScreenWorld()->GetCtrlKey()
+                            && !g_pBaldurChitin->GetScreenWorld()->GetShiftKey()) {
                             pGame->UnselectAll();
-                            pGame->GetVisibleArea()->m_bPicked = FALSE;
-                            pGame->GetVisibleArea()->m_iPicked = CGameObjectArray::INVALID_INDEX;
-                            pGame->GetVisibleArea()->m_nToolTip = 0;
-                            pGame->GetVisibleArea()->OnDeactivation();
-                            pGame->m_visibleArea = m_pArea->m_id;
-                            pGame->GetVisibleArea()->OnActivation();
                         }
+                        pGame->SelectCharacter(m_id, !m_bSelected);
+                        pGame->SelectToolbar();
+                    }
+                } else {
+                    if (pGroup->GetCount() > 0
+                        && m_pArea == pGame->GetVisibleArea()) {
+                        action1 = CAIAction(CAIAction::MOVETOOBJECTFOLLOW,
+                            targetType,
+                            0,
+                            0,
+                            0);
+                        pGroup->GroupAction(action1, TRUE, NULL);
+                    } else {
+                        pGame->UnselectAll();
+                        pGame->GetVisibleArea()->m_bPicked = FALSE;
+                        pGame->GetVisibleArea()->m_iPicked = CGameObjectArray::INVALID_INDEX;
+                        pGame->GetVisibleArea()->m_nToolTip = 0;
+                        pGame->GetVisibleArea()->OnDeactivation();
+                        pGame->m_visibleArea = m_pArea->m_id;
+                        pGame->GetVisibleArea()->OnActivation();
                     }
                 }
             } else {
@@ -4829,7 +4840,7 @@ void CGameSprite::OnActionButton(const CPoint& pt)
                         || m_typeAI.GetEnemyAlly() < CAIObjectType::EA_EVILCUTOFF) {
                         if (m_typeAI.GetEnemyAlly() < CAIObjectType::EA_EVILCUTOFF) {
                             if (pGroup->IsPartyLeader() && (~m_baseStats.m_flags & STATE_DISEASED) != 0) {
-                                CMessage* message = new CMessageSetDialogWait(140,
+                                CMessage* message = new CMessageSetDialogWait(150,
                                     pGroup->GetGroupLeader(),
                                     m_id,
                                     m_id);
@@ -4896,8 +4907,8 @@ void CGameSprite::OnActionButton(const CPoint& pt)
                 }
                 break;
             case 20:
-            case -1:
-                pGame->UseMagicOnGround(m_id);
+            case 255:
+                pGame->UseMagicOnObject(m_id);
 
                 pGame->SetState(0);
                 pGame->GetButtonArray()->SetSelectedButton(100);
@@ -4992,7 +5003,7 @@ void CGameSprite::OnLightningStrike()
                     nProb += 35;
                     break;
                 case 52:
-                    nProb += 40;
+                    nProb += 70;
                     break;
                 }
             }
@@ -5031,7 +5042,8 @@ SHORT CGameSprite::GetNumSounds(SHORT nOffset, SHORT nMaxNum)
 
     if (m_secondarySounds == "") {
         for (INT nIndex = 0; nIndex < nMaxNum; nIndex++) {
-            if (m_baseStats.m_speech[nOffset + nIndex] == -1) {
+            if (m_baseStats.m_speech[nOffset + nIndex] == -1
+                || m_baseStats.m_speech[nOffset + nIndex] == 0) {
                 break;
             }
 
@@ -5603,6 +5615,7 @@ void CGameSprite::VerbalConstant(LONG verbalConstant)
     if (CanSpeak(verbalConstant >= 36 && verbalConstant < 38, FALSE)
         && verbalConstant >= 0 && verbalConstant < 64) {
         g_pBaldurChitin->GetTlkTable().Fetch(m_baseStats.m_speech[verbalConstant], strRes);
+        strRes.cSound.SetChannel(channel, reinterpret_cast<DWORD>(m_pArea));
         COLORREF nameColor = CVidPalette::RANGE_COLORS[m_baseStats.m_colors[CVIDPALETTE_RANGE_MAIN_CLOTH]];
         if (m_secondarySounds != "") {
             CString sSoundName;
@@ -5613,7 +5626,11 @@ void CGameSprite::VerbalConstant(LONG verbalConstant)
             sSoundName.TrimRight();
             sSoundName = sSoundSetName + sSoundName;
 
-            strRes.cSound.SetResRef(CResRef(sSoundName), TRUE, TRUE);
+            if (nNumber == 0
+                || g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(CResRef(sSoundName), 4, TRUE) != NULL) {
+                strRes.szText = "";
+                strRes.cSound.SetResRef(CResRef(sSoundName), TRUE, TRUE);
+            }
         }
 
         strRes.szText.TrimLeft();
@@ -5647,7 +5664,7 @@ void CGameSprite::VerbalConstant(LONG verbalConstant)
             if (!strRes.cSound.GetLooping()) {
                 strRes.cSound.SetFireForget(TRUE);
             }
-            if (strRes.cSound.Play(FALSE)) {
+            if (strRes.cSound.Play(m_pos.x, m_pos.y, 0, FALSE)) {
                 m_talkingCounter = min(strRes.cSound.GetPlayTime() / 66, STANDARD_VERBAL_CONSTANT_LENGTH);
             }
 
@@ -5657,7 +5674,7 @@ void CGameSprite::VerbalConstant(LONG verbalConstant)
                 g_pBaldurChitin->GetScreenWorld()->DisplayText(m_sName,
                     sText,
                     nameColor,
-                    RGB(160, 200, 215),
+                    RGB(215, 215, 190),
                     -1,
                     FALSE);
             }
@@ -5687,6 +5704,7 @@ LONG CGameSprite::GetLength(LONG verbalConstant)
 
         if (nNumber == 0
             || g_pBaldurChitin->cDimm.m_cKeyTable.FindKey(CResRef(sSoundName), 4, TRUE) != NULL) {
+            strRes.szText = "";
             strRes.cSound.SetResRef(CResRef(sSoundName), TRUE, TRUE);
         }
     }
@@ -5702,8 +5720,8 @@ BOOL CGameSprite::IsSpellSchool(BYTE spellSchool)
         || ((GetSpecialization() & SPECMASK_WIZARD_CONJURER) != 0 && spellSchool == 2)
         || ((GetSpecialization() & SPECMASK_WIZARD_DIVINER) != 0 && spellSchool == 3)
         || ((GetSpecialization() & SPECMASK_WIZARD_ENCHANTER) != 0 && spellSchool == 4)
-        || ((GetSpecialization() & SPECMASK_WIZARD_ILLUSIONIST) != 0 && spellSchool == 5)
-        || ((GetSpecialization() & SPECMASK_WIZARD_EVOKER) != 0 && spellSchool == 6)
+        || ((GetSpecialization() & SPECMASK_WIZARD_ILLUSIONIST) != 0 && spellSchool == 6)
+        || ((GetSpecialization() & SPECMASK_WIZARD_EVOKER) != 0 && spellSchool == 5)
         || ((GetSpecialization() & SPECMASK_WIZARD_NECROMANCER) != 0 && spellSchool == 7)
         || ((GetSpecialization() & SPECMASK_WIZARD_TRANSMUTER) != 0 && spellSchool == 8)
         || ((GetSpecialization() & SPECMASK_WIZARD_UNIVERSAL) != 0 && spellSchool == 9);
@@ -5807,9 +5825,9 @@ BYTE CGameSprite::GetSound(BYTE soundID)
         } else {
             nNumSounds = GetNumSounds(15, 7);
             if (nNumSounds > 0) {
-                nSound = field_710A % nNumSounds;
+                nSound = field_710A % nNumSounds + 15;
             } else {
-                nSound = 0;
+                nSound = 15;
             }
             field_710A++;
             field_710C++;
@@ -5949,13 +5967,16 @@ void CGameSprite::Render(CGameArea* pArea, CVidMode* pVidMode, INT nSurface)
             // NOTE: Uninline.
             m_animation.CalculateFxRect(rFX, ptReference, m_posZ);
 
+            newPos.x = m_pos.x;
+            newPos.y = m_pos.y + m_pArea->GetHeightOffset(m_pos, m_listType);
+
             if (m_id == m_pArea->m_iPicked
                 || g_pBaldurChitin->GetObjectGame()->GetOptions()->m_bAlwaysDither
                 || g_pBaldurChitin->GetObjectGame()->m_bForceDither) {
                 bDithered = TRUE;
             }
 
-            rgbTint = m_pArea->GetTintColor(CPoint(m_pos.x, m_pos.y + m_posZ),
+            rgbTint = m_pArea->GetTintColor(CPoint(newPos.x, newPos.y + m_posZ),
                 m_listType);
 
             if (m_pArea->m_nInfravision
@@ -5995,7 +6016,7 @@ void CGameSprite::Render(CGameArea* pArea, CVidMode* pVidMode, INT nSurface)
             }
 
             if (m_derivedStats.m_visualEffects[IWD_VFX_INVISIBILITY]) {
-                transparency = static_cast<BYTE>(abs(g_pBaldurChitin->nAUCounter % 80 - 40)) + 140;
+                transparency = static_cast<BYTE>((abs(g_pBaldurChitin->nAUCounter % 80 - 40) + 40) * 255 / 100);
             }
 
             // NOTE: Unsigned compare.
@@ -6142,8 +6163,8 @@ void CGameSprite::Render(CGameArea* pArea, CVidMode* pVidMode, INT nSurface)
 
             if (m_derivedStats.m_visualEffects[IWD_VFX_BLUR]
                 && m_pos != m_posOld) {
-                LONG dx = (m_pos.x - m_posOld.x) / 2;
-                LONG dy = (m_pos.y - m_posOld.y) / 2;
+                LONG dx = (m_pos.x - m_posOld.x) >> 1;
+                LONG dy = (m_pos.y - m_posOld.y) >> 1;
                 for (int cnt = 0; cnt < 4; cnt++) {
                     m_animation.CalculateGCBoundsRect(rGCBounds,
                         newPos,
@@ -6421,7 +6442,6 @@ void CGameSprite::Render(CGameArea* pArea, CVidMode* pVidMode, INT nSurface)
             if (!m_lstBlood.IsEmpty()) {
                 bloodLstPos = m_lstBlood.GetHeadPosition();
                 while (bloodLstPos != NULL) {
-                    CBlood* blood = m_lstBlood.GetNext(bloodLstPos);
                     pBlood = m_lstBlood.GetNext(bloodLstPos);
                     nBloodDir = pBlood->GetDirection();
                     if (pBlood->BloodLeft()
@@ -6447,6 +6467,7 @@ void CGameSprite::RenderMarkers(CVidMode* pVidMode, INT nSurface)
             || (m_baseStats.field_2FC & 0x1) != 0)
         && m_baseStats.field_294 != 1) {
         DWORD level = g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nGuiFeedbackLevel;
+        // NOTE: The exe reads `field_14A` as one byte.
         if (g_pBaldurChitin->GetScreenWorld()->field_14A) {
             level = 5;
         }
@@ -6722,7 +6743,7 @@ void CGameSprite::RenderPortrait(const CPoint& cpRenderPosition, const CSize& sz
             m_vbPortraitSmall.RenderDirect(CVIDINF_SURFACE_BACK,
                 r2.left,
                 r2.top,
-                r2 & r2,
+                r2 & rClip,
                 0x20000,
                 FALSE);
         }
@@ -6804,6 +6825,8 @@ void CGameSprite::RenderPortrait(const CPoint& cpRenderPosition, const CSize& sz
             RGB(255, 255, 0));
     }
 
+    r3.right += nScale;
+
     CPoint ptIcon(r3.left, r3.bottom);
     POSITION pos = m_portraitIcons.GetHeadPosition();
     while (pos != NULL) {
@@ -6851,7 +6874,7 @@ void CGameSprite::RenderPortrait(const CPoint& cpRenderPosition, const CSize& sz
 
                 CString sHealth;
                 INT iHealthPercent = 100 * m_baseStats.m_hitPoints / m_derivedStats.m_nMaxHitPoints;
-                COLORREF rgbColor;
+                COLORREF rgbColor = RGB(255, 0, 0);
 
                 for (int index = 0; index < 4; index++) {
                     if (iHealthPercent >= HEALTH_VALUE[index]) {
@@ -7268,7 +7291,7 @@ void CGameSprite::SetCharacterToolTip(CUIControlBase* pControl)
             } else {
                 g_pBaldurChitin->GetObjectCursor()->SetToolTip(-1,
                     NULL,
-                    m_sName + "\n" + strRes.szText);
+                    m_sName);
             }
         }
     }
@@ -7293,8 +7316,7 @@ void CGameSprite::SetDirection(SHORT direction)
     m_deltaDirection = direction > m_nDirection ? 1 : -1;
 
     if (direction - m_nDirection > 8 || direction - m_nDirection <= -8) {
-        // FIXME: Same value?
-        m_deltaDirection = direction > m_nDirection ? 1 : -1;
+        m_deltaDirection = -m_deltaDirection;
     }
 
     if (abs(direction - m_nDirection) == 8) {
@@ -39061,13 +39083,13 @@ SHORT CGameSprite::GetDirection(const CPoint& ptStart, const CPoint& ptTarget)
 
     if (ptTarget.y < ptStart.y) {
         if (ptTarget.x < ptStart.x) {
-            dx = ptStart.x - ptTarget.y;
+            dx = ptStart.x - ptTarget.x;
             dy = ptStart.y - ptTarget.y;
 
             if (27 * dy <= 6 * dx) {
                 return 4;
             } else if (27 * dy <= 16 * dx) {
-                return 6;
+                return 5;
             } else if (24 * dy <= 38 * dx) {
                 return 6;
             } else if (7 * dy <= 38 * dx) {
