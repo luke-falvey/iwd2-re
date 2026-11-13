@@ -23503,7 +23503,8 @@ SHORT CGameSprite::sub_73CB10(CItem* curWeapon, const ITEM_ABILITY* curAttack)
 
     const CRuleTables& cRule = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
 
-    if (curAttack->type == 2 || curAttack->type == 4) {
+    // NOTE: The original compares only the low byte of the ability type.
+    if (static_cast<BYTE>(curAttack->type) == 2 || static_cast<BYTE>(curAttack->type) == 4) {
         return cRule.GetAbilityScoreModifier(m_derivedStats.m_nDEX);
     }
 
@@ -23548,7 +23549,8 @@ SHORT CGameSprite::sub_73CC40(CItem* curWeapon, const ITEM_ABILITY* curAttack)
         mod += curAttack->thac0Bonus;
     }
 
-    if (curAttack->type == 2 || curAttack->type == 4) {
+    // NOTE: The original compares only the low byte of the ability type.
+    if (static_cast<BYTE>(curAttack->type) == 2 || static_cast<BYTE>(curAttack->type) == 4) {
         mod += m_derivedStats.m_nMissileTHAC0Bonus;
     }
 
@@ -26727,7 +26729,7 @@ SHORT CGameSprite::OneSwing()
 
     switch (frameType) {
     case 0:
-        if (m_nSequence == GetIdleSequence()) {
+        if (m_nSequence != GetIdleSequence()) {
             message = new CMessageSetSequence(static_cast<BYTE>(GetIdleSequence()), m_id, m_id);
             g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
         }
@@ -26796,7 +26798,7 @@ SHORT CGameSprite::PlayDead()
 {
     CMessage* message;
 
-    if (m_nSequence != SEQ_DIE || m_nSequence != SEQ_TWITCH) {
+    if (m_nSequence != SEQ_DIE && m_nSequence != SEQ_TWITCH) {
         message = new CMessageSetSequence(SEQ_DIE, m_id, m_id);
         g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
     }
@@ -31092,7 +31094,7 @@ SHORT CGameSprite::GroupAttack(CGameSprite* pTarget)
     typeAI.SetInstance(-1);
     m_curAction.m_acteeID.Set(typeAI);
     AddAction(m_curAction);
-    AddAction(CAIAction(CAIAction::ATTACK, m_curAction.m_acteeID, 0, 0, 0));
+    AddAction(CAIAction(CAIAction::ATTACKNOSOUND, m_curAction.m_acteeID, 0, 0, 0));
 
     return ACTION_DONE;
 }
@@ -31113,8 +31115,9 @@ SHORT CGameSprite::Enemy()
     m_equipedEffectList.RemoveAllOfType(this, ICEWIND_CGAMEEFFECT_CHARM, m_equipedEffectList.m_posCurrent, -1);
     m_timedEffectList.RemoveAllOfType(this, CGAMEEFFECT_CHARM, m_timedEffectList.m_posCurrent, -1);
     m_timedEffectList.RemoveAllOfType(this, ICEWIND_CGAMEEFFECT_CHARM, m_timedEffectList.m_posCurrent, -1);
-    m_timedEffectList.RemoveAllOfType(this, CGAMEEFFECT_SETAISCRIPT, m_timedEffectList.m_posCurrent, -1);
-    m_equipedEffectList.RemoveAllOfType(this, CGAMEEFFECT_SETAISCRIPT, m_equipedEffectList.m_posCurrent, -1);
+    // NOTE: The original passes the other list's `m_posCurrent` here.
+    m_timedEffectList.RemoveAllOfType(this, CGAMEEFFECT_SETAISCRIPT, m_equipedEffectList.m_posCurrent, -1);
+    m_equipedEffectList.RemoveAllOfType(this, CGAMEEFFECT_SETAISCRIPT, m_timedEffectList.m_posCurrent, -1);
     g_pBaldurChitin->GetObjectGame()->RemoveCharacterFromAllies(m_id);
     g_pBaldurChitin->GetObjectGame()->RemoveCharacterFromFamiliars(m_id);
 
@@ -33318,7 +33321,7 @@ SHORT CGameSprite::EquipItem()
 SHORT CGameSprite::FindTraps()
 {
     if (!m_typeAI.IsClassValid(CAIObjectType::C_ROGUE)
-        || !m_typeAI.IsClassValid(CAIObjectType::C_MONK)) {
+        && !m_typeAI.IsClassValid(CAIObjectType::C_MONK)) {
         return ACTION_ERROR;
     }
 
@@ -34057,7 +34060,7 @@ SHORT CGameSprite::RemoveTraps(CGameAIBase* pTarget)
 SHORT CGameSprite::Turn()
 {
     if (!m_typeAI.IsClassValid(CAIObjectType::C_CLERIC)
-        || !m_typeAI.IsClassValid(CAIObjectType::C_PALADIN)) {
+        && !m_typeAI.IsClassValid(CAIObjectType::C_PALADIN)) {
         return ACTION_ERROR;
     }
 
@@ -35422,7 +35425,7 @@ SHORT CGameSprite::GetCasterLevel(CSpell* pSpell, BYTE nClass, DWORD nSpecializa
     }
 
     for (UINT nClassIndex = nStart; nClassIndex < nEnd; nClassIndex++) {
-        nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nStart);
+        nClass = g_pBaldurChitin->GetObjectGame()->GetSpellcasterClass(nClassIndex);
         switch (nClass) {
         case CAIOBJECTTYPE_C_BARD:
         case CAIOBJECTTYPE_C_DRUID:
@@ -36658,7 +36661,7 @@ SHORT CGameSprite::ForceHide(CGameSprite* pSprite)
 
     ITEM_EFFECT effect;
     CGameEffect::ClearItemEffect(&effect, CGAMEEFFECT_INVISIBLE);
-    effect.durationType = 0x100;
+    effect.durationType = 0x1000;
     effect.dwFlags = 0;
     effect.effectAmount = 1;
     effect.duration = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime + 300;
@@ -36686,7 +36689,8 @@ SHORT CGameSprite::sub_7615F0(int a1)
     }
 
     m_pArea->m_visibility.field_E = static_cast<short>(a1);
-    m_pArea->m_visibility.field_10 = static_cast<short>(3 * a1 / 4);
+    // NOTE: The original derives `field_10` from the 16-bit value.
+    m_pArea->m_visibility.field_10 = static_cast<short>(3 * static_cast<short>(a1) / 4);
     m_pArea->m_visibility.sub_5518A0();
 
     return ACTION_DONE;
@@ -37140,7 +37144,7 @@ void CGameSprite::SetClassLevel(INT iClassType, INT nLevel)
     // __LINE__: 28719
     UTIL_ASSERT(iClassType <= CAIOBJECT_CLASS_MAX);
 
-    m_baseStats.m_characterLevel += static_cast<BYTE>(nLevel) - m_baseStats.m_classLevels[iClassType];
+    m_baseStats.m_characterLevel += static_cast<BYTE>(nLevel) - m_baseStats.m_classLevels[iClassType - 1];
     m_baseStats.m_classLevels[iClassType - 1] = static_cast<BYTE>(nLevel);
 }
 
@@ -37505,10 +37509,10 @@ BOOL CGameSprite::sub_763150(UINT nFeatNumber)
         if (m_derivedStats.m_nSTR >= 13) {
             if (sub_763150(CGAMESPRITE_FEAT_POWER_ATTACK)) {
                 INT nValue = GetFeatValue(CGAMESPRITE_FEAT_CLEAVE);
-                if (nValue == 1 || nValue == 2) {
-                    if (m_baseStats.m_attackBase >= 4) {
-                        return TRUE;
-                    }
+                // NOTE: Signed byte compare.
+                if (nValue == 1
+                    || (nValue == 2 && static_cast<signed char>(m_baseStats.m_attackBase) >= 4)) {
+                    return TRUE;
                 }
             }
         }
@@ -37786,62 +37790,62 @@ BOOL CGameSprite::sub_763A40(UINT nFeatNumber, INT a2)
             && sub_763200(nFeatNumber, 1);
     case CGAMESPRITE_FEAT_MARTIAL_AXE:
         return (m_baseStats.m_featAxe != CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE - 1
-                   || m_baseStats.m_attackBase >= 4)
+                   || m_baseStats.m_fighterLevel >= 4)
             && m_baseStats.m_featAxe < CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE
             && sub_763200(nFeatNumber, 1);
     case CGAMESPRITE_FEAT_MARTIAL_BOW:
         return (m_baseStats.m_featBow != CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE - 1
-                   || m_baseStats.m_attackBase >= 4)
+                   || m_baseStats.m_fighterLevel >= 4)
             && m_baseStats.m_featBow < CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE
             && sub_763200(nFeatNumber, 1);
     case CGAMESPRITE_FEAT_MARTIAL_FLAIL:
         return (m_baseStats.m_featFlail != CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE - 1
-                   || m_baseStats.m_attackBase >= 4)
+                   || m_baseStats.m_fighterLevel >= 4)
             && m_baseStats.m_featFlail < CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE
             && sub_763200(nFeatNumber, 1);
     case CGAMESPRITE_FEAT_MARTIAL_GREATSWORD:
         return (m_baseStats.m_featGreatSword != CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE - 1
-                   || m_baseStats.m_attackBase >= 4)
+                   || m_baseStats.m_fighterLevel >= 4)
             && m_baseStats.m_featGreatSword < CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE
             && sub_763200(nFeatNumber, 1);
     case CGAMESPRITE_FEAT_MARTIAL_HAMMER:
         return (m_baseStats.m_featHammer != CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE - 1
-                   || m_baseStats.m_attackBase >= 4)
+                   || m_baseStats.m_fighterLevel >= 4)
             && m_baseStats.m_featHammer < CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE
             && sub_763200(nFeatNumber, 1);
     case CGAMESPRITE_FEAT_MARTIAL_LARGESWORD:
         return (m_baseStats.m_featLargeSword != CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE - 1
-                   || m_baseStats.m_attackBase >= 4)
+                   || m_baseStats.m_fighterLevel >= 4)
             && m_baseStats.m_featLargeSword < CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE
             && sub_763200(nFeatNumber, 1);
     case CGAMESPRITE_FEAT_MARTIAL_POLEARM:
         return (m_baseStats.m_featPolearm != CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE - 1
-                   || m_baseStats.m_attackBase >= 4)
+                   || m_baseStats.m_fighterLevel >= 4)
             && m_baseStats.m_featPolearm < CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE
             && sub_763200(nFeatNumber, 1);
     case CGAMESPRITE_FEAT_SIMPLE_CROSSBOW:
         return (m_baseStats.m_featCrossbow != CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE - 1
-                   || m_baseStats.m_attackBase >= 4)
+                   || m_baseStats.m_fighterLevel >= 4)
             && m_baseStats.m_featCrossbow < CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE
             && sub_763200(nFeatNumber, 1);
     case CGAMESPRITE_FEAT_SIMPLE_MACE:
         return (m_baseStats.m_featMace != CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE - 1
-                   || m_baseStats.m_attackBase >= 4)
+                   || m_baseStats.m_fighterLevel >= 4)
             && m_baseStats.m_featMace < CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE
             && sub_763200(nFeatNumber, 1);
     case CGAMESPRITE_FEAT_SIMPLE_MISSILE:
         return (m_baseStats.m_featMissile != CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE - 1
-                   || m_baseStats.m_attackBase >= 4)
+                   || m_baseStats.m_fighterLevel >= 4)
             && m_baseStats.m_featMissile < CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE
             && sub_763200(nFeatNumber, 1);
     case CGAMESPRITE_FEAT_SIMPLE_QUARTERSTAFF:
         return (m_baseStats.m_featQuarterStaff != CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE - 1
-                   || m_baseStats.m_attackBase >= 4)
+                   || m_baseStats.m_fighterLevel >= 4)
             && m_baseStats.m_featQuarterStaff < CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE
             && sub_763200(nFeatNumber, 1);
     case CGAMESPRITE_FEAT_SIMPLE_SMALLBLADE:
         return (m_baseStats.m_featSmallBlade != CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE - 1
-                   || m_baseStats.m_attackBase >= 4)
+                   || m_baseStats.m_fighterLevel >= 4)
             && m_baseStats.m_featSmallBlade < CGAMESPRITE_FEAT_MAX_WEAPON_UPGRADE
             && sub_763200(nFeatNumber, 1);
     case CGAMESPRITE_FEAT_SPELL_FOCUS_ENCHANTMENT:
@@ -38113,7 +38117,8 @@ INT CGameSprite::GetSkillValue(UINT iSkillNumber)
     // __LINE__: 30444
     UTIL_ASSERT(iSkillNumber < CGAMESPRITE_SKILL_NUMSKILLS);
 
-    return m_baseStats.m_skills[iSkillNumber];
+    // NOTE: The original sign-extends the skill byte.
+    return static_cast<signed char>(m_baseStats.m_skills[iSkillNumber]);
 }
 
 // 0x764310
@@ -38185,7 +38190,8 @@ INT CGameSprite::GetSkillCost(UINT iSkillNumber, BYTE nClass)
         }
     }
 
-    if (m_baseStats.m_skills[iSkillNumber] < (nLevels + 3) / v3) {
+    // NOTE: The original sign-extends the skill byte.
+    if (static_cast<signed char>(m_baseStats.m_skills[iSkillNumber]) < (nLevels + 3) / v3) {
         return v2;
     }
 
@@ -38905,14 +38911,14 @@ void CGameSprite::DisplaySkills(CUIControlTextDisplay* pText)
                 CBaldurEngine::UpdateText(pText,
                     "%s: %d",
                     (LPCSTR)CBaldurEngine::FetchString(ruleTables.GetSkillName(nSkillId)),
-                    m_derivedStats.m_nSkills[nSkillId]);
+                    static_cast<signed char>(m_derivedStats.m_nSkills[nSkillId]));
             }
         } else {
             CBaldurEngine::UpdateText(pText,
                 "%s: %d (%d)",
                 (LPCSTR)CBaldurEngine::FetchString(ruleTables.GetSkillName(nSkillId)),
-                m_derivedStats.m_nSkills[nSkillId],
-                m_baseStats.m_skills[nSkillId]);
+                static_cast<signed char>(m_derivedStats.m_nSkills[nSkillId]),
+                static_cast<signed char>(m_baseStats.m_skills[nSkillId]));
         }
     }
 }
