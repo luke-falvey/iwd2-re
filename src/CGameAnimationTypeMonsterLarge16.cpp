@@ -39,7 +39,6 @@ CGameAnimationTypeMonsterLarge16::CGameAnimationTypeMonsterLarge16(USHORT animat
         m_nSndFreq = 16;
         m_personalSpace = 5;
         m_colorBlood = 56;
-        m_resRef = "MWYV";
         m_colorChunks = -1;
         m_resRef = "MCAR";
         break;
@@ -63,8 +62,9 @@ CGameAnimationTypeMonsterLarge16::CGameAnimationTypeMonsterLarge16(USHORT animat
         m_g3VidCellExtend.SetResRef(CResRef(m_resRef + "G3E"), FALSE, TRUE, TRUE);
     }
 
+    m_currentVidCellBase = &m_g1VidCellBase;
     m_currentVidCellExtend = &m_g1VidCellExtend;
-    m_currentVidCell = &m_g1VidCellBase;
+    m_currentVidCell = m_currentVidCellBase;
 
     if (m_falseColor) {
         for (BYTE colorRange = 0; colorRange < CVidPalette::NUM_RANGES; colorRange++) {
@@ -149,7 +149,7 @@ void CGameAnimationTypeMonsterLarge16::IncrementFrame()
 void CGameAnimationTypeMonsterLarge16::DecrementFrame()
 {
     // __FILE__: .\Include\ObjAnimation.h
-    // __LINE__: 1166
+    // __LINE__: 1228
     UTIL_ASSERT(m_currentVidCell != NULL);
 
     m_currentVidCell->m_nCurrentFrame--;
@@ -169,7 +169,7 @@ BOOLEAN CGameAnimationTypeMonsterLarge16::GetCurrentResRef(CString& resBody, CSt
 SHORT CGameAnimationTypeMonsterLarge16::GetCurrentFrame()
 {
     // __FILE__: .\Include\ObjAnimation.h
-    // __LINE__: 1175
+    // __LINE__: 1240
     UTIL_ASSERT(m_currentVidCell != NULL);
 
     return m_currentVidCell->m_nCurrentFrame;
@@ -566,7 +566,7 @@ void CGameAnimationTypeMonsterLarge16::SetColorEffect(BYTE effectType, BYTE colo
 void CGameAnimationTypeMonsterLarge16::SetColorEffectAll(BYTE effectType, COLORREF tintColor, BYTE periodLength)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
-    // __LINE__: 7792
+    // __LINE__: 9774
     UTIL_ASSERT(m_currentVidCell != NULL);
 
     if (m_falseColor) {
@@ -783,7 +783,7 @@ SHORT CGameAnimationTypeMonsterLarge16::SetSequence(SHORT nSequence)
     case 11:
         m_currentVidCellBase = &m_g3VidCellBase;
         m_currentVidCellExtend = &m_g3VidCellExtend;
-        m_currentBamSequence = 1;
+        m_currentBamSequence = 0;
         nSequence = 0;
         break;
     case 12:

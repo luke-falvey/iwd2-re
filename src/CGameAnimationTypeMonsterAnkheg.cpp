@@ -31,7 +31,7 @@ CGameAnimationTypeMonsterAnkheg::CGameAnimationTypeMonsterAnkheg(USHORT animatio
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
         // __LINE__: 15501
-        UTIL_ASSERT(m_currentVidCell != NULL && m_currentVidCellHole != NULL);
+        UTIL_ASSERT(FALSE);
     }
 
     // NOTE: Uninline.
@@ -228,8 +228,8 @@ void CGameAnimationTypeMonsterAnkheg::CalculateFxRect(CRect& rFx, CPoint& ptRefe
     ptReference.x = max(ptHole.x, ptReference.x);
     ptReference.y = max(ptHole.y, ptReference.y);
 
-    frameSize.cx += ptChar.x - ptReference.x;
-    frameSize.cy += ptChar.y - ptReference.y;
+    frameSize.cx += ptReference.x - ptChar.x;
+    frameSize.cy += ptReference.y - ptChar.y;
     rFx.SetRect(0, 0, frameSize.cx, frameSize.cy);
 
     m_currentVidCellHole->GetCurrentFrameSize(frameSize, FALSE);

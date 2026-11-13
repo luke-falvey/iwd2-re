@@ -102,6 +102,7 @@ CGameAnimationTypeEffect::CGameAnimationTypeEffect(USHORT animationID, BYTE* col
                 colorRangeValues[colorRange],
                 *g_pBaldurChitin->GetObjectGame()->GetMasterBitmap());
         }
+        m_g1VidCell.SetPalette(m_palette);
         m_currentBamSequence = animationID & 0xF;
         m_g1VidCell.SequenceSet(m_currentBamSequence);
         m_g1VidCell.FrameSet(0);
@@ -113,7 +114,6 @@ CGameAnimationTypeEffect::CGameAnimationTypeEffect(USHORT animationID, BYTE* col
         switch (m_animationID & 0xF0) {
         case 0x00:
             m_g1VidCell.SetResRef(CResRef("SKLH"), FALSE, TRUE, TRUE);
-            m_currentBamSequence = 1;
             break;
         case 0x10:
             m_g1VidCell.SetResRef(CResRef("GLPHWRDH"), FALSE, TRUE, TRUE);
