@@ -170,20 +170,22 @@ void CScreenSpellbook::EngineActivated()
         g_pBaldurChitin->m_pEngineWorld->TogglePauseGame(0, 1, 0);
     }
 
-    m_preLoadFontRealms.SetResRef(CResRef("REALMS"), FALSE, TRUE);
-    m_preLoadFontRealms.RegisterFont();
+    if (m_cUIManager.m_bInitialized) {
+        m_preLoadFontRealms.SetResRef(CResRef("REALMS"), FALSE, TRUE);
+        m_preLoadFontRealms.RegisterFont();
 
-    m_preLoadFontStnSml.SetResRef(CResRef("STONESML"), FALSE, TRUE);
-    m_preLoadFontStnSml.RegisterFont();
+        m_preLoadFontStnSml.SetResRef(CResRef("STONESML"), FALSE, TRUE);
+        m_preLoadFontStnSml.RegisterFont();
 
-    m_preLoadFontTool.SetResRef(CResRef("TOOLFONT"), FALSE, TRUE);
-    m_preLoadFontTool.RegisterFont();
+        m_preLoadFontTool.SetResRef(CResRef("TOOLFONT"), FALSE, TRUE);
+        m_preLoadFontTool.RegisterFont();
 
-    UpdateMainPanel();
-    UpdateCursorShape(0);
-    CheckEnablePortaits(1);
-    CheckEnableLeftPanel();
-    m_cUIManager.InvalidateRect(NULL);
+        UpdateMainPanel();
+        UpdateCursorShape(0);
+        CheckEnablePortaits(1);
+        CheckEnableLeftPanel();
+        m_cUIManager.InvalidateRect(NULL);
+    }
 }
 
 // 0x668E30
@@ -266,6 +268,10 @@ void CScreenSpellbook::OnKeyDown(SHORT nKeysFlags)
         CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
 
         for (SHORT nKeyFlag = 0; nKeyFlag < nKeysFlags; nKeyFlag++) {
+            if (m_cUIManager.OnKeyDown(m_pVirtualKeysFlags[nKeyFlag])) {
+                continue;
+            }
+
             switch (m_pVirtualKeysFlags[nKeyFlag]) {
             case VK_TAB:
                 m_cUIManager.ForceToolTip();
@@ -333,7 +339,7 @@ void CScreenSpellbook::OnKeyDown(SHORT nKeysFlags)
                 break;
             default:
                 if (GetTopPopup() == NULL) {
-                    for (SHORT index = 0; index < CINFGAME_KEYMAP_SIZE; index) {
+                    for (SHORT index = 0; index < CINFGAME_KEYMAP_SIZE; index++) {
                         // NOTE: Uninline.
                         if (pGame->GetKeymap(index) == m_pVirtualKeysFlags[nKeyFlag]
                             && pGame->GetKeymapFlag(index) == m_bCtrlKeyDown) {
@@ -953,15 +959,15 @@ void CScreenSpellbook::EnableMainPanel(BOOL bEnable)
     CUIPanel* pRightPanel = m_cUIManager.GetPanel(1);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
-    // __LINE__: 4222
+    // __LINE__: 1668
     UTIL_ASSERT(pMainPanel != NULL);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
-    // __LINE__: 4223
+    // __LINE__: 1669
     UTIL_ASSERT(pLeftPanel != NULL);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
-    // __LINE__: 4224
+    // __LINE__: 1670
     UTIL_ASSERT(pRightPanel != NULL);
 
     if (bEnable) {
@@ -1453,6 +1459,10 @@ void CScreenSpellbook::OnCancelButtonClick()
 
     CUIPanel* pPanel = GetTopPopup();
 
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenSpellbook.cpp
+    // __LINE__: 2435
+    UTIL_ASSERT(pPanel != NULL);
+
     switch (pPanel->m_nID) {
     case 3:
     case 4:
@@ -1559,10 +1569,10 @@ void CScreenSpellbook::UpdateSpellInfoPanel()
 void CScreenSpellbook::ResetErrorPanel(CUIPanel* pPanel)
 {
     switch (pPanel->m_nID) {
-    case 7:
+    case 4:
         m_nNumErrorButtons = 1;
         break;
-    case 8:
+    case 5:
         m_nNumErrorButtons = 2;
         break;
     case 50:
@@ -1741,10 +1751,9 @@ void CScreenSpellbook::CheckMultiPlayerViewable()
             if (pSprite->InControl()) {
                 m_bMultiPlayerViewable = TRUE;
             } else {
-                if (g_pChitin->cNetwork.GetSessionOpen()) {
-                    m_bMultiPlayerViewable = g_pChitin->cNetwork.GetSessionHosting()
-                        || pGame->m_singlePlayerPermissions.GetSinglePermission(CGamePermission::LEADER);
-                }
+                m_bMultiPlayerViewable = g_pChitin->cNetwork.GetSessionOpen()
+                    && (g_pChitin->cNetwork.GetSessionHosting()
+                        || pGame->m_singlePlayerPermissions.GetSinglePermission(CGamePermission::LEADER));
             }
         } else {
             m_bMultiPlayerViewable = FALSE;
@@ -2625,7 +2634,7 @@ void CUIControlScrollBarSpellbookKnownSpells::OnPageDown(DWORD nLines)
     // __LINE__: 4073
     UTIL_ASSERT(pSpellbook != NULL);
 
-    INT nStep = min(nLines, 7);
+    INT nStep = min(static_cast<INT>(nLines & 0xFFFF), 7);
     pSpellbook->m_nTopKnownSpell = max(min(pSpellbook->m_nTopKnownSpell + nStep, pSpellbook->m_nNumKnownSpells - 8), 0);
 
     InvalidateItems();
@@ -2640,11 +2649,14 @@ void CUIControlScrollBarSpellbookKnownSpells::OnScroll()
     // __LINE__: 4098
     UTIL_ASSERT(pSpellbook != NULL);
 
-    pSpellbook->m_nTopKnownSpell = max(field_144 * (pSpellbook->m_nNumKnownSpells - 8), 0) / field_142;
+    INT nTop = max(field_144 * (pSpellbook->m_nNumKnownSpells - 8), 0) / field_142;
 
     if (pSpellbook->m_nNumKnownSpells < 8) {
+        nTop = 0;
         field_144 = 0;
     }
+
+    pSpellbook->m_nTopKnownSpell = nTop & 0xFFFF;
 
     InvalidateItems();
 }
@@ -2721,7 +2733,7 @@ BOOL CUIControlButtonSpellbookSpellInfoIcon::Render(BOOL bForce)
         return FALSE;
     }
 
-    if (m_nRenderCount != 0) {
+    if (m_nRenderCount > 0) {
         CSingleLock lock(&(m_pPanel->m_pManager->field_56), FALSE);
         lock.Lock(INFINITE);
         m_nRenderCount--;
@@ -2877,9 +2889,9 @@ void CUIControlButtonSpellbookClassSelection::OnLButtonClick(CPoint pt)
 
         if (nNewClassIndex < pSpellbook->m_nNumberOfSpellClasses) {
             pSpellbook->SetClassIndex(nNewClassIndex);
+            pSpellbook->sub_669830(pSpellbook->GetSelectedCharacter());
         }
 
-        pSpellbook->sub_669830(pSpellbook->GetSelectedCharacter());
         pSpellbook->UpdateMainPanel();
         break;
     case 92:
