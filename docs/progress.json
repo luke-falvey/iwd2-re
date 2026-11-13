@@ -11,8 +11,8 @@
   "incomplete_by_file": {
     "src/BalDataTypes.h": 1
   },
-  "annotations_total": 10657,
-  "annotations_not_function_start": 2615,
+  "annotations_total": 10658,
+  "annotations_not_function_start": 2616,
   "duplicate_annotations": {
     "0x7ACD60": [
       "src/CAIObjectType.cpp",
@@ -2124,6 +2124,7 @@
     "0x85C19F",
     "0x85C1A0",
     "0x85C1A1",
+    "0x85DD3C",
     "0x85DD64",
     "0x85DD68",
     "0x85DD6C",

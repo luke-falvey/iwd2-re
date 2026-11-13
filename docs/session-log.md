@@ -2,6 +2,48 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-14 (afternoon): batches 138–148, resource manager, rendering classes and every animation class read against the exe
+
+Twenty-five more files of pre-project code were read against the exe and fixed. S1–S7 pass on the rebuild after batch 147; batch 148 is merged and waits for the next run.
+
+| File | Old functions read | With a real difference | Batch |
+|---|---|---|---|
+| `CDimm.cpp` | all | 14 | 138 |
+| `CChitin.cpp`, `CUIControlFactory.cpp` | all | see commit | 139 |
+| `CVidCell.cpp` | 40 | 12 | 140 |
+| `CVidInf.cpp` | 44 | 11 | 140 |
+| `CVidFont.cpp` | 24 | 13 | 140 |
+| `CGameAnimationTypeCharacterOld.cpp` | 32 | 13 | 141 |
+| `CGameAnimationTypeCharacter.cpp` | 32 | 12 | 141 |
+| `CGameAnimationTypeMonsterIcewindNew.cpp` | 22 | 7 | 142 |
+| `CGameAnimationTypeMonsterOld.cpp` | 23 | 2 | 142 |
+| `CGameAnimationTypeMonsterMulti.cpp` | 24 | 3 | 143 |
+| `CGameAnimationTypeMonsterQuadrant.cpp` | 27 | 3 | 143 |
+| `CGameAnimationTypeMonsterLayeredSpell.cpp` | 22 | 6 | 144 |
+| `CGameAnimationTypeMonsterLayered.cpp` | 23 | 4 | 144 |
+| `CGameAnimationTypeMonsterIcewind.cpp` | 20 | 3 | 145 |
+| `CGameAnimationTypeMonster.cpp` | 23 | 1 | 146 |
+| `…Effect`, `…MonsterAnkheg`, `…MonsterLarge16`, `…Ambient`, `…MonsterLarge` | 102 | 8 | 147 |
+| `CCacheStatus.cpp` | 5 | 1 (15 places) | 148 |
+| `CGameSpriteEquipment.cpp` | 6 | 1 | 148 |
+
+- **Control factory (139).** `CUIControlBase::CreateControl` was compared with the exe by emulating the exe's function for every screen, panel and control id: 15,804 mismatches of 406,068 before, 5 after.
+- **Rendering (140).** `CVidCell`: sequence member is a WORD, FX blit guards, 3d render demand/release pairs. `CVidInf`: surface creation and pixel-format parsing (24/32 bpp loops stopped at bit 16), the back surface released in the wrong mode, `FXPrep` clear sizes. `CVidFont`: `CreateFontA` arguments in the wrong order, DBCS trail bytes sign-extended, `TextOutEx` takes its clip rectangle by value, 3d text clipping and advance.
+- **Animation classes (141–147).** The recurring defects:
+  - `GetCurrentSequenceAndFrame` took its two results by value in the whole hierarchy, so callers got nothing back.
+  - Equip functions copied from a sibling and not adapted: armour "E" art loaded into the base cells, shield code used for the helmet, weapon flags written to the wrong slot, weapon art names built from the whole item string where the exe uses its first character.
+  - `SetSequence` switches: missing `break`s (IcewindNew, Icewind), six missing cases in `CGameAnimationTypeMonster` that fell into the assertion, wrong cells or sequence numbers in single cases of seven classes.
+  - Constructors that never set `m_currentVidCellBase` (Large, Large16, Quadrant) or `m_falseColor` (MonsterOld), and two missing `break`s in the character constructor.
+  - `CGameAnimationTypeMonsterIcewindNew::EquipWeapon` had a search loop that never incremented.
+- **Loading screen (148).** `CCacheStatus::Update`: hint-line positions, hint index saved one too low, two early returns, timeout counter text, minibar player index, two font calls the exe doesn't make.
+- **Equipment (148).** `CGameSpriteEquipment::Unmarshal` never stored the sprite pointer that `ClearMarshal` later uses.
+
+All claims in these rounds were confirmed by the fix translators against the asm; none was rejected, and two were corrected in detail (a cited address, a store that the exe has three times).
+
+**Open notes.** `CGameAnimationTypeCharacter::m_renderWeapons` / `m_renderHelmet` are declared BOOLEAN but read as dwords in the exe. `CDimm::Alloc` still uses malloc/free. No play test puts a monster or an equipped weapon swing on screen, so most animation fixes are covered by the asm comparison only.
+
+**State.** 0.45 MB of old code unread (2,112 functions). In progress: `CUIControlTextDisplay.cpp`, `CUIControlScrollBar.cpp`, `CVideo3d.cpp`, `CVidMode.cpp`, `CSound.cpp`, `CSoundMixer.cpp`. Largest left after those: `CScreenConnection.cpp` (39 KB), `CScreenMultiPlayer.cpp` (33 KB), `CNetwork.cpp` (27 KB), `music/sound.cpp`, `music/music.cpp`, `CMultiplayerSettings.cpp`.
+
 ## 2026-11-14 (morning): batches 132–137, eight more single-player files read against the exe
 
 `CInfinity.cpp`, `CScreenOptions.cpp`, `CScreenSave.cpp`, `CScreenLoad.cpp`, `CScreenWorldMap.cpp`, `CWeather.cpp`, `CInfCursor.cpp` and `CBaldurChitin.cpp`: 427 pre-project functions, 91 with a real difference. One more wrong verifier claim (the load screen's Tab key entry, a misread push order); the scripted key-table check had been right.
