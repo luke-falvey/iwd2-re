@@ -55,9 +55,9 @@ CGameContainer::CGameContainer(CGameArea* pArea, CAreaFileContainer* pContainerO
         && pContainerObject->m_boundingRectRight == 0
         && pContainerObject->m_boundingRectBottom == 0) {
         pContainerObject->m_boundingRectLeft = CPathSearch::GRID_SQUARE_SIZEX * (pContainerObject->m_posX / CPathSearch::GRID_SQUARE_SIZEX);
-        pContainerObject->m_boundingRectRight = CPathSearch::GRID_SQUARE_SIZEX * (pContainerObject->m_posX / (CPathSearch::GRID_SQUARE_SIZEX + 1)) - 1;
+        pContainerObject->m_boundingRectRight = CPathSearch::GRID_SQUARE_SIZEX * (pContainerObject->m_posX / CPathSearch::GRID_SQUARE_SIZEX + 1) - 1;
         pContainerObject->m_boundingRectTop = CPathSearch::GRID_SQUARE_SIZEY * (pContainerObject->m_posY / CPathSearch::GRID_SQUARE_SIZEY);
-        pContainerObject->m_boundingRectBottom = CPathSearch::GRID_SQUARE_SIZEY * (pContainerObject->m_posY / (CPathSearch::GRID_SQUARE_SIZEY + 1)) - 1;
+        pContainerObject->m_boundingRectBottom = CPathSearch::GRID_SQUARE_SIZEY * (pContainerObject->m_posY / CPathSearch::GRID_SQUARE_SIZEY + 1) - 1;
     }
 
     m_rBounding.left = pContainerObject->m_boundingRectLeft;
@@ -114,7 +114,7 @@ CGameContainer::CGameContainer(CGameArea* pArea, CAreaFileContainer* pContainerO
                     || (y2 == y1 && y1 == y0)
                     || (x2 != x1
                         && x1 != x0
-                        && 1000 * (y2 - y1) / (x2 - x1) != 1000 * (y1 - y0) / (x1 - x0))) {
+                        && 1000 * (y2 - y1) / (x2 - x1) == 1000 * (y1 - y0) / (x1 - x0))) {
                     m_pPolygon[cnt - adjust - 1] = m_pPolygon[cnt - adjust];
                     adjust++;
                 }
@@ -214,6 +214,10 @@ CGameContainer::CGameContainer(CGameArea* pArea, CAreaFileContainer* pContainerO
 // 0x47C890
 CGameContainer::CGameContainer(CGameArea* pArea, const CRect& rBound)
 {
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameContainer.cpp
+    // __LINE__: 322
+    UTIL_ASSERT(pArea != NULL);
+
     m_objectType = TYPE_CONTAINER;
     m_rBounding = rBound;
     m_nPolygon = 0;
@@ -1279,6 +1283,7 @@ void CGameContainer::RemoveFromArea()
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameContainer.cpp
         // __LINE__: 1597
         UTIL_ASSERT(FALSE);
+        return;
     }
 
     delete this;
@@ -1291,7 +1296,7 @@ void CGameContainer::SetCursor(LONG nToolTip)
 
     switch (pGame->GetState()) {
     case 0:
-        if (pGame->GetGroup()->GetCount() == 0) {
+        if (pGame->GetGroup()->GetCount() != 0) {
             g_pBaldurChitin->GetObjectCursor()->SetCursor(2, FALSE);
         } else {
             g_pBaldurChitin->GetObjectCursor()->SetCursor(0, FALSE);
@@ -1450,7 +1455,7 @@ void CGameContainer::SetItem(SHORT nSlotNum, CItem* pItem)
 
     RefreshRenderPile();
 
-    g_pBaldurChitin->GetActiveEngine()->UpdateContainerStatus(m_id, -1);
+    g_pBaldurChitin->GetActiveEngine()->UpdateContainerStatus(m_id, nSlotNum);
 
     if (g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
         // NOTE: Uninline.
@@ -1661,7 +1666,7 @@ void CGameContainer::MarshalMessage(BYTE** pData, DWORD* dwSize)
     CResRef areaResRef;
     DWORD cnt;
     CAreaFileContainer cContainerObject;
-    WORD nItems;
+    WORD nItems = 0;
     CItem* tempItem;
     BYTE nAreaStringLength;
     CCreatureFileItem* pItems;
@@ -1747,7 +1752,6 @@ void CGameContainer::MarshalMessage(BYTE** pData, DWORD* dwSize)
     cContainerObject.m_posYTrapOrigin = static_cast<WORD>(m_posTrapOrigin.y);
     cContainerObject.m_triggerRange = m_triggerRange;
     cContainerObject.m_triggerRange = m_triggerRange;
-    cContainerObject.m_breakDifficulty = m_breakDifficulty;
     strncpy(cContainerObject.m_ownedBy, m_ownedBy, SCRIPTNAME_SIZE);
     m_keyType.GetResRef(cContainerObject.m_keyType);
 
@@ -1911,7 +1915,7 @@ SHORT CGameContainer::FindItemSlot(const CResRef& res)
     SHORT nSlot = 0;
     while (pos != NULL) {
         CItem* pItem = m_lstItems.GetNext(pos);
-        if (pItem->GetResRef() == res) {
+        if (pItem != NULL && pItem->GetResRef() == res) {
             return nSlot;
         }
 

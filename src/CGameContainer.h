@@ -63,6 +63,7 @@ public:
     /* 05D4 */ CVidCell m_pileVidCell[3];
     /* 0863 */ BOOLEAN m_bDeleteMe;
     /* 0864 */ RESREF m_scriptRes;
+    /* 086C */ SCRIPTNAME m_scriptName;
     /* 088C */ WORD m_lockDifficulty;
     /* 088E */ DWORD m_dwFlags;
     /* 0892 */ WORD m_trapDetectionDifficulty;
