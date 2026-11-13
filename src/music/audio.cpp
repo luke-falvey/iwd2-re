@@ -159,7 +159,14 @@ int audio_fseek(FILE* stream, long offset, int origin)
     int rc = fseek(stream, offset, origin);
     dword_A16428 = 0;
     dword_A16424 = 0;
-    dword_A1642C &= ~0x1;
+
+    // NOTE: Bit 0 (end of file) is set to whether `fseek` failed.
+    if (rc != 0) {
+        dword_A1642C |= 0x1;
+    } else {
+        dword_A1642C &= ~0x1;
+    }
+
     return rc;
 }
 
@@ -211,7 +218,10 @@ int defaultCompressionFunc(char* fname)
 // 0x7D9870
 int audioOpen(char* fname, int mode)
 {
-    int compression = queryCompressedFunc(fname) != 0 ? 2 : 0;
+    char path[MAX_PATH];
+    strcpy(path, fname);
+
+    int compression = queryCompressedFunc(path) != 0 ? 2 : 0;
 
     char modeStr[4] = { 0 };
     char* pm = modeStr;
@@ -231,7 +241,7 @@ int audioOpen(char* fname, int mode)
         *pm++ = 'b';
     }
 
-    FILE* stream = audioOpenPtr(fname, modeStr);
+    FILE* stream = audioOpenPtr(path, modeStr);
     if (stream == NULL) {
         return -1;
     }
@@ -277,6 +287,7 @@ int audioOpen(char* fname, int mode)
             &(audioStream->channels),
             &(audioStream->sampleRate),
             &(audioStream->filesize));
+        audioStream->filesize *= 2;
     } else {
         audioStream->filesize = fileLength(audioStream->file);
     }
@@ -326,14 +337,19 @@ size_t audioRead(int fd, void* buf, size_t size)
     if ((audioStream->flags & AUDIO_STREAM_COMPRESSED) == 0) {
         bytesRead = audioReadPtr(buf, 1, size, audioStream->file);
     } else {
-        bytesRead = AudioDecoder_Read(audio->decoder, buf, size);
+        if (audioStream->decoder == NULL) {
+            LeaveCriticalSection(&soundCritSect);
+            return 0;
+        }
+
+        bytesRead = AudioDecoder_Read(audioStream->decoder, buf, size);
         if (audioStream->preReadPos != audioStream->preReadSize) {
-            size_t bytesToCopy = audioStream->preReadSize - audioStream->preReadPos;
-            if (bytesToCopy > size) {
+            int bytesToCopy = audioStream->preReadSize - audioStream->preReadPos;
+            if (bytesToCopy > static_cast<int>(size)) {
                 bytesToCopy = size;
             }
 
-            memcpy(buf, audioStream->preReadBuf, bytesToCopy);
+            memcpy(buf, audioStream->preReadBuf + audioStream->preReadPos, bytesToCopy);
             audioStream->preReadPos += bytesToCopy;
         }
     }
@@ -367,6 +383,10 @@ int audioSeek(int fd, long offset, int origin)
         break;
     case SEEK_END:
         pos = offset + audioStream->filesize;
+        break;
+    default:
+        // NOTE: Original code uses `fd` as position for unknown origin.
+        pos = fd;
         break;
     }
 

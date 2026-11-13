@@ -308,7 +308,7 @@ DWORD CResFile::GetFileSize(RESID resID)
 
     if (field_20 != NULL) {
         // TODO: Object/structure?
-        return reinterpret_cast<DWORD>(reinterpret_cast<unsigned char*>(field_20) + 2);
+        return *reinterpret_cast<DWORD*>(reinterpret_cast<unsigned char*>(field_20) + 2);
     }
 
     return 0;
@@ -346,6 +346,7 @@ BOOL CResFile::OpenFile()
     if (m_cFile.Read(m_pHeader, sizeof(BIFF_HEADER)) != sizeof(BIFF_HEADER)) {
         m_cFile.Close();
         delete m_pHeader;
+        m_pHeader = NULL;
         return FALSE;
     }
 
@@ -353,6 +354,7 @@ BOOL CResFile::OpenFile()
         if (memcmp(&(m_pHeader->dwFileType), "BIFC", 4) != 0) {
             m_cFile.Close();
             delete m_pHeader;
+            m_pHeader = NULL;
             return FALSE;
         }
 
@@ -415,6 +417,7 @@ BOOL CResFile::OpenFile()
         if (m_pVarEntries == NULL) {
             m_cFile.Close();
             delete m_pHeader;
+            m_pHeader = NULL;
             return FALSE;
         }
 

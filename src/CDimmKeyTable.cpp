@@ -35,6 +35,7 @@ BOOL CDimmKeyTable::AddKey(CResRef cResRef, USHORT nResType, RESID nID)
 
             bNotFound = FALSE;
             hash = Hash(cResRef, nResType);
+            n = static_cast<int>(hash);
 
             if (cResRef == "") {
                 return FALSE;
@@ -92,7 +93,7 @@ BOOL CDimmKeyTable::BuildNewTable(int nLength)
         return FALSE;
     }
 
-    m_pNewEntries = new CDimmKeyTableEntry[nLength];
+    m_pNewEntries = reinterpret_cast<CDimmKeyTableEntry*>(malloc(sizeof(CDimmKeyTableEntry) * nLength));
     if (m_pNewEntries == NULL) {
         m_nNewEntries = 0;
         return FALSE;
@@ -134,7 +135,7 @@ void CDimmKeyTable::DestroyTable(CDimm* dimm)
             }
         }
 
-        delete m_pEntries;
+        free(m_pEntries);
         m_pEntries = NULL;
         m_nEntries = 0;
     }
@@ -172,6 +173,13 @@ BOOL CDimmKeyTable::ExtendTable()
                 // __LINE__: 9446
                 UTIL_ASSERT(bFull == FALSE);
 
+                if (bFull == TRUE) {
+                    free(m_pNewEntries);
+                    m_pNewEntries = NULL;
+                    m_nNewEntries = 0;
+                    return FALSE;
+                }
+
                 if (m_pNewEntries[n].resRef == "") {
                     break;
                 }
@@ -196,7 +204,7 @@ BOOL CDimmKeyTable::ExtendTable()
         }
     }
 
-    delete m_pEntries;
+    free(m_pEntries);
 
     m_pEntries = m_pNewEntries;
     m_nEntries = m_nNewEntries;
@@ -365,9 +373,7 @@ BOOL CDimmKeyTable::RescanEverything()
     }
 
     KEYFILE_HEADER keyFileHeader;
-    if (!keyFile.Read(&keyFileHeader, sizeof(keyFileHeader))) {
-        return FALSE;
-    }
+    keyFile.Read(&keyFileHeader, sizeof(keyFileHeader));
 
     if (memcmp(&(keyFileHeader.nFileType), "KEY ", 4) != 0) {
         return FALSE;
