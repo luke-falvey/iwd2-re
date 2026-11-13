@@ -141,9 +141,8 @@ public:
     /* 048A */ DWORD m_dwLastSessionRefresh;
     /* 048E */ INT m_nEnumServiceProvidersCountDown;
     /* 0492 */ BOOL m_bStartedCountDown;
-    /* 0497 */ BOOLEAN m_bEliminateInitialize;
-    /* 04B2 */ BOOL m_bAllowInput;
     /* 0496 */ unsigned char field_496;
+    /* 0497 */ BOOLEAN m_bEliminateInitialize;
     /* 0498 */ BOOLEAN m_bEMSwapped;
     /* 0499 */ BOOLEAN m_bEMValue;
     /* 049A */ BOOLEAN m_bEMWaiting;
@@ -154,6 +153,7 @@ public:
     /* 04A2 */ STRREF m_strErrorText;
     /* 04A6 */ INT m_nNumErrorButtons;
     /* 04AA */ STRREF m_strErrorButtonText[CSCREENCONNECTION_ERROR_BUTTONS];
+    /* 04B2 */ BOOL m_bAllowInput;
     /* 04B6 */ BOOLEAN m_bEnumeratingAsynchronous;
     /* 04B7 */ BOOLEAN m_bJoinWaiting;
     /* 04B8 */ BOOLEAN m_bJoinComplete;

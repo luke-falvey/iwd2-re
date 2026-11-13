@@ -160,7 +160,7 @@ void CUIManager::TimerAsynchronousUpdate()
 {
     DWORD nID = -1;
     if (m_bInitialized) {
-        if (field_18) {
+        if (field_18 && !m_bHidden) {
             POSITION pos = m_lPanels.GetHeadPosition();
             while (pos != NULL) {
                 CUIPanel* pPanel = m_lPanels.GetNext(pos);

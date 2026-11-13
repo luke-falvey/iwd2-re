@@ -36,9 +36,7 @@ CUIControlEditMultiLine::CUIControlEditMultiLine(CUIPanel* panel, UI_CONTROL_EDI
     field_877 = 1;
 
     CResRef cursorResRef(controlInfo->refCursor);
-    m_vcCursor.SetResRef(cursorResRef, m_pPanel->m_pManager->m_bDoubleSize, TRUE, TRUE);
-
-    m_vcCursor.m_bDoubleSize = m_pPanel->m_pManager->m_bDoubleSize;
+    m_vcCursor.SetResRef(cursorResRef, m_pPanel->m_pManager->m_bDoubleSize, FALSE, TRUE);
 
     m_vcCursor.SequenceSet(controlInfo->nSequence);
     m_vcCursor.FrameSet(controlInfo->nFrame);
@@ -454,7 +452,7 @@ CString CUIControlEditMultiLine::GetText()
                 end = m_sText.GetLength();
             }
 
-            sText += m_sText.Mid(start, end);
+            sText += m_sText.Mid(start, end - start);
             start = end + 1;
         } while (end < m_sText.GetLength());
     }
@@ -2496,9 +2494,11 @@ void CUIControlEditMultiLine::AdjustVisibleIndex()
                     field_86E = numberOfLines;
                 }
             } else {
-                if (field_87A - field_86E < field_878) {
-                    field_86E = field_87A - field_878;
+                if (field_87A - field_86E >= field_878) {
+                    return;
                 }
+
+                field_86E = field_87A - field_878;
 
                 if (field_86E < numberOfLines) {
                     field_86E = max(numberOfLines - field_878 + 1, 0);
@@ -2538,7 +2538,7 @@ CUIControlEditMultiLineScroller::CUIControlEditMultiLineScroller(CUIPanel* panel
     field_897 = 0;
     field_898 = 0;
     field_899 = 0;
-    field_892 = field_36;
+    field_892 = controlInfo->field_36;
 }
 
 // 0x4E18D0

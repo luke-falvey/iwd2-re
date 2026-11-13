@@ -47,12 +47,13 @@ public:
     /* 086A */ int field_86A;
     /* 086E */ int field_86E;
     /* 0872 */ int field_872;
-    /* 0876 */ int field_876;
+    /* 0876 */ unsigned char field_876;
     /* 0877 */ unsigned char field_877;
     /* 0878 */ short field_878;
     /* 087A */ short field_87A;
     /* 087C */ COLORREF m_rgbForegroundColor;
     /* 0880 */ COLORREF m_rgbBackgroundColor;
+    /* 0884 */ int field_884;
     /* 0888 */ unsigned char field_888;
     /* 088A */ int field_88A;
     /* 088E */ int field_88E;
