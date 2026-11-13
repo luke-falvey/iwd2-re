@@ -26,6 +26,7 @@ static size_t musicSoundRead(int fd, void* buf, size_t size);
 static int musicSoundSeek(int fd, long offset, int origin);
 static long musicSoundTell(int fd);
 static long musicSoundFilesize(int fd);
+static int forceSong(int song, int section, int position);
 
 static int internalMusicPlay(int song, int section, int position);
 static int setupNewSong();
@@ -235,7 +236,10 @@ int musicLoadSongList(char** list, int num)
     for (int index = 0; index < num; index++) {
         jumpList[index].fileName = strdup(list[index]);
 
-        FILE* stream = audioOpenPtr(nameMangler(jumpList[index].fileName), "r");
+        // NOTE: Redundant copy over the string `strdup` just made.
+        strcpy(jumpList[index].fileName, list[index]);
+
+        FILE* stream = audioOpenPtr(nameMangler(list[index]), "r");
         if (stream != NULL) {
             v1[index] = 1;
 
@@ -394,11 +398,11 @@ int musicLoadSongList(char** list, int num)
                                 // NOTE: Uninline.
                                 int songRef = findSong(token);
                                 if (songRef != -1) {
-                                    if (strcmpi(token, "none") != 0 && strcmpi(token, "end") != 0) {
+                                    if (strcmpi(tokenValue, "none") != 0 && strcmpi(tokenValue, "end") != 0) {
                                         // NOTE: Uninline.
-                                        jumpList[index].list[section * numSongs + index] = findSongSection(songRef, tokenValue);
+                                        jumpList[index].list[section * numSongs + songRef] = findSongSection(songRef, tokenValue);
                                     } else {
-                                        jumpList[index].list[section * numSongs + index] = -1;
+                                        jumpList[index].list[section * numSongs + songRef] = -1;
                                     }
                                 }
                             }
@@ -488,37 +492,42 @@ size_t musicSoundRead(int fd, void* buf, size_t size)
 
     int v1 = 0;
     if (currentSection == -1) {
-        currentSection = nextSection >= 0 ? nextSection : 0;
+        // NOTE: No clamp, `nextSection` can be -1 here.
+        currentSection = nextSection;
         currentSong = nextSong;
         v1 = 1;
-    } else if (nextSong == numSongs || jumpList[currentSong].list[currentSection * numSongs + nextSong] == -1) {
-        if (jumpList[currentSong].tag[currentSection][0] != '\0') {
-            char* fileName = getSectionName(jumpList[currentSong].name, jumpList[currentSong].tag[currentSection]);
-            if (stricmp(jumpList[currentSong].tag[currentSection], "none") == 0) {
-                currentSong = nextSong;
-                currentSection = 0;
-            } else if (stricmp(jumpList[currentSong].tag[currentSection], "end") == 0) {
-                currentSong = numSongs;
-                currentSection = -2;
-                memset((unsigned char*)buf + bytesRead, 0, size - bytesRead);
-                return bytesRead;
-            } else {
-                currentSectionName = fileName;
-
-                currentSong = nextSong;
-                currentSection = -1;
-
-                // NOTE: Uninline.
-                currentSectionFile = openSectionFile(fileName);
-
-                gSecondSectionSize = audioRead(currentSectionFile, (unsigned char*)buf + bytesRead, size - bytesRead);
-                return bytesRead + gSecondSectionSize;
-            }
-        } else {
-            currentSection = jumpList[currentSong].list[currentSection * numSongs + currentSong];
-        }
-    } else {
+    } else if (nextSong != numSongs && jumpList[currentSong].list[currentSection * numSongs + nextSong] != -1) {
+        currentSection = jumpList[currentSong].list[currentSection * numSongs + nextSong];
         currentSong = nextSong;
+    } else {
+        char* fileName = NULL;
+        if (jumpList[currentSong].tag[currentSection][0] != '\0') {
+            // NOTE: Uninline.
+            fileName = getSectionName(jumpList[currentSong].name, jumpList[currentSong].tag[currentSection]);
+        }
+
+        if (fileName == NULL) {
+            currentSection = jumpList[currentSong].list[currentSection * numSongs + currentSong];
+        } else if (stricmp(jumpList[currentSong].tag[currentSection], "none") == 0) {
+            currentSong = nextSong;
+            currentSection = 0;
+        } else if (stricmp(jumpList[currentSong].tag[currentSection], "end") == 0) {
+            currentSong = numSongs;
+            currentSection = -2;
+            memset((unsigned char*)buf + bytesRead, 0, size - bytesRead);
+            return bytesRead;
+        } else {
+            currentSectionName = fileName;
+
+            currentSong = nextSong;
+            currentSection = -1;
+
+            // NOTE: Uninline.
+            currentSectionFile = openSectionFile(fileName);
+
+            gSecondSectionSize = audioRead(currentSectionFile, (unsigned char*)buf + bytesRead, size - bytesRead);
+            return bytesRead + gSecondSectionSize;
+        }
     }
 
     // NOTE: Uninline.
@@ -535,7 +544,7 @@ size_t musicSoundRead(int fd, void* buf, size_t size)
             audioSeek(currentSectionFile, nextPosition - nextPosition % songSound->dataSize, 0);
         }
 
-        memset(buf, 0, size - bytesRead);
+        memset((unsigned char*)buf + bytesRead, 0, size - bytesRead);
         currentSection = -2;
         return size;
     }
@@ -574,6 +583,8 @@ void musicFade(int song, int section, int position, int fadeTime)
         fadeSection = section;
         fadePosition = position;
         soundFadePause(songSound, fadeTime, 0);
+    } else {
+        forceSong(song, section, position);
     }
 }
 
@@ -653,7 +664,7 @@ int musicSetVolume(int volume)
     currentMusicVolume = volume;
 
     if (songSound != NULL) {
-        soundVolume(songSound, volume);
+        soundVolume(songSound, currentMusicVolume);
     }
 
     return 0;
@@ -704,7 +715,7 @@ int forceSong(int song, int section, int position)
 
     nextSong = song;
     nextPosition = -1;
-    nextSection = 1;
+    nextSection = -1;
 
     fadeSong = -3;
 
@@ -720,7 +731,7 @@ int forceSong(int song, int section, int position)
     currentSectionFile = openSectionFile(fileName);
 
     if (currentSectionFile == NULL) {
-        return 0;
+        return 5;
     }
 
     currentSongName = jumpList[currentSong].name;
@@ -768,7 +779,7 @@ int musicGetSongPlaying()
 int musicGetPosition()
 {
     if (songSound == NULL) {
-        return -1;
+        return 0;
     }
 
     int pos = soundGetDirectSoundBufferPosition(songSound);
@@ -856,6 +867,12 @@ int setupNewSong()
         return 5;
     }
 
+    if (songSound != NULL) {
+        soundDelete(songSound);
+        songSound = NULL;
+        dword_A0E1D0 = 0;
+    }
+
     songSound = soundAllocate(SOUND_TYPE_STREAMING | SOUND_TYPE_FIRE_AND_FORGET | SOUND_TYPE_0x20, SOUND_16BIT | SOUND_CTRL_VOLUME);
     if (songSound == NULL) {
         return 5;
@@ -882,26 +899,28 @@ char* getSectionName(char* song, char* section)
     // 0xA0E2F0
     static char buf[256];
 
-    if (section != NULL) {
-        if (strnicmp(section, "SPC", 3) == 0) {
-            sprintf(buf,
-                "%s%s.%s",
-                defaultMusicPath,
-                section,
-                defaultMusicExtension);
-        } else if (strnicmp(section, "MX0000A", 7) == 0) {
-            sprintf(buf,
-                "%sMX0000/MX0000A.ACM",
-                defaultMusicPath);
-        } else {
-            sprintf(buf,
-                "%s%s/%s%s.%s",
-                defaultMusicPath,
-                song,
-                song,
-                section,
-                defaultMusicExtension);
-        }
+    if (section == NULL) {
+        return NULL;
+    }
+
+    if (strnicmp(section, "SPC", 3) == 0) {
+        sprintf(buf,
+            "%s%s.%s",
+            defaultMusicPath,
+            section,
+            defaultMusicExtension);
+    } else if (strnicmp(section, "MX0000A", 7) == 0) {
+        sprintf(buf,
+            "%sMX0000/MX0000A.ACM",
+            defaultMusicPath);
+    } else {
+        sprintf(buf,
+            "%s%s/%s%s.%s",
+            defaultMusicPath,
+            song,
+            song,
+            section,
+            defaultMusicExtension);
     }
 
     return buf;
