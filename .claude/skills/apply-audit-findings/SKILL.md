@@ -9,6 +9,12 @@ Input: a worktree and branch, the files you own, and one or more findings files.
 section of a findings file is one claim: a function address, what the exe is said to do,
 what the repo does, asm addresses, and a proposed fix.
 
+Every file you edit must be under the worktree path you were given. The main tree
+`c:\Users\Luke\Projects\iwd2-re` has the same files at the same relative paths; an edit
+there by mistake gets swept into someone else's commit. Check the path before each edit, and
+if you find you have edited the main tree, restore that file with `git -C <main tree>
+checkout -- <file>` and say so in the report.
+
 Claims are unconfirmed. About one in forty is wrong, and about one in eight proposed fixes
 is not quite what the exe does. You decide from the asm.
 

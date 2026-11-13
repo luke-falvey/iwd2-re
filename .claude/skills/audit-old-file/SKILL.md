@@ -61,12 +61,15 @@ signature change.
 
 ## 5. Merge, mark, test
 
-On `phase-a/stubs-and-layout`, with no play test running:
+On `phase-a/stubs-and-layout`, with no play test running. First run `git status --short`:
+the main tree must be clean. A modified source file there is a fixer's stray edit; restore it
+before merging, and never use `git commit -a` for the mark commit (add
+`tools/audited_old.txt` by name).
 
 ```
 git merge --no-ff <hash> -m "Merge batch N: <file> old-code audit fixes (<what>)"
 py -I tools/audit_tranches.py --mark <scratch dir> <tag> [<tag> ...]
-git commit -am "Mark <file> old functions as audited"
+git commit -m "Mark <file> old functions as audited" tools/audited_old.txt
 tools\play.ps1 > <scratch dir>\play_N.log 2>&1      # background, about 10 minutes
 ```
 
