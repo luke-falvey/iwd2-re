@@ -444,6 +444,7 @@ void CGame85BF7C::Render(CGameArea* pArea, CVidMode* pVidMode, int a3)
 
 // 0x7105B0
 CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const CPoint& pos, WORD a5, BYTE a6, BYTE a7, WORD a8)
+    : m_palette(CVidPalette::TYPE_RANGE)
 {
     memcpy(m_colors, pColors, sizeof(m_colors));
 

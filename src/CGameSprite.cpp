@@ -728,7 +728,9 @@ CAIAction CGameSprite::m_aiDoAction;
 
 // 0x6EF990
 CGameSprite::CGameSprite(BYTE* pCreature, LONG creatureSize, int a3, WORD type, DWORD expirationTime, WORD huntingRange, WORD followRange, DWORD timeOfDayVisible, CPoint startPos, WORD facing)
-    : m_portraitIconVidCell(CResRef("STATES"), g_pBaldurChitin->field_4A28)
+    : m_spriteEffectPalette(CVidPalette::TYPE_RANGE)
+    , m_spriteSplashPalette(CVidPalette::TYPE_RANGE)
+    , m_portraitIconVidCell(CResRef("STATES"), g_pBaldurChitin->field_4A28)
 {
     int index;
 

@@ -106,3 +106,22 @@ Steps and checkpoints (name, region, limit); original results per run and
 any variants; rebuild result per checkpoint with what differs; what was
 dropped and why; run time; new coordinates and lessons worth adding to this
 skill.
+
+## Targos docks (AR1000) notes
+
+- Move the view with the area map, not the arrow keys (their distance depends
+  on the frame rate). The map is drawn at 1/8 scale with its top-left at
+  screen (138,73): a click at (x,y) centres the view on map point
+  ((x-138)*8, (y-73)*8).
+- Clicks on unexplored black map are ignored: walk in steps onto ground
+  already shown.
+- Hostile creatures can be found by the pure red (255,0,40) of their
+  selection circle.
+- The parked pointer at (300,560) covers the bottom message line; move it
+  before comparing that line.
+- Combat messages, hit points and gold amounts vary run to run on the
+  original. "The party has gained experience: N" does not.
+- `test_s9_docks.py` lists people, doors and exits with map coordinates.
+- Reading game files: the S9 author's `res.py` / `are.py` (scratchpad `s9`)
+  read a resource from CHITIN.KEY and list an area's actors, regions,
+  containers and doors.
