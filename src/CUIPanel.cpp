@@ -12,6 +12,8 @@
 // 0x4D2750
 CUIPanel::CUIPanel(CUIManager* manager, UI_PANELHEADER* panelInfo)
 {
+    m_rDirty.SetRect(0, 0, 0, 0);
+
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ChUI.cpp
     // __LINE__: 286
     UTIL_ASSERT(manager != NULL && panelInfo != NULL);
@@ -139,7 +141,7 @@ BOOL CUIPanel::RemoveControl(DWORD nID)
         }
     }
 
-    return TRUE;
+    return FALSE;
 }
 
 // 0x4D2B90
@@ -153,7 +155,7 @@ DWORD CUIPanel::TimerAsynchronousUpdate()
         POSITION pos = m_lControls.GetHeadPosition();
         while (pos != NULL) {
             CUIControlBase* pControl = m_lControls.GetNext(pos);
-            if (pControl->m_bActive
+            if (m_bActive
                 && (g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nTooltips != INT_MAX || m_pManager->field_76)
                 && pControl->IsOver(pt)) {
                 pControl->TimerAsynchronousUpdate(TRUE);
