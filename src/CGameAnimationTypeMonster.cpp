@@ -197,6 +197,7 @@ CGameAnimationTypeMonster::CGameAnimationTypeMonster(USHORT animationID, BYTE* c
             }
             break;
         }
+        break;
     case 0x400:
         m_colorChunks = -1;
         m_moveScale = 8;
@@ -425,6 +426,7 @@ CGameAnimationTypeMonster::CGameAnimationTypeMonster(USHORT animationID, BYTE* c
             break;
         case 1:
             m_resRef = "MTAS";
+            m_falseColor = FALSE;
             break;
         }
         break;
