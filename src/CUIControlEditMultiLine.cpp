@@ -2624,7 +2624,7 @@ void CUIControlEditMultiLineScroller::OnScrollDown()
 // NOTE: Uninline.
 void CUIControlEditMultiLineScroller::OnPageUp(DWORD nLines)
 {
-    SHORT v1 = static_cast<SHORT>(nLines);
+    SHORT v1 = static_cast<SHORT>(nLines & 0x7FFF);
     if (v1 > field_878) {
         v1 = field_878;
     }
@@ -2650,7 +2650,7 @@ void CUIControlEditMultiLineScroller::OnPageDown(DWORD nLines)
     if (field_87A < field_878) {
         field_86E = 0;
     } else {
-        SHORT v1 = static_cast<SHORT>(nLines);
+        SHORT v1 = static_cast<SHORT>(nLines & 0x7FFF);
         if (v1 > field_878) {
             v1 = field_878;
         }
