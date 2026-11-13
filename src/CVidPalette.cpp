@@ -665,7 +665,7 @@ void CVidPalette::Realize(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, CVIDIMG_
         if (g_pChitin->cVideo.m_bIs3dAccelerated) {
             RealizeResource3d(pDestPalette, dwFlags, pAffectArgs, nTransVal);
         } else {
-            if (pAffectArgs != NULL
+            if (dwFlags != 0
                 || g_pChitin->GetCurrentVideoMode()->m_nBrightnessCorrection != 0
                 || g_pChitin->GetCurrentVideoMode()->m_nGammaCorrection != 0) {
                 RealizeResource(pDestPalette, nBpp, dwFlags, pAffectArgs);
@@ -731,7 +731,7 @@ BOOL CVidPalette::GetTint(CVIDPALETTE_COLOR& rgbTint, CVIDIMG_PALETTEAFFECT* pAf
             rgbTint.rgbGreen = GetGValue(rgbGlobalTintColor) * GetGValue(pAffectArgs->rgbTintColor);
             rgbTint.rgbBlue = GetBValue(rgbGlobalTintColor) * GetBValue(pAffectArgs->rgbTintColor);
             nShiftBack = 16;
-            nMaxValue = 255 * 255;
+            nMaxValue = 0xFFFF;
             return TRUE;
         } else {
             rgbTint.rgbRed = GetRValue(pAffectArgs->rgbTintColor);
@@ -1167,18 +1167,23 @@ void CVidPalette::RealizeResource(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, 
     if (pAffectArgs != NULL) {
         if (pAffectArgs->pRangeAdds[0] != NULL) {
             if (pAffectArgs->aRangeAddPeriods[0] == 1 || pAffectArgs->aRangeAddPeriods[0] == 0) {
-                rgbInv.rgbRed *= ~GetRValue(*pAffectArgs->pRangeAdds[0]);
-                rgbInv.rgbGreen *= ~GetGValue(*pAffectArgs->pRangeAdds[0]);
-                rgbInv.rgbBlue *= ~GetBValue(*pAffectArgs->pRangeAdds[0]);
+                rgbInv.rgbRed *= static_cast<BYTE>(~GetRValue(*pAffectArgs->pRangeAdds[0]));
+                rgbInv.rgbGreen *= static_cast<BYTE>(~GetGValue(*pAffectArgs->pRangeAdds[0]));
+                rgbInv.rgbBlue *= static_cast<BYTE>(~GetBValue(*pAffectArgs->pRangeAdds[0]));
+
+                // NOTE: The original stores the period (0 or 1) as the add
+                // percentage. With a period of 0 the suppress-tint division
+                // below divides by zero.
+                nAddPercentage = pAffectArgs->aRangeAddPeriods[0];
             } else {
                 nAddPercentage = m_nAUCounter % (2 * pAffectArgs->aRangeAddPeriods[0]);
                 if (nAddPercentage > pAffectArgs->aRangeAddPeriods[0]) {
                     nAddPercentage = 2 * pAffectArgs->aRangeAddPeriods[0] - nAddPercentage;
                 }
 
-                rgbInv.rgbRed *= ~(nAddPercentage * GetRValue(*pAffectArgs->pRangeAdds[0]) / pAffectArgs->aRangeAddPeriods[0]);
-                rgbInv.rgbGreen *= ~(nAddPercentage * GetGValue(*pAffectArgs->pRangeAdds[0]) / pAffectArgs->aRangeAddPeriods[0]);
-                rgbInv.rgbBlue *= ~(nAddPercentage * GetBValue(*pAffectArgs->pRangeAdds[0]) / pAffectArgs->aRangeAddPeriods[0]);
+                rgbInv.rgbRed *= static_cast<BYTE>(~(nAddPercentage * GetRValue(*pAffectArgs->pRangeAdds[0]) / pAffectArgs->aRangeAddPeriods[0]));
+                rgbInv.rgbGreen *= static_cast<BYTE>(~(nAddPercentage * GetGValue(*pAffectArgs->pRangeAdds[0]) / pAffectArgs->aRangeAddPeriods[0]));
+                rgbInv.rgbBlue *= static_cast<BYTE>(~(nAddPercentage * GetBValue(*pAffectArgs->pRangeAdds[0]) / pAffectArgs->aRangeAddPeriods[0]));
             }
 
             bAdd = TRUE;
@@ -1237,9 +1242,9 @@ void CVidPalette::RealizeResource(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, 
         for (INT nIndex = 0; nIndex < nReservedEntries; nIndex++) {
             if (nIndex == CVidPalette::SHADOW_ENTRY) {
                 COLORREF rgb = pVidMode->ApplyBrightnessContrast(RGB(0, 0, 0));
-                *pDestPalette++ = ((GetRValue(rgb) >> v1) << dwRBitShift) | ((GetGValue(rgb) >> v2) << dwGBitShift) | ((GetBValue(rgb) >> v3) << dwBBitShift);
+                *reinterpret_cast<WORD*>(pDestPalette++) = static_cast<WORD>(((GetRValue(rgb) >> v1) << dwRBitShift) | ((GetGValue(rgb) >> v2) << dwGBitShift) | ((GetBValue(rgb) >> v3) << dwBBitShift));
             } else {
-                *pDestPalette++ = ((m_pPalette[nIndex].rgbRed >> v1) << dwRBitShift) | ((m_pPalette[nIndex].rgbGreen >> v2) << dwGBitShift) | ((m_pPalette[nIndex].rgbBlue >> v3) << dwBBitShift);
+                *reinterpret_cast<WORD*>(pDestPalette++) = static_cast<WORD>(((m_pPalette[nIndex].rgbRed >> v1) << dwRBitShift) | ((m_pPalette[nIndex].rgbGreen >> v2) << dwGBitShift) | ((m_pPalette[nIndex].rgbBlue >> v3) << dwBBitShift));
             }
         }
         v10 = (255 >> v2) << dwGBitShift;
@@ -1257,13 +1262,18 @@ void CVidPalette::RealizeResource(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, 
         v11 = 254 << dwGBitShift;
     }
 
-    for (INT nIndex = nReservedEntries; nIndex < 256; nIndex++) {
+    // NOTE: The original counts down in a BYTE (`SUB CH,1` / `JNC`), so it
+    // realizes `((m_nEntries - nReservedEntries - 1) & 0xFF) + 1` entries:
+    // all 256 for a full palette.
+    BYTE nCount = static_cast<BYTE>(m_nEntries - nReservedEntries - 1);
+    INT nIndex = nReservedEntries;
+    do {
         RGBQUAD rgb = m_pPalette[nIndex];
 
         if ((dwFlags & 0x80000) != 0) {
             rgb.rgbRed = (rgb.rgbRed + rgb.rgbGreen + rgb.rgbBlue) / 4;
             rgb.rgbGreen = rgb.rgbRed;
-            rgb.rgbBlue = rgb.rgbBlue;
+            rgb.rgbBlue = rgb.rgbRed;
         }
 
         if ((dwFlags & 0x2000000) != 0) {
@@ -1300,11 +1310,10 @@ void CVidPalette::RealizeResource(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, 
 
         if (bIs16) {
             WORD color = ((rgb.rgbRed >> v1) << dwRBitShift) | ((rgb.rgbGreen >> v2) << dwGBitShift) | ((rgb.rgbBlue >> v3) << dwBBitShift);
-            if (color == v10) {
-                // TODO: Check.
+            if (color == static_cast<WORD>(v10)) {
                 color = static_cast<WORD>(v11);
             }
-            *pDestPalette++ = color;
+            *reinterpret_cast<WORD*>(pDestPalette++) = color;
         } else {
             DWORD color = (rgb.rgbRed << dwRBitShift) | (rgb.rgbGreen << dwGBitShift) | (rgb.rgbBlue << dwBBitShift);
             if (color == v10) {
@@ -1312,7 +1321,9 @@ void CVidPalette::RealizeResource(DWORD* pDestPalette, INT nBpp, DWORD dwFlags, 
             }
             *pDestPalette++ = color;
         }
-    }
+
+        nIndex++;
+    } while (nCount-- != 0);
 }
 
 // NOTE: Inlined in `CVidPalette::Realize`.
@@ -1331,14 +1342,26 @@ void CVidPalette::QuickRealizeResource(DWORD* pDestPalette, INT nBpp)
     DWORD dwGBitShift = pVidMode->m_dwGBitShift;
     DWORD dwBBitShift = pVidMode->m_dwBBitShift;
 
+    // NOTE: The original counts down in a BYTE (`SUB CH,1` / `JNC`), so it
+    // realizes `((m_nEntries - 1) & 0xFF) + 1` entries: 256 for a full
+    // palette, but also 256 for `m_nEntries == 0` and 255 for `-1`.
+    BYTE nCount = static_cast<BYTE>(m_nEntries - 1);
+    RGBQUAD* pSrc = m_pPalette;
+
     if (bIs16) {
-        for (int index = 0; index < m_nEntries; index++) {
-            pDestPalette[index] = ((m_pPalette[index].rgbRed >> v1) << dwRBitShift) | ((m_pPalette[index].rgbGreen >> v2) << dwGBitShift) | ((m_pPalette[index].rgbBlue >> v3) << dwBBitShift);
-        }
+        do {
+            // NOTE: 16-bpp entries are WORD stores into the DWORD array; the
+            // high word is left untouched.
+            *reinterpret_cast<WORD*>(pDestPalette) = static_cast<WORD>(((pSrc->rgbRed >> v1) << dwRBitShift) | ((pSrc->rgbGreen >> v2) << dwGBitShift) | ((pSrc->rgbBlue >> v3) << dwBBitShift));
+            pDestPalette++;
+            pSrc++;
+        } while (nCount-- != 0);
     } else {
-        for (int index = 0; index < m_nEntries; index++) {
-            pDestPalette[index] = (m_pPalette[index].rgbRed << dwRBitShift) | (m_pPalette[index].rgbGreen << dwGBitShift) | (m_pPalette[index].rgbBlue << dwBBitShift);
-        }
+        do {
+            *pDestPalette = (pSrc->rgbRed << dwRBitShift) | (pSrc->rgbGreen << dwGBitShift) | (pSrc->rgbBlue << dwBBitShift);
+            pDestPalette++;
+            pSrc++;
+        } while (nCount-- != 0);
     }
 }
 
@@ -1400,18 +1423,23 @@ void CVidPalette::RealizeResource3d(DWORD* pDestPalette, DWORD dwFlags, CVIDIMG_
     if (pAffectArgs != NULL) {
         if (pAffectArgs->pRangeAdds[0] != NULL) {
             if (pAffectArgs->aRangeAddPeriods[0] == 1 || pAffectArgs->aRangeAddPeriods[0] == 0) {
-                rgbInv.rgbRed *= ~GetRValue(*pAffectArgs->pRangeAdds[0]);
-                rgbInv.rgbGreen *= ~GetGValue(*pAffectArgs->pRangeAdds[0]);
-                rgbInv.rgbBlue *= ~GetBValue(*pAffectArgs->pRangeAdds[0]);
+                rgbInv.rgbRed *= static_cast<BYTE>(~GetRValue(*pAffectArgs->pRangeAdds[0]));
+                rgbInv.rgbGreen *= static_cast<BYTE>(~GetGValue(*pAffectArgs->pRangeAdds[0]));
+                rgbInv.rgbBlue *= static_cast<BYTE>(~GetBValue(*pAffectArgs->pRangeAdds[0]));
+
+                // NOTE: The original stores the period (0 or 1) as the add
+                // percentage. With a period of 0 the suppress-tint division
+                // below divides by zero.
+                nAddPercentage = pAffectArgs->aRangeAddPeriods[0];
             } else {
                 nAddPercentage = m_nAUCounter % (2 * pAffectArgs->aRangeAddPeriods[0]);
                 if (nAddPercentage > pAffectArgs->aRangeAddPeriods[0]) {
                     nAddPercentage = 2 * pAffectArgs->aRangeAddPeriods[0] - nAddPercentage;
                 }
 
-                rgbInv.rgbRed *= ~(nAddPercentage * GetRValue(*pAffectArgs->pRangeAdds[0]) / pAffectArgs->aRangeAddPeriods[0]);
-                rgbInv.rgbGreen *= ~(nAddPercentage * GetGValue(*pAffectArgs->pRangeAdds[0]) / pAffectArgs->aRangeAddPeriods[0]);
-                rgbInv.rgbBlue *= ~(nAddPercentage * GetBValue(*pAffectArgs->pRangeAdds[0]) / pAffectArgs->aRangeAddPeriods[0]);
+                rgbInv.rgbRed *= static_cast<BYTE>(~(nAddPercentage * GetRValue(*pAffectArgs->pRangeAdds[0]) / pAffectArgs->aRangeAddPeriods[0]));
+                rgbInv.rgbGreen *= static_cast<BYTE>(~(nAddPercentage * GetGValue(*pAffectArgs->pRangeAdds[0]) / pAffectArgs->aRangeAddPeriods[0]));
+                rgbInv.rgbBlue *= static_cast<BYTE>(~(nAddPercentage * GetBValue(*pAffectArgs->pRangeAdds[0]) / pAffectArgs->aRangeAddPeriods[0]));
             }
 
             bAdd = TRUE;
@@ -1473,7 +1501,12 @@ void CVidPalette::RealizeResource3d(DWORD* pDestPalette, DWORD dwFlags, CVIDIMG_
         }
     }
 
-    for (INT nIndex = nReservedEntries; nIndex < 256; nIndex++) {
+    // NOTE: The original counts down in a BYTE (`SUB CH,1` / `JNC`), so it
+    // realizes `((m_nEntries - nReservedEntries - 1) & 0xFF) + 1` entries:
+    // all 256 for a full palette.
+    BYTE nCount = static_cast<BYTE>(m_nEntries - nReservedEntries - 1);
+    INT nIndex = nReservedEntries;
+    do {
         RGBQUAD rgb = m_pPalette[nIndex];
 
         if (bTint) {
@@ -1503,7 +1536,9 @@ void CVidPalette::RealizeResource3d(DWORD* pDestPalette, DWORD dwFlags, CVIDIMG_
         }
 
         pDestPalette[nIndex] = nNewTransVal | (rgb.rgbRed << dwRBitShift) | (rgb.rgbGreen << dwGBitShift) | (rgb.rgbBlue << dwBBitShift);
-    }
+
+        nIndex++;
+    } while (nCount-- != 0);
 
     if ((dwFlags & 0x1) != 0) {
         if (memcmp(&(m_pPalette[CLEAR_ENTRY]), &CLEAR_RGBQUAD, sizeof(RGBQUAD)) == 0) {
