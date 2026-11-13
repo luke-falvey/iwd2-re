@@ -106,7 +106,7 @@ BOOL CVidInf::ActivateVideoMode(CVidMode* pPrevVidMode, HWND hWnd, BOOLEAN bFull
 
         SetWindowedMode(hWnd);
     } else {
-        int nBpp = CUtil::GetCurrentBitsPerPixels();
+        USHORT nBpp = static_cast<USHORT>(g_pChitin->GetSavedBitsPerPixel());
         switch (nBpp) {
         case 16:
         case 24:
@@ -194,6 +194,7 @@ BOOLEAN CVidInf::SetClipper(IDirectDrawClipper* lpDirectDrawClipper)
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChVideo.cpp
         // __LINE__: 6208
         UTIL_ASSERT(FALSE);
+        return FALSE;
     }
 
     return TRUE;
@@ -273,7 +274,7 @@ BOOL CVidInf::CreateSurfaces(BOOLEAN bFullscreen)
         }
     }
 
-    surfaceDesc.ddpfPixelFormat.dwFlags = sizeof(surfaceDesc.ddpfPixelFormat);
+    surfaceDesc.ddpfPixelFormat.dwSize = sizeof(surfaceDesc.ddpfPixelFormat);
 
     hr = pSurfaces[CVIDINF_SURFACE_BACK]->GetPixelFormat(&(surfaceDesc.ddpfPixelFormat));
     if (hr != DD_OK) {
@@ -283,8 +284,9 @@ BOOL CVidInf::CreateSurfaces(BOOLEAN bFullscreen)
     ParsePixelFormat(surfaceDesc.ddpfPixelFormat);
 
     DDCOLORKEY colorKey;
+    field_24 = m_dwGBitMask;
     colorKey.dwColorSpaceLowValue = m_dwGBitMask;
-    colorKey.dwColorSpaceLowValue = m_dwGBitMask;
+    colorKey.dwColorSpaceHighValue = m_dwGBitMask;
 
     surfaceDesc.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH;
 
@@ -421,8 +423,8 @@ BOOL CVidInf::CreateSurfaces(BOOLEAN bFullscreen)
     pSurfaces[CVIDINF_SURFACE_7]->SetColorKey(DDCKEY_SRCBLT, &colorKey);
 
     if (g_pChitin->cVideo.m_nBpp == 16
-        && (g_pChitin->cVideo.cVidBlitter.m_bSoftSrcKeyBlt
-            || g_pChitin->cVideo.cVidBlitter.m_bSoftSrcKeyBltFast)) {
+        && (g_pChitin->cVideo.cVidBlitter.m_bSoftBlt
+            || g_pChitin->cVideo.cVidBlitter.m_bSoftBltFast)) {
         surfaceDesc.ddsCaps.dwCaps = DDSCAPS_SYSTEMMEMORY | DDSCAPS_OFFSCREENPLAIN;
     } else {
         surfaceDesc.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN;
@@ -499,7 +501,7 @@ void CVidInf::DestroySurfaces()
             pSurfaces[CVIDINF_SURFACE_FRONT] = NULL;
         }
 
-        if (pSurfaces[CVIDINF_SURFACE_BACK] != NULL) {
+        if (!g_pChitin->m_bFullscreen && pSurfaces[CVIDINF_SURFACE_BACK] != NULL) {
             pSurfaces[CVIDINF_SURFACE_BACK]->Release();
             pSurfaces[CVIDINF_SURFACE_BACK] = NULL;
         }
@@ -705,9 +707,9 @@ BOOL CVidInf::FullScreenFlip(BOOL bRenderCursor)
     if (bRenderCursor) {
         if (field_14) {
             if (bPointerRendered
-                && rOldPointerStorage.Width() > 0
-                && rOldPointerStorage.Height() > 0) {
-                m_pPointerVidCell->RestoreBackground(CVIDINF_SURFACE_4, CVIDINF_SURFACE_BACK, rOldPointerStorage);
+                && m_rPointerStorage.Width() > 0
+                && m_rPointerStorage.Height() > 0) {
+                m_pPointerVidCell->RestoreBackground(CVIDINF_SURFACE_4, CVIDINF_SURFACE_BACK, m_rPointerStorage);
             }
         } else {
             if (bPointerRendered
@@ -880,7 +882,11 @@ BOOL CVidInf::FXPrep(CRect& rFXRect, DWORD dwFlags, const CPoint& ptPos, const C
     CPoint pt = ptReference;
 
     if (g_pChitin->cVideo.Is3dAccelerated()) {
-        memset(CVideo3d::texImageData, 0, rFXRect.Height() * 2048);
+        if (g_pChitin->cVideo.field_13A) {
+            memset(CVideo3d::texImageData, 0, rFXRect.Height() * 2048);
+        } else {
+            memset(CVideo3d::texImageData, 0, rFXRect.Height() * rFXRect.Width() * 4);
+        }
         return TRUE;
     }
 
@@ -1482,7 +1488,9 @@ BOOL CVidInf::FXTextOut(CVidFont* pFont, const CString& sString, INT x, INT y, c
     }
 
     INT nSurface;
-    g_pChitin->GetCurrentVideoMode()->GetFXSurface(nSurface, dwFlags);
+    if (!g_pChitin->GetCurrentVideoMode()->GetFXSurface(nSurface, dwFlags)) {
+        return FALSE;
+    }
 
     return pFont->TextOutEx(nSurface,
         sString,
@@ -1685,6 +1693,7 @@ BOOL CVidInf::BKRender(CParticle* pParticle, const CRect& rClip, USHORT nFlag, U
 
     if (m_SurfaceDesc.lpSurface != NULL) {
         pParticle->Render(m_SurfaceDesc.lpSurface, m_SurfaceDesc.lPitch, rClip, nFlag, nBlobSize);
+        return TRUE;
     }
 
     return FALSE;
@@ -2305,12 +2314,12 @@ void CVidInf::RenderFlash(UINT nSurface, COLORREF rgbColor, unsigned char a4, co
         fx.dwFillColor = ConvertToSurfaceRGB(rgbColor);
 
         do {
-            HRESULT hr = g_pChitin->cVideo.cVidBlitter.Blt(pSurfaces[CVIDINF_SURFACE_FRONT],
+            HRESULT hr = g_pChitin->cVideo.cVidBlitter.Blt(pSurfaces[nSurface],
                 &destRect,
                 NULL,
                 NULL,
                 DDBLT_WAIT | DDBLT_COLORFILL,
-                NULL);
+                &fx);
             CheckResults(hr);
             if (hr != DDERR_SURFACELOST && hr != DDERR_WASSTILLDRAWING) {
                 break;
@@ -2450,7 +2459,7 @@ void CVidInf::RestoreSurfaces()
             ddck.dwColorSpaceLowValue = m_dwGBitMask;
             ddck.dwColorSpaceHighValue = ddck.dwColorSpaceLowValue;
 
-            if (!g_pChitin->m_bFullscreen) {
+            if (!g_pChitin->m_bFullscreen && pSurfaces[CVIDINF_SURFACE_BACK] != NULL) {
                 hr = pSurfaces[CVIDINF_SURFACE_BACK]->Restore();
                 CheckResults(hr);
             }
@@ -2529,7 +2538,6 @@ void CVidInf::RestoreSurfaces()
     }
 }
 
-// #binary-identical
 // 0x7A0210
 void CVidInf::ParsePixelFormat(const DDPIXELFORMAT& ddpf)
 {
@@ -2607,7 +2615,7 @@ void CVidInf::ParsePixelFormat(const DDPIXELFORMAT& ddpf)
     case 24:
     case 32:
         dwRBitMask = m_dwRBitMask;
-        for (bit = 0; bit < 16; bit++) {
+        for (bit = 0; bit < 32; bit++) {
             if ((dwRBitMask & 1) != 0) {
                 break;
             }
@@ -2617,7 +2625,7 @@ void CVidInf::ParsePixelFormat(const DDPIXELFORMAT& ddpf)
         m_dwRBitShift = bit;
 
         dwGBitMask = m_dwGBitMask;
-        for (bit = 0; bit < 16; bit++) {
+        for (bit = 0; bit < 32; bit++) {
             if ((dwGBitMask & 1) != 0) {
                 break;
             }
@@ -2628,7 +2636,7 @@ void CVidInf::ParsePixelFormat(const DDPIXELFORMAT& ddpf)
         m_dwGBitShift = bit;
 
         dwBBitMask = m_dwBBitMask;
-        for (bit = 0; bit < 16; bit++) {
+        for (bit = 0; bit < 32; bit++) {
             if ((dwBBitMask & 1) != 0) {
                 break;
             }
