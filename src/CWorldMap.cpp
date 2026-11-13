@@ -157,10 +157,10 @@ void CWorldMap::SetResRef(const CResRef& cResRef)
 
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CWorldMap.cpp
             // __LINE__: 305
-            UTIL_ASSERT(m_ppAreas[nMap] != NULL);
+            UTIL_ASSERT(m_ppLinks[nMap] != NULL);
 
             for (DWORD nLink = 0; nLink < nLinks; nLink++) {
-                cnt = m_pData[nMap].m_nAreasOffset + sizeof(CWorldMapLinks) * nLink;
+                cnt = m_pData[nMap].m_nOffsetToLinks + sizeof(CWorldMapLinks) * nLink;
 
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CWorldMap.cpp
                 // __LINE__: 310

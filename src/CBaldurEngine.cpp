@@ -789,7 +789,7 @@ void CBaldurEngine::OnLeftPanelButtonClick(DWORD dwButtonId)
     case 6:
         if (g_pBaldurChitin->m_pEngineJournal != g_pBaldurChitin->GetActiveEngine()) {
             // FIXME: Calls `GetCurrentChapter` 4 times.
-            g_pBaldurChitin->m_pEngineJournal->m_nChapter = max(min(g_pBaldurChitin->GetObjectGame()->GetCurrentChapter(), CGameJournal::NUM_CHAPTERS - 1), 0);
+            g_pBaldurChitin->m_pEngineJournal->m_nChapter = min(max(0, g_pBaldurChitin->GetObjectGame()->GetCurrentChapter()), CGameJournal::NUM_CHAPTERS - 1);
             g_pBaldurChitin->m_pEngineJournal->OnPortraitLClick(g_pBaldurChitin->GetActiveEngine()->GetSelectedCharacter());
             g_pBaldurChitin->GetActiveEngine()->SelectEngine(g_pBaldurChitin->m_pEngineJournal);
         }

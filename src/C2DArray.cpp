@@ -153,7 +153,7 @@ void C2DArray::Load(const CResRef& cResRef)
 
         posY = 0;
         v2 = v1;
-        while (v2.GetLength() > 0) {
+        while (v2.GetLength() > 0 && posY < m_nSizeY) {
             v3 = CAIUtil::ReadToChar(v2, NEWLINE);
             v2 = CAIUtil::ReadAfterChar(v2, NEWLINE);
             v5 = CAIUtil::ReadToChar(v3, SPACE);
@@ -193,6 +193,9 @@ const CString& C2DArray::GetAt(const CString& nX, const CString& nY) const
                     return m_pArray[x + y * m_nSizeX];
                 }
             }
+
+            // NOTE: The matching column is not searched further.
+            break;
         }
     }
 
