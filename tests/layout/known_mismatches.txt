@@ -2243,6 +2243,8 @@ CScreenWorld::field_11B6
 CScreenWorld::field_11BA
 CScreenWorld::field_11BE
 CScreenWorld::field_11D0
+CScreenWorld::field_11E0
+CScreenWorld::field_11EC
 CScreenWorld::field_11E
 CScreenWorld::field_11F0
 CScreenWorld::field_11F4

@@ -111,19 +111,19 @@ CScreenWorld::CScreenWorld()
     m_pVirtualKeys[42] = CKeyInfo(VK_UP, 0, 0);
     m_pVirtualKeys[43] = CKeyInfo(VK_RIGHT, 0, 0);
     m_pVirtualKeys[44] = CKeyInfo(VK_DOWN, 0, 0);
-    m_pVirtualKeys[45] = CKeyInfo(VK_SNAPSHOT, -1, 0);
+    m_pVirtualKeys[45] = CKeyInfo(VK_PRINT, -1, 0);
     m_pVirtualKeys[46] = CKeyInfo(VK_INSERT, -1, 0);
     m_pVirtualKeys[47] = CKeyInfo(VK_DELETE, 0, 0);
     m_pVirtualKeys[48] = CKeyInfo(VK_NUMPAD0, -1, 0);
-    m_pVirtualKeys[49] = CKeyInfo(VK_NUMPAD1, -1, 0);
-    m_pVirtualKeys[50] = CKeyInfo(VK_NUMPAD2, -1, 0);
-    m_pVirtualKeys[51] = CKeyInfo(VK_NUMPAD3, -1, 0);
-    m_pVirtualKeys[52] = CKeyInfo(VK_NUMPAD4, -1, 0);
+    m_pVirtualKeys[49] = CKeyInfo(VK_NUMPAD1, 1, 1);
+    m_pVirtualKeys[50] = CKeyInfo(VK_NUMPAD2, 1, 1);
+    m_pVirtualKeys[51] = CKeyInfo(VK_NUMPAD3, 1, 1);
+    m_pVirtualKeys[52] = CKeyInfo(VK_NUMPAD4, 1, 1);
     m_pVirtualKeys[53] = CKeyInfo(VK_NUMPAD5, -1, 0);
-    m_pVirtualKeys[54] = CKeyInfo(VK_NUMPAD6, -1, 0);
-    m_pVirtualKeys[55] = CKeyInfo(VK_NUMPAD7, -1, 0);
-    m_pVirtualKeys[56] = CKeyInfo(VK_NUMPAD8, -1, 0);
-    m_pVirtualKeys[57] = CKeyInfo(VK_NUMPAD9, -1, 0);
+    m_pVirtualKeys[54] = CKeyInfo(VK_NUMPAD6, 1, 1);
+    m_pVirtualKeys[55] = CKeyInfo(VK_NUMPAD7, 1, 1);
+    m_pVirtualKeys[56] = CKeyInfo(VK_NUMPAD8, 1, 1);
+    m_pVirtualKeys[57] = CKeyInfo(VK_NUMPAD9, 1, 1);
     m_pVirtualKeys[58] = CKeyInfo(VK_MULTIPLY, -1, 0);
     m_pVirtualKeys[59] = CKeyInfo(VK_ADD, -1, 0);
     m_pVirtualKeys[60] = CKeyInfo(VK_SEPARATOR, -1, 0);
@@ -142,7 +142,7 @@ CScreenWorld::CScreenWorld()
     m_pVirtualKeys[73] = CKeyInfo(VK_F10, -1, 0);
     m_pVirtualKeys[74] = CKeyInfo(VK_F11, -1, 0);
     m_pVirtualKeys[75] = CKeyInfo(VK_F12, -1, 0);
-    m_pVirtualKeys[76] = CKeyInfo(VK_NUMLOCK, -1, 0);
+    m_pVirtualKeys[76] = CKeyInfo(VK_SNAPSHOT, -1, 0);
     m_pVirtualKeys[77] = CKeyInfo(VK_RETURN, -1, 0);
     m_pVirtualKeys[78] = CKeyInfo(VK_OEM_3, 0, 0);
     m_pVirtualKeys[79] = CKeyInfo(VK_OEM_MINUS, 0, 0);
@@ -156,8 +156,8 @@ CScreenWorld::CScreenWorld()
     m_pVirtualKeys[87] = CKeyInfo(VK_OEM_PERIOD, 0, 0);
     m_pVirtualKeys[88] = CKeyInfo(VK_OEM_2, 0, 0);
     m_pVirtualKeys[89] = CKeyInfo(VK_TAB, -1, 0);
-    m_pVirtualKeys[90] = CKeyInfo(VK_PRIOR, 0, 0);
-    m_pVirtualKeys[91] = CKeyInfo(VK_NEXT, 0, 0);
+    m_pVirtualKeys[90] = CKeyInfo(VK_NEXT, -1, 0);
+    m_pVirtualKeys[91] = CKeyInfo(VK_PRIOR, -1, 0);
 
     // FIXME: Buffer overrun.
     m_pVirtualKeys[92] = CKeyInfo(VK_PROCESSKEY, -1, 0);
@@ -234,6 +234,9 @@ CScreenWorld::CScreenWorld()
     field_11F0 = 1;
     field_11F4 = 1;
     field_11D0 = CInfinity::stru_8E79B8;
+    field_11F8 = CInfinity::stru_8E79B8.bottom;
+    field_11FC = CInfinity::stru_8E79E0.bottom;
+    field_11EC = CInfinity::stru_8E79B8.right;
     m_nBlackOutCountDown = 0;
     field_1204 = 0;
 }
@@ -442,10 +445,10 @@ void CScreenWorld::EngineActivated()
                 if (dwInputMode != 0x182 && dwInputMode != 0x502) {
                     // NOTE: Uninline.
                     CancelPopup();
-                }
 
-                m_nAutoHideInterface--;
-                HideInterface();
+                    m_nAutoHideInterface--;
+                    HideInterface();
+                }
             }
 
             CUIControlTextDisplay* pText = m_pActiveChatDisplay;
@@ -456,6 +459,7 @@ void CScreenWorld::EngineActivated()
             if (pText != NULL) {
                 m_nChatMessageCount = g_pBaldurChitin->GetBaldurMessage()->m_cChatBuffer.UpdateTextDisplay(pText,
                     m_nChatMessageCount);
+                pText->ScrollToBottom();
             }
         }
     }
@@ -467,8 +471,10 @@ void CScreenWorld::EngineDeactivated()
     if (CChitin::byte_8FB950
         && g_pChitin->cNetwork.GetSessionOpen() == TRUE
         && g_pChitin->cNetwork.GetSessionHosting() == TRUE
-        && g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
-        g_pBaldurChitin->m_pEngineWorld->TogglePauseGame(0, 1, 0);
+        && g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL
+        && !g_pBaldurChitin->m_pEngineWorld->m_bPaused) {
+        field_142 = TRUE;
+        TogglePauseGame(1, 1, 0);
     }
 
     // NOTE: Uninline.
@@ -520,7 +526,7 @@ void CScreenWorld::EngineGameInit()
     field_10C0 = "";
     field_10C4 = 0;
     field_10C8 = 0;
-    field_10D8 = CGameObjectArray::INVALID_INDEX;
+    field_10D0 = CGameObjectArray::INVALID_INDEX;
     m_deltaTime = 0;
     m_nChatMessageCount = 0;
     m_movie = "";
@@ -568,6 +574,7 @@ void CScreenWorld::EngineGameInit()
     m_pActiveDialogDisplay = static_cast<CUIControlTextDisplay*>(g_pBaldurChitin->m_pEngineWorld->GetManager()->GetPanel(GetPanel_22_0())->GetControl(1));
     m_nAutoHideInterface = 0;
     m_nAutoUnhideInterface = 0;
+    field_1204 = 0;
 
     if (!field_11F0) {
         field_11F0 = TRUE;
@@ -2142,7 +2149,7 @@ void CScreenWorld::OnMouseMove(CPoint pt)
     m_cUIManager.OnMouseMove(pt);
 
     CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetVisibleArea();
-    if (pArea != NULL) {
+    if (pArea != NULL && (g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_mode & 0x1) != 0) {
         pArea->OnMouseMove(pt);
     }
 }
@@ -3101,8 +3108,8 @@ void CScreenWorld::UpdateContainerStatus(LONG nContainerId, SHORT nSlotNum)
                 for (INT nButtonID = 0; nButtonID <= 9; nButtonID++) {
                     pPanel->GetControl(nButtonID)->InvalidateRect();
                 }
-            } else if (nSlotNum >= 0 && nSlotNum <= 9) {
-                CUIControlBase* pControl = pPanel->GetControl(nSlotNum);
+            } else if (nIndex >= 0 && nIndex <= 9) {
+                CUIControlBase* pControl = pPanel->GetControl(nIndex);
 
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenWorld.cpp
                 // __LINE__: 4044
@@ -3692,6 +3699,10 @@ void CScreenWorld::MoveToArea(CString areaName)
 {
     // NOTE: Uninline.
     CAIAction leave(CAIAction::LEAVEAREALUA, areaName, CPoint(0, 0), 0);
+
+    // NOTE: The exe does not initialize `m_specificID2` here (the inlined
+    // constructor only stores `m_specificID`, `m_specificID3` and the flags).
+    // Zeroed to keep the value deterministic.
     leave.m_specificID2 = 0;
 
     g_pBaldurChitin->GetObjectGame()->GetGroup()->GroupAction(leave, TRUE, NULL);
@@ -4048,10 +4059,7 @@ void CScreenWorld::StartCommand()
 
     for (INT nId = 6; nId <= 17; nId++) {
         // FIXME: `GetPanel` should be outside of the loop.
-        CUIControlBase* pControl = m_cUIManager.GetPanel(1)->GetControl(nId);
-        if (pControl != NULL) {
-            pControl->SetActive(FALSE);
-        }
+        m_cUIManager.GetPanel(1)->GetControl(nId)->SetActive(FALSE);
     }
 
     m_cUIManager.GetPanel(GetPanel_22_0())->SetActive(FALSE);
@@ -4720,7 +4728,7 @@ void CScreenWorld::StartDeath()
     }
 
     UpdateLabel(pPanel,
-        -1,
+        0x0FFFFFFF,
         "%s",
         FetchString(strRef));
 
@@ -4821,7 +4829,7 @@ void CScreenWorld::SetPendingChapterChange(BYTE nChapter, BYTE* szChapterResRef)
         memcpy(m_szChapterTransitionResRef, szChapterResRef, RESREF_SIZE);
     } else {
         m_bChapterTransitionPending = FALSE;
-        m_nChapterTransition = -1;
+        m_nChapterTransition = 255;
         memset(m_szChapterTransitionResRef, 0, RESREF_SIZE);
     }
 }
@@ -4971,7 +4979,7 @@ void CScreenWorld::SetPendingRest(INT nHP, BOOLEAN bRenting, BOOLEAN bMovie)
 // 0x693520
 void CScreenWorld::StartRestMultiplayerHost(INT nHP, BOOLEAN bRenting, BOOLEAN bMovie)
 {
-    if (g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL) {
+    if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
         CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
         BOOL bListenToJoin = pGame->GetMultiplayerSettings()->GetListenToJoinOption();
         pGame->GetMultiplayerSettings()->SetListenToJoinOption(FALSE, TRUE);
@@ -4997,7 +5005,7 @@ void CScreenWorld::StartRestMultiplayerHost(INT nHP, BOOLEAN bRenting, BOOLEAN b
     m_bRestMovie = FALSE;
 
     if (g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
-        BOOL bListenToJoin = g_pBaldurChitin->m_pEngineWorld->m_bEndMajorEventPauseStatus;
+        BOOL bListenToJoin = g_pBaldurChitin->m_pEngineWorld->m_bEndMajorEventListenToJoin;
         g_pBaldurChitin->GetObjectGame()->GetMultiplayerSettings()->SetListenToJoinOption(bListenToJoin, TRUE);
     }
 }
@@ -5090,13 +5098,13 @@ void CScreenWorld::CancelEngine()
         StopContainer();
         field_EA4 = -1;
         break;
-    case 15:
     case 17:
         StopDeath();
         field_EA4 = -1;
         break;
     case 19:
     case 21:
+    case 22:
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenWorld.cpp
@@ -6521,7 +6529,7 @@ void CUIControlScrollBarWorldContainer::OnPageUp(DWORD nLines)
         // NOTE: Unused.
         pWorld->GetNumContainerRows(nContainer);
 
-        nNewTopContainerRow = max(pWorld->m_nTopGroupRow - (nStep != 0 ? nStep : 2), 0);
+        nNewTopContainerRow = max(pWorld->m_nTopContainerRow - (nStep != 0 ? nStep : 2), 0);
 
         if (pWorld->m_nTopContainerRow != nNewTopContainerRow) {
             pWorld->m_nTopContainerRow = nNewTopContainerRow;
@@ -6582,7 +6590,7 @@ void CUIControlScrollBarWorldContainer::OnPageDown(DWORD nLines)
     switch (m_nID) {
     case 52:
         // NOTE: Uninline.
-        nNumContainerRows = pWorld->GetNumContainerRows(nContainer);
+        nNumContainerRows = pWorld->GetNumContainerRows(nContainer) - 2;
         nNewTopContainerRow = min(nNumContainerRows,
             pWorld->m_nTopContainerRow + (nStep != 0 ? nStep : 2));
 
@@ -6640,6 +6648,10 @@ void CUIControlScrollBarWorldContainer::OnScrollUp()
 
     switch (m_nID) {
     case 52:
+        // NOTE: Uninline.
+        // NOTE: Unused.
+        pWorld->GetNumContainerRows(nContainer);
+
         if (pWorld->m_nTopContainerRow > 0) {
             pWorld->m_nTopContainerRow--;
 
@@ -6690,7 +6702,7 @@ void CUIControlScrollBarWorldContainer::OnScrollDown()
     switch (m_nID) {
     case 52:
         // NOTE: Uninline.
-        if (pWorld->m_nTopContainerRow < pWorld->GetNumContainerRows(nContainer)) {
+        if (pWorld->m_nTopContainerRow < pWorld->GetNumContainerRows(nContainer) - 2) {
             pWorld->m_nTopContainerRow++;
 
             // NOTE: Uninline.
@@ -6741,7 +6753,7 @@ void CUIControlScrollBarWorldContainer::OnScroll()
     switch (m_nID) {
     case 52:
         // NOTE: Uninline.
-        pWorld->m_nTopContainerRow = pWorld->GetNumContainerRows(nContainer) * field_144 / field_142;
+        pWorld->m_nTopContainerRow = max(pWorld->GetNumContainerRows(nContainer) - 2, 0) * field_144 / field_142;
 
         // NOTE: Uninline.
         InvalidateSlots();
@@ -6750,7 +6762,7 @@ void CUIControlScrollBarWorldContainer::OnScroll()
         break;
     case 53:
         // NOTE: Uninline.
-        pWorld->m_nTopGroupRow = (pWorld->GetNumGroupRows() - 2) * field_144 / field_142;
+        pWorld->m_nTopGroupRow = max(pWorld->GetNumGroupRows() - 2, 0) * field_144 / field_142;
 
         // NOTE: Uninline.
         InvalidateSlots();
@@ -6863,7 +6875,7 @@ BOOL CUIControlButtonWorldContainerIcon::Render(BOOL bForce)
 
     CVidMode* pVidMode = g_pBaldurChitin->GetCurrentVideoMode();
 
-    if (m_resRef == "") {
+    if (!(m_resRef != "")) {
         return FALSE;
     }
 
@@ -7115,6 +7127,7 @@ void CUIControlButtonWorldDeathQuit::OnLButtonClick(CPoint pt)
     // __LINE__: 12289
     UTIL_ASSERT(pGame != NULL);
 
+    g_pBaldurChitin->m_pEngineConnection->field_FB0 = 0;
     pWorld->SelectEngine(g_pBaldurChitin->m_pEngineConnection);
 
     if (g_pChitin->cNetwork.GetSessionOpen() == TRUE) {

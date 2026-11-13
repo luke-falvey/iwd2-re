@@ -202,7 +202,7 @@ CAIAction::CAIAction(SHORT actionID, const CString& name, CPoint pt, LONG specif
     m_string1 = name;
     m_dest = pt;
     m_specificID = specificID;
-    m_specificID2 = 0;
+    m_specificID3 = 0;
     m_internalFlags = 0;
 }
 
