@@ -48,45 +48,53 @@ CString CScreenCharacter::SAVE_NAME("default");
 // 0x5D50F0
 void CScreenCharacter::ResetBiography(CGameSprite* pSprite)
 {
+    STRREF iStringRef = 0;
+
     switch (pSprite->m_derivedStats.GetBestClass()) {
     case CAIOBJECTTYPE_C_BARBARIAN:
-        pSprite->m_baseStats.m_biography = 27862;
+        iStringRef = 27862;
         break;
     case CAIOBJECTTYPE_C_BARD:
-        pSprite->m_baseStats.m_biography = 19425;
+        iStringRef = 19425;
         break;
     case CAIOBJECTTYPE_C_CLERIC:
-        pSprite->m_baseStats.m_biography = 19422;
+        iStringRef = 19422;
         break;
     case CAIOBJECTTYPE_C_DRUID:
-        pSprite->m_baseStats.m_biography = 19421;
+        iStringRef = 19421;
         break;
     case CAIOBJECTTYPE_C_FIGHTER:
-        pSprite->m_baseStats.m_biography = 19423;
+        iStringRef = 19423;
         break;
     case CAIOBJECTTYPE_C_MONK:
-        pSprite->m_baseStats.m_biography = 27860;
+        iStringRef = 27860;
         break;
     case CAIOBJECTTYPE_C_PALADIN:
-        pSprite->m_baseStats.m_biography = 19427;
+        iStringRef = 19427;
         break;
     case CAIOBJECTTYPE_C_RANGER:
-        pSprite->m_baseStats.m_biography = 19429;
+        iStringRef = 19429;
         break;
     case CAIOBJECTTYPE_C_ROGUE:
-        pSprite->m_baseStats.m_biography = 19428;
+        iStringRef = 19428;
         break;
     case CAIOBJECTTYPE_C_SORCERER:
-        pSprite->m_baseStats.m_biography = 27863;
+        iStringRef = 27863;
         break;
     case CAIOBJECTTYPE_C_WIZARD:
-        pSprite->m_baseStats.m_biography = 19430;
+        iStringRef = 19430;
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
         // __LINE__: 199
         UTIL_ASSERT(FALSE);
     }
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+    // __LINE__: 203
+    UTIL_ASSERT(iStringRef != 0);
+
+    pSprite->m_baseStats.m_biography = iStringRef;
 }
 
 // 0x5D5220
@@ -190,7 +198,7 @@ CScreenCharacter::CScreenCharacter()
     m_pVirtualKeys[41] = CKeyInfo(VK_LEFT, static_cast<BYTE>(CChitin::TIMER_UPDATES_PER_SECOND), static_cast<BYTE>(CChitin::TIMER_UPDATES_PER_SECOND));
     m_pVirtualKeys[42] = CKeyInfo(VK_UP, 4, 0);
     m_pVirtualKeys[43] = CKeyInfo(VK_RIGHT, static_cast<BYTE>(CChitin::TIMER_UPDATES_PER_SECOND), static_cast<BYTE>(CChitin::TIMER_UPDATES_PER_SECOND));
-    m_pVirtualKeys[44] = CKeyInfo(VK_DOWN, 0, 0);
+    m_pVirtualKeys[44] = CKeyInfo(VK_DOWN, 4, 0);
     m_pVirtualKeys[45] = CKeyInfo(VK_SNAPSHOT, -1, 0);
     m_pVirtualKeys[46] = CKeyInfo(VK_INSERT, -1, 0);
     m_pVirtualKeys[47] = CKeyInfo(VK_DELETE, 0, 0);
@@ -761,9 +769,9 @@ void CScreenCharacter::OnMouseMove(CPoint pt)
     } else if (m_cUIManager.GetPanel(57)->m_bActive) {
         pPanel = m_cUIManager.GetPanel(57);
         if (pPanel->GetControl(2)->IsOver(pt - pPanel->m_ptOrigin)) {
-            m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(4));
-        } else {
             m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(3));
+        } else {
+            m_pCurrentScrollBar = static_cast<CUIControlScrollBar*>(pPanel->GetControl(4));
         }
     }
 
@@ -817,7 +825,7 @@ void CScreenCharacter::UpdateSavingThrows(CUIControlTextDisplay* pText, CDerived
             FetchString(17381), // "Reflex"
             DStats.m_nSaveVSReflex,
             FetchString(39802), // "Traps"
-            nTrapSenseBonus);
+            DStats.m_nSaveVSReflex + nTrapSenseBonus);
     } else {
         UpdateText(pText,
             "%s: %+d",
@@ -1393,7 +1401,7 @@ BOOL CScreenCharacter::ResetAbility(CGameSprite* pSprite, const CString& sMin, c
     CString sRace = ruleTables.GetRaceString(pSprite->m_startTypeAI.m_nRace, pSprite->m_startTypeAI.m_nSubRace);
     BYTE nMinRaceReq = static_cast<BYTE>(atol(ruleTables.m_tAbilityRaceReq.GetAt(sMin, sRace)));
     BYTE nMaxRaceReq = static_cast<BYTE>(atol(ruleTables.m_tAbilityRaceReq.GetAt(sMax, sRace)));
-    BYTE nRaceAdj = static_cast<BYTE>(atol(ruleTables.m_tAbilityRaceAdj.GetAt(sMod, sRace)));
+    INT nRaceAdj = atol(ruleTables.m_tAbilityRaceAdj.GetAt(sMod, sRace));
 
     CString sClass = ruleTables.GetClassString(nBestClass, pSprite->m_baseStats.m_specialization);
     BYTE nMinClassReq = static_cast<BYTE>(atol(ruleTables.m_tAbilityClassReq.GetAt(sMin, sClass)));
@@ -1474,7 +1482,7 @@ void CScreenCharacter::ResetAbilitiesPanel(CGameSprite* pSprite, int a2)
 }
 
 // 0x5D9970
-void CScreenCharacter::ResetSpellsPanel(CGameSprite* pSprite, int a2)
+void CScreenCharacter::ResetSpellsPanel(CGameSprite* pSprite)
 {
     CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
     const CRuleTables& ruleTables = pGame->GetRuleTables();
@@ -2007,6 +2015,9 @@ void CScreenCharacter::UpdateAbilitiesPanel(CGameSprite* pSprite)
 
     pButton->SetEnabled(IsDoneButtonClickable(pSprite));
 
+    // NOTE: Read through the engine pointer once, before the loop.
+    CCreatureFileHeader* pTempBaseStats = g_pBaldurChitin->m_pEngineCharacter->m_pTempBaseStats;
+
     for (INT nIndex = 0; nIndex < 12; nIndex += 2) {
         CUIControlButton* pButton;
 
@@ -2029,22 +2040,22 @@ void CScreenCharacter::UpdateAbilitiesPanel(CGameSprite* pSprite)
         BOOL bCanDec;
         switch (nIndex) {
         case 0:
-            bCanDec = m_pTempBaseStats->m_STRBase < pSprite->m_baseStats.m_STRBase;
+            bCanDec = pTempBaseStats->m_STRBase < pSprite->m_baseStats.m_STRBase;
             break;
         case 2:
-            bCanDec = m_pTempBaseStats->m_DEXBase < pSprite->m_baseStats.m_DEXBase;
+            bCanDec = pTempBaseStats->m_DEXBase < pSprite->m_baseStats.m_DEXBase;
             break;
         case 4:
-            bCanDec = m_pTempBaseStats->m_CONBase < pSprite->m_baseStats.m_CONBase;
+            bCanDec = pTempBaseStats->m_CONBase < pSprite->m_baseStats.m_CONBase;
             break;
         case 6:
-            bCanDec = m_pTempBaseStats->m_INTBase < pSprite->m_baseStats.m_INTBase;
+            bCanDec = pTempBaseStats->m_INTBase < pSprite->m_baseStats.m_INTBase;
             break;
         case 8:
-            bCanDec = m_pTempBaseStats->m_WISBase < pSprite->m_baseStats.m_WISBase;
+            bCanDec = pTempBaseStats->m_WISBase < pSprite->m_baseStats.m_WISBase;
             break;
         case 10:
-            bCanDec = m_pTempBaseStats->m_CHRBase < pSprite->m_baseStats.m_CHRBase;
+            bCanDec = pTempBaseStats->m_CHRBase < pSprite->m_baseStats.m_CHRBase;
             break;
         }
 
@@ -2715,10 +2726,36 @@ void CScreenCharacter::UpdateMainPanel(BOOL bCharacterChanged)
 
             UpdateLabel(pPanel, 0x1000002A, "%d", DStats.m_nMaxHitPoints);
             UpdateLabel(pPanel, 0x10000028, "%d", pSprite->GetAC());
+
+            CString sRace;
+            rule.GetRaceStringMixed(typeAI.m_nRace, sRace, typeAI.m_nSubRace);
+            UpdateLabel(pPanel, 0x1000000F, "%s", (LPCSTR)sRace);
+
+            switch (typeAI.m_nAlignment) {
+            case 0:
+            case CAIOBJECTTYPE_LAWFUL_GOOD:
+            case CAIOBJECTTYPE_LAWFUL_NEUTRAL:
+            case CAIOBJECTTYPE_LAWFUL_EVIL:
+            case CAIOBJECTTYPE_NEUTRAL_GOOD:
+            case CAIOBJECTTYPE_NEUTRAL:
+            case CAIOBJECTTYPE_NEUTRAL_EVIL:
+            case CAIOBJECTTYPE_CHAOTIC_GOOD:
+            case CAIOBJECTTYPE_CHAOTIC_NEUTRAL:
+            case CAIOBJECTTYPE_CHAOTIC_EVIL:
+                break;
+            default:
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+                // __LINE__: 1546
+                UTIL_ASSERT(FALSE);
+            }
         } else {
             UpdateLabel(pPanel, 0x10000029, "");
             UpdateLabel(pPanel, 0x1000002A, "");
             UpdateLabel(pPanel, 0x10000028, "");
+
+            CString sRace;
+            rule.GetRaceStringMixed(0, sRace, 0);
+            UpdateLabel(pPanel, 0x1000000F, "%s", (LPCSTR)sRace);
         }
 
         if (BStats.m_name != -1) {
@@ -2817,8 +2854,8 @@ void CScreenCharacter::UpdateMainPanel(BOOL bCharacterChanged)
         // __LINE__: 4866
         UTIL_ASSERT(pButton != NULL);
 
-        // pButton->SetEnabled(IsLevelUpButtonClickable(pSprite)
-        //     && (DStats.m_generalState & STATE_DEAD) == 0);
+        pButton->SetEnabled(sub_5E4E80(pSprite)
+            && (DStats.m_generalState & STATE_DEAD) == 0);
 
         pGame->GetObjectArray()->ReleaseShare(nCharacterId,
             CGameObjectArray::THREAD_ASYNCH,
@@ -4466,7 +4503,7 @@ void CScreenCharacter::ResetPopupPanel(DWORD dwPanelId, CGameSprite* pSprite, in
         ResetAbilitiesPanel(pSprite, a3);
         break;
     case 8:
-        ResetSpellsPanel(pSprite, a3);
+        ResetSpellsPanel(pSprite);
         break;
     case 9:
     case 10:
@@ -6012,7 +6049,7 @@ void CScreenCharacter::OnInformationButtonClick()
     renderLock.Lock(INFINITE);
 
     // NOTE: Uninline.
-    LONG nCharacterId = pGame->GetCharacterId(m_nSelectedCharacter);
+    LONG nCharacterId = pGame->GetCharacterId(GetSelectedCharacter());
 
     CGameSprite* pSprite;
 
@@ -6048,7 +6085,7 @@ void CScreenCharacter::OnBiographyButtonClick()
     renderLock.Lock(INFINITE);
 
     // NOTE: Uninline.
-    LONG nCharacterId = pGame->GetCharacterId(m_nSelectedCharacter);
+    LONG nCharacterId = pGame->GetCharacterId(GetSelectedCharacter());
 
     CGameSprite* pSprite;
 
@@ -6084,7 +6121,7 @@ void CScreenCharacter::OnCustomizeBiographyButtonClick()
     renderLock.Lock(INFINITE);
 
     // NOTE: Uninline.
-    LONG nCharacterId = pGame->GetCharacterId(m_nSelectedCharacter);
+    LONG nCharacterId = pGame->GetCharacterId(GetSelectedCharacter());
 
     CGameSprite* pSprite;
 
@@ -7002,7 +7039,7 @@ void CScreenCharacter::ResetErrorPanel(CUIPanel* pPanel)
     strRes.cSound.SetFireForget(TRUE);
     strRes.cSound.Play(FALSE);
 
-    CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(pPanel->GetControl(0));
+    CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(pPanel->GetControl(3));
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
     // __LINE__: 9842
@@ -7034,7 +7071,7 @@ void CScreenCharacter::ResetScriptPanel(CUIPanel* pPanel)
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
     // __LINE__: 9880
-    UTIL_ASSERT(pPanel != NULL);
+    UTIL_ASSERT(pGame != NULL);
 
     CString sScript;
     CString sTitle;
@@ -7191,7 +7228,7 @@ void CScreenCharacter::RefreshScripts()
                 pos2 = lStandardScripts.GetHeadPosition();
                 while (pos2 != NULL) {
                     sOtherScript = lStandardScripts.GetAt(pos2);
-                    if (sOtherScript.Compare(sScript) < 0) {
+                    if (sScript.Compare(sOtherScript) < 0) {
                         break;
                     }
                     lStandardScripts.GetNext(pos2);
@@ -7212,6 +7249,7 @@ void CScreenCharacter::RefreshScripts()
         m_pScripts->GetNext(pos1);
     }
 
+    m_pScripts->RemoveAll();
     m_pScripts->AddTail(&lStandardScripts);
     m_pScripts->AddTail(&lCustomScripts);
 
@@ -7321,14 +7359,14 @@ void CScreenCharacter::OnScriptItemSelect(INT nItem)
                 UTIL_ASSERT(pText != NULL);
 
                 if (m_nScriptIndex != -1) {
-                    pText->SetItemTextColor(pText->GetItemBossPosition(m_nScriptIndex),
+                    pText->SetItemTextColor(pText->GetItemBossPosition(m_nScriptIndex * 2),
                         pText->m_rgbTextColor);
                 }
 
                 m_nScriptIndex = nItem;
 
                 if (m_nScriptIndex != -1) {
-                    pText->SetItemTextColor(pText->GetItemBossPosition(m_nScriptIndex),
+                    pText->SetItemTextColor(pText->GetItemBossPosition(m_nScriptIndex * 2),
                         CBaldurChitin::TEXTDISPLAY_COLOR_SELECT);
                 }
 
@@ -7358,7 +7396,7 @@ void CScreenCharacter::OnScriptItemSelect(INT nItem)
 
                 pDescriptionText->SetTopString(pDescriptionText->m_plstStrings->FindIndex(0));
 
-                UpdatePopupPanel(GetTopPopup()->m_nID, pSprite);
+                UpdatePopupPanel(pPanel->m_nID, pSprite);
             }
 
             pGame->GetObjectArray()->ReleaseDeny(nGameSprite,
@@ -7915,7 +7953,7 @@ void CScreenCharacter::CheckMultiPlayerViewableModifyable()
         m_bMultiPlayerModifyable = m_bMultiPlayerViewable;
 
         if (!pSprite->Orderable(TRUE)) {
-            m_bMultiPlayerViewable = FALSE;
+            m_bMultiPlayerModifyable = FALSE;
         }
 
         if (!m_bMultiPlayerViewable) {
@@ -8255,12 +8293,10 @@ void CScreenCharacter::OnPlayButtonClick()
                     }
                 }
 
-                memcpy(pSprite->field_725A,
-                    sSoundSetName.GetBuffer(sSoundSetName.GetLength()),
-                    min(sSoundSetName.GetLength(), 32));
-
-                if (sSoundSetName.GetLength() < 32) {
-                    pSprite->field_725A[sSoundSetName.GetLength()] = '\0';
+                DWORD nLength = sSoundSetName.GetAllocLength();
+                memcpy(pSprite->field_725A, sSoundSetName.GetBuffer(nLength), min(nLength, 32));
+                if (nLength < 32) {
+                    pSprite->field_725A[nLength] = '\0';
                 }
 
                 sDirName = g_pBaldurChitin->GetObjectGame()->GetDirSounds() + sSoundSetName + '\\';
@@ -8270,7 +8306,7 @@ void CScreenCharacter::OnPlayButtonClick()
                 CString sFileName;
                 CString sPattern;
 
-                sPattern = g_pBaldurChitin->GetObjectGame()->GetDirSounds() + "\\" + sSoundSetName + "\\*.wav";
+                sPattern = g_pBaldurChitin->GetObjectGame()->GetDirSounds() + '\\' + sSoundSetName + "\\*.wav";
 
                 WIN32_FIND_DATAA findFileData;
                 HANDLE hFindFile = FindFirstFileA(sPattern, &findFileData);
@@ -10556,9 +10592,9 @@ DWORD CUIControlButtonCharacterSpecializationSelection::GetSpecialization()
         case 6:
             return SPECMASK_WIZARD_ENCHANTER;
         case 7:
-            return SPECMASK_WIZARD_ILLUSIONIST;
-        case 8:
             return SPECMASK_WIZARD_EVOKER;
+        case 8:
+            return SPECMASK_WIZARD_ILLUSIONIST;
         case 9:
             return SPECMASK_WIZARD_NECROMANCER;
         case 10:
@@ -10708,6 +10744,13 @@ void CUIControlButtonCharacterSpecializationSelection::OnLButtonClick(CPoint pt)
             break;
         case SPECMASK_WIZARD_UNIVERSAL:
             strDescription = 9563;
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
+            // __LINE__: 14181
+            UTIL_ASSERT(FALSE);
+            strDescription = -1;
+            break;
         }
 
         pCharacter->UpdateHelp(m_pPanel->m_nID, 13, strDescription);
@@ -10897,8 +10940,8 @@ void CUIControlButtonCharacterAbilitiesPlusMinus::AdjustValue()
             }
         } else {
             if (*pValue > *pBase) {
-                if (*pBase > nMin) {
-                    (*pBase)--;
+                if (*pValue > nMin) {
+                    (*pValue)--;
                     pCharacter->m_nExtraAbilityPoints++;
                     pCharacter->UpdatePopupPanel(m_pPanel->m_nID, pSprite);
                 } else {
@@ -11058,7 +11101,10 @@ void CUIControlScrollBarCharacterHatedRace::OnPageUp(DWORD nLines)
     // __LINE__: 14706
     UTIL_ASSERT(pCharacter != NULL);
 
-    INT nStep = min(nLines, 11);
+    INT nStep = abs(static_cast<INT>(nLines));
+    if (nStep == 0) {
+        nStep = 11;
+    }
     INT nTopHatedRace = max(pCharacter->m_nTopHatedRace - nStep, 0);
 
     if (nTopHatedRace != pCharacter->m_nTopHatedRace) {
@@ -11081,7 +11127,10 @@ void CUIControlScrollBarCharacterHatedRace::OnPageDown(DWORD nLines)
     // __LINE__: 14744
     UTIL_ASSERT(pCharacter != NULL);
 
-    INT nStep = min(nLines, 11);
+    INT nStep = abs(static_cast<INT>(nLines));
+    if (nStep == 0) {
+        nStep = 11;
+    }
     INT nTopHatedRace = min(pCharacter->m_nTopHatedRace + nStep, 5);
 
     if (nTopHatedRace != pCharacter->m_nTopHatedRace) {
@@ -12646,7 +12695,7 @@ void CUIControlScrollBarCharacterFeats::OnScroll()
     UTIL_ASSERT(pCharacter != NULL);
 
     INT nTopFeat = max(FEAT_COUNT * field_144, 0) / field_142;
-    pCharacter->m_nTopFeat = max(min(nTopFeat - FEAT_SLOTS, FEAT_COUNT - FEAT_SLOTS), 0);
+    pCharacter->m_nTopFeat = max(min(nTopFeat, FEAT_COUNT - FEAT_SLOTS), 0);
 
     InvalidateItems();
 
@@ -12789,6 +12838,7 @@ void CUIControlButtonCharacterFeatsPlusMinus::AdjustValue()
     case 25:
     case 27:
     case 29:
+    case 31:
         bInc = FALSE;
         break;
     default:
@@ -12905,7 +12955,7 @@ BOOL CUIControlButtonCharacterFeatsCircle::Render(BOOL bForce)
         return FALSE;
     }
 
-    if (m_nRenderCount != 0) {
+    if (m_nRenderCount > 0) {
         CSingleLock lock(&(m_pPanel->m_pManager->field_56), FALSE);
         lock.Lock(INFINITE);
         m_nRenderCount--;
@@ -12993,9 +13043,9 @@ BOOL CUIControlButtonCharacterFeatsCircle::Render(BOOL bForce)
         UTIL_ASSERT(FALSE);
     }
 
-    CScreenCreateChar* pCreateChar = g_pBaldurChitin->m_pEngineCreateChar;
+    CScreenCharacter* pCharacter = g_pBaldurChitin->m_pEngineCharacter;
 
-    INT nGameSprite = pCreateChar->GetSpriteId();
+    INT nGameSprite = pCharacter->field_1840;
 
     CGameSprite* pSprite;
     BYTE rc;
@@ -13011,7 +13061,7 @@ BOOL CUIControlButtonCharacterFeatsCircle::Render(BOOL bForce)
     }
 
     const CRuleTables& ruleTables = g_pBaldurChitin->GetObjectGame()->GetRuleTables();
-    DWORD v1 = ruleTables.GetFeatId(nIndex + pCreateChar->m_nTopFeat);
+    DWORD v1 = ruleTables.GetFeatId(nIndex + pCharacter->m_nTopFeat);
     INT nFeatNumber = ruleTables.GetFeatId(v1);
     INT nValue = pSprite->GetFeatValue(nFeatNumber);
     INT nMaxValue = pSprite->GetMaxFeatValue(nFeatNumber);
@@ -13046,15 +13096,19 @@ BOOL CUIControlButtonCharacterFeatsCircle::Render(BOOL bForce)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
         // __LINE__: 17756
         UTIL_ASSERT(bResult);
-    }
 
-    pCreateChar->UpdatePopupPanel(pCreateChar->GetTopPopup()->m_nID, pSprite);
+        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nGameSprite,
+            CGameObjectArray::THREAD_1,
+            INFINITE);
+
+        return TRUE;
+    }
 
     g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(nGameSprite,
         CGameObjectArray::THREAD_1,
         INFINITE);
 
-    return TRUE;
+    return FALSE;
 }
 
 // -----------------------------------------------------------------------------
@@ -13140,7 +13194,7 @@ void CUIControlScrollBarCharacterSkills::OnPageDown(DWORD nLines)
     CScreenCharacter* pCharacter = g_pBaldurChitin->m_pEngineCharacter;
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
-    // __LINE__: 11362
+    // __LINE__: 18263
     UTIL_ASSERT(pCharacter != NULL);
 
     INT nStep = min(nLines, SKILL_SLOTS - 1);
@@ -13465,12 +13519,12 @@ void CUIControlCharacterHotArea778ED0::OnHotAreaClick(CPoint pt)
     UTIL_ASSERT(pCharacter != NULL);
 
     if (m_nID >= 27 && m_nID <= 37) {
-        pCharacter->sub_5F8C90(m_nID - 37);
-        pCharacter->UpdatePopupPanel(57, NULL);
+        pCharacter->sub_5F8C90(m_nID - 27);
     } else if (m_nID >= 71 && m_nID <= 81) {
         pCharacter->sub_5F91F0(pCharacter->field_1852 + m_nID - 71);
-        pCharacter->UpdatePopupPanel(57, NULL);
     }
+
+    pCharacter->UpdatePopupPanel(57, NULL);
 }
 
 // -----------------------------------------------------------------------------
@@ -13518,8 +13572,8 @@ void CUIControlButtonCharacterInformationFolder::OnLButtonClick(CPoint pt)
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCharacter.cpp
-        // __LINE__: 18906
-        UTIL_ASSERT(pCharacter != NULL);
+        // __LINE__: 18932
+        UTIL_ASSERT(FALSE);
     }
 }
 
@@ -13595,9 +13649,16 @@ void CUIControlScrollbarCharacter5F9410::OnPageUp(DWORD nLines)
     UTIL_ASSERT(pCharacter);
 
     if (pCharacter->field_184E > 11) {
-        // NOTE: Original code is slightly different.
-        INT nStep = min(nLines, 10);
-        pCharacter->field_1852 = max(pCharacter->field_1852 - nLines, 0);
+        INT nStep;
+        if (nLines >= 11) {
+            nStep = 10;
+        } else if (nLines != 0) {
+            nStep = nLines;
+        } else {
+            return;
+        }
+
+        pCharacter->field_1852 = max(pCharacter->field_1852 - nStep, 0);
 
         pCharacter->UpdatePopupPanel(57, NULL);
 
@@ -13616,9 +13677,16 @@ void CUIControlScrollbarCharacter5F9410::OnPageDown(DWORD nLines)
     UTIL_ASSERT(pCharacter);
 
     if (pCharacter->field_184E > 11) {
-        // NOTE: Original code is slightly different.
-        INT nStep = min(nLines, 11);
-        pCharacter->field_1852 = min(pCharacter->field_1852 + nStep, pCharacter->field_184E - 11);
+        INT nStep;
+        if (nLines >= 11) {
+            nStep = 10;
+        } else if (nLines != 0) {
+            nStep = nLines;
+        } else {
+            return;
+        }
+
+        pCharacter->field_1852 = max(min(pCharacter->field_1852 + nStep, pCharacter->field_184E - 11), 0);
 
         pCharacter->UpdatePopupPanel(57, NULL);
 
@@ -13636,8 +13704,8 @@ void CUIControlScrollbarCharacter5F9410::OnScroll()
     // __LINE__: 19396
     UTIL_ASSERT(pCharacter);
 
-    int v1 = max(pCharacter->field_184E - 1, 0) * field_144 / field_142;
-    pCharacter->field_1852 = min(max(v1, 0), pCharacter->field_184E - 11);
+    int v1 = field_144 * max(pCharacter->field_184E - 11, 0) / field_142;
+    pCharacter->field_1852 = max(min(v1, pCharacter->field_184E - 11), 0);
 
     if (pCharacter->field_184E > 11) {
         pCharacter->UpdatePopupPanel(57, NULL);
