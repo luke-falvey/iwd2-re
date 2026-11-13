@@ -466,7 +466,7 @@ BOOL CVidCell::GetFrameSize(SHORT nSequence, SHORT nFrame, CSize& frameSize, BOO
 }
 
 // 0x7ADF40
-SHORT CVidCell::GetNumberSequences(BOOLEAN bDemanded)
+BYTE CVidCell::GetNumberSequences(BOOLEAN bDemanded)
 {
     if (pRes == NULL) {
         return 0;
@@ -476,7 +476,7 @@ SHORT CVidCell::GetNumberSequences(BOOLEAN bDemanded)
         return 0;
     }
 
-    SHORT nSequences = GetResBamHeader()->nSequences;
+    BYTE nSequences = GetResBamHeader()->nSequences;
 
     Release(bDemanded);
 
@@ -1941,8 +1941,9 @@ void CVidCell::BltBackGroundToFx(LPDIRECTDRAWSURFACE pSurface, CRect& rSrc, cons
                 &rSrc,
                 DDBLT_WAIT | DDBLT_DDFX,
                 &fx);
+            g_pChitin->GetCurrentVideoMode()->CheckResults(hr);
         } while (hr == DDERR_SURFACELOST || hr == DDERR_WASSTILLDRAWING);
-    } else {
+    } else if (rSrcSurface.top < rSrcSurface.bottom && rSrcSurface.left < rSrcSurface.right) {
         do {
             hr = g_pChitin->cVideo.cVidBlitter.BltFast(g_pChitin->GetCurrentVideoMode()->pSurfaces[m_nFxSurface],
                 destX,
@@ -1950,6 +1951,7 @@ void CVidCell::BltBackGroundToFx(LPDIRECTDRAWSURFACE pSurface, CRect& rSrc, cons
                 pSurface,
                 rSrcSurface,
                 DDBLTFAST_WAIT);
+            g_pChitin->GetCurrentVideoMode()->CheckResults(hr);
             if (hr != DDERR_SURFACELOST && hr != DDERR_WASSTILLDRAWING) {
                 break;
             }
@@ -2016,7 +2018,7 @@ BOOL CVidCell::BltFromFX(LPDIRECTDRAWSURFACE pSurface, int x, int y, const CRect
                     &rDest,
                     g_pChitin->GetCurrentVideoMode()->pSurfaces[m_nFxSurface],
                     &rSrcSurface,
-                    DDBLT_WAIT | DDBLT_DDFX,
+                    DDBLT_WAIT | DDBLT_KEYSRC | DDBLT_DDFX,
                     &fx);
                 g_pChitin->GetCurrentVideoMode()->CheckResults(hr);
             } while (hr == DDERR_SURFACELOST || hr == DDERR_WASSTILLDRAWING);
@@ -2042,6 +2044,10 @@ BOOL CVidCell::BltFromFX(LPDIRECTDRAWSURFACE pSurface, int x, int y, const CRect
 // 0x7B0980
 BOOL CVidCell::GetFrame(BOOLEAN bDemanded)
 {
+    if (pRes == NULL) {
+        return FALSE;
+    }
+
     if (!bDemanded) {
         if (pRes->Demand() == NULL) {
             return FALSE;
@@ -3240,7 +3246,8 @@ BOOL CVidCell::Blt8To32ClearShadow(DWORD* pSurface, LONG lPitch, DWORD dwFlags)
                     } else if (nColor == 1) {
                         pos++;
 
-                        *pSurface++ = (*pSurface / 2) & 0x7F7F7F;
+                        *pSurface = (*pSurface / 2) & 0x7F7F7F;
+                        pSurface++;
                         nRemainingWidth--;
                     } else {
                         pos++;
@@ -3374,7 +3381,7 @@ BOOL CVidCell::Blt8To32Brightest(DWORD* pSurface, LONG lPitch, DWORD dwFlags)
 
                     // NOTE: Not present in uncompressed data branch.
                     if ((CVidImage::rgbTempPal[nColor] & 0xF0F0F0) != 0) {
-                        *pSurface = RGB(max(GetRValue(*pSurface), GetRValue(CVidImage::rgbTempPal[nColor])),
+                        *pSurface = (*pSurface & 0xFF000000) | RGB(max(GetRValue(*pSurface), GetRValue(CVidImage::rgbTempPal[nColor])),
                             max(GetGValue(*pSurface), GetGValue(CVidImage::rgbTempPal[nColor])),
                             max(GetBValue(*pSurface), GetBValue(CVidImage::rgbTempPal[nColor])));
                     }
@@ -3390,7 +3397,7 @@ BOOL CVidCell::Blt8To32Brightest(DWORD* pSurface, LONG lPitch, DWORD dwFlags)
             for (int x = 0; x < nWidth; x++) {
                 BYTE nColor = *pFrameData;
                 if (nColor != nTransparentColor) {
-                    *pSurface = RGB(max(GetRValue(*pSurface), GetRValue(CVidImage::rgbTempPal[nColor])),
+                    *pSurface = (*pSurface & 0xFF000000) | RGB(max(GetRValue(*pSurface), GetRValue(CVidImage::rgbTempPal[nColor])),
                         max(GetGValue(*pSurface), GetGValue(CVidImage::rgbTempPal[nColor])),
                         max(GetBValue(*pSurface), GetBValue(CVidImage::rgbTempPal[nColor])));
                 }
@@ -4055,9 +4062,10 @@ void CVidCell::RenderTexture(INT x, INT y, const CRect& rFxRect, CSize dataPitch
 
         BYTE nBrightnessCorrection = g_pChitin->GetCurrentVideoMode()->m_nBrightnessCorrection;
         if (nBrightnessCorrection != 0) {
-            r = ~((~nBrightnessCorrection * ~r) >> 8);
-            g = ~((~nBrightnessCorrection * ~g) >> 8);
-            b = ~((~nBrightnessCorrection * ~b) >> 8);
+            BYTE nInvBrightness = ~nBrightnessCorrection;
+            r = ~((nInvBrightness * static_cast<BYTE>(~r)) >> 8);
+            g = ~((nInvBrightness * static_cast<BYTE>(~g)) >> 8);
+            b = ~((nInvBrightness * static_cast<BYTE>(~b)) >> 8);
         }
 
         BYTE nGammaCorrection = g_pChitin->GetCurrentVideoMode()->m_nGammaCorrection;
@@ -4068,9 +4076,9 @@ void CVidCell::RenderTexture(INT x, INT y, const CRect& rFxRect, CSize dataPitch
             b = static_cast<BYTE>(min((nLight * b) / 8, 255));
         }
 
-        CVideo3d::glColor4f(static_cast<float>(r) / 255.0f,
-            static_cast<float>(g) / 255.0f,
-            static_cast<float>(b) / 255.0f,
+        CVideo3d::glColor4f(static_cast<float>(r) / 256.0f,
+            static_cast<float>(g) / 256.0f,
+            static_cast<float>(b) / 256.0f,
             1.0f);
     }
 
@@ -4106,9 +4114,6 @@ void CVidCell::RenderTexture(INT x, INT y, const CRect& rFxRect, CSize dataPitch
         CVideo3d::glVertex3f(x2, y2, 0.0f);
         CVideo3d::glEnd();
         g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
-
-        CVideo3d::glDisable(GL_BLEND);
-        g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
     }
 
     CVideo3d::glDisable(GL_BLEND);
@@ -4143,7 +4148,7 @@ BOOL CVidCell::Render3d(INT nRefPtX, INT nRefPtY, DWORD dwFlags, INT nTransVal)
 
     CRect rClip(0, 0, CVideo::SCREENWIDTH, CVideo::SCREENHEIGHT);
 
-    BOOLEAN bResult = Render3d(nRefPtX, nRefPtY, rClip, FALSE, dwFlags);
+    BOOLEAN bResult = Render3d(nRefPtX, nRefPtY, rClip, TRUE, dwFlags);
 
     pRes->Release();
     m_pFrame = NULL;
@@ -4160,7 +4165,7 @@ BOOL CVidCell::Render3d(INT nRefPtX, INT nRefPtY, const CRect& rClip, CVidPoly* 
     }
 
     if (m_pFrame == NULL) {
-        if (!GetFrame(FALSE)) {
+        if (!GetFrame(bDemanded)) {
             return FALSE;
         }
     }
@@ -4390,6 +4395,7 @@ BOOL CVidCell::FXRender3d(INT nRefPtX, INT nRefPtY, const CRect& rFXRect, DWORD 
 
     CRect rClip(0, 0, CVideo::SCREENWIDTH, CVideo::SCREENHEIGHT);
     bResult = FXRender3d(nRefPtX, nRefPtY, rFXRect, rClip, TRUE, dwFlags, bAlphaValues);
+    pRes->Release();
     m_pFrame = NULL;
 
     return bResult;

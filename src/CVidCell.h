@@ -27,7 +27,7 @@ public:
     BYTE GetSequenceLength(WORD nSequence, BOOLEAN bDemanded);
     BOOL GetFrameCenterPoint(SHORT nSequence, SHORT nFrame, CSize& ptCtr, BOOLEAN bDemanded);
     BOOL GetFrameSize(SHORT nSequence, SHORT nFrame, CSize& frameSize, BOOLEAN bDemanded);
-    SHORT GetNumberSequences(BOOLEAN bDemanded);
+    BYTE GetNumberSequences(BOOLEAN bDemanded);
     BOOL FrameSet(SHORT nFrame);
     BOOL IsEndOfSequence(BOOLEAN bDemanded);
     void RestoreBackground(INT nFrom, INT nTo, const CRect& rClip);
@@ -91,7 +91,7 @@ public:
 
     /* 00B4 */ CResHelper<CResCellHeader, 1100> m_header;
     /* 00C4 */ SHORT m_nCurrentFrame;
-    /* 00C6 */ SHORT m_nCurrentSequence;
+    /* 00C6 */ WORD m_nCurrentSequence;
     /* 00C8 */ int field_C8;
     /* 00CC */ BOOL m_bPaletteChanged;
     /* 00D0 */ FRAMEENTRY* m_pFrame;
