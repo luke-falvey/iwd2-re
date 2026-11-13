@@ -253,8 +253,8 @@ CScreenCharacter::CScreenCharacter()
     for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
         if (m_spells.m_lists[nLevel].m_List.size() != 0) {
             m_spells.m_lists[nLevel].m_List.clear();
-            m_spells.m_lists[nLevel].field_10 = 0;
             m_spells.m_lists[nLevel].field_14 = 0;
+            m_spells.m_lists[nLevel].field_18 = 0;
         }
     }
     m_spells.m_nHighestLevel = 0;
@@ -519,6 +519,19 @@ void CScreenCharacter::EngineGameInit()
     m_pTempBaseStats = NULL;
     m_pTempDerivedStats = NULL;
     m_pBeforeLevelUpDerivedStats = NULL;
+
+    for (UINT nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
+        if (m_spells.m_lists[nLevel].m_List.size() != 0) {
+            m_spells.m_lists[nLevel].m_List.clear();
+            m_spells.m_lists[nLevel].field_14 = 0;
+            m_spells.m_lists[nLevel].field_18 = 0;
+        }
+    }
+
+    // NOTE: The original has one store, to offset 0x2B6, which is both
+    // `m_spells.m_nHighestLevel` and `field_2B6` going by the header offsets.
+    m_spells.m_nHighestLevel = 0;
+    field_2B6 = 0;
 
     field_866 = 0;
     field_86A = 0;

@@ -11749,6 +11749,7 @@ CItem* CGameSprite::GetLauncher(const ITEM_ABILITY* ability, SHORT& launcherSlot
         }
 
         for (index = 0; index < 8; index++) {
+            launcherSlot = 43 + index;
             if (m_equipment.m_items[43 + index] != NULL
                 && m_equipment.m_items[43 + index]->GetItemType() == 15) {
                 return m_equipment.m_items[43 + index];
@@ -11765,6 +11766,7 @@ CItem* CGameSprite::GetLauncher(const ITEM_ABILITY* ability, SHORT& launcherSlot
         }
 
         for (index = 0; index < 8; index++) {
+            launcherSlot = 43 + index;
             if (m_equipment.m_items[43 + index] != NULL
                 && m_equipment.m_items[43 + index]->GetItemType() == 27) {
                 return m_equipment.m_items[43 + index];
@@ -11781,6 +11783,7 @@ CItem* CGameSprite::GetLauncher(const ITEM_ABILITY* ability, SHORT& launcherSlot
         }
 
         for (index = 0; index < 8; index++) {
+            launcherSlot = 43 + index;
             if (m_equipment.m_items[43 + index] != NULL
                 && m_equipment.m_items[43 + index]->GetItemType() == 18) {
                 return m_equipment.m_items[43 + index];

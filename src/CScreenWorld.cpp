@@ -6956,7 +6956,7 @@ void CUIControlButtonClock::TimerAsynchronousUpdate(BOOLEAN bInside)
         CTimerWorld* pTimerWorld = g_pBaldurChitin->GetObjectGame()->GetWorldTimer();
 
         BYTE nSequenceLength = m_vcGear.GetSequenceLength(m_vcGear.m_nCurrentSequence, FALSE);
-        m_vcGear.FrameSet(pTimerWorld->m_gameTime % nSequenceLength);
+        m_vcGear.FrameSet(static_cast<WORD>(pTimerWorld->m_gameTime) % nSequenceLength);
 
         InvalidateRect();
 

@@ -110,7 +110,7 @@ int CResItem::Release()
 BOOL CResItem::Parse(void* pData)
 {
     if (pData == NULL) {
-        return FALSE;
+        return m_bParsed;
     }
 
     m_pHeader = reinterpret_cast<ITEM_HEADER*>(pData);

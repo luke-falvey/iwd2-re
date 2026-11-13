@@ -2,6 +2,26 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-13 (evening): batches 109–110, listing holes closed, old code sampled
+
+**Code outside functions.** Batch 109 checked the 11 chunks inside known functions and the five standalone runs against the repo and found five real bugs in older code (monster constructor `animationID & 0xFF`, `CInfGame::StepAnimation` cases '4'–'7', Icewind `ClearColorEffectsAll`, the music `deleteSound` callback). Four functions also had bytes Ghidra left undefined; `tools/ghidra/RangeListing.java` writes a gap-free listing of an address range for those. Three were verified from it (monster constructor: missing `break` after group 0x300 and `m_falseColor = FALSE` for MTAS; world map 0x69D0F0; `EquipHelmet` 0x6D62E0); the fourth, 0x426B20, is the CD check that this exe has patched to return 1. Batch 110 re-derived the `CGameAnimationTypeCharacterOld` constructor.
+
+**Old code, sampled.** 6,454 functions (1.9 MB) were complete when the project started and have not changed since, so no translator or verifier of this project has read them. Three Sonnet verifiers checked a random sample (62 functions of 150–2,500 bytes, 25 KB, seed 20261113): **12 functions (19%) had a behavioural difference, 17 differences in all**. All 17 were confirmed against the disassembly and fixed:
+- `CGameSprite::GetLauncher` did not report the slot of a launcher found outside the active weapon set.
+- `CScreenConnection::ResetImportPanel` looked for `iwd0.chr`–`iwd5.chr` instead of 1–6 and swapped the two help texts.
+- `CScreenOptions::OnKeyDown` did not pass keys to the UI manager first, ran keymap shortcuts with a popup open, and its keymap loop never advanced.
+- `CVidMode::ApplyBrightnessContrast` inverted channels as 32-bit values and truncated the gamma factor to a byte.
+- `CMessageSpriteUpdate` constructor and `CScreenCreateChar::ImportCharacter` each had a member name as a statement where an assignment belongs (`m_currPath;`, `field_1628;`); `ImportCharacter` also left the step unset when items are imported.
+- `CScreenCharacter::EngineGameInit` did not clear the spell lists.
+- `CGameEffectList::RemoveAllEffectsIgnoreMoreThenPermanent` compared the dispel level difference unsigned and 32 bits wide.
+- `CMemINI::GetFast` never updated the last-section cache; `CResItem::Parse` returned FALSE for a null argument instead of the parsed flag; `CScreenStore::UpdateRentRoomPanel` normalised the inn flags; the clock button used the full 32-bit game time for its frame.
+
+At that rate the unread 1.9 MB would hold on the order of a thousand such differences. Whether to audit all of it (about 40M tokens at the sample's cost) is the user's decision.
+
+**Open**
+- `CScreenCharacter.h` declares `field_2B6` at the offset that is also `m_spells.m_nHighestLevel` (0x1BA + 0xFC); they are probably one member, which would shift every later member's comment by four.
+- Code outside functions still unexamined: about 700 short runs classified only by pattern, three table-like undefined runs (0x72B521, 0x4529AD, 0x63054B), static initialisers against the repo's constant values.
+
 ## 2026-11-13 (afternoon): batches 88–108, every counted function done; code outside functions found
 
 **State.** The inventory counts 8,020 functions and all are translated or excluded; no `TODO: Incomplete` function stub is left (one marker remains on a struct in `BalDataTypes.h`). S1–S5 and S6 pass on each merged build.

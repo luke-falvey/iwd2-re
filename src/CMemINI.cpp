@@ -143,7 +143,15 @@ CMemINIValue* CMemINI::GetFast(const CString& sectionName, const CString& name)
     }
 
     // NOTE: Uninline.
-    return Get(sectionName, name);
+    CMemINISection* section = GetSection(sectionName);
+    if (section == NULL) {
+        return NULL;
+    }
+
+    mpLastSection = section;
+
+    // NOTE: Uninline.
+    return section->Get(name);
 }
 
 // 0x6A0E40

@@ -4960,8 +4960,10 @@ void CScreenCreateChar::ImportCharacter(const CString& sCharacter)
                     CompleteCharacterAbilities(pSprite);
 
                     m_nCurrentStep = 5;
-                } else if ((nImportingBitField & CMultiplayerSettings::IMPORT_ITEMS) == 0) {
-                    CompleteCharacterSkills(pSprite);
+                } else {
+                    if ((nImportingBitField & CMultiplayerSettings::IMPORT_ITEMS) == 0) {
+                        CompleteCharacterSkills(pSprite);
+                    }
                     m_nCurrentStep = 6;
                 }
             } else {
@@ -4974,7 +4976,7 @@ void CScreenCreateChar::ImportCharacter(const CString& sCharacter)
                 CGameObjectArray::THREAD_ASYNCH,
                 INFINITE);
 
-            field_1628;
+            field_1628 = 1;
         }
     }
 }

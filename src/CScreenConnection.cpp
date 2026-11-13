@@ -3187,13 +3187,13 @@ void CScreenConnection::ResetImportPanel()
     WIN32_FIND_DATAA findFileData;
 
     for (int index = 0; index < 6; index++) {
-        sprintf(szFileName, "iwd%01d.chr", index);
+        sprintf(szFileName, "iwd%01d.chr", index + 1);
         sPath = g_pBaldurChitin->GetObjectGame()->GetDirCharacters() + szFileName;
 
         hFindFile = FindFirstFileA(sPath, &findFileData);
         if (hFindFile != INVALID_HANDLE_VALUE) {
             field_FB8 = 1;
-            UpdateHelp(pPanel->m_nID, 0, 26318);
+            UpdateHelp(pPanel->m_nID, 0, 26317);
 
             // FIXME: Leaking `hFindFile`.
             return;
@@ -3201,7 +3201,7 @@ void CScreenConnection::ResetImportPanel()
     }
 
     field_FB8 = 0;
-    UpdateHelp(pPanel->m_nID, 0, 26317);
+    UpdateHelp(pPanel->m_nID, 0, 26318);
 }
 
 // 0x600770

@@ -73,7 +73,7 @@ void CGameEffectList::RemoveAllEffectsIgnoreMoreThenPermanent(POSITION posLeave,
         POSITION posOld = pos;
         CGameEffect* pEffect = GetNext(pos);
         if (posOld != posLeave
-            && (!useLevelDiff || prob > 5 * (pEffect->m_casterLevel - dispelLevel + 10))
+            && (!useLevelDiff || prob > 5 * (static_cast<BYTE>(pEffect->m_casterLevel) - dispelLevel + 10))
             && (!checkDispellable || (pEffect->m_flags & 0x1) != 0)) {
             RemoveAt(posOld);
             delete pEffect;

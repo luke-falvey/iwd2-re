@@ -22833,7 +22833,7 @@ CMessageSpriteUpdate::CMessageSpriteUpdate(CGameSprite* pSprite, LONG caller, LO
             m_currPath = pSprite->m_currPath;
             if (pSprite->m_pPath == NULL) {
                 m_nPath = 0;
-                m_currPath;
+                m_currPath = 0;
             }
             if (m_nPath > 0) {
                 m_pPath = new LONG[m_nPath];

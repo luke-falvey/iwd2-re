@@ -2222,16 +2222,16 @@ void CScreenStore::UpdateRentRoomPanel()
         BOOL bEnabled;
         switch (nIndex) {
         case 0:
-            bEnabled = (nInnFlags & 0x1) != 0;
+            bEnabled = nInnFlags & 0x1;
             break;
         case 1:
-            bEnabled = (nInnFlags & 0x2) != 0;
+            bEnabled = nInnFlags & 0x2;
             break;
         case 2:
-            bEnabled = (nInnFlags & 0x4) != 0;
+            bEnabled = nInnFlags & 0x4;
             break;
         case 3:
-            bEnabled = (nInnFlags & 0x8) != 0;
+            bEnabled = nInnFlags & 0x8;
             break;
         }
 

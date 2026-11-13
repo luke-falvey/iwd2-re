@@ -290,13 +290,13 @@ COLORREF CVidMode::ApplyBrightnessContrast(COLORREF rgb)
 {
     if (m_nBrightnessCorrection != 0) {
         BYTE v1 = ~m_nBrightnessCorrection;
-        rgb = RGB(~((v1 * ~GetRValue(rgb)) >> 8),
-            ~((v1 * ~GetGValue(rgb)) >> 8),
-            ~((v1 * ~GetBValue(rgb)) >> 8));
+        rgb = RGB(~((v1 * static_cast<BYTE>(~GetRValue(rgb))) >> 8),
+            ~((v1 * static_cast<BYTE>(~GetGValue(rgb))) >> 8),
+            ~((v1 * static_cast<BYTE>(~GetBValue(rgb))) >> 8));
     }
 
     if (m_nGammaCorrection != 0) {
-        BYTE v2 = m_nGammaCorrection + (1 << CVidPalette::LIGHT_SCALE);
+        int v2 = m_nGammaCorrection + (1 << CVidPalette::LIGHT_SCALE);
         rgb = RGB(min((v2 * GetRValue(rgb)) >> CVidPalette::LIGHT_SCALE, 255),
             min((v2 * GetGValue(rgb)) >> CVidPalette::LIGHT_SCALE, 255),
             min((v2 * GetBValue(rgb)) >> CVidPalette::LIGHT_SCALE, 255));

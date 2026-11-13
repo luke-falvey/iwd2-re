@@ -365,6 +365,10 @@ void CScreenOptions::OnKeyDown(SHORT nKeysFlags)
 
     if (nKeysFlags > 0) {
         for (SHORT nKeyFlag = 0; nKeyFlag < nKeysFlags; nKeyFlag++) {
+            if (m_cUIManager.OnKeyDown(m_pVirtualKeysFlags[nKeyFlag])) {
+                continue;
+            }
+
             switch (m_pVirtualKeysFlags[nKeyFlag]) {
             case VK_TAB:
                 m_cUIManager.ForceToolTip();
@@ -395,7 +399,11 @@ void CScreenOptions::OnKeyDown(SHORT nKeysFlags)
                 }
                 break;
             default:
-                for (SHORT index = 0; index < CINFGAME_KEYMAP_SIZE; index) {
+                if (m_lPopupStack.GetTailPosition() != NULL && m_lPopupStack.GetTail() != NULL) {
+                    break;
+                }
+
+                for (SHORT index = 0; index < CINFGAME_KEYMAP_SIZE; index++) {
                     // NOTE: Uninline.
                     if (pGame->GetKeymap(index) == m_pVirtualKeysFlags[nKeyFlag]
                         && pGame->GetKeymapFlag(index) == m_bCtrlKeyDown) {
