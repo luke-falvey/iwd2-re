@@ -744,13 +744,11 @@ void CBaldurProjector::PlayMovieInternal(const CResRef& cResRef, BOOL bAsynchThr
 // 0x43F460
 void CBaldurProjector::PlayMovieNext(const CResRef& cResRef)
 {
-    CResRef* temp = new CResRef();
+    CResRef* temp = new CResRef(cResRef);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CBaldurProjector.cpp
     // __LINE__: 786
     UTIL_ASSERT(temp != NULL);
-
-    *temp = cResRef;
 
     m_lMovies.AddTail(temp);
 }

@@ -28,7 +28,7 @@ public:
     BOOL Initialize(HWND hWnd, BOOLEAN bFullscreen);
     void SetExclusiveMode(BOOLEAN bExclusiveMode);
     void ChangeBppValue();
-    BOOL SetNextBpp(USHORT nNewBpp);
+    BOOLEAN SetNextBpp(USHORT nNewBpp);
     void SetBitsPerPixels(USHORT nNewBpp, BOOLEAN a3);
     void CleanUp3d();
     BOOL Initialize3d(HWND hWnd, BOOLEAN bFullscreen, int a4);
@@ -67,7 +67,7 @@ public:
     /* 014E */ CVidMode* m_pVidModes[4];
     /* 015E */ CVidMode* m_pCurrentVidMode;
     /* 0162 */ BOOLEAN m_bExclusiveMode;
-    /* 0162 */ BOOLEAN m_bFullscreen;
+    /* 0163 */ BOOLEAN m_bFullscreen;
     /* 0164 */ HWND m_hWnd; // #guess
 };
 

@@ -37,6 +37,7 @@ CGameRemoteObjectArray::CGameRemoteObjectArray(SHORT nArraySize)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
         // __LINE__: 1187
         UTIL_ASSERT(FALSE);
+        return;
     }
 
     m_nArraySize = nArraySize;
@@ -81,6 +82,7 @@ BOOL CGameRemoteObjectArray::Add(PLAYER_ID remotePlayerID, LONG remoteObjectID, 
             // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
             // __LINE__: 1289
             UTIL_ASSERT_MSG(FALSE, "CGameRemoteObjectArray::Add: new failed in expanding array.");
+            return FALSE;
         }
 
         for (SHORT cnt = 0; cnt < m_nArraySize; cnt++) {
@@ -99,7 +101,10 @@ BOOL CGameRemoteObjectArray::Add(PLAYER_ID remotePlayerID, LONG remoteObjectID, 
     LONG tempObjectID;
 
     // NOTE: Uninline.
-    if (Find(remotePlayerID, remoteObjectID, tempObjectID)) {
+    // NOTE: The original passes the two ids to the inlined `Find` swapped
+    // (bucket from `remotePlayerID`, entry player id compared with
+    // `remoteObjectID` and entry object id with `remotePlayerID`).
+    if (Find(remoteObjectID, remotePlayerID, tempObjectID)) {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
         // __LINE__: 1313
         UTIL_ASSERT(localObjectID == tempObjectID);
@@ -113,6 +118,7 @@ BOOL CGameRemoteObjectArray::Add(PLAYER_ID remotePlayerID, LONG remoteObjectID, 
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
         // __LINE__: 1320
         UTIL_ASSERT_MSG(FALSE, "CGameRemoteObjectArray::Add: new failed.");
+        return FALSE;
     }
 
     node->pNext = NULL;
@@ -120,11 +126,11 @@ BOOL CGameRemoteObjectArray::Add(PLAYER_ID remotePlayerID, LONG remoteObjectID, 
     node->remoteObjectID = remoteObjectID;
     node->localObjectID = localObjectID;
 
-    if (m_pArray[arrayIndex] != NULL) {
-        node->pNext = m_pArray[arrayIndex];
+    if (m_pArray[arrayIndex] == NULL) {
         m_pArray[arrayIndex] = node;
     } else {
-        m_pArray[arrayIndex] = NULL;
+        node->pNext = m_pArray[arrayIndex];
+        m_pArray[arrayIndex] = node;
     }
 
     if (bSetInGame == TRUE) {
@@ -142,6 +148,7 @@ BOOL CGameRemoteObjectArray::Add(PLAYER_ID remotePlayerID, LONG remoteObjectID, 
             // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
             // __LINE__: 1356
             UTIL_ASSERT(FALSE);
+            return FALSE;
         }
 
         pObject->m_remoteObjectID = remoteObjectID;
@@ -415,7 +422,7 @@ BOOL CGameRemoteObjectArray::UnmarshalControlChanges(BYTE* pData, DWORD dwSize)
     // __LINE__: 1859
     UTIL_ASSERT(pData != NULL && dwSize != 0);
 
-    cnt = 0;
+    cnt = CNetwork::SPEC_MSG_HEADER_LENGTH;
 
     SHORT nControlsAreaChanged = *reinterpret_cast<SHORT*>(pData + cnt);
     cnt += sizeof(SHORT);
@@ -430,7 +437,7 @@ BOOL CGameRemoteObjectArray::UnmarshalControlChanges(BYTE* pData, DWORD dwSize)
         memcpy(szAreaString, pData + cnt, szAreaStringLength);
         cnt += szAreaStringLength;
 
-        areas[nIndex] = szAreaString;
+        areas[nIndex] = CString(szAreaString, szAreaStringLength);
 
         areasPlayerID[nIndex] = *reinterpret_cast<DWORD*>(pData + cnt);
         cnt += sizeof(DWORD);
@@ -541,6 +548,8 @@ BOOL CGameRemoteObjectArray::RemovePlayer(DWORD removedPlayerID)
                     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
                     // __LINE__: 2101
                     UTIL_ASSERT_MSG(FALSE, "CGameRemoteObjectArray::RemovePlayer:  Deny not allowed on object.\n");
+                    entry = entry->pNext;
+                    continue;
                 }
 
                 PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
@@ -597,7 +606,7 @@ BOOL CGameRemoteObjectArray::ChangeControlOnLoadArea(CGameArea* pArea)
     m_pnControlsAreaChangedFirstObject[m_nControlsAreaChanged] = static_cast<SHORT>(pArea->m_nFirstObject);
     m_nControlsAreaChanged++;
 
-    for (SHORT objectID = static_cast<SHORT>(pArea->m_nFirstObject); objectID < lastObjectID; objectID++) {
+    for (SHORT objectID = static_cast<SHORT>(pArea->m_nFirstObject); objectID != lastObjectID; objectID++) {
         LONG localObjectID = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->FindObjectId(objectID);
         if (localObjectID != -1) {
             CGameObject* pObject;
@@ -677,6 +686,8 @@ BOOL CGameRemoteObjectArray::ChangeControlOnLoadGame()
                     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
                     // __LINE__: 2341
                     UTIL_ASSERT_MSG(FALSE, "CGameRemoteObjectArray::ChangeControlOnLoadGame:  Share not allowed on object.\n");
+                    entry = entry->pNext;
+                    continue;
                 }
 
                 PLAYER_ID remotePlayerID = pObject->m_remotePlayerID;
@@ -687,33 +698,35 @@ BOOL CGameRemoteObjectArray::ChangeControlOnLoadGame()
                     CGameObjectArray::THREAD_ASYNCH,
                     INFINITE);
 
-                if (objectType == CGameObject::TYPE_SPRITE) {
-                    do {
-                        rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(entry->localObjectID,
-                            CGameObjectArray::THREAD_ASYNCH,
-                            &pObject,
-                            INFINITE);
-                    } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+                if (remotePlayerID == 0) {
+                    if (objectType == CGameObject::TYPE_SPRITE) {
+                        do {
+                            rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(entry->localObjectID,
+                                CGameObjectArray::THREAD_ASYNCH,
+                                &pObject,
+                                INFINITE);
+                        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
 
-                    if (rc == CGameObjectArray::SUCCESS) {
-                        static_cast<CGameSprite*>(pObject)->m_inControlLastTime = TRUE;
-                        g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(entry->localObjectID,
-                            CGameObjectArray::THREAD_ASYNCH,
-                            INFINITE);
+                        if (rc == CGameObjectArray::SUCCESS) {
+                            static_cast<CGameSprite*>(pObject)->m_inControlLastTime = TRUE;
+                            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(entry->localObjectID,
+                                CGameObjectArray::THREAD_ASYNCH,
+                                INFINITE);
+                        }
                     }
-                }
 
-                ChangeControl(0,
-                    remoteObjectID,
-                    g_pChitin->cNetwork.m_idLocalPlayer,
-                    entry->localObjectID,
-                    listType == CGameObject::LIST_FLIGHT);
+                    ChangeControl(0,
+                        remoteObjectID,
+                        g_pChitin->cNetwork.m_idLocalPlayer,
+                        entry->localObjectID,
+                        listType == CGameObject::LIST_FLIGHT);
+                }
             }
             entry = entry->pNext;
         }
     }
 
-    for (SHORT nCharacterSlot = 0; nCharacterSlot < CINFGAME_MAXCHARACTERS; nCharacterSlot++) {
+    for (SHORT nCharacterSlot = 0; nCharacterSlot < g_pBaldurChitin->GetObjectGame()->m_nCharacters; nCharacterSlot++) {
         LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterSlot(nCharacterSlot);
 
         CGameObject* pObject;

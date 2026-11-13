@@ -248,12 +248,16 @@ BOOL CTlkTable::OpenFile(BYTE a2, BYTE a3)
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChTlkTbl.cpp
         // __LINE__: 90
         UTIL_ASSERT(FALSE);
+        pFile->Close();
+        return FALSE;
     }
 
     if (memcmp(&(pFile->m_header.nFileType), "TLK ", 4) != 0) {
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChTlkTbl.cpp
         // __LINE__: 97
         UTIL_ASSERT(FALSE);
+        pFile->Close();
+        return FALSE;
     }
 
     pFile->m_bOpened = TRUE;
