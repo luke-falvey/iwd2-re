@@ -13,6 +13,9 @@ CTypedPtrList<CPtrList, CVidFontRegistryEntry*> CVidFont::REGISTRY;
 // 0x8FB9A0
 CCriticalSection CVidFont::REGISTRY_CRITICAL_SECTION;
 
+// 0x85DD3C
+static const SHORT word_85DD3C = 0;
+
 // 0x792CA0
 CVidFont::CVidFont()
 {
@@ -51,6 +54,7 @@ LONG CVidFont::GetStringLength(const CString& sString, BOOLEAN bDemanded)
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidFont.cpp
         // __LINE__: 168
         UTIL_ASSERT(FALSE);
+        return -1;
     }
 
     int length = sString.GetLength();
@@ -59,9 +63,9 @@ LONG CVidFont::GetStringLength(const CString& sString, BOOLEAN bDemanded)
         SHORT nSequence = ch < 0 ? ch + 256 : ch;
         SequenceSet(nSequence - 1);
 
-        if (g_pChitin->field_1A0 & IsDBCSLeadByte(sString.GetAt(index))) {
+        if (g_pChitin->field_1A0 && IsDBCSLeadByte(sString.GetAt(index))) {
             index++;
-            FrameSet(sString.GetAt(index) - 1);
+            FrameSet(static_cast<BYTE>(sString.GetAt(index)) - 1);
         } else {
             FrameSet(0);
         }
@@ -86,6 +90,7 @@ LONG CVidFont::GetStringLengthEx(INT nSurface, const CString& sString, BOOLEAN b
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidFont.cpp
         // __LINE__: 242
         UTIL_ASSERT(FALSE);
+        return -1;
     }
 
     CVidMode* pVidMode = g_pChitin->GetCurrentVideoMode();
@@ -106,7 +111,7 @@ LONG CVidFont::GetStringLengthEx(INT nSurface, const CString& sString, BOOLEAN b
     }
 
     if (!m_bFontSet) {
-        SetTextFontEx(nSurface, hDC);
+        SetTextFontEx(nSurface, &hDC);
     }
 
     SIZE size;
@@ -139,6 +144,7 @@ SHORT CVidFont::GetBaseLineHeight(BOOLEAN bDemanded)
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidFont.cpp
         // __LINE__: 333
         UTIL_ASSERT(FALSE);
+        return -1;
     }
 
     CSize size;
@@ -165,6 +171,7 @@ SHORT CVidFont::GetFontHeight(BOOLEAN bDemanded)
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidFont.cpp
         // __LINE__: 379
         UTIL_ASSERT(FALSE);
+        return -1;
     }
 
     CSize size;
@@ -212,7 +219,7 @@ void CVidFont::SetResRef(const CResRef& cNewResRef, BOOL bDoubleSize, BOOL bSetA
 }
 
 // 0x793390
-BOOL CVidFont::SetTextFontEx(INT nSurface, HDC hDC)
+BOOL CVidFont::SetTextFontEx(INT nSurface, HDC* phDC)
 {
     // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidFont.cpp
     // __LINE__: 489
@@ -224,7 +231,7 @@ BOOL CVidFont::SetTextFontEx(INT nSurface, HDC hDC)
         GetFrameSize(0, 0, size, FALSE);
         nHeight = size.cy;
     } else {
-        nHeight = -1;
+        nHeight = field_4E6;
     }
 
     nHeight = -nHeight;
@@ -237,6 +244,7 @@ BOOL CVidFont::SetTextFontEx(INT nSurface, HDC hDC)
     m_hFont = CreateFontA(nHeight,
         0,
         0,
+        0,
         FW_NORMAL,
         FALSE,
         FALSE,
@@ -245,8 +253,7 @@ BOOL CVidFont::SetTextFontEx(INT nSurface, HDC hDC)
         OUT_DEFAULT_PRECIS,
         CLIP_DEFAULT_PRECIS,
         DEFAULT_QUALITY,
-        DEFAULT_PITCH,
-        FF_DONTCARE,
+        DEFAULT_PITCH | FF_DONTCARE,
         g_pChitin->GetFontName());
     m_bFontSet = TRUE;
 
@@ -258,12 +265,14 @@ BOOL CVidFont::SetTextFontEx(INT nSurface, HDC hDC)
     }
 
     HRESULT hr;
+    HDC hDC;
 
-    if (hDC == NULL) {
+    if (phDC == NULL) {
+        phDC = &hDC;
         pSurface = pVidMode->pSurfaces[nSurface];
 
         do {
-            hr = pSurface->GetDC(&hDC);
+            hr = pSurface->GetDC(phDC);
             pVidMode->CheckResults(hr);
         } while (hr == DDERR_SURFACELOST || hr == DDERR_WASSTILLDRAWING);
 
@@ -273,13 +282,13 @@ BOOL CVidFont::SetTextFontEx(INT nSurface, HDC hDC)
     }
 
     TEXTMETRICA tm;
-    HGDIOBJ hPrev = SelectObject(hDC, m_hFont);
-    GetTextMetricsA(hDC, &tm);
-    SelectObject(hDC, hPrev);
+    HGDIOBJ hPrev = SelectObject(*phDC, m_hFont);
+    GetTextMetricsA(*phDC, &tm);
+    SelectObject(*phDC, hPrev);
 
     if (pSurface != NULL) {
         do {
-            hr = pVidMode->pSurfaces[nSurface]->ReleaseDC(hDC);
+            hr = pVidMode->pSurfaces[nSurface]->ReleaseDC(*phDC);
             pVidMode->CheckResults(hr);
         } while (hr == DDERR_SURFACELOST || hr == DDERR_WASSTILLDRAWING);
     }
@@ -327,14 +336,15 @@ BOOL CVidFont::TextOut(const CString& sString, int x, int y, const CRect& rClip,
 {
     int length = sString.GetLength();
     for (int index = 0; index < length; index++) {
-        SequenceSet(sString.GetAt(index) - 1);
+        SequenceSet(static_cast<BYTE>(sString.GetAt(index) - 1));
 
         char ch = sString.GetAt(index);
         SHORT nSequence = ch < 0 ? ch + 256 : ch;
         SequenceSet(nSequence - 1);
 
         if (g_pChitin->field_1A0 && IsDBCSLeadByte(sString.GetAt(index))) {
-            FrameSet(sString.GetAt(index) - 1);
+            index++;
+            FrameSet(static_cast<BYTE>(sString.GetAt(index)) - 1);
         } else {
             FrameSet(0);
         }
@@ -395,7 +405,7 @@ BOOL CVidFont::TextOut(const CString& sString, WORD* pSurface, LONG lPitch, int 
 
     int length = sString.GetLength();
     for (int index = 0; index < length; index++) {
-        SequenceSet(sString.GetAt(index) - 1);
+        SequenceSet(static_cast<BYTE>(sString.GetAt(index) - 1));
 
         char ch = sString.GetAt(index);
         SHORT nSequence = ch < 0 ? ch + 256 : ch;
@@ -403,7 +413,7 @@ BOOL CVidFont::TextOut(const CString& sString, WORD* pSurface, LONG lPitch, int 
 
         if (g_pChitin->field_1A0 && IsDBCSLeadByte(sString.GetAt(index))) {
             index++;
-            FrameSet(sString.GetAt(index) - 1);
+            FrameSet(static_cast<BYTE>(sString.GetAt(index)) - 1);
         } else {
             FrameSet(0);
         }
@@ -439,7 +449,7 @@ BOOL CVidFont::TextOut(const CString& sString, WORD* pSurface, LONG lPitch, int 
 }
 
 // 0x793A70
-BOOL CVidFont::TextOutEx(INT nSurface, const CString& sString, int x, int y, const CRect& rClip, DWORD dwFlags, BOOL bDemanded)
+BOOL CVidFont::TextOutEx(INT nSurface, const CString& sString, int x, int y, CRect rClip, DWORD dwFlags, BOOL bDemanded)
 {
     HDC hDC;
     HRESULT hr;
@@ -495,7 +505,7 @@ BOOL CVidFont::TextOutEx(INT nSurface, const CString& sString, int x, int y, con
 
     ExtTextOutA(hDC,
         x,
-        y - GetBaseLineHeight(TRUE), // NOTE: Uninline.
+        y - GetBaseLineHeight(bDemanded), // NOTE: Uninline.
         ETO_CLIPPED,
         rClip,
         sString,
@@ -509,7 +519,7 @@ BOOL CVidFont::TextOutEx(INT nSurface, const CString& sString, int x, int y, con
         pVidMode->CheckResults(hr);
     } while (hr == DDERR_SURFACELOST || hr == DDERR_WASSTILLDRAWING);
 
-    return FALSE;
+    return TRUE;
 }
 
 // 0x7A0490
@@ -578,6 +588,8 @@ int CVidFont::RegisterFont()
         newNode->m_bLoaded = FALSE;
         newNode->m_nRefCount = 1;
         memset(newNode->m_aTextureIds, -1, sizeof(newNode->m_aTextureIds));
+        // NOTE: The exe sets only the first 7 bytes (+0x30..+0x36) to 0xFF;
+        // the eighth is left as `new` returned it.
         memset(newNode->m_aFirstGlyph, -1, sizeof(newNode->m_aFirstGlyph));
         newNode->m_aGlyphWidths = NULL;
         newNode->m_aGlyphCoords = 0;
@@ -755,7 +767,7 @@ INT CVidFont::LoadToTexture(BOOL bDemanded)
 
     // FIXME: Will never be true, probably some inlining.
     if (nIndex == -1) {
-        return -2;
+        return 2;
     }
 
     if (!bDemanded) {
@@ -771,14 +783,16 @@ INT CVidFont::LoadToTexture(BOOL bDemanded)
     node->m_texSize.cy = 256;
     node->m_nFontHeight = GetFontHeight(TRUE);
     node->m_nBaseLineHeight = GetBaseLineHeight(TRUE);
-    node->m_nSequences = GetNumberSequences(TRUE);
+    // NOTE: The exe uses the result as a byte (`AND EAX, 0xFF`).
+    node->m_nSequences = static_cast<BYTE>(GetNumberSequences(TRUE));
     node->m_aGlyphWidths = new INT[node->m_nSequences];
     node->m_aGlyphCoords = new CPoint[node->m_nSequences];
 
     CRect rClip(0, 0, 256, 256);
 
     if (m_bPaletteChanged) {
-        for (INT nColorIndex = 0; nColorIndex < 256; nColorIndex++) {
+        rgbTempPal[0] = 0;
+        for (INT nColorIndex = 1; nColorIndex < 256; nColorIndex++) {
             rgbTempPal[nColorIndex] = (nColorIndex << 24) | RGB(255, 255, 255);
         }
     } else {
@@ -793,7 +807,7 @@ INT CVidFont::LoadToTexture(BOOL bDemanded)
     UTIL_ASSERT(pData != NULL);
 
     INT nSequence = 0;
-    for (INT nTextureIndex = 0; nTextureIndex < 8; nTextureIndex++) {
+    for (INT nTextureIndex = 0; nTextureIndex < 8 && nSequence < node->m_nSequences; nTextureIndex++) {
         node->m_aTextureIds[nTextureIndex] = nTextureIndex + 8 * nIndex + 789;
         memset(pData, 0, sizeof(DWORD) * node->m_texSize.cx * node->m_texSize.cy);
 
@@ -971,7 +985,7 @@ BOOL CVidFont::TextOut3d(const CString& sText, int x, int y, const CRect& rClip,
 
         COLORREF rgbColor = m_rgbForegroundColor;
         if (m_bPaletteChanged) {
-            g_pChitin->GetCurrentVideoMode()->ApplyBrightnessContrast(rgbColor);
+            rgbColor = g_pChitin->GetCurrentVideoMode()->ApplyBrightnessContrast(rgbColor);
         } else {
             rgbColor = RGB(255, 255, 255);
         }
@@ -1025,7 +1039,7 @@ void CVidFont::RenderCharacters(const CString& sString, INT x, INT y, CVidFontRe
 
     INT nTextureIndex;
     INT nTextureId = -1;
-    BYTE ch;
+    INT ch;
 
     INT nScale = 1;
     if (m_bDoubleSize) {
@@ -1042,7 +1056,7 @@ void CVidFont::RenderCharacters(const CString& sString, INT x, INT y, CVidFontRe
     // Skip left.
     INT nIndex = 0;
     while (nIndex < sString.GetLength()) {
-        ch = sString[nIndex] - 1;
+        ch = static_cast<BYTE>(sString[nIndex]) - 1;
         if (x + node->m_aGlyphWidths[ch] * nScale >= rClip.left) {
             break;
         }
@@ -1052,12 +1066,12 @@ void CVidFont::RenderCharacters(const CString& sString, INT x, INT y, CVidFontRe
     }
 
     while (nIndex < sString.GetLength()) {
-        if (x > rClip.right) {
+        if (x >= rClip.right) {
             break;
         }
 
-        ch = sString[nIndex] - 1;
-        if (ch <= 0xFF) {
+        ch = static_cast<BYTE>(sString[nIndex]) - 1;
+        if (static_cast<UINT>(ch) <= 0xFF) {
             if (x < rClip.left) {
                 x1 = static_cast<float>(rClip.left);
                 x3 = static_cast<float>(rClip.left - x) / static_cast<float>(nScale) + static_cast<float>(node->m_aGlyphCoords[ch].x);
@@ -1103,7 +1117,7 @@ void CVidFont::RenderCharacters(const CString& sString, INT x, INT y, CVidFontRe
                 nTextureIndex++;
             }
 
-            if (node->m_aTextureIds[nTextureIndex] != nTextureId) {
+            if (nTextureIndex != 8 && node->m_aTextureIds[nTextureIndex] != nTextureId) {
                 nTextureId = node->m_aTextureIds[nTextureIndex];
                 g_pChitin->cVideo.field_13E = nTextureId;
                 CVideo3d::glBindTexture(GL_TEXTURE_2D, nTextureId);
@@ -1128,7 +1142,7 @@ void CVidFont::RenderCharacters(const CString& sString, INT x, INT y, CVidFontRe
                 CVideo3d::glEnd();
                 g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
 
-                x += nScale * node->m_aGlyphWidths[ch];
+                x += (node->m_aGlyphWidths[ch] + word_85DD3C) * nScale;
             }
         } else {
             CString sMessage;
@@ -1166,23 +1180,20 @@ BOOL CVidFont::TextOutEx3d(const CString& sString, int x, int y, const CRect& rC
         255);
 
     for (int index = 0; index < sString.GetLength(); index++) {
-        SequenceSet(sString[index] - 1);
-
-        char ch = sString[index];
-        SHORT nSequence = ch < 0 ? ch + 256 : ch;
-        SequenceSet(nSequence - 1);
+        SequenceSet(static_cast<BYTE>(sString[index]) - 1);
 
         if (g_pChitin->field_1A0 && IsDBCSLeadByte(sString[index])) {
-            FrameSet(sString[index] - 1);
+            index++;
+            FrameSet(static_cast<BYTE>(sString[index]) - 1);
         } else {
             FrameSet(0);
         }
 
         CSize size;
-        GetCurrentFrameSize(size, FALSE);
+        GetCurrentFrameSize(size, TRUE);
 
         CPoint ptCenter;
-        GetCurrentCenterPoint(ptCenter, FALSE);
+        GetCurrentCenterPoint(ptCenter, TRUE);
 
         CRect rChar(x, y - ptCenter.y, x + size.cx, y + size.cy - ptCenter.y);
 
@@ -1197,7 +1208,7 @@ BOOL CVidFont::TextOutEx3d(const CString& sString, int x, int y, const CRect& rC
             Render3d(x + ptCenter.x, y, rClip, TRUE, dwFlags);
         }
 
-        x += size.cx;
+        x += size.cx + word_85DD3C;
     }
 
     if (!bDemanded) {

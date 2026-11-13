@@ -35,11 +35,11 @@ public:
     SHORT GetFontHeight(BOOLEAN bDemanded);
     void SetColor(COLORREF rgbForegroundColor, COLORREF rgbBackgroundColor, BOOL bForce);
     void SetResRef(const CResRef& cNewResRef, BOOL bDoubleSize, BOOL bSetAutoRequest);
-    BOOL SetTextFontEx(INT nSurface, HDC hDC);
+    BOOL SetTextFontEx(INT nSurface, HDC* phDC);
     void RealizePalette(COLORREF rgbForegroundColor, COLORREF rgbBackgroundColor);
     BOOL TextOut(const CString& sString, int x, int y, const CRect& rClip, INT nSurface);
     BOOL TextOut(const CString& sString, WORD* pSurface, LONG lPitch, int x, int y, const CRect& rClip, DWORD dwFlags, BOOL bDemanded);
-    BOOL TextOutEx(INT nSurface, const CString& sString, int x, int y, const CRect& rClip, DWORD dwFlags, BOOL bDemanded);
+    BOOL TextOutEx(INT nSurface, const CString& sString, int x, int y, CRect rClip, DWORD dwFlags, BOOL bDemanded);
     BOOL Load(BOOL bDemanded);
     int RegisterFont();
     int CheckIfLoaded(BOOL bDemanded);
