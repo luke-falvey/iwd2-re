@@ -218,6 +218,10 @@ void CScreenMovies::OnKeyDown(SHORT nKeysFlags)
 {
     if (nKeysFlags > 0) {
         for (SHORT nKeyFlag = 0; nKeyFlag < nKeysFlags; nKeyFlag++) {
+            if (m_cUIManager.OnKeyDown(m_pVirtualKeysFlags[nKeyFlag])) {
+                continue;
+            }
+
             switch (m_pVirtualKeysFlags[nKeyFlag]) {
             case VK_TAB:
                 m_cUIManager.ForceToolTip();
@@ -424,6 +428,7 @@ void CScreenMovies::StartMovies(INT nEngineState)
             m_pMovies->GetPrev(prev);
             m_pMovies->RemoveAt(pos);
             if (prev != NULL) {
+                m_pMovies->GetNext(prev);
                 pos = prev;
             } else {
                 pos = m_pMovies->GetHeadPosition();
@@ -518,7 +523,7 @@ void CUIControlButtonMoviesCredits::OnLButtonClick(CPoint pt)
     CScreenMovies* pMovies = g_pBaldurChitin->m_pEngineMovies;
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMovies.cpp
-    // __LINE__: 1058
+    // __LINE__: 1114
     UTIL_ASSERT(pMovies != NULL);
 
     // NOTE: Uninline.
