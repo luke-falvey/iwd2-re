@@ -1608,7 +1608,7 @@ CGameObject* CAIObjectType::sub_40CCA0(CGameAIBase* caller, BOOL checkBackList) 
         nId = sub_40CED0(caller, checkBackList);
     }
 
-    CGameObject* pObject;
+    CGameObject* pObject = NULL;
     BYTE rc;
     do {
         rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nId,
@@ -1637,9 +1637,9 @@ BOOL CAIObjectType::sub_40CD80(CGameAIBase* caller, CPoint& pt, INT& nRadius) co
 
         CRect rRect;
         rRect.top = min(max(m_rect.top, 0), pArea->GetInfinity()->nAreaY);
-        rRect.bottom = min(m_rect.bottom, pArea->GetInfinity()->nAreaY + 1);
+        rRect.bottom = min(max(m_rect.bottom, rRect.top + 1), pArea->GetInfinity()->nAreaY);
         rRect.left = min(max(m_rect.left, 0), pArea->GetInfinity()->nAreaX);
-        rRect.right = min(m_rect.right, pArea->GetInfinity()->nAreaX + 1);
+        rRect.right = min(max(m_rect.right, rRect.left + 1), pArea->GetInfinity()->nAreaX);
         rRect.top = 3 * rRect.top / 4;
         rRect.bottom = 3 * rRect.bottom / 4;
         rRect.NormalizeRect();
@@ -1661,8 +1661,9 @@ LONG CAIObjectType::sub_40CED0(CGameAIBase* caller, BOOL checkBackList) const
     if (caller->GetArea() != NULL) {
         if (caller->GetVertListType() != CGameObject::LIST_FRONT
             || m_nLocationType != 0) {
-            CPoint pt;
-            INT nRadius;
+            // NOTE: Both are overwritten by `sub_40CD80`.
+            CPoint pt = caller->GetPos();
+            INT nRadius = caller->GetVisualRange();
 
             // NOTE: Uninline.
             sub_40CD80(caller, pt, nRadius);
@@ -1714,6 +1715,9 @@ LONG CAIObjectType::sub_40CED0(CGameAIBase* caller, BOOL checkBackList) const
 CGameObject* CAIObjectType::sub_40D050(CGameAIBase* caller, BYTE type, BOOL checkBackList) const
 {
     CGameObject* pObject = sub_40D0F0(caller, checkBackList);
+    if (pObject == NULL) {
+        return NULL;
+    }
 
     if ((pObject->GetObjectType() != type
             && type != CGameObject::TYPE_AIBASE
@@ -1732,17 +1736,87 @@ CGameObject* CAIObjectType::sub_40D050(CGameAIBase* caller, BYTE type, BOOL chec
 // 0x40D0F0
 CGameObject* CAIObjectType::sub_40D0F0(CGameAIBase* caller, BOOL checkBackList) const
 {
+    CGameObject* pObject = NULL;
+
     if (Equal(NOONE)) {
         return NULL;
     }
 
+    // NOTE: The rest is a copy of `sub_40CED0` and `sub_40CD80` that differs
+    // from them: the nearest search sees invisible creatures, and the
+    // location search starts from the caller's position and visual range.
     LONG nId = m_nInstance;
     if (nId < 0) {
-        // NOTE: Uninline.
-        nId = sub_40CED0(caller, checkBackList);
+        if (caller->GetArea() != NULL) {
+            if (caller->GetVertListType() == CGameObject::LIST_FRONT
+                && m_nLocationType == 0) {
+                nId = caller->GetArea()->GetNearest(caller->GetId(),
+                    *this,
+                    caller->GetVisualRange(),
+                    caller->GetVisibleTerrainTable(),
+                    TRUE,
+                    TRUE,
+                    FALSE,
+                    FALSE,
+                    FALSE);
+            } else {
+                CPoint pt = caller->GetPos();
+                INT nRadius = caller->GetVisualRange();
+
+                if (m_nLocationType == 1) {
+                    pt.x = m_ptCenter.x;
+                    pt.y = 3 * m_ptCenter.y / 4;
+                    // NOTE: The exe overwrites only the low word of
+                    // `nRadius`; `sub_46DAE0` reads only that word.
+                    nRadius = m_nRadius;
+                } else if (m_nLocationType == 2) {
+                    CGameArea* pArea = caller->GetArea();
+
+                    CRect rRect;
+                    rRect.top = min(max(m_rect.top, 0), pArea->GetInfinity()->nAreaY);
+                    rRect.bottom = min(max(m_rect.bottom, rRect.top + 1), pArea->GetInfinity()->nAreaY);
+                    rRect.left = min(max(m_rect.left, 0), pArea->GetInfinity()->nAreaX);
+                    rRect.right = min(max(m_rect.right, rRect.left + 1), pArea->GetInfinity()->nAreaX);
+                    rRect.top = 3 * rRect.top / 4;
+                    rRect.bottom = 3 * rRect.bottom / 4;
+                    rRect.NormalizeRect();
+
+                    pt.y = (rRect.bottom + rRect.top) / 2;
+                    pt.x = (rRect.right + rRect.left) / 2;
+                    nRadius = rRect.bottom + rRect.right - rRect.top - rRect.left;
+                }
+
+                nId = caller->GetArea()->sub_46DAE0(pt.x,
+                    pt.y,
+                    *this,
+                    nRadius,
+                    caller->GetVisibleTerrainTable(),
+                    FALSE,
+                    TRUE,
+                    FALSE,
+                    FALSE);
+            }
+
+            if (nId == -1 && checkBackList) {
+                CTypedPtrList<CPtrList, LONG*> targets;
+
+                caller->GetArea()->GetAllInRangeBack(caller->GetPos(),
+                    *this,
+                    caller->GetVisualRange(),
+                    caller->GetVisibleTerrainTable(),
+                    targets,
+                    TRUE,
+                    FALSE,
+                    FALSE);
+                if (targets.GetCount() != 0) {
+                    nId = reinterpret_cast<LONG>(targets.GetHead());
+                }
+            }
+        } else {
+            nId = CGameObjectArray::INVALID_INDEX;
+        }
     }
 
-    CGameObject* pObject;
     BYTE rc;
     do {
         rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nId,
