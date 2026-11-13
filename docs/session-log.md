@@ -18,9 +18,11 @@ Newest first. Each entry covers what was done, what's blocked and what's next.
 
 At that rate the unread 1.9 MB would hold on the order of a thousand such differences. Whether to audit all of it (about 40M tokens at the sample's cost) is the user's decision.
 
+**Static data.** Two scripts compare the repo's annotated statics with the exe: `tools/static_strings.py` (523 static `CString`s) and `tools/static_values.py` (1,253 integer constants and arrays; 46 with expression initialisers are skipped). They found `CHARISMA_STORE_MOD` naming the table `CHRMODS` instead of `CHRMODST`, `CGameSprite::READY_COUNT` 75 instead of 60, and nine wrong address comments. A verifier read the other 83 static initialisers: the CD-switch screen's `dword_8E0320` and `dword_8E0330` had no initial values (exe: (35,545) and (765,48)). Four exe objects have no repo definition and no reader in the listings (0x8D86B8, 0x8E17F0, 0x8E52F8, 0xA09F5C). The three table-like undefined runs are switch index tables.
+
 **Open**
 - `CScreenCharacter.h` declares `field_2B6` at the offset that is also `m_spells.m_nHighestLevel` (0x1BA + 0xFC); they are probably one member, which would shift every later member's comment by four.
-- Code outside functions still unexamined: about 700 short runs classified only by pattern, three table-like undefined runs (0x72B521, 0x4529AD, 0x63054B), static initialisers against the repo's constant values.
+- Code outside functions: 773 of the 867 runs match five exact compiler patterns (static constructor and atexit thunks); the rest are covered above or in batch 109.
 
 ## 2026-11-13 (afternoon): batches 88–108, every counted function done; code outside functions found
 

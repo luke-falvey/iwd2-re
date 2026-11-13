@@ -36,10 +36,10 @@ static int dword_8AE4B4 = 321;
 static int dword_8AE4B8 = 10;
 
 // 0x8E0320
-static CPoint dword_8E0320;
+static CPoint dword_8E0320(35, 545);
 
 // 0x8E0330
-static CSize dword_8E0330;
+static CSize dword_8E0330(765, 48);
 
 // 0x54D280
 CSwitchCDStatus::CSwitchCDStatus()

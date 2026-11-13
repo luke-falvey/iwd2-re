@@ -41,7 +41,7 @@ const BYTE CGameSpriteEquipment::SLOT_FIST = 10;
 // 0x85BD84
 const BYTE CGameSpriteEquipment::SLOT_AMMO = 11;
 
-// 0x85BD84
+// 0x85BD85
 const BYTE CGameSpriteEquipment::SLOT_MISC = 15;
 
 // 0x85BD86

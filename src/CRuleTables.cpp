@@ -340,7 +340,7 @@ const CString CRuleTables::LORE("Lore");
 const CString CRuleTables::LORE_BONUS("LoreBon");
 
 // 0x8DEE74
-const CString CRuleTables::CHARISMA_STORE_MOD("CHRMODS");
+const CString CRuleTables::CHARISMA_STORE_MOD("CHRMODST");
 
 // 0x8DF19C
 const CString CRuleTables::RAISE_DEAD_COST("RaisDead");

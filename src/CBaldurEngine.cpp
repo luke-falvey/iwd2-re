@@ -119,7 +119,7 @@ const CResRef CBaldurEngine::RESREF_SOUND_BOOT1("G_Boot1");
 
 // NOTE: Probably error, should it be `G_Boot2`?
 //
-// 0x8CD2E0
+// 0x8CD2D8
 const CResRef CBaldurEngine::RESREF_SOUND_BOOT2("G_Boot1");
 
 // 0x8CD388
