@@ -43,7 +43,6 @@ public:
     void ResetMainPanel();
     void UpdateMainPanel();
     void OnDoneButtonClick();
-    void OnReplayButtonClick();
     void StartChapter(const CResRef& cResText);
     void StartChapterMultiplayerHost(BYTE nChapter, BYTE* resRef);
     BOOL StartText(const CResRef& cResText);

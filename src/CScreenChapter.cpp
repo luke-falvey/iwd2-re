@@ -443,7 +443,9 @@ void CScreenChapter::ResetMainPanel()
 
     INT nLine = 0;
     INT nTextLength = 0;
-    POSITION pos = m_pTextList->GetHeadPosition();
+    // NOTE: The title (index 0) went into the label above, the body starts at
+    // index 1.
+    POSITION pos = m_pTextList->FindIndex(1);
     while (pos != NULL) {
         g_pBaldurChitin->GetTlkTable().Fetch(m_pTextList->GetAt(pos), strRes);
 
@@ -462,13 +464,15 @@ void CScreenChapter::ResetMainPanel()
                     break;
                 }
 
-                m_pTextControl->DisplayString(CString(""),
-                    CString(""),
-                    m_pTextControl->m_rgbLabelColor,
-                    m_pTextControl->m_rgbTextColor,
-                    -1,
-                    FALSE,
-                    TRUE);
+                if (strRes.szText[n] == '\n') {
+                    m_pTextControl->DisplayString(CString(""),
+                        CString(""),
+                        m_pTextControl->m_rgbLabelColor,
+                        m_pTextControl->m_rgbTextColor,
+                        -1,
+                        FALSE,
+                        TRUE);
+                }
             }
 
             m_pTextControl->DisplayString(CString(""),
@@ -513,7 +517,9 @@ void CScreenChapter::ResetMainPanel()
         UpdateText(m_pTextControl, "");
     }
 
-    m_nLineDelay = max(m_nTotalPlayTime / max(m_pTextControl->m_plstStrings->GetCount() - 7 * m_pTextControl->field_A6A / 4, 1), 833);
+    // NOTE: Both `max` compare unsigned (0x5D4001, 0x5D4019).
+    DWORD nLines = static_cast<DWORD>(m_pTextControl->m_plstStrings->GetCount() - 7 * m_pTextControl->field_A6A / 4);
+    m_nLineDelay = max(m_nTotalPlayTime / max(nLines, 1ul), 833ul);
 
     m_pTextControl->SetTopString(m_pTextControl->m_plstStrings->FindIndex(0));
 
@@ -603,22 +609,6 @@ void CScreenChapter::OnDoneButtonClick()
 
         break;
     }
-}
-
-// NOTE: Inlined.
-void CScreenChapter::OnReplayButtonClick()
-{
-    CSingleLock renderLock(&(GetManager()->field_36), FALSE);
-    renderLock.Lock(INFINITE);
-
-    m_cVoiceSound.Stop();
-    m_pTextControl->SetTopString(m_pTextControl->m_plstStrings->FindIndex(0));
-    m_nParagraph = 1;
-    m_nLine = 1;
-    m_bEnded = FALSE;
-    m_nStartTime = GetTickCount();
-
-    renderLock.Unlock();
 }
 
 // 0x5D4380
@@ -823,8 +813,12 @@ void CUIControlButtonChapterReplay::OnLButtonClick(CPoint pt)
     CSingleLock renderLock(&(pChapter->GetManager()->field_36), FALSE);
     renderLock.Lock(INFINITE);
 
-    // NOTE: Uninline.
-    pChapter->OnReplayButtonClick();
+    pChapter->m_cVoiceSound.Stop();
+    pChapter->m_pTextControl->SetTopString(pChapter->m_pTextControl->m_plstStrings->FindIndex(0));
+    pChapter->m_nParagraph = 1;
+    pChapter->m_nLine = 1;
+    pChapter->m_bEnded = FALSE;
+    pChapter->m_nStartTime = GetTickCount();
 
     renderLock.Unlock();
 }
@@ -861,7 +855,7 @@ void CUIControlTextDisplayChapter::TimerAsynchronousUpdate(BOOLEAN bInside)
                 nElapsed = nTickCount - nEnd;
             }
 
-            field_A62 = -static_cast<SHORT>((nElapsed * m_nFontHeight) / pChapter->m_nLineDelay);
+            field_A62 = -static_cast<SHORT>((static_cast<INT>(nElapsed) * m_nFontHeight) / pChapter->m_nLineDelay);
 
             if (field_A62 <= -m_nFontHeight) {
                 field_A62 = 0;
@@ -872,7 +866,7 @@ void CUIControlTextDisplayChapter::TimerAsynchronousUpdate(BOOLEAN bInside)
                 pChapter->m_nLine++;
             }
 
-            CRect rDirty(m_pPanel->m_ptOrigin + m_ptOrigin, m_size);
+            CRect rDirty(m_ptOrigin, m_size);
             m_pPanel->InvalidateRect(&rDirty);
             InvalidateRect();
         }
