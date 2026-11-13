@@ -43,8 +43,9 @@ CGameAnimationTypeMonsterLarge::CGameAnimationTypeMonsterLarge(USHORT animationI
         m_g3VidCellExtend.SetResRef(CResRef(m_resRef + "G3E"), FALSE, TRUE, TRUE);
     }
 
+    m_currentVidCellBase = &m_g1VidCellBase;
     m_currentVidCellExtend = &m_g1VidCellExtend;
-    m_currentVidCell = &m_g1VidCellBase;
+    m_currentVidCell = m_currentVidCellBase;
 
     if (m_falseColor) {
         for (BYTE colorRange = 0; colorRange < CVidPalette::NUM_RANGES; colorRange++) {
@@ -228,7 +229,9 @@ void CGameAnimationTypeMonsterLarge::GetAnimationResRef(CString& resRef, BYTE ra
     case 0x30:
         break;
     default:
-        resRef = "";
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+        // __LINE__: 8387
+        UTIL_ASSERT(FALSE);
         break;
     }
 }
@@ -267,7 +270,7 @@ char* CGameAnimationTypeMonsterLarge::GetSndWalk(SHORT tableIndex)
     char* szTemp = new char[9];
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
-    // __LINE__: 3699
+    // __LINE__: 8473
     UTIL_ASSERT(szTemp != NULL);
 
     memcpy(szTemp, v1, 9);
@@ -645,7 +648,7 @@ SHORT CGameAnimationTypeMonsterLarge::SetSequence(SHORT nSequence)
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
-        // __LINE__: 8995
+        // __LINE__: 8985
         UTIL_ASSERT(FALSE);
     }
 

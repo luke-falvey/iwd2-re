@@ -400,7 +400,7 @@ void CGameAnimationTypeAmbient::GetAnimationResRef(CString& resRef, BYTE range)
 // 0x6A7C90
 char* CGameAnimationTypeAmbient::GetSndWalk(SHORT tableIndex)
 {
-    switch (m_animationID) {
+    switch (m_animationID & 0xF00) {
     case 0x400:
     case 0x600:
     case 0x700:
@@ -834,7 +834,7 @@ SHORT CGameAnimationTypeAmbient::SetSequence(SHORT nSequence)
     case 10:
         m_currentVidCellBase = &m_g1VidCellBase;
         m_currentVidCellExtend = &m_g1VidCellExtend;
-        m_currentBamSequence = 10;
+        m_currentBamSequence = 0;
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
