@@ -927,7 +927,7 @@ CResRef CItem::GetUsedUpItemId()
 {
     CResRef usedResRef("");
 
-    if (cResRef != "") {
+    if (!(cResRef == "")) {
         if (pRes != NULL) {
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CItem.cpp
             // __LINE__: 1732
@@ -1066,7 +1066,7 @@ CResRef CItem::GetGroundIcon()
 {
     CResRef iconResRef("");
 
-    if (cResRef != "") {
+    if (!(cResRef == "")) {
         if (pRes != NULL) {
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CItem.cpp
             // __LINE__: 1973
@@ -1089,8 +1089,8 @@ CResRef CItem::GetItemIcon()
 {
     CResRef iconResRef("");
 
-    if (cResRef != "") {
-        if (IsBadReadPtr(pRes, 0x60)) {
+    if (!(cResRef == "")) {
+        if (IsBadReadPtr(pRes, 0x60) == TRUE) {
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CItem.cpp
             // __LINE__: 2019
             UTIL_ASSERT_MSG(FALSE, "Bad item!");
@@ -1174,26 +1174,24 @@ WORD CItem::GetLoreValue()
 // 0x4E9FD0
 STRREF CItem::GetDescription()
 {
-    if (cResRef == "") {
-        return -1;
+    STRREF strDescription = -1;
+
+    if (cResRef != "") {
+        if (pRes != NULL) {
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\CItem.cpp
+            // __LINE__: 2176
+            UTIL_ASSERT(pRes->Demand());
+
+            if ((m_flags & 0x1) != 0 && pRes->m_pHeader->identifiedDescription != -1) {
+                strDescription = pRes->m_pHeader->identifiedDescription;
+            } else {
+                strDescription = pRes->m_pHeader->genericDescription;
+            }
+
+            pRes->Release();
+        }
     }
 
-    if (pRes == NULL) {
-        return -1;
-    }
-
-    // __FILE__: C:\Projects\Icewind2\src\Baldur\CItem.cpp
-    // __LINE__: 2176
-    UTIL_ASSERT(pRes->Demand());
-
-    STRREF strDescription;
-    if ((m_flags & 0x1) != 0 && pRes->m_pHeader->identifiedDescription != -1) {
-        strDescription = pRes->m_pHeader->identifiedDescription;
-    } else {
-        strDescription = pRes->m_pHeader->genericDescription;
-    }
-
-    pRes->Release();
     return strDescription;
 }
 
@@ -1240,7 +1238,7 @@ BYTE CItem::GetMinLevelRequired()
 {
     BYTE nValue = 0;
 
-    if (cResRef != "") {
+    if (!(cResRef == "")) {
         if (pRes != NULL) {
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CItem.cpp
             // __LINE__: 2464
@@ -1259,7 +1257,7 @@ BYTE CItem::GetMinSTRRequired()
 {
     BYTE nValue = 0;
 
-    if (cResRef != "") {
+    if (!(cResRef == "")) {
         if (pRes != NULL) {
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CItem.cpp
             // __LINE__: 2483
@@ -1278,7 +1276,7 @@ BYTE CItem::GetMinINTRequired()
 {
     BYTE nValue = 0;
 
-    if (cResRef != "") {
+    if (!(cResRef == "")) {
         if (pRes != NULL) {
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CItem.cpp
             // __LINE__: 2521
@@ -1297,7 +1295,7 @@ BYTE CItem::GetMinDEXRequired()
 {
     BYTE nValue = 0;
 
-    if (cResRef != "") {
+    if (!(cResRef == "")) {
         if (pRes != NULL) {
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CItem.cpp
             // __LINE__: 2540
@@ -1316,7 +1314,7 @@ BYTE CItem::GetMinWISRequired()
 {
     BYTE nValue = 0;
 
-    if (cResRef != "") {
+    if (!(cResRef == "")) {
         if (pRes != NULL) {
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CItem.cpp
             // __LINE__: 2559
@@ -1335,7 +1333,7 @@ BYTE CItem::GetMinCONRequired()
 {
     BYTE nValue = 0;
 
-    if (cResRef != "") {
+    if (!(cResRef == "")) {
         if (pRes != NULL) {
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CItem.cpp
             // __LINE__: 2578
@@ -1354,7 +1352,7 @@ BYTE CItem::GetMinCHRRequired()
 {
     BYTE nValue = 0;
 
-    if (cResRef != "") {
+    if (!(cResRef == "")) {
         if (pRes != NULL) {
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CItem.cpp
             // __LINE__: 2597

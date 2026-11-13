@@ -591,6 +591,7 @@ public:
 class CPersistantEffectListRegenerated : public CTypedPtrList<CPtrList, CPersistantEffect*> {
 public:
     CPersistantEffectListRegenerated();
+    ~CPersistantEffectListRegenerated() override;
     void ClearAll();
     void AIUpdate(CGameSprite* pSprite, LONG deltaT);
 
@@ -631,6 +632,7 @@ public:
 // NOTE: List of `CResRef` (copied by 0x4E7680).
 class CDerivedStatsResRefList : public CTypedPtrList<CPtrList, CResRef*> {
 public:
+    ~CDerivedStatsResRefList() override;
     CDerivedStatsResRefList& operator=(const CDerivedStatsResRefList& other);
     void ClearAll();
 };
