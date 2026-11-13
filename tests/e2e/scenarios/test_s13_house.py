@@ -197,6 +197,11 @@ def test_s13_house(game, golden_dir):
                     break
             seen = now if now else seen
             time.sleep(0.25)
+        # The experience line can come up to a second after the death (the
+        # killer handles the kill on its next AI slot, every 16 AI ticks, once
+        # its last order is more than 75 ticks old): let it arrive before the
+        # next pause, so the lines are always experience, PAUSED, UNPAUSED.
+        time.sleep(1.5)
         if time.time() > fight_end:
             raise AssertionError(f"{len(hostile_circles(game.grab()))} goblin(s) still alive after 90 s")
     # No hostile circle for 3 s.

@@ -156,3 +156,27 @@ skill.
 - Beyond screenshots: compare what the two targets write to disk (S10's
   saves were unpacked and diffed, which found a bug no checkpoint showed).
   Random loot and gold differ between any two runs.
+
+## Notes from S12 and S13
+
+- Cross-target tests (S12): one target makes a save, the other loads it; keep
+  what the first target showed in a bank folder under the golden directory.
+- The party does not fight back on its own on the original. Order it: Select
+  All, Attack (63,463), click the creature. Do it paused (Space): the world
+  view freezes completely (`diff_ratio` 0) and the last line reads PAUSED.
+- With several hostile circles, cluster the red pixels (`hostile_circles()`
+  in `test_s13_house.py`) rather than averaging them.
+- "The party has gained experience" can come up to a second after the death
+  line on both targets. Wait 1.5 s after a kill before the next input that
+  prints a line, or the order of lines varies.
+- Message lines are 13 px apart; descenders of the line above reach into a
+  one-line region.
+- A panel open inside a dark interior turns the action-bar strip black
+  (mean < 30).
+- Locked container: a non-thief clicks it first ("LOCKED") and walks there,
+  then Kylie (portrait 6) uses Thieving (268,463) on it.
+- AR1005: screen = map point (x+84, y-10). Footlocker (558,238), exit
+  (200,350), open floor (450,215). Goblin loot is random.
+- `docks_to_house()` in `test_s9_docks.py` is the shared set-up for anything
+  starting in the house. It fails now and then in its own fight ("no goblin
+  came", "click on Reig did not change the screen"): rerun.
