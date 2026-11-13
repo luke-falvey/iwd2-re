@@ -11,8 +11,8 @@
   "incomplete_by_file": {
     "src/BalDataTypes.h": 1
   },
-  "annotations_total": 10649,
-  "annotations_not_function_start": 2607,
+  "annotations_total": 10657,
+  "annotations_not_function_start": 2615,
   "duplicate_annotations": {
     "0x7ACD60": [
       "src/CAIObjectType.cpp",
@@ -26,10 +26,6 @@
     "0x45B3A0": [
       "src/CAIObjectType.cpp",
       "src/CGameAnimationType.cpp"
-    ],
-    "0x847DDC": [
-      "src/CAITrigger.cpp",
-      "src/CAITrigger.cpp"
     ],
     "0x41E1E0": [
       "src/CAITrigger.cpp",
@@ -149,10 +145,6 @@
       "src/CScreenWorldMap.cpp",
       "src/CScreenWorldMap.cpp",
       "src/IcewindCGameEffects.cpp"
-    ],
-    "0x8CD2E0": [
-      "src/CBaldurEngine.cpp",
-      "src/CBaldurEngine.cpp"
     ],
     "0x427860": [
       "src/CBaldurEngine.cpp",
@@ -511,26 +503,9 @@
       "src/CGameEffectList.cpp",
       "src/CItem.cpp"
     ],
-    "0x85BD84": [
-      "src/CGameSpriteEquipment.cpp",
-      "src/CGameSpriteEquipment.cpp"
-    ],
     "0x4E73E0": [
       "src/CImmunities.cpp",
       "src/CImmunities.cpp"
-    ],
-    "0x84CF11": [
-      "src/CMessage.cpp",
-      "src/CMessage.cpp"
-    ],
-    "0x84CF12": [
-      "src/CMessage.cpp",
-      "src/CMessage.cpp"
-    ],
-    "0x84CF6F": [
-      "src/CMessage.cpp",
-      "src/CMessage.cpp",
-      "src/CMessage.cpp"
     ],
     "0x40A0D0": [
       "src/CMessage.cpp",
@@ -1201,7 +1176,7 @@
     "0x8478B4",
     "0x8478D4",
     "0x8478D8",
-    "0x8478DD",
+    "0x8478DC",
     "0x8478DE",
     "0x8478F2",
     "0x8478F4",
@@ -1380,6 +1355,7 @@
     "0x847DA6",
     "0x847DD0",
     "0x847DDC",
+    "0x847DE0",
     "0x847DF6",
     "0x847E04",
     "0x847E3C",
@@ -1517,6 +1493,8 @@
     "0x84CF10",
     "0x84CF11",
     "0x84CF12",
+    "0x84CF13",
+    "0x84CF14",
     "0x84CF15",
     "0x84CF16",
     "0x84CF17",
@@ -1603,6 +1581,8 @@
     "0x84CF6D",
     "0x84CF6E",
     "0x84CF6F",
+    "0x84CF70",
+    "0x84CF71",
     "0x84CF72",
     "0x84CF73",
     "0x84CF74",
@@ -1674,8 +1654,8 @@
     "0x84CFBB",
     "0x84CFBC",
     "0x84CFBD",
+    "0x84CFC1",
     "0x84CFC2",
-    "0x84CFC3",
     "0x84CFC4",
     "0x84CFC8",
     "0x84CFC9",
@@ -1955,6 +1935,7 @@
     "0x85AB48",
     "0x85AB49",
     "0x85AB4A",
+    "0x85AB4C",
     "0x85ABAB",
     "0x85BB38",
     "0x85BB39",
@@ -2017,6 +1998,7 @@
     "0x85BD82",
     "0x85BD83",
     "0x85BD84",
+    "0x85BD85",
     "0x85BD86",
     "0x85BD87",
     "0x85BD88",
@@ -2553,6 +2535,7 @@
     "0x8CD2C0",
     "0x8CD2C8",
     "0x8CD2D0",
+    "0x8CD2D8",
     "0x8CD2E0",
     "0x8CD2E8",
     "0x8CD2F0",

@@ -20,6 +20,19 @@ At that rate the unread 1.9 MB would hold on the order of a thousand such differ
 
 **Static data.** Two scripts compare the repo's annotated statics with the exe: `tools/static_strings.py` (523 static `CString`s) and `tools/static_values.py` (1,253 integer constants and arrays; 46 with expression initialisers are skipped). They found `CHARISMA_STORE_MOD` naming the table `CHRMODS` instead of `CHRMODST`, `CGameSprite::READY_COUNT` 75 instead of 60, and nine wrong address comments. A verifier read the other 83 static initialisers: the CD-switch screen's `dword_8E0320` and `dword_8E0330` had no initial values (exe: (35,545) and (765,48)). Four exe objects have no repo definition and no reader in the listings (0x8D86B8, 0x8E17F0, 0x8E52F8, 0xA09F5C). The three table-like undefined runs are switch index tables.
 
+**Old code in `CGameSprite.cpp`, audited in full (batches 111–113).** All 188 functions of this file that predate the project and had never been read against the exe (107 KB) went to Sonnet verifiers in ten lists of about 10 KB: **57 functions (30%) had a behavioural difference, about 125 differences**. Translators then confirmed each claim against the disassembly before applying it; one claim of about 125 was wrong (`GetInternalButtonList`) and one was left as a note (`FeedBack` parameters are 16-bit in the exe; 205 callers). Cost: about 1.9M tokens of verification and 570k of fixing. The ones a player would notice:
+- `EquipAll` called `Unequip` on nine slots; `Unequip`/`UnequipAll` passed the wrong slot; quick-spell buttons were always disabled (inverted test) and quick-item buttons had no type.
+- `FindTraps` and `Turn` required both classes (rogue and monk, cleric and paladin) instead of either; `PlayDead` and `OneSwing` had inverted sequence tests.
+- `StartSpriteEffect` asserted on every successful allocation; `SetDirection` never reversed the turn direction; `GetDirection` was wrong in one quadrant; `ChangeDirection` lacked the slow-mover throttle.
+- `FeedBack`: 12 differences (inverted encumbrance tests, a missing `break`, four wrong formats, two missing song messages).
+- `OnActionButton` cast on the ground instead of on the object; `IsSpellSchool` swapped Illusionist and Evoker; `GetCasterLevel` queried one class seven times; weapon specialisation tested base attack instead of fighter level.
+- `Render`: tint position, invisibility transparency, blur rounding, blood loop skipping entries; `RenderPortrait` clip and health colour; `RenderMirrorImage` moved the sprite itself.
+- `AutoPause` was sent to the wrong sprite in `CheckIfVisible` and ignored the trap option; `AddKnownDivineSpells` skipped two cases; the spell-memorisation helpers searched the wrong domain level and list.
+
+The typical causes: `||` for `&&`, an inverted test, a copy-pasted line not adapted (wrong list, wrong index, wrong slot), a statement that is a bare member name, a missing `break` or `else`, and byte-wide fields compared at full width. Ghidra split one function in two (`sub_720B50` continues in the listing `0x720C2F.asm`).
+
+Not audited: the other 1.76 MB of old code (largest: `CGameEffect.cpp` 103 KB, `CScreenCreateChar.cpp` 93 KB, `CMessage.cpp` 91 KB, `CAIScriptFile.cpp` 69 KB, `CInfGame.cpp` 65 KB). `tools/old_code.py` lists it per file (functions complete at f04e0db whose body is unchanged, minus the audited addresses in `tools/audited_old.txt`). Going wider is the user's decision.
+
 **Open**
 - `CScreenCharacter.h` declares `field_2B6` at the offset that is also `m_spells.m_nHighestLevel` (0x1BA + 0xFC); they are probably one member, which would shift every later member's comment by four.
 - Code outside functions: 773 of the 867 runs match five exact compiler patterns (static constructor and atexit thunks); the rest are covered above or in batch 109.
