@@ -1523,7 +1523,7 @@ SHORT CGameAnimationTypeMonster::SetSequence(SHORT nSequence)
         m_currentBamSequence = 5;
 
         if (m_bSplitBams) {
-            m_splitBamChar = '6';
+            m_splitBamChar = '5';
 
             // NOTE: Uninline.
             m_g2VidCellBase.SetResRef(CResRef(m_resRef + "G2" + m_splitBamChar), FALSE, TRUE, TRUE);
@@ -1533,7 +1533,7 @@ SHORT CGameAnimationTypeMonster::SetSequence(SHORT nSequence)
         m_currentVidCellBase = &m_g1VidCellBase;
 
         if (m_currentVidCellWeapon != NULL) {
-            m_currentVidCellWeapon = &m_g1VidCellWeaponBase;
+            m_currentVidCellWeaponBase = &m_g1VidCellWeaponBase;
         }
 
         m_currentBamSequence = 3;
@@ -1553,7 +1553,7 @@ SHORT CGameAnimationTypeMonster::SetSequence(SHORT nSequence)
         m_currentVidCellBase = &m_g1VidCellBase;
 
         if (m_currentVidCellWeapon != NULL) {
-            m_currentVidCellWeapon = &m_g1VidCellWeaponBase;
+            m_currentVidCellWeaponBase = &m_g1VidCellWeaponBase;
         }
 
         m_currentBamSequence = 2;
@@ -1576,7 +1576,7 @@ SHORT CGameAnimationTypeMonster::SetSequence(SHORT nSequence)
         m_currentVidCellBase = &m_g1VidCellBase;
 
         if (m_currentVidCellWeapon != NULL) {
-            m_currentVidCellWeapon = &m_g1VidCellWeaponBase;
+            m_currentVidCellWeaponBase = &m_g1VidCellWeaponBase;
         }
 
         m_currentBamSequence = 1;
@@ -1586,6 +1586,101 @@ SHORT CGameAnimationTypeMonster::SetSequence(SHORT nSequence)
 
             // NOTE: Uninline.
             m_g1VidCellBase.SetResRef(CResRef(m_resRef + "G1" + m_splitBamChar), FALSE, TRUE, TRUE);
+        }
+        break;
+    case 8:
+        m_currentVidCellBase = &m_g2VidCellBase;
+
+        if (m_currentVidCellWeapon != NULL) {
+            m_currentVidCellWeaponBase = &m_g2VidCellWeaponBase;
+        }
+
+        m_currentBamSequence = m_currentShootSequence;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = m_currentShootSplit;
+
+            // NOTE: Uninline.
+            m_g2VidCellBase.SetResRef(CResRef(m_resRef + "G2" + m_splitBamChar), FALSE, TRUE, TRUE);
+        }
+        break;
+    case 9:
+        m_renderWeapons = FALSE;
+        m_currentVidCellBase = &m_g1VidCellBase;
+        m_currentBamSequence = 5;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '5';
+
+            // NOTE: Uninline.
+            m_g1VidCellBase.SetResRef(CResRef(m_resRef + "G1" + m_splitBamChar), FALSE, TRUE, TRUE);
+        }
+        break;
+    case 10:
+        m_currentVidCellBase = &m_g1VidCellBase;
+
+        if (m_currentVidCellWeapon != NULL) {
+            m_currentVidCellWeaponBase = &m_g1VidCellWeaponBase;
+        }
+
+        m_currentBamSequence = 0;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '1';
+
+            // NOTE: Uninline.
+            m_g1VidCellBase.SetResRef(CResRef(m_resRef + "G1" + m_splitBamChar), FALSE, TRUE, TRUE);
+        }
+        break;
+    case 11:
+        m_currentVidCellBase = &m_g2VidCellBase;
+
+        if (m_currentVidCellWeapon != NULL) {
+            m_currentVidCellWeaponBase = &m_g2VidCellWeaponBase;
+        }
+
+        m_currentBamSequence = 0;
+        nSequence = 0;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '\0';
+
+            // NOTE: Uninline.
+            m_g2VidCellBase.SetResRef(CResRef(m_resRef + "G2" + m_splitBamChar), FALSE, TRUE, TRUE);
+        }
+        break;
+    case 12:
+        m_currentVidCellBase = &m_g2VidCellBase;
+
+        if (m_currentVidCellWeapon != NULL) {
+            m_currentVidCellWeaponBase = &m_g2VidCellWeaponBase;
+        }
+
+        m_currentBamSequence = 1;
+        nSequence = 0;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '1';
+
+            // NOTE: Uninline.
+            m_g2VidCellBase.SetResRef(CResRef(m_resRef + "G2" + m_splitBamChar), FALSE, TRUE, TRUE);
+        }
+        break;
+    case 13:
+        m_currentVidCellBase = &m_g2VidCellBase;
+
+        if (m_currentVidCellWeapon != NULL) {
+            m_currentVidCellWeaponBase = &m_g2VidCellWeaponBase;
+        }
+
+        m_currentBamSequence = 2;
+        nSequence = 0;
+
+        if (m_bSplitBams) {
+            m_splitBamChar = '2';
+
+            // NOTE: Uninline.
+            m_g2VidCellBase.SetResRef(CResRef(m_resRef + "G2" + m_splitBamChar), FALSE, TRUE, TRUE);
         }
         break;
     default:
