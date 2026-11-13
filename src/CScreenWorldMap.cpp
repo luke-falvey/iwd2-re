@@ -134,6 +134,7 @@ CScreenWorldMap::CScreenWorldMap()
 
     m_bCtrlKeyDown = FALSE;
     m_bShiftKeyDown = FALSE;
+    m_bCapsLockKeyOn = FALSE;
     m_ptMapView.x = 0;
     m_ptMapView.y = 0;
     field_FCA = RGB(224, 180, 15);
@@ -409,8 +410,8 @@ void CScreenWorldMap::EngineGameInit()
     m_nSelectedCharacter = 0;
     m_pCurrentScrollBar = NULL;
     field_FCA = RGB(224, 180, 15);
-    m_vfLabel.SetColor(field_FCA, field_FCA, FALSE);
-    m_nHighlightArea = 0;
+    m_vfLabel.SetColor(field_FCA, 0, FALSE);
+    m_nHighlightArea = -1;
     m_nSelectedArea = -1;
     m_ptMapStartMousePos.x = 0;
     m_ptMapStartMousePos.y = 0;
@@ -631,7 +632,7 @@ void CScreenWorldMap::SetMapView(const CPoint& ptMapView)
 
     CWorldMap* pWorldMap = pGame->GetWorldMap(sArea);
 
-    if (pGame->sub_5C79C0(sArea)) {
+    if (!pGame->sub_5C79C0(sArea)) {
         CSize cViewSize = m_pMapControl->m_size;
         cViewSize.cx += 1;
         cViewSize.cy += 1;
@@ -1484,7 +1485,7 @@ void CScreenWorldMap::StartWorldMap(INT nEngineState, LONG nLeavingEdge, BOOLEAN
     m_bInControl = bInControl;
     m_bClickedArea = FALSE;
 
-    if (m_nEngineState == 1 && m_nCurrentLink == 1) {
+    if (m_nEngineState == 1 && m_nCurrentLink == -1) {
         switch (m_nLeavingEdge) {
         case 0x0:
         case 0x4:

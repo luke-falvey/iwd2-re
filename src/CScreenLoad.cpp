@@ -435,6 +435,12 @@ void CScreenLoad::UpdateMainPanel()
         // __LINE__: 763
         UTIL_ASSERT(pButton != NULL);
 
+        // NOTE: Inlining.
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenLoad.cpp
+        // __LINE__: 1070
+        UTIL_ASSERT(0 <= nSlot && nSlot < GAME_SLOTS);
+
         pButton->SetEnabled(nGameSlot < m_nNumGameSlots);
 
         pButton = static_cast<CUIControlButton*>(pPanel->GetControl(1 + nSlot));
@@ -491,6 +497,12 @@ void CScreenLoad::LoadGame(INT nSlot)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenLoad.cpp
     // __LINE__: 851
     UTIL_ASSERT(pGame != NULL);
+
+    // NOTE: Inlining.
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenLoad.cpp
+    // __LINE__: 823
+    UTIL_ASSERT(0 <= nSlot && nSlot < GAME_SLOTS);
 
     INT nGameSlot = nSlot + m_nTopGameSlot;
     if (nGameSlot < m_nNumGameSlots) {
@@ -634,6 +646,12 @@ void CScreenLoad::OnDeleteButtonClick(INT nSlot)
     // __LINE__: 1097
     UTIL_ASSERT(0 <= nSlot && nSlot < GAME_SLOTS);
 
+    // NOTE: Inlining.
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenLoad.cpp
+    // __LINE__: 1070
+    UTIL_ASSERT(0 <= nSlot && nSlot < GAME_SLOTS);
+
     if (nSlot + m_nTopGameSlot < m_nNumGameSlots) {
         CUIPanel* pPanel = m_cUIManager.GetPanel(0);
 
@@ -690,10 +708,8 @@ void CScreenLoad::OnMainCancelButtonClick()
         // NOTE: Repeats code block above.
         if (g_pChitin->cNetwork.GetSessionOpen() == TRUE) {
             CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
-            if (pGame->GetMultiplayerSettings()->m_bArbitrationLockStatus == TRUE) {
-                pGame->GetMultiplayerSettings()->SetArbitrationLockAllowInput(TRUE);
-                pGame->GetMultiplayerSettings()->SetArbitrationLockStatus(FALSE, 0);
-            }
+            pGame->GetMultiplayerSettings()->SetArbitrationLockAllowInput(TRUE);
+            pGame->GetMultiplayerSettings()->SetArbitrationLockStatus(FALSE, 0);
         }
 
         g_pChitin->cNetwork.CloseSession(TRUE);
@@ -949,7 +965,7 @@ void CScreenLoad::RefreshGameSlots()
 }
 
 // 0x63D460
-BOOL CScreenLoad::DrawScreenShot(INT nSlot, const CRect& rArea, const CRect& rClip)
+BOOL CScreenLoad::DrawScreenShot(INT nSlot, const CRect& rArea, CRect rClip)
 {
     CVidBitmap vbScreenShot(CResRef(""), g_pBaldurChitin->field_4A28);
 
@@ -971,7 +987,7 @@ BOOL CScreenLoad::DrawScreenShot(INT nSlot, const CRect& rArea, const CRect& rCl
     } else {
         vbScreenShot.SetResRef(CResRef("ICEWIND2"), TRUE, TRUE);
         vbScreenShot.m_bDoubleSize = g_pBaldurChitin->field_4A28;
-        bResult = vbScreenShot.RenderDirect(0, rArea.left, rArea.top, rClip, 0, 1);
+        bResult = vbScreenShot.RenderDirect(0, rArea.left, rArea.top, rClip, 0, 0);
 
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenLoad.cpp
         // __LINE__: 1599
@@ -982,7 +998,7 @@ BOOL CScreenLoad::DrawScreenShot(INT nSlot, const CRect& rArea, const CRect& rCl
 }
 
 // 0x63D720
-BOOL CScreenLoad::DrawPortrait(USHORT nPortrait, INT nSlot, const CRect& rArea, const CRect& rClip)
+BOOL CScreenLoad::DrawPortrait(USHORT nPortrait, INT nSlot, const CRect& rArea, CRect rClip)
 {
     CVidBitmap vbPortrait(CResRef(""), g_pBaldurChitin->field_4A28);
 
@@ -1039,11 +1055,11 @@ BOOL CScreenLoad::DrawPortrait(USHORT nPortrait, INT nSlot, const CRect& rArea, 
 
         return TRUE;
     case 3:
-        if (m_aGameSlots[nGameSlot]->m_cBmpResPortrait2.m_pData == NULL) {
+        if (m_aGameSlots[nGameSlot]->m_cBmpResPortrait3.m_pData == NULL) {
             return FALSE;
         }
 
-        vbPortrait.SetRes(&(m_aGameSlots[nGameSlot]->m_cBmpResPortrait2));
+        vbPortrait.SetRes(&(m_aGameSlots[nGameSlot]->m_cBmpResPortrait3));
         vbPortrait.pRes->DemandLoadedBitmap();
         bResult = vbPortrait.RenderDirect(0, rArea.left, rArea.top, rClip, 0, 1);
         vbPortrait.pRes->ReleaseLoadedBitmap();
@@ -1783,6 +1799,9 @@ void CUIControlButtonLoadError::OnLButtonClick(CPoint pt)
     if (pPanel != NULL) {
         switch (pPanel->m_nID) {
         case 1:
+            pLoad->OnErrorButtonClick(m_nID - 1);
+            break;
+        case 2:
             // NOTE: Inlining.
             if (1) {
                 CSingleLock renderLock(&(pLoad->m_cUIManager.field_36), FALSE);
@@ -1790,9 +1809,6 @@ void CUIControlButtonLoadError::OnLButtonClick(CPoint pt)
                 pLoad->DismissPopup();
                 renderLock.Unlock();
             }
-            break;
-        default:
-            pLoad->OnErrorButtonClick(m_nID - 1);
             break;
         }
     } else {
