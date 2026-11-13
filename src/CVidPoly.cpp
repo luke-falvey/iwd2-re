@@ -77,7 +77,7 @@ BOOLEAN CVidPoly::IsPtInPoly(const CPoint* pPoly, SHORT nPoly, const CPoint& pt)
     if (nPoly == 1) {
         return pPoly[0] == pt;
     } else if (nPoly == 2) {
-        interSectionY = CalculateLineVIntersection(pPoly[0], pPoly[2], pt.x, pPoly[1]);
+        interSectionY = CalculateLineVIntersection(pPoly[0], pPoly[1], pt.x, pPoly[1]);
         return interSectionY == pt.y;
     }
 
@@ -116,13 +116,13 @@ BOOL CVidPoly::FillConvexPoly(WORD* pSurface, LONG lPitch, const CRect& rClipRec
     UINT nLeftIndex;
     INT nRightDx;
     INT nRightDy;
-    UINT nRightAdjUp;
-    UINT nRightRun;
+    INT nRightAdjUp;
+    INT nRightRun;
     INT nRightErrTerm;
     INT nLeftDx;
     INT nLeftDy;
-    UINT nLeftAdjUp;
-    UINT nLeftRun;
+    INT nLeftAdjUp;
+    INT nLeftRun;
     INT nLeftErrTerm;
     SHORT nIndex;
     CRect rClip;
@@ -139,20 +139,20 @@ BOOL CVidPoly::FillConvexPoly(WORD* pSurface, LONG lPitch, const CRect& rClipRec
     nLeftXDir = 1;
     nRightXDir = 1;
 
+    // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidPoly.cpp
+    // __LINE__: 267
+    UTIL_ASSERT(m_nVertices >= 3);
+
     if (m_nVertices < 3) {
         return FALSE;
     }
-
-    // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidPoly.cpp
-    // __LINE__: 267
-    UTIL_ASSERT_MSG(m_nVertices < CVPOLY_MAX_VERTICIES, "Excessive poly vertex count");
 
     SetHLineFunction(dwFlags);
 
     nMinYIndex = 0;
     nMinYPt = m_pVertices[nMinYIndex].y;
     nMaxYPt = m_pVertices[nMinYIndex].y;
-    ;
+
     for (nIndex = 1; nIndex < m_nVertices; nIndex++) {
         if (m_pVertices[nIndex].y < nMinYPt) {
             nMinYPt = m_pVertices[nIndex].y;
@@ -162,26 +162,25 @@ BOOL CVidPoly::FillConvexPoly(WORD* pSurface, LONG lPitch, const CRect& rClipRec
         }
     }
 
-    nRightX = m_pVertices[nMinYIndex].x;
-    nLeftX = m_pVertices[nMinYIndex].x;
     nRightIndex = (nMinYIndex + 1) % m_nVertices;
+    nRightX = m_pVertices[nMinYIndex].x;
+    nLeftX = nRightX;
     nLeftIndex = (nMinYIndex + m_nVertices - 1) % m_nVertices;
 
+    // NOTE: When an initial Dy is not positive the run, adjust and error
+    // terms of that side are left uninitialized. The vertex at the end of
+    // that edge is then on the first row, so the loop sets them before use.
     nRightDx = m_pVertices[nRightIndex].x - nRightX;
     if (nRightDx < 0) {
         nRightXDir = -1;
         nRightDx = -nRightDx;
     }
-    nRightDy = m_pVertices[nRightIndex].y - nMaxYPt;
 
+    nRightDy = m_pVertices[nRightIndex].y - nMinYPt;
     if (nRightDy > 0) {
         nRightRun = nRightDx / nRightDy;
         nRightAdjUp = nRightDx % nRightDy;
         nRightErrTerm = nRightAdjUp - nRightDy;
-    } else {
-        nRightRun = nRightDx;
-        nRightAdjUp = nRightDx;
-        nRightErrTerm = nRightDx;
     }
 
     nLeftDx = m_pVertices[nLeftIndex].x - nLeftX;
@@ -189,23 +188,19 @@ BOOL CVidPoly::FillConvexPoly(WORD* pSurface, LONG lPitch, const CRect& rClipRec
         nLeftXDir = -1;
         nLeftDx = -nLeftDx;
     }
-    nLeftDy = m_pVertices[nLeftIndex].y - nMaxYPt;
 
+    nLeftDy = m_pVertices[nLeftIndex].y - nMinYPt;
     if (nLeftDy > 0) {
         nLeftRun = nLeftDx / nLeftDy;
         nLeftAdjUp = nLeftDx % nLeftDy;
-        nLeftErrTerm = nRightAdjUp - nLeftDy;
-    } else {
-        nLeftRun = nLeftDx;
-        nLeftAdjUp = nLeftDx;
-        nLeftErrTerm = nLeftDx;
+        nLeftErrTerm = nLeftAdjUp - nLeftDy;
     }
 
     if ((dwFlags & 0x8) != 0) {
         pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(pSurface) + lPitch * (rClip.bottom - nMinYPt));
         lPitch = -lPitch;
     } else {
-        pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(pSurface) + lPitch * (nMinYPt - rClip.top));
+        pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(pSurface) + (nMinYPt - rClip.top) * lPitch);
     }
 
     ptRefAdjusted.y += nMinYPt - rClip.top;
@@ -251,16 +246,16 @@ BOOL CVidPoly::FillConvexPoly(WORD* pSurface, LONG lPitch, const CRect& rClipRec
             nLeftErrTerm = nLeftAdjUp - nLeftDy;
         }
 
-        // NOTE: Signed compare.
-        if (static_cast<LONG>(nMinYPt) >= rClip.top && static_cast<LONG>(nMinYPt) < rClip.bottom) {
+        // NOTE: Signed compares, against the inclusive bottom row.
+        if (static_cast<LONG>(nMinYPt) >= rClip.top && static_cast<LONG>(nMinYPt) <= rClip.bottom) {
             INT xMin;
             INT xMax;
             if (nLeftX > nRightX) {
                 xMax = min(static_cast<LONG>(nLeftX), rClip.right) - rClip.left;
-                xMin = max(static_cast<LONG>(nRightX) - rClip.left, 0);
+                xMin = static_cast<LONG>(nRightX) > rClip.left ? static_cast<LONG>(nRightX) - rClip.left : 0;
             } else {
                 xMax = min(static_cast<LONG>(nRightX), rClip.right) - rClip.left;
-                xMin = max(static_cast<LONG>(nLeftX) - rClip.left, 0);
+                xMin = static_cast<LONG>(nLeftX) > rClip.left ? static_cast<LONG>(nLeftX) - rClip.left : 0;
             }
 
             (this->*m_pDrawHLineFunction)(pSurface,
@@ -271,23 +266,23 @@ BOOL CVidPoly::FillConvexPoly(WORD* pSurface, LONG lPitch, const CRect& rClipRec
                 ptRefAdjusted);
         }
 
-        nLeftX += nLeftRun * nLeftXDir;
+        nLeftX += nLeftXDir * nLeftRun;
         nLeftErrTerm += nLeftAdjUp;
         if (nLeftErrTerm > 0) {
             nLeftX += nLeftXDir;
-            nLeftErrTerm -= nLeftAdjUp + nLeftDx;
+            nLeftErrTerm -= nLeftDy;
         }
 
-        nRightX += nRightRun * nRightXDir;
+        nRightX += nRightXDir * nRightRun;
         nRightErrTerm += nRightAdjUp;
         if (nRightErrTerm > 0) {
             nRightX += nRightXDir;
-            nRightErrTerm -= nRightAdjUp + nRightDx;
+            nRightErrTerm -= nRightDy;
         }
 
+        pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(pSurface) + lPitch);
         nMinYPt++;
         ptRefAdjusted.y++;
-        pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(pSurface) + lPitch);
     }
 
     return TRUE;
@@ -637,8 +632,8 @@ BOOL CVidPoly::FillConvexPoly3d(const CRect& rClip, DWORD dwColor, DWORD dwFlags
     }
 
     CVideo3d::glColor4f(static_cast<float>(GetRValue(dwColor)) / 255.0f,
-        static_cast<float>(GetRValue(dwColor)) / 255.0f,
-        static_cast<float>(GetRValue(dwColor)) / 255.0f,
+        static_cast<float>(GetGValue(dwColor)) / 255.0f,
+        static_cast<float>(GetBValue(dwColor)) / 255.0f,
         static_cast<float>(dwColor >> 24) / 255.0f);
     g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
 
@@ -691,7 +686,7 @@ void CVidPoly::SetPoly(WORD* pVertices, WORD nVertices)
 }
 
 // 0x7C18D0
-void CVidPoly::SetPoly(CVIDPOLY_VERTEX* pVertices, WORD nVertices)
+void CVidPoly::SetPoly(CVIDPOLY_VERTEX* pVertices, SHORT nVertices)
 {
     m_pVertices = pVertices;
     m_nVertices = nVertices;
@@ -748,7 +743,7 @@ void CVidPoly::DrawHLineDithered16(void* pSurface, int xMin, int xMax, DWORD dwC
             }
         }
 
-        width /= 2;
+        width = (width + 1) / 2;
         for (int x = 0; x < width; x++) {
             *pSurface16 = static_cast<unsigned short>(dwColor);
             pSurface16 += 2;
@@ -777,7 +772,7 @@ void CVidPoly::DrawHLineDitheredMirrored16(void* pSurface, int xMin, int xMax, D
             }
         }
 
-        width /= 2;
+        width = (width + 1) / 2;
         for (int x = 0; x < width; x++) {
             *pSurface16 = static_cast<unsigned short>(dwColor);
             pSurface16 -= 2;
@@ -945,7 +940,7 @@ void CVidPoly::DrawHLineDithered24(void* pSurface, int xMin, int xMax, DWORD dwC
 
     int width = xMax - xMin + 1;
     if (width > 0) {
-        pSurface8 += xMin;
+        pSurface8 += xMin * 3;
 
         if ((ptRef.y & 1) != 0) {
             if (((xMin + ptRef.x) & 1) != 0) {
@@ -959,7 +954,7 @@ void CVidPoly::DrawHLineDithered24(void* pSurface, int xMin, int xMax, DWORD dwC
             }
         }
 
-        width /= 2;
+        width = (width + 1) / 2;
         for (int x = 0; x < width; x++) {
             pSurface8[0] = GetRValue(dwColor);
             pSurface8[1] = GetGValue(dwColor);
@@ -990,7 +985,7 @@ void CVidPoly::DrawHLineDitheredMirrored24(void* pSurface, int xMin, int xMax, D
             }
         }
 
-        width /= 2;
+        width = (width + 1) / 2;
         for (int x = 0; x < width; x++) {
             pSurface8[0] = GetRValue(dwColor);
             pSurface8[1] = GetGValue(dwColor);
@@ -1057,7 +1052,7 @@ void CVidPoly::DrawHLineDithered32(void* pSurface, int xMin, int xMax, DWORD dwC
                 }
             }
 
-            width /= 2;
+            width = (width + 1) / 2;
             for (int x = 0; x < width; x++) {
                 *pSurface32 = dwColor;
                 pSurface32 += 2;
@@ -1093,7 +1088,7 @@ void CVidPoly::DrawHLineDitheredMirrored32(void* pSurface, int xMin, int xMax, D
                 }
             }
 
-            width /= 2;
+            width = (width + 1) / 2;
             for (int x = 0; x < width; x++) {
                 *pSurface32 = dwColor;
                 pSurface32 -= 2;

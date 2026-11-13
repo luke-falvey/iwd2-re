@@ -64,7 +64,7 @@ public:
     BOOL FillPoly(WORD* pSurface, LONG lPitch, const CRect& rClip, DWORD dwColor, DWORD dwFlags, const CPoint& ptRef);
     BOOL FillConvexPoly3d(const CRect& rClip, DWORD dwColor, DWORD dwFlags, const CPoint& ptRef);
     void SetPoly(WORD* pVertices, WORD nVertices);
-    void SetPoly(CVIDPOLY_VERTEX* pVertices, WORD nVertices);
+    void SetPoly(CVIDPOLY_VERTEX* pVertices, SHORT nVertices);
     void DrawHLine16(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef);
     void DrawHLineMirrored16(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef);
     void DrawHLineDithered16(void* pSurface, int xMin, int xMax, DWORD dwColor, const CRect& rSurface, const CPoint& ptRef);
