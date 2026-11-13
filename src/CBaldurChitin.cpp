@@ -458,8 +458,10 @@ CBaldurChitin::CBaldurChitin()
         nLogicalScreenWidth = 1024;
         nLogicalScreenHeight = 768;
         break;
-    case 800:
     default:
+        CVideo::SCREENWIDTH = DEFAULT_SCREEN_WIDTH;
+        // FALLTHROUGH
+    case 800:
         CInfinity::stru_8E7538.left = 0;
         CInfinity::stru_8E7538.top = 0;
         CInfinity::stru_8E7538.right = 736;
@@ -636,7 +638,7 @@ CBaldurChitin::~CBaldurChitin()
 
     WritePrivateProfileStringA(PROGRAM_OPTIONS_SECTION_KEY,
         FIRST_RUN_KEY,
-        "1",
+        "0",
         FILE_NAME);
 
     m_cTlkTable.CloseFile(0, byte_8FB954);
@@ -911,7 +913,7 @@ void CBaldurChitin::Init(HINSTANCE hInstance)
 
                     // __FILE__: C:\Projects\Icewind2\src\Baldur\CBaldurChitin.cpp
                     // __LINE__: 1148
-                    UTIL_ASSERT(bOpened);
+                    UTIL_ASSERT_MSG(bOpened, "Could not open male tlk file");
                 }
             } else {
                 byte_8BA28C = byte_8FB954;
@@ -920,7 +922,7 @@ void CBaldurChitin::Init(HINSTANCE hInstance)
 
                     // __FILE__: C:\Projects\Icewind2\src\Baldur\CBaldurChitin.cpp
                     // __LINE__: 1158
-                    UTIL_ASSERT(bOpened);
+                    UTIL_ASSERT_MSG(bOpened, "No tlk file");
                 }
             }
         } else {
@@ -930,7 +932,7 @@ void CBaldurChitin::Init(HINSTANCE hInstance)
 
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CBaldurChitin.cpp
                 // __LINE__: 1169
-                UTIL_ASSERT(bOpened);
+                UTIL_ASSERT_MSG(bOpened, "No tlk file");
             }
         }
     } else {
@@ -940,7 +942,7 @@ void CBaldurChitin::Init(HINSTANCE hInstance)
 
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CBaldurChitin.cpp
             // __LINE__: 1181
-            UTIL_ASSERT(bOpened);
+            UTIL_ASSERT_MSG(bOpened, "No tlk file");
         }
     }
 
@@ -1552,11 +1554,11 @@ void CBaldurChitin::LoadOptions()
 
     CVidCell::TRANSLUCENT_SHADOWS_ON = pOptions->m_bTranslucentShadows;
 
-    if (pOptions->m_nTooltips > 99 && pOptions->m_nTooltips != INT_MAX) {
+    if (static_cast<DWORD>(pOptions->m_nTooltips) > 99 && pOptions->m_nTooltips != INT_MAX) {
         pOptions->m_nTooltips = 30;
     }
 
-    BYTE nGammaCorrection = GetPrivateProfileIntA(PROGRAM_OPTIONS_SECTION_KEY,
+    INT nGammaCorrection = GetPrivateProfileIntA(PROGRAM_OPTIONS_SECTION_KEY,
         GAMMA_CORRECTION_KEY,
         0,
         GetIniFileName());
@@ -1564,9 +1566,9 @@ void CBaldurChitin::LoadOptions()
         nGammaCorrection = 0;
     }
 
-    cVideo.m_pVidModes[0]->m_nGammaCorrection = nGammaCorrection;
+    cVideo.m_pVidModes[0]->m_nGammaCorrection = static_cast<BYTE>(nGammaCorrection);
 
-    BYTE nBrightnessCorrection = GetPrivateProfileIntA(PROGRAM_OPTIONS_SECTION_KEY,
+    INT nBrightnessCorrection = GetPrivateProfileIntA(PROGRAM_OPTIONS_SECTION_KEY,
         BRIGHTNESS_CORRECTION_KEY,
         0,
         GetIniFileName());
@@ -1574,7 +1576,7 @@ void CBaldurChitin::LoadOptions()
         nBrightnessCorrection = 0;
     }
 
-    cVideo.m_pVidModes[0]->m_nBrightnessCorrection = nBrightnessCorrection;
+    cVideo.m_pVidModes[0]->m_nBrightnessCorrection = static_cast<BYTE>(nBrightnessCorrection);
 
     cVideo.field_13A = GetPrivateProfileIntA(PROGRAM_OPTIONS_SECTION_KEY,
         BACKWARDS_COMPATIBLE_3D_KEY,
@@ -1836,6 +1838,7 @@ void CBaldurChitin::SaveBitsPerPixel(USHORT nBpp)
 {
     switch (nBpp) {
     case 16:
+    default:
         WritePrivateProfileStringA(PROGRAM_OPTIONS_SECTION_KEY,
             BITS_PER_PIXEL_KEY,
             "16",
@@ -1913,7 +1916,7 @@ void CBaldurChitin::OnMultiplayerSessionClose()
         0,
         g_pBaldurChitin->GetIniFileName());
 
-    if (bEnabled) {
+    if (bEnabled == TRUE) {
         // NOTE: Unused.
         INT nServiceProviderType;
         g_pChitin->cNetwork.GetServiceProviderType(g_pChitin->cNetwork.GetServiceProvider(), nServiceProviderType);
@@ -2070,7 +2073,7 @@ void CBaldurChitin::OnMultiplayerPlayerVisible(PLAYER_ID playerID)
 void CBaldurChitin::OnMultiplayerPlayerLeave(PLAYER_ID playerID, const CString& sPlayerName)
 {
     INT nLocation;
-    INT nHostLocation;
+    BYTE nHostLocation;
 
     if (g_pChitin->cNetwork.GetSessionOpen()) {
         if (g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
@@ -2078,6 +2081,7 @@ void CBaldurChitin::OnMultiplayerPlayerLeave(PLAYER_ID playerID, const CString& 
 
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CBaldurChitin.cpp
             // __LINE__: 2725
+            // NOTE: The host location is a byte, so this can never fire.
             UTIL_ASSERT_MSG(nHostLocation != -1,
                 "CBaldurChitin::OnMultiplayerLeave: Can't find host player slot!\n");
 
@@ -2159,14 +2163,16 @@ void CBaldurChitin::OnMixerInitialize()
 
     INT nNumSongs = 0;
     for (INT nRow = 0; nRow < tMusic.GetHeight(); nRow++) {
-        if (tMusic.GetAt(CPoint(0, nRow)) == "*") {
+        if (nRow != 0 && tMusic.GetAt(CPoint(0, nRow)) == "*") {
             break;
         }
 
         nNumSongs++;
     }
 
-    // NOTE: Original code is slightly different.
+    // NOTE: The original has no bound of 100 songs here (and none on the
+    // row count above), so more than 100 rows overrun SONGS. Row 0 is
+    // always counted, even if it is "*".
     for (INT nSong = 0; nSong < nNumSongs && nSong < 100; nSong++) {
         sFileName = tMusic.GetAt(CPoint(0, nSong));
         if (sFileName == "*") {
@@ -2180,7 +2186,7 @@ void CBaldurChitin::OnMixerInitialize()
             UTIL_ASSERT_MSG(FALSE, "Problem loading songs from music.2da into the songs list!");
         }
 
-        memcpy(SONGS[nSong], sFileName.GetBuffer(), sFileName.GetLength());
+        memcpy(SONGS[nSong], sFileName.GetBuffer(1), sFileName.GetLength());
         sFileName.ReleaseBuffer();
 
         SONGS[nSong][sFileName.GetLength()] = '\0';
@@ -2216,7 +2222,9 @@ void CBaldurChitin::OnMixerInitialize()
         g_pBaldurChitin->m_pEngineChapter->OnMixerInitialize();
     }
 
-    // NOTE: Original code is slightly different.
+    // NOTE: The original deletes SONGS[0] and then every entry up to the
+    // first NULL one (without clearing the pointers) instead of looping over
+    // all 100 entries.
     for (INT nSong = 0; nSong < 100; nSong++) {
         delete SONGS[nSong];
     }
@@ -2230,6 +2238,10 @@ CStringList* CBaldurChitin::GetPlayedMovies()
     char buffer[4096];
 
     CStringList* pStringList = new CStringList();
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CBaldurChitin.cpp
+    // __LINE__: 3050
+    UTIL_ASSERT(pStringList != NULL);
 
     // NOTE: Original code is slightly different, but does the same thing.
     CString sMovieName;
@@ -2283,7 +2295,7 @@ CStringList* CBaldurChitin::GetPlayedMovies()
             }
         }
 
-        if (GetPrivateProfileIntA("Movies", sMovieName, 0, GetIniFileName()) > 0 && bFound) {
+        if (static_cast<INT>(GetPrivateProfileIntA("Movies", sMovieName, 0, GetIniFileName())) > 0 && bFound) {
             pStringList->AddTail(sMovieName);
         }
 
@@ -2307,10 +2319,10 @@ void CBaldurChitin::GetGameSpyCode(CString& sGameSpyCode)
     sGameSpyCode = "";
 
     for (int k = 0; k < 6; k++) {
-        sGameSpyCode += static_cast<char>(CBaldurChitin::BALDUR_GAMESPY_CODE1[k]
-            ^ CBaldurChitin::BALDUR_GAMESPY_CODE2[k]
-            ^ CBaldurChitin::BALDUR_GAMESPY_CODE3[k]
-            ^ CBaldurChitin::BALDUR_GAMESPY_CODE4[k]);
+        sGameSpyCode += static_cast<char>(((CBaldurChitin::BALDUR_GAMESPY_CODE4[k]
+                                               ^ CBaldurChitin::BALDUR_GAMESPY_CODE3[k])
+                                              & CBaldurChitin::BALDUR_GAMESPY_CODE2[k])
+            ^ CBaldurChitin::BALDUR_GAMESPY_CODE1[k]);
     }
 }
 
@@ -2337,20 +2349,20 @@ CString CBaldurChitin::GetFirstCDRomDrive()
 
     DWORD nDrives = GetLogicalDrives();
 
-    for (BYTE nDrive = 0; nDrive < 32; nDrive++) {
+    for (BYTE nDrive = 0; nDrive < 31; nDrive++) {
         if (field_49B1) {
-            sDrive = "";
             break;
         }
 
         if (((1 << nDrive) & nDrives) != 0) {
             sDrive.Format("%c:\\", nDrive + 'A');
             if (GetDriveTypeA(sDrive.GetBuffer(sDrive.GetLength())) == DRIVE_CDROM) {
-                break;
+                return sDrive;
             }
         }
     }
 
+    sDrive = "";
     return sDrive;
 }
 
@@ -2363,7 +2375,7 @@ WORD CBaldurChitin::GetMultiplayerDirectPlayPort()
 // 0x426EE0
 WORD CBaldurChitin::GetMultiplayerGameSpyPort()
 {
-    if (GetPrivateProfileIntA("GameSpy", "Enabled", 0, GetIniFileName()) != 1) {
+    if (static_cast<WORD>(GetPrivateProfileIntA("GameSpy", "Enabled", 0, GetIniFileName())) != 1) {
         return 0;
     }
 
