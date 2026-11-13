@@ -778,7 +778,8 @@
     ],
     "0x4022B0": [
       "src/CResBIO.cpp",
-      "src/CResCHR.cpp"
+      "src/CResCHR.cpp",
+      "src/CResCRE.cpp"
     ],
     "0x4016D0": [
       "src/CResItem.cpp",

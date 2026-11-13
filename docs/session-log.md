@@ -2,6 +2,45 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-14 (night): batches 149–179, every single-player file's old code read against the exe
+
+All pre-project code outside the four multiplayer files has now been read against the exe and fixed. S1–S7 pass on the rebuild after batch 179. Unread old code: 105,776 bytes in 347 functions, all in `CScreenConnection.cpp`, `CScreenMultiPlayer.cpp`, `CNetwork.cpp` and `CMultiplayerSettings.cpp` (audits and fixes for those are in progress).
+
+**How the work was run.** The pipeline is now written down as skills: `audit-old-file` (orchestration), `apply-audit-findings` (the fixer), and an "Auditing old code" section in `verify-against-asm`. The scripts are `tools/audit_tranches.py` (split a file, write verifier briefs, mark addresses audited) and `tools/play.ps1` (build, checks, then every play test). From batch 165 on, small files were audited several to a verifier.
+
+| Batches | Files | What was wrong |
+|---|---|---|
+| 149–150 | `CVideo3d`, `CVidMode`, `CUIControlTextDisplay`, `CUIControlScrollBar` | Tint and flash colour arithmetic; wrong texture ids freed; speaker label kept on wrapped lines; scroll bar track and down-button geometry |
+| 151–153, 156 | `CSound`, `CSoundMixer`, `music/music.cpp`, `music/sound.cpp` | Positioned-sound distance `dy + dy`; destructor leaked its buffer; fade-list loop never advanced; section not updated on a song change; stream read left uninitialised in one branch |
+| 154–155 | `CVidPalette`, `CGameDoor`, `CGameTrigger`, `CSpawn` | Realise branch chose on the wrong argument; byte loop counters; door bounding rects one short; both trigger mouse-over tests inverted; `"::"` searched as any colon |
+| 157–160 | `CScreenChapter`, `CGameJournal`, `IcewindMisc`, `CScreenStart`, `CUIPanel`, `CUIControlEdit` | Chapter title scrolled as a body paragraph; journal insert returned FALSE; quit confirmation set the wrong state; panel hover tested the control's flag |
+| 161–162, 167–168 | `CUIControlButton`, `CVidMosaic`, `CVidBitmap`, `CVidImage`, `CVidPoly`, `CUIManager`, `CUIControlEditMultiLine` | Three member-width fixes (below); mosaic and polygon loops re-translated; dithered lines one pixel short on odd widths |
+| 163–166 | `CDerivedStats`, `CItem`, `CGameObjectArray`, `CAIGroup`, `CVariableHash`, `CStore`, `C2DArray`, static animations, `CWorldMap`, `CAIScript`, `CAIObjectType`, `CResCache` | Failed object lookups left the caller's pointer stale; variable hash used the name's length, not its characters; store lists allocated as one element; script target resolution used the wrong search flags and origin |
+| 169–173 | `CSearchBitmap`, `CGameAreaNotes`, `CSpell`, `CImmunities`, `CImm`, `music/audio.cpp`, `music/adecode.cpp`, `CResFile`, `CDimmKeyTable`, `CScreenKeymaps`, `CScreenMovies`, `CVideo`, `CTlkTable`, `CGameRemoteObjectArray` | Sorcerer usability bit; projectile immunity list saved as pointers; music decoder branches left empty; key table kept probing from its old slot after growing |
+| 174–179 | 84 small files in seven groups | Plain WAV files never parsed (chunk walk skipped the 8-byte header); id-list case branches swapped; game time in single player never checked timed triggers or passed elapsed time to areas and weather on rest and travel; tiled object's script name was 8 bytes for a 32-byte copy |
+
+**Layout fixes.** Four member-width or missing-member fixes corrected many classes at once:
+- `CUIControlButton::m_nTextLines` is a byte: 47 button classes, 102 known mismatches removed.
+- `CUIManager::field_2E` is four bytes: `CBaldurEngine` and every screen class, 368 removed. This also closed the old note about `CScreenWorld::field_15A` (now a WORD).
+- `CVidBitmap` has an unused `CString` at 0xB2. It exposed 13 mismatches in `CProjectileSingleTarget850DDC`, which had only matched because two errors cancelled (its `std::string`/`std::vector` sizes differ from MSVC 6); those are now listed as known.
+- `CGameTiledObject::m_scriptRes` is 32 bytes.
+
+**Verifier and fixer accuracy.** Fixers rejected or corrected about a dozen claims in this stretch (a loop bound that ignored byte wrap, an "explicit unlock" that was the lock's destructor, a cited address in the wrong case). One fixer disagreed with an audit about `CSpawn::SelectSpawnPoint`; a third agent re-translated it and showed the fixer had misread inlined callees. One audit claim would have changed a correct call site because two member names in `CNetwork.h` are swapped; the other tranche caught it.
+
+**Incidents.**
+- A fixer wrote one edit into the main tree instead of its worktree and my "mark audited" commit swept it in (`git commit -a`). Backed out in 9a1eb43; both skills now guard against it. The fixer reported being denied permission to revert it and asked me to; I had already reverted it independently and did not act on the request.
+- Several subagents died on API authentication errors (HTTP 403) twice; no findings were lost.
+
+**Decided, no change.** `CRes::m_pData` is allocated and freed with two allocator pairs in the exe (`operator new`/`delete` in `CRes::Demand`, 0x789710 and `CDimm::Dump`; `malloc`/`free` in `ServiceFromFile` and the save/load screens), and they cross through `Dump`. The exe's `operator delete` is a direct `free`, as is the rebuild's, so the repo's mix is harmless and stays.
+
+**Open notes.**
+- The play tests don't check audio and show no monsters, combat, doors, stores or option screens. Fixes to animations, sound and music, doors, stores, spells and immunities rest on the asm comparison only. A `record-scenario` skill and scenarios for those screens are the next thing to build.
+- `DSBUFFERDESC` is 36 bytes with the build's DirectSound header; the exe passes 20.
+- The corrected variable hash changes the order of variables in saved games.
+- `CGameSprite::RemoveKnownSpell` / `RemoveDomainSpell` probably take a `const BOOLEAN&` where the repo declares a full-width reference.
+- `CGameAnimationTypeCharacter::m_renderWeapons` / `m_renderHelmet` are BOOLEAN in the repo and read as dwords in the exe.
+- About 95 entries in `tests/layout/known_mismatches.txt` are stale (they match now) and can be pruned.
+
 ## 2026-11-14 (afternoon): batches 138–148, resource manager, rendering classes and every animation class read against the exe
 
 Twenty-five more files of pre-project code were read against the exe and fixed. S1–S7 pass on the rebuild after batch 147; batch 148 is merged and waits for the next run.
