@@ -466,14 +466,6 @@ void CGameAnimationTypeEffect::Render(CInfinity* pInfinity, CVidMode* pVidMode, 
         dwRenderFlags |= 0x1;
     }
 
-    if (transparency) {
-        dwRenderFlags |= CInfinity::FXPREP_COPYFROMBACK;
-        dwRenderFlags |= 0x2;
-    } else {
-        dwRenderFlags |= CInfinity::FXPREP_CLEARFILL;
-        dwRenderFlags |= 0x1;
-    }
-
     if (m_currentVidCellShadow != NULL) {
         dwRenderFlags |= 0x4;
     }
