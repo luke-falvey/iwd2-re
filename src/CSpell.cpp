@@ -22,7 +22,7 @@ CSpell::CSpell(CResRef res)
 // 0x54A380
 BOOL CSpell::Demand()
 {
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
 
@@ -53,7 +53,7 @@ INT CSpell::GetAbilityCount()
     INT nAbilityCount = 0;
 
     // NOTE: Probably inlined `Demand` and `Release`.
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
             if (pRes != NULL) {
@@ -72,15 +72,19 @@ INT CSpell::GetAbilityCount()
 BOOL CSpell::GetIcon(BYTE* resRef)
 {
     // NOTE: Probably inlined `Demand` and `Release`.
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
-            if (pRes != NULL) {
-                CResRef iconResRef(pRes->m_pHeader->itemIcon);
-                iconResRef.GetResRef(resRef);
-                pRes->Release();
+            if (pRes == NULL) {
+                return FALSE;
             }
+
+            CResRef iconResRef(pRes->m_pHeader->itemIcon);
+            iconResRef.GetResRef(resRef);
+            pRes->Release();
         }
+
+        return TRUE;
     }
 
     return FALSE;
@@ -91,7 +95,7 @@ SPELL_ABILITY* CSpell::GetAbility(LONG abilityNum) const
 {
     SPELL_ABILITY* pAbility = NULL;
 
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
             if (pRes != NULL) {
@@ -272,7 +276,7 @@ SHORT CSpell::GetLevel() const
 {
     SHORT nLevel = 0;
 
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
             if (pRes != NULL) {
@@ -282,6 +286,8 @@ SHORT CSpell::GetLevel() const
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CSpell.cpp
                 // __LINE__: 492
                 UTIL_ASSERT(FALSE);
+
+                return 0;
             }
         }
     }
@@ -294,7 +300,7 @@ DWORD CSpell::GetNotUsableBy() const
 {
     DWORD nNotUsableBy = 0;
 
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
             if (pRes != NULL) {
@@ -304,6 +310,8 @@ DWORD CSpell::GetNotUsableBy() const
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CSpell.cpp
                 // __LINE__: 536
                 UTIL_ASSERT(FALSE);
+
+                return 0;
             }
         }
     }
@@ -316,7 +324,7 @@ STRREF CSpell::GetGenericName() const
 {
     STRREF nGenericName = 0;
 
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
             if (pRes != NULL) {
@@ -326,6 +334,8 @@ STRREF CSpell::GetGenericName() const
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CSpell.cpp
                 // __LINE__: 755
                 UTIL_ASSERT(FALSE);
+
+                return -1;
             }
         }
     }
@@ -356,7 +366,7 @@ BOOL CSpell::CheckUsableBy(CGameSprite* pSprite) const
     }
 
     if ((dwClassMask & CLASSMASK_SORCERER) != 0
-        && (dwNotUsableBy & 0x80000000) == 0) {
+        && (dwNotUsableBy & 0x20000000) == 0) {
         return TRUE;
     }
 
@@ -402,7 +412,7 @@ BOOL CSpell::CheckUsableBy(CGameSprite* pSprite) const
                 : FALSE;
         }
 
-        return (dwNotUsableBy & 0x4000) != 0;
+        return (dwNotUsableBy & 0x4000) == 0;
     }
 
     if ((dwNotUsableBy & 0x0) == 0) {
@@ -417,7 +427,7 @@ STRREF CSpell::GetDescription() const
 {
     STRREF nGenericDescription = 0;
 
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
             if (pRes != NULL) {
@@ -427,6 +437,8 @@ STRREF CSpell::GetDescription() const
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CSpell.cpp
                 // __LINE__: 799
                 UTIL_ASSERT(FALSE);
+
+                return -1;
             }
         }
     }
@@ -439,7 +451,7 @@ SHORT CSpell::GetCasterType() const
 {
     SHORT nCasterType = 0;
 
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
             if (pRes != NULL) {
@@ -449,6 +461,8 @@ SHORT CSpell::GetCasterType() const
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CSpell.cpp
                 // __LINE__: 844
                 UTIL_ASSERT(FALSE);
+
+                return 0;
             }
         }
     }
@@ -461,9 +475,17 @@ CGameEffect* CSpell::GetCastingEffect(int nEffect) const
 {
     CGameEffect* pEffect = NULL;
 
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
+
+            if (pRes == NULL) {
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\CSpell.cpp
+                // __LINE__: 890
+                UTIL_ASSERT(FALSE);
+
+                return NULL;
+            }
 
             if (nEffect < pRes->GetCastingEffectNo()) {
                 CPoint source(-1, -1);
@@ -484,9 +506,11 @@ CGameEffect* CSpell::GetCastingEffect(int nEffect) const
 // 0x54AEC0
 SHORT CSpell::GetCastingEffectNo() const
 {
-    SHORT nCastingEffects;
+    // NOTE: The exe leaves this uninitialised when the resref is empty or
+    // `pRes` is NULL and returns garbage there.
+    SHORT nCastingEffects = 0;
 
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
             if (pRes != NULL) {
@@ -496,6 +520,8 @@ SHORT CSpell::GetCastingEffectNo() const
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CSpell.cpp
                 // __LINE__: 940
                 UTIL_ASSERT(FALSE);
+
+                return 0;
             }
         }
     }
@@ -508,7 +534,7 @@ WORD CSpell::GetAnimationType() const
 {
     WORD nAnimationType = 0;
 
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
             if (pRes != NULL) {
@@ -518,6 +544,8 @@ WORD CSpell::GetAnimationType() const
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\CSpell.cpp
                 // __LINE__: 985
                 UTIL_ASSERT(FALSE);
+
+                return 0;
             }
         }
     }
@@ -530,7 +558,7 @@ DWORD CSpell::GetItemFlags() const
 {
     DWORD dwItemFlags = 0;
 
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
             if (pRes != NULL) {
@@ -552,7 +580,7 @@ BYTE CSpell::GetSchool() const
 {
     BYTE nSchool = 0;
 
-    if (GetResRef() != "") {
+    if (!(GetResRef() == "")) {
         if (pRes != NULL) {
             pRes->Demand();
             if (pRes != NULL) {
