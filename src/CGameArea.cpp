@@ -1254,8 +1254,15 @@ void CGameArea::GetAllInRange(const CPoint& center, const CAIObjectType& type, S
             if (pObject->GetObjectType() != CGameObject::TYPE_SPRITE
                 || static_cast<CGameSprite*>(pObject)->GetBaseStats()->field_294 != 1) {
                 const CPoint& ptObject = pObject->GetPos();
-                if (abs(pt.y - 4 * ptObject.y / 3) <= range
-                    && (4 * ptObject.y / 3 - pt.y) * (4 * ptObject.y / 3 - pt.y) + (ptObject.x - pt.x) * (ptObject.x - pt.x) <= range * range
+                if (pt.y - 4 * ptObject.y / 3 > range) {
+                    // Not in range, continue with the next object.
+                } else if (4 * ptObject.y / 3 - pt.y > range) {
+                    // Past the range on the y axis, stop scanning.
+                    m_pGame->GetObjectArray()->ReleaseShare(nId,
+                        CGameObjectArray::THREAD_ASYNCH,
+                        INFINITE);
+                    break;
+                } else if ((4 * ptObject.y / 3 - pt.y) * (4 * ptObject.y / 3 - pt.y) + (ptObject.x - pt.x) * (ptObject.x - pt.x) <= range * range
                     && pObject->GetAIType().OfType(type, checkForNonSprites, !checkForNonSprites)
                     && (!lineOfSight
                         || CheckLOS(center, pObject->GetPos(), terrainTable, FALSE))
@@ -1447,8 +1454,8 @@ void CGameArea::GetAllInPoly(const CRect& rBounding, CPoint* pPoly, SHORT nPoly,
                     && (pObject->GetObjectType() != CGameObject::TYPE_SPRITE
                         || static_cast<CGameSprite*>(pObject)->GetAnimation()->GetAboveGround())
                     && (pObject->GetObjectType() != CGameObject::TYPE_SPRITE
-                        || ((static_cast<CGameSprite*>(pObject)->GetDerivedStats()->m_generalState & STATE_DEAD) != 0
-                            && (static_cast<CGameSprite*>(pObject)->GetBaseStats()->m_generalState & STATE_DEAD) != 0))) {
+                        || ((static_cast<CGameSprite*>(pObject)->GetDerivedStats()->m_generalState & STATE_DEAD) == 0
+                            && (static_cast<CGameSprite*>(pObject)->GetBaseStats()->m_generalState & STATE_DEAD) == 0))) {
                     targets.AddTail(reinterpret_cast<LONG*>(nId));
                 }
 
@@ -2616,7 +2623,7 @@ void CGameArea::CompressTime(DWORD deltaTime)
                 CGameObjectArray::THREAD_ASYNCH,
                 &pObject,
                 INFINITE);
-        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+        } while (rc == CGameObjectArray::SHARED);
 
         if (rc == CGameObjectArray::SUCCESS) {
             // NOTE: Uninline.
@@ -2639,7 +2646,7 @@ void CGameArea::CompressTime(DWORD deltaTime)
                 CGameObjectArray::THREAD_ASYNCH,
                 &pObject,
                 INFINITE);
-        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+        } while (rc == CGameObjectArray::SHARED);
 
         if (rc == CGameObjectArray::SUCCESS) {
             // NOTE: Uninline.
@@ -2662,7 +2669,7 @@ void CGameArea::CompressTime(DWORD deltaTime)
                 CGameObjectArray::THREAD_ASYNCH,
                 &pObject,
                 INFINITE);
-        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+        } while (rc == CGameObjectArray::SHARED);
 
         if (rc == CGameObjectArray::SUCCESS) {
             // NOTE: Uninline.
@@ -2959,7 +2966,7 @@ int CGameArea::GetHeightOffset(const CPoint& pt, BYTE listType)
             nOffset = -7;
         }
 
-        if (nOffset == CGameObject::LIST_FRONT) {
+        if (listType == CGameObject::LIST_FRONT) {
             int index = (m_search.m_GridSquareDimensions.cx * (pt.y / 12) + pt.x / 16) / 2;
             if ((m_visibility.m_pDynamicHeight[index] & 0xF0) != 0) {
                 nOffset -= 7;
@@ -4629,7 +4636,7 @@ void CGameArea::SetListenPosition()
     }
 
     cnt = 0;
-    range = m_cInfinity.rViewPort.Width() / CVisibilityMap::SQUARE_SIZEX;
+    range = m_cInfinity.rViewPort.Height() / CVisibilityMap::SQUARE_SIZEY;
     ptCheck.x = m_cInfinity.nNewX + m_cInfinity.rViewPort.Width() / 2;
     ptCheck.y = m_cInfinity.nNewY + CVisibilityMap::SQUARE_SIZEY / 2;
     while (cnt < range) {
@@ -4640,6 +4647,8 @@ void CGameArea::SetListenPosition()
         ptCheck.y += CVisibilityMap::SQUARE_SIZEY;
         cnt++;
     }
+
+    g_pBaldurChitin->cSoundMixer.SetListenPosition(-1, -1, 0);
 }
 
 // 0x4750E0
@@ -4653,7 +4662,7 @@ void CGameArea::OnActivation()
     m_cInfinity.m_nScrollDelay = CInfinity::SCROLL_DELAY;
     m_cInfinity.bRefreshVRamRect = TRUE;
 
-    if (g_pBaldurChitin->m_pEngineWorld->m_bPaused) {
+    if (!g_pBaldurChitin->m_pEngineWorld->m_bPaused) {
         g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->StopTime();
     }
 
@@ -5115,7 +5124,7 @@ void CGameArea::OnActionButtonClickTravel(const CPoint& pt)
     m_pGame->GetGroup()->GroupAction(leave, TRUE, NULL);
 
     CAIAction move(CAIAction::MOVETOPOINT, pt, 0, -1);
-    m_pGame->GetGroup()->GroupAction(leave, TRUE, NULL);
+    m_pGame->GetGroup()->GroupAction(move, FALSE, NULL);
 }
 
 // 0x4765C0
@@ -5150,8 +5159,8 @@ void CGameArea::OnFormationButtonDown(const CPoint& pt)
                     m_pGame->GetGroup()->GroupDrawMove(m_moveDest,
                         m_pGame->GetGameSave()->m_curFormation,
                         CPoint(-1, -1));
-                    m_groupMove = TRUE;
                 }
+                m_groupMove = TRUE;
             }
         } else {
             m_moveDest.x = -9;
@@ -5168,6 +5177,7 @@ void CGameArea::OnFormationButtonUp(const CPoint& pt)
     if (gameState == 0) {
         if (abs(m_moveDest.x - worldMousePoint.x) <= 8
             && abs(m_moveDest.y - worldMousePoint.y) <= 8
+            && worldMousePoint.x != -1
             && m_iPicked != CGameObjectArray::INVALID_INDEX) {
             CGameObject* pObject;
 
@@ -5491,7 +5501,8 @@ void CGameArea::RemoveObject(POSITION posVertList, BYTE listType, LONG id)
         }
         break;
     case CGAMEOBJECT_LIST_FLIGHT:
-        if (m_lVertSortFlightRemove.Find(posVertList) == NULL) {
+        // NOTE: Original bug, adds only when already present.
+        if (m_lVertSortFlightRemove.Find(posVertList) != NULL) {
             m_lVertSortFlightRemove.AddTail(posVertList);
         }
         break;
@@ -5519,7 +5530,7 @@ void CGameArea::OnLightningStrike()
                 CGameObjectArray::THREAD_ASYNCH,
                 &pObject,
                 INFINITE);
-        } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
+        } while (rc == CGameObjectArray::SHARED);
 
         if (rc == CGameObjectArray::SUCCESS) {
             if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
@@ -5717,7 +5728,7 @@ void CGameArea::Render(CVidMode* pVidMode, INT nSurface)
                 int height = abs(m_selectSquare.Height());
 
                 CSize axes;
-                axes.cx = static_cast<LONG>(sqrt(width * width + (4 * height / 3) * (4 * height / 3)));
+                axes.cx = static_cast<LONG>(sqrt(static_cast<double>(width * width + (4 * height / 3) * (4 * height / 3))) + 0.5);
                 axes.cy = 3 * axes.cx / 4;
                 m_cInfinity.DrawEllipse(m_moveDest, axes, RGB(0, 255, 0));
             }
@@ -5767,12 +5778,15 @@ void CGameArea::SetDay()
     } else {
         if (g_pChitin->cDimm.GetMemoryAmount() == 1) {
             m_sndAmbientDay.SetResRef(CResRef(m_headerSound.m_dayAmbient), TRUE, TRUE);
-            if (m_sndAmbientDay.GetResRef() != "") {
-                m_sndAmbientDay.SetLoopingFlag(TRUE);
-                m_sndAmbientDay.SetChannel(1, reinterpret_cast<DWORD>(this));
-                m_sndAmbientDay.SetVolume(m_sndAmbientDayVolume * m_sndAmbientVolume / 100);
-                m_sndAmbientDay.Play(FALSE);
-            }
+        } else {
+            m_sndAmbientDay.SetResRef(CResRef(m_headerSound.m_dayAmbientExtended), TRUE, TRUE);
+        }
+
+        if (m_sndAmbientDay.GetResRef() != "") {
+            m_sndAmbientDay.SetLoopingFlag(TRUE);
+            m_sndAmbientDay.SetChannel(1, reinterpret_cast<DWORD>(this));
+            m_sndAmbientDay.SetVolume(m_sndAmbientDayVolume * m_sndAmbientVolume / 100);
+            m_sndAmbientDay.Play(FALSE);
         }
     }
 
@@ -5793,12 +5807,15 @@ void CGameArea::SetNight()
     } else {
         if (g_pChitin->cDimm.GetMemoryAmount() == 1) {
             m_sndAmbientNight.SetResRef(CResRef(m_headerSound.m_nightAmbient), TRUE, TRUE);
-            if (m_sndAmbientNight.GetResRef() != "") {
-                m_sndAmbientNight.SetLoopingFlag(TRUE);
-                m_sndAmbientNight.SetChannel(1, reinterpret_cast<DWORD>(this));
-                m_sndAmbientNight.SetVolume(m_sndAmbientNightVolume * m_sndAmbientVolume / 100);
-                m_sndAmbientNight.Play(FALSE);
-            }
+        } else {
+            m_sndAmbientNight.SetResRef(CResRef(m_headerSound.m_nightAmbientExtended), TRUE, TRUE);
+        }
+
+        if (m_sndAmbientNight.GetResRef() != "") {
+            m_sndAmbientNight.SetLoopingFlag(TRUE);
+            m_sndAmbientNight.SetChannel(1, reinterpret_cast<DWORD>(this));
+            m_sndAmbientNight.SetVolume(m_sndAmbientNightVolume * m_sndAmbientVolume / 100);
+            m_sndAmbientNight.Play(FALSE);
         }
     }
 
@@ -5844,7 +5861,7 @@ void CGameArea::SetDawn(BYTE nIntensity, BOOLEAN bPlayDayNightMovie)
         }
     }
 
-    m_sndAmbientNightVolume = static_cast<WORD>(nIntensity * m_headerSound.m_nightAmbientVolume / 256);
+    m_sndAmbientNightVolume = static_cast<WORD>(m_headerSound.m_nightAmbientVolume - ((nIntensity * m_headerSound.m_nightAmbientVolume) >> 8));
     if (m_sndAmbientNight.IsSoundPlaying()) {
         m_sndAmbientNight.SetVolume(m_sndAmbientVolume * m_sndAmbientNightVolume / 100);
     } else {
@@ -5873,7 +5890,7 @@ void CGameArea::SetDawn(BYTE nIntensity, BOOLEAN bPlayDayNightMovie)
     }
 
     if ((m_cInfinity.m_areaType & 0x2) != 0) {
-        m_cInfinity.SetDusk(nIntensity, bPlayDayNightMovie);
+        m_cInfinity.SetDawn(nIntensity, bPlayDayNightMovie);
     }
 }
 
@@ -5902,7 +5919,7 @@ void CGameArea::SetDusk(BYTE nIntensity, BOOLEAN bPlayDayNightMovie)
         }
     }
 
-    m_sndAmbientNightVolume = static_cast<WORD>(nIntensity * m_headerSound.m_nightAmbientVolume / 256);
+    m_sndAmbientNightVolume = static_cast<WORD>(m_headerSound.m_nightAmbientVolume - ((nIntensity * m_headerSound.m_nightAmbientVolume) >> 8));
     if (m_sndAmbientNight.IsSoundPlaying()) {
         m_sndAmbientNight.SetVolume(m_sndAmbientVolume * m_sndAmbientNightVolume / 100);
     } else {
@@ -5954,6 +5971,11 @@ void CGameArea::SetTimeOfDay(ULONG nTimeOfDay, BOOLEAN bPlayDayNightMovie)
     m_sndAmbientVolume = g_pBaldurChitin->m_pEngineWorld->m_weather.GetWind();
     m_sndAmbientDay.SetVolume(m_sndAmbientDayVolume * m_sndAmbientVolume / 100);
     m_sndAmbientNight.SetVolume(m_sndAmbientNightVolume * m_sndAmbientVolume / 100);
+
+    if ((m_cInfinity.m_areaType & 0x40) != 0) {
+        SetNight();
+        return;
+    }
 
     if (CTimerWorld::IsDay(nTimeOfDay)) {
         SetDay();
@@ -6290,7 +6312,7 @@ void CGameArea::SortLists()
 }
 
 // 0x479CC0
-BOOL CGameArea::SetSong(SHORT slot, BYTE song)
+BOOL CGameArea::SetSong(SHORT slot, signed char song)
 {
     switch (slot) {
     case 0:
@@ -6398,6 +6420,10 @@ void CGameArea::PlaySong(SHORT slot, DWORD flags)
             || m_headerSound.m_battleStandOffMusic == -1) {
             return;
         }
+    }
+
+    if (m_nCurrentSong == 3) {
+        flags = 0x2;
     }
 
     m_nCurrentSong = slot;
