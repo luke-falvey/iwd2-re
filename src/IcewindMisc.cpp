@@ -67,6 +67,9 @@ CPoint IcewindMisc::sub_584610(INT nDirection)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\IcewindMisc.cpp
         // __LINE__: 57
         UTIL_ASSERT(FALSE);
+
+        // NOTE: Falls through to return (0, 0) after the assertion.
+        return CPoint(0, 0);
     }
 }
 
@@ -74,8 +77,9 @@ CPoint IcewindMisc::sub_584610(INT nDirection)
 CPoint IcewindMisc::sub_5847B0(const CPoint& pt, int x, int y, int radius)
 {
     if (x != 0 || y != 0) {
-        float v1 = static_cast<float>(sqrt(static_cast<float>(radius * radius) / static_cast<float>(x * x + y * y)));
-        return CPoint(pt.x + static_cast<int>(x * v1), pt.y + static_cast<int>(y * v1));
+        double v1 = sqrt(static_cast<double>(radius * radius) / static_cast<double>(x * x + y * y));
+        return CPoint(static_cast<int>(static_cast<double>(x) * v1 + static_cast<double>(pt.x)),
+            static_cast<int>(static_cast<double>(y) * v1 + static_cast<double>(pt.y)));
     } else {
         return pt;
     }
@@ -425,6 +429,7 @@ BOOLEAN IcewindMisc::sud_585070(CGameSprite* pSprite)
     USHORT nID = pSprite->m_animation.m_animation->m_animationID;
 
     switch (nID) {
+    case ANIM_ABISHAI_WHITE:
     case ANIM_DJINNI:
     case ANIM_DJINNI_LEGS:
     case ANIM_RAVER:
@@ -916,7 +921,8 @@ CGameEffect* IcewindMisc::CreateEffectColorGlowDissipate(BYTE a1, BYTE a2, BYTE 
 INT IcewindMisc::GetSneakAttackRolls(CGameSprite* pSprite)
 {
     if ((pSprite->GetAIType().m_nClassMask & CLASSMASK_ROGUE) != 0) {
-        return (pSprite->GetDerivedStats()->GetClassLevel(CAIOBJECTTYPE_C_ROGUE) - 1) / 2 + 1;
+        // NOTE: Signed division in the exe.
+        return (static_cast<INT>(pSprite->GetDerivedStats()->GetClassLevel(CAIOBJECTTYPE_C_ROGUE)) - 1) / 2 + 1;
     } else {
         return 0;
     }
@@ -975,7 +981,7 @@ void IcewindMisc::sub_5860F0(CGameSprite* pSprite, CGameEffect* pEffect)
     if (pEffect->m_effectID == CGAMEEFFECT_DAMAGE) {
         int nDamageMod;
 
-        switch (pEffect->m_dwFlags) {
+        switch (pEffect->m_dwFlags & 0xFFFF0000) {
         case 0x0:
         case 0x4000000:
         case 0x8000000:
@@ -1014,7 +1020,7 @@ void IcewindMisc::sub_5860F0(CGameSprite* pSprite, CGameEffect* pEffect)
         }
 
         if (nDamageMod != 0) {
-            pEffect->m_effectAmount += nDamageMod * (pEffect->m_effectAmount + pEffect->m_numDice * pEffect->m_diceSize / 2) / 100;
+            pEffect->m_effectAmount += nDamageMod * static_cast<INT>(pEffect->m_effectAmount + pEffect->m_numDice * pEffect->m_diceSize / 2) / 100;
         }
     }
 }

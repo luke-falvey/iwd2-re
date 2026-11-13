@@ -201,11 +201,15 @@ void CScreenStart::UpdateMainPanel()
         pButton->SetEnabled(TRUE);
 
         pButton = static_cast<CUIControlButton*>(pPanel->GetControl(1));
-        pButton->SetText(FetchString(13728));
+        pButton->SetText(FetchString(13729));
         pButton->SetEnabled(TRUE);
 
         pButton = static_cast<CUIControlButton*>(pPanel->GetControl(2));
         pButton->SetText(FetchString(24110));
+        pButton->SetEnabled(TRUE);
+
+        pButton = static_cast<CUIControlButton*>(pPanel->GetControl(3));
+        pButton->SetText(FetchString(15416));
         pButton->SetEnabled(TRUE);
 
         break;
@@ -233,15 +237,20 @@ void CScreenStart::UpdateMainPanel()
         }
 
         break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStart.cpp
+        // __LINE__: 930
+        UTIL_ASSERT(FALSE);
     }
 }
 
 // 0x66F8F0
 void CScreenStart::OnQuitButtonClick()
 {
-    CSingleLock lock(&m_cUIManager.field_36, TRUE);
+    CSingleLock lock(&m_cUIManager.field_36, FALSE);
+    lock.Lock(INFINITE);
 
-    m_nErrorState = 0;
+    m_nErrorState = 1;
     m_dwErrorTextId = 19532;
     m_strErrorButtonText[0] = 15417;
     m_strErrorButtonText[1] = 13727;
@@ -427,7 +436,7 @@ void CScreenStart::ResetErrorPanel(CUIPanel* pPanel)
     strRes.cSound.SetFireForget(TRUE);
     strRes.cSound.Play(FALSE);
 
-    CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(pPanel->GetControl(3));
+    CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(pPanel->GetControl(0));
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStart.cpp
     // __LINE__: 1639
@@ -465,7 +474,9 @@ void CScreenStart::OnErrorButtonClick(DWORD nID)
 
     switch (m_nErrorState) {
     case 0:
-        DismissPopup();
+        if (nID == 0) {
+            DismissPopup();
+        }
         break;
     case 1:
         switch (nID) {
@@ -483,7 +494,9 @@ void CScreenStart::OnErrorButtonClick(DWORD nID)
         }
         break;
     case 2:
-        DismissPopup();
+        if (nID == 0) {
+            DismissPopup();
+        }
         break;
     }
 
@@ -498,6 +511,8 @@ void CScreenStart::ResetVersionMismatchPanel(CUIPanel* pPanel)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStart.cpp
     // __LINE__: 1853
     UTIL_ASSERT(pText != NULL);
+
+    pText->RemoveAll();
 
     g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_SERVERVERSION,
         g_pBaldurChitin->GetBaldurMessage()->GetVersionControlShutdownServerString());
@@ -527,7 +542,8 @@ void CScreenStart::ResetVersionMismatchPanel(CUIPanel* pPanel)
 // 0x6702C0
 void CScreenStart::sub_6702C0()
 {
-    CSingleLock lock(&(m_cUIManager.field_36), TRUE);
+    CSingleLock lock(&(m_cUIManager.field_36), FALSE);
+    lock.Lock(INFINITE);
 
     if (m_lPopupStack.GetTailPosition() != NULL) {
         CUIPanel* pPanel = m_lPopupStack.GetTail();
@@ -757,7 +773,7 @@ void CUIControlButtonStart670770::OnLButtonClick(CPoint pt)
     CScreenStart* pStart = g_pBaldurChitin->m_pEngineStart;
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenStart.cpp
-    // __LINE__: 2010
+    // __LINE__: 2201
     UTIL_ASSERT(pStart != NULL);
 
     pStart->sub_6702C0();
