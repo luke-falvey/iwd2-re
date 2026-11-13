@@ -921,6 +921,7 @@
       "src/CScreenCharacter.cpp",
       "src/CScreenJournal.cpp",
       "src/CScreenOptions.cpp",
+      "src/CScreenSave.cpp",
       "src/CScreenSpellbook.cpp"
     ],
     "0x632C00": [
@@ -1011,10 +1012,6 @@
       "src/CScreenJournal.cpp",
       "src/CScreenSpellbook.cpp",
       "src/CScreenSpellbook.cpp"
-    ],
-    "0x63B9B0": [
-      "src/CScreenLoad.cpp",
-      "src/CScreenSave.cpp"
     ],
     "0x699620": [
       "src/CScreenMap.cpp",

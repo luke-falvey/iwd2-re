@@ -2,6 +2,30 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-14 (morning): batches 132–137, eight more single-player files read against the exe
+
+`CInfinity.cpp`, `CScreenOptions.cpp`, `CScreenSave.cpp`, `CScreenLoad.cpp`, `CScreenWorldMap.cpp`, `CWeather.cpp`, `CInfCursor.cpp` and `CBaldurChitin.cpp`: 427 pre-project functions, 91 with a real difference. One more wrong verifier claim (the load screen's Tab key entry, a misread push order); the scripted key-table check had been right.
+
+| File | Old functions read | With a real difference | Batch |
+|---|---|---|---|
+| `CInfinity.cpp` | 62 | 19 | 132 |
+| `CScreenOptions.cpp` | 52 | 9 | 133 |
+| `CScreenSave.cpp` | 71 | 13 | 134 |
+| `CScreenLoad.cpp` | 54 | 7 | 135 |
+| `CScreenWorldMap.cpp` | 40 | 4 | 135 |
+| `CWeather.cpp` | 29 | 11 | 136 |
+| `CInfCursor.cpp` | 19 | 8 | 136 |
+| `CBaldurChitin.cpp` | 81 | 12 | 137 |
+
+- **Renderer (`CInfinity`).** Scroll speed terms swapped for vertical and diagonal scrolling; screen shake scaled by 10 instead of shifted by 10, no random flip on Y, wrong end-of-shake restore; the night-to-day WED swap branch was empty; day/night tile caching used raw game time and an inverted test; tile request border loops asked for one edge twice; multi-layer areas looked tiles up in layer 0; viewport bounds exclusive where the exe is inclusive. S5 and S6 still match the original's screenshots after the change.
+- **Options.** Saving from the options screen hit `UTIL_ASSERT(FALSE)`; rest set the heal flag the wrong way round; the weather checkbox was never refreshed.
+- **Save and load.** Save-as date label used the chapter as the format string; a missing `break` in the overwrite confirmation; no clean-up after saving; the fourth portrait drew the third character's in both screens; the load screen's error popup handled its two types the wrong way round.
+- **Weather.** Storm stage end time not updated at full strength; lightning frequency passed on every update; rain sound reset every tick; particle `rand()` calls in a different order from the exe.
+- **Cursor and tooltips.** Tooltip clamp and saved-background rectangles used the wrong widths; line count one short in two branches; two `CResCell` sub-objects missing from `CInfCursor` (adding them cleared all 11 of its layout mismatches).
+- **Application object.** "First Run" written as 1 on exit; an unknown INI resolution kept its width while using the 800 layout; `GetFirstCDRomDrive` returned the last drive tried when there is no CD drive; one byte of the GameSpy code XORed instead of ANDed.
+
+**State.** 0.81 MB of old code unread (2,854 functions). Largest: `CUIControlFactory.cpp` (54 KB), the character and monster animation files (about 200 KB together), `CScreenConnection.cpp` (39 KB), `CScreenMultiPlayer.cpp` (33 KB), `CNetwork.cpp` (27 KB), `CDimm.cpp` (23 KB), `CVidCell.cpp`, `CVidInf.cpp`, `CChitin.cpp`.
+
 ## 2026-11-14 (early): batches 123–131, ten more files read against the exe; S7 added
 
 Same method on `CScreenCreateChar.cpp`, `CGameArea.cpp`, `CRuleTables.cpp`, `CScreenJournal.cpp`, `CGameAIBase.cpp`, `IcewindCGameEffects.cpp`, `CGameContainer.cpp`, `CScreenMap.cpp`, `CScreenSpellbook.cpp` and `CScreenSinglePlayer.cpp`: 1,133 pre-project functions, 138 with a real difference. One verifier claim was wrong (a `CGameContainer::SetCursor` switch table misread) and was caught by the fix translator reading the table from the exe.
