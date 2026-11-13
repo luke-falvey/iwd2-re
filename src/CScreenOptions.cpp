@@ -287,6 +287,7 @@ void CScreenOptions::EngineActivated()
             CheckEnableLeftPanel();
         }
 
+        UpdateCursorShape(0);
         g_pBaldurChitin->GetObjectCursor()->SetCursor(0, FALSE);
         m_cUIManager.InvalidateRect(NULL);
         g_pBaldurChitin->GetObjectGame()->LoadKeymap();
@@ -544,7 +545,7 @@ void CScreenOptions::OnDoneButtonClick()
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenOptions.cpp
         // __LINE__: 978
-        UTIL_ASSERT(pPanel != NULL);
+        UTIL_ASSERT(FALSE);
     }
 }
 
@@ -844,7 +845,7 @@ void CScreenOptions::ResetErrorPanel(CUIPanel* pPanel)
 
     strRes.cSound.SetChannel(0, 0);
     strRes.cSound.SetFireForget(TRUE);
-    strRes.cSound.Play(TRUE);
+    strRes.cSound.Play(FALSE);
 
     CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(pPanel->GetControl(3));
 
@@ -1023,11 +1024,11 @@ void CScreenOptions::LoadGame()
                     g_pBaldurChitin->m_cBaldurMessage.ObjectControlRequest(localObjectID);
                 }
             }
-        }
 
-        g_pBaldurChitin->m_cBaldurMessage.ObjectControl();
-        pGame->GetMultiplayerSettings()->SetArbitrationLockAllowInput(FALSE);
-        pGame->GetMultiplayerSettings()->SetArbitrationLockStatus(TRUE, 1);
+            g_pBaldurChitin->m_cBaldurMessage.ObjectControl();
+            pGame->GetMultiplayerSettings()->SetArbitrationLockAllowInput(FALSE);
+            pGame->GetMultiplayerSettings()->SetArbitrationLockStatus(TRUE, 1);
+        }
     } else {
         nLoadState = 2;
     }
@@ -1356,9 +1357,15 @@ void CScreenOptions::UpdateGamePlayPanel(BOOLEAN bInitialUpdate)
     UTIL_ASSERT(pButton != NULL); // 2281
     pButton->SetSelected(pOptions->m_bDarkvision);
 
-    pButton = static_cast<CUIControlButton3State*>(pPanel->GetControl(50));
+    pButton = static_cast<CUIControlButton3State*>(pPanel->GetControl(47));
     UTIL_ASSERT(pButton != NULL); // 2285
+    pButton->SetSelected(pOptions->m_bWeatherEnabled);
+
+    pButton = static_cast<CUIControlButton3State*>(pPanel->GetControl(50));
+    UTIL_ASSERT(pButton != NULL); // 2289
     pButton->SetSelected(pOptions->m_bMaxHP);
+
+    pSlider->InvalidateRect();
 }
 
 // 0x656B00
@@ -1541,7 +1548,7 @@ void CScreenOptions::OnErrorButtonClick(INT nButton)
                         if (!pGame->field_50D8) {
                             pGame->SynchronousUpdate();
                         }
-                        pGame->field_50D8;
+                        pGame->field_50D8 = TRUE;
                     }
                 }
 
@@ -1549,7 +1556,7 @@ void CScreenOptions::OnErrorButtonClick(INT nButton)
 
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenOptions.cpp
                 // __LINE__: 1670
-                UTIL_ASSERT(FALSE);
+                UTIL_ASSERT(pSave != NULL);
 
                 pSave->StartSave(1);
                 SelectEngine(pSave);
@@ -1561,11 +1568,15 @@ void CScreenOptions::OnErrorButtonClick(INT nButton)
             lock.Unlock();
             QuitGame();
             break;
-        default:
+        case 2:
             lock.Lock(INFINITE);
             DismissPopup();
             lock.Unlock();
             break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenOptions.cpp
+            // __LINE__: 2494
+            UTIL_ASSERT(FALSE);
         }
         break;
     case 4:
@@ -1634,14 +1645,19 @@ void CScreenOptions::OnErrorButtonClick(INT nButton)
             DismissPopup();
             lock.Unlock();
 
-            CInfGame::m_bHealPartyOnRest = FALSE;
-            pGame->RestParty(1, 0);
             CInfGame::m_bHealPartyOnRest = TRUE;
+            pGame->RestParty(1, 0);
+            CInfGame::m_bHealPartyOnRest = FALSE;
             break;
-        default:
+        case 2:
             lock.Lock(INFINITE);
             DismissPopup();
             lock.Unlock();
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenOptions.cpp
+            // __LINE__: 2592
+            UTIL_ASSERT(FALSE);
         }
         break;
     default:
@@ -1742,7 +1758,7 @@ void CUIControlButtonOptionsSelection::OnLButtonClick(CPoint pt)
     CUIControlButton3State::OnLButtonClick(pt);
 
     DWORD dwTextId;
-    DWORD dwStrId;
+    DWORD dwStrId = -1;
     switch (m_pPanel->m_nID) {
     case 6:
         dwTextId = 33;
@@ -2068,7 +2084,7 @@ void CUIControlButtonOptionsRadio::OnLButtonClick(CPoint pt)
     UTIL_ASSERT(pOptions != NULL);
 
     DWORD dwTextId;
-    DWORD dwStrId;
+    DWORD dwStrId = -1;
 
     switch (m_pPanel->m_nID) {
     case 6:
@@ -2178,7 +2194,7 @@ void CUIControlSliderOptionsSlider::OnThumbFinalChange()
     UTIL_ASSERT(pOptions != NULL);
 
     DWORD dwTextId;
-    DWORD dwStrId;
+    DWORD dwStrId = -1;
     DWORD dwNewDifficultyStrId = -1;
     DWORD dwValue;
     switch (m_pPanel->m_nID) {
@@ -2263,7 +2279,6 @@ void CUIControlSliderOptionsSlider::OnThumbFinalChange()
         case 22:
             dwStrId = 18012;
             pOptions->m_nVolumeMovie = 100 * m_nValue / (m_nKnobJumpCount - 1);
-            pGame->ApplyVolumeSliders(FALSE);
             break;
         default:
             // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenOptions.cpp
@@ -2333,10 +2348,11 @@ void CUIControlSliderOptionsSlider::OnThumbFinalChange()
                     pOptions->m_nMPDifficultyMultiplier = pOptions->m_nDifficultyMultiplier;
                 }
 
-                if (g_pChitin->cNetwork.GetSessionOpen() == TRUE
-                    && g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
-                    g_pBaldurChitin->m_cBaldurMessage.SendFullSettingsToClients(CString(""));
-                }
+            }
+
+            if (g_pChitin->cNetwork.GetSessionOpen() == TRUE
+                && g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
+                g_pBaldurChitin->m_cBaldurMessage.SendFullSettingsToClients(CString(""));
             }
 
             break;
@@ -2727,7 +2743,6 @@ void CUIControlButtonOptionsPopupCancel::OnLButtonClick(CPoint pt)
 CUIControlButtonOptionsError::CUIControlButtonOptionsError(CUIPanel* panel, UI_CONTROL_BUTTON* controlInfo)
     : CUIControlButton(panel, controlInfo, LBUTTON, 0)
 {
-    SetText(CBaldurEngine::FetchString(13727));
 }
 
 // 0x6594C0
