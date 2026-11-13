@@ -112,6 +112,14 @@ static LONG WINAPI UnhandledExceptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
     return EXCEPTION_EXECUTE_HANDLER;
 }
 
+static LONG WINAPI HeapCorruptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
+{
+    if (pExceptionInfo->ExceptionRecord->ExceptionCode == 0xC0000374) {
+        UnhandledExceptionHandler(pExceptionInfo);
+    }
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
 // Writes the stack of every other thread to iwd2re-stacks.txt. Used to find
 // where the game hangs. Each thread is suspended only long enough to copy its
 // registers, so no thread stays frozen while this one allocates. Stuck threads
@@ -199,6 +207,10 @@ void InstallCrashHandler()
     }
 
     SetUnhandledExceptionFilter(UnhandledExceptionHandler);
+
+    // Heap corruption (0xC0000374) is raised fail-fast and never reaches the
+    // unhandled exception filter, so catch it first-chance.
+    AddVectoredExceptionHandler(1, HeapCorruptionHandler);
 
     char eventName[64];
     _snprintf(eventName, sizeof(eventName), "iwd2re-dump-%lu", GetCurrentProcessId());
