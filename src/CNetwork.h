@@ -256,8 +256,8 @@ public:
     /* 06EA */ unsigned char field_6EA;
     /* 06EB */ BOOLEAN m_bSessionOptionsDefined;
     /* 06EC */ CString m_sJoinedGame;
-    /* 06F0 */ CString m_sDroppedGame;
-    /* 06F4 */ CString m_sLeftGame;
+    /* 06F0 */ CString m_sLeftGame;
+    /* 06F4 */ CString m_sDroppedGame;
     /* 06F8 */ BOOLEAN m_bPlayerNameToMake;
     /* 06F9 */ BOOLEAN m_bPlayerCreated;
     /* 06FA */ PLAYER_ID m_idLocalPlayer;
