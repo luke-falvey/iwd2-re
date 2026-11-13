@@ -11,6 +11,7 @@ CGameAnimationTypeMonsterOld::CGameAnimationTypeMonsterOld(USHORT animationID, B
     : m_charPalette(CVidPalette::TYPE_RANGE)
 {
     m_animationID = animationID;
+    m_falseColor = TRUE;
     field_7A6 = FALSE;
     m_translucent = FALSE;
     m_bDetectedByInfravision = TRUE;
@@ -25,20 +26,21 @@ CGameAnimationTypeMonsterOld::CGameAnimationTypeMonsterOld(USHORT animationID, B
             m_moveScaleCurrent = 7;
             m_resRef = "MOGH";
             m_nSndFreq = 5;
-            m_pSndDeath = "FAL_03B";
             break;
         case 1:
             m_moveScale = 6;
             m_moveScaleCurrent = 6;
             m_resRef = "MOGN";
             m_nSndFreq = 8;
-            m_pSndDeath = "FAL_03B";
             break;
         default:
             // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
             // __LINE__: 6516
             UTIL_ASSERT(FALSE);
         }
+
+        // NOTE: Also reached on the default path after the assert.
+        m_pSndDeath = "FAL_03B";
         break;
     case 0x100:
         m_rEllipse.left = -24;
@@ -438,15 +440,6 @@ BOOL CGameAnimationTypeMonsterOld::NewSupport(USHORT animationID)
         switch (animationID & 0xF) {
         case 0:
         case 1:
-            return FALSE;
-        default:
-            return TRUE;
-        }
-        break;
-    case 0x300:
-        switch (animationID & 0xF) {
-        case 0:
-        case 1:
         case 2:
         case 3:
             return FALSE;
@@ -518,6 +511,7 @@ BOOL CGameAnimationTypeMonsterOld::NewSupport(USHORT animationID)
         case 2:
         case 3:
         case 4:
+        case 5:
             return FALSE;
         default:
             return TRUE;
