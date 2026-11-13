@@ -48,6 +48,7 @@ CGameTrigger::CGameTrigger(CGameArea* pArea, CAreaFileTriggerObject* pTriggerObj
     m_dwFlags = pTriggerObject->m_dwFlags;
     m_description = pTriggerObject->m_description;
     m_nPolygon = pTriggerObject->m_pickPointCount;
+    memcpy(m_scriptRes, pTriggerObject->m_script, RESREF_SIZE);
     strncpy(m_scriptName, pTriggerObject->m_scriptName, SCRIPTNAME_SIZE);
 
     CAIScript* pScript = new CAIScript(CResRef(pTriggerObject->m_script));
@@ -69,34 +70,35 @@ CGameTrigger::CGameTrigger(CGameArea* pArea, CAreaFileTriggerObject* pTriggerObj
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameTrigger.cpp
             // __LINE__: 149
             UTIL_ASSERT(FALSE);
-        }
+            m_nPolygon = 0;
+        } else {
+            WORD adjust = 0;
+            for (WORD cnt = 0; cnt < m_nPolygon; cnt++) {
+                m_pPolygon[cnt - adjust].x = pPoints[cnt + pTriggerObject->m_pickPointStart].m_xPos;
+                m_pPolygon[cnt - adjust].y = pPoints[cnt + pTriggerObject->m_pickPointStart].m_yPos;
+                if (cnt >= 2) {
+                    int x2 = m_pPolygon[cnt - adjust - 2].x;
+                    int y2 = m_pPolygon[cnt - adjust - 2].y;
 
-        WORD adjust = 0;
-        for (WORD cnt = 0; cnt < m_nPolygon; cnt++) {
-            m_pPolygon[cnt - adjust].x = pPoints[cnt + pTriggerObject->m_pickPointStart].m_xPos;
-            m_pPolygon[cnt - adjust].y = pPoints[cnt + pTriggerObject->m_pickPointStart].m_yPos;
-            if (cnt >= 2) {
-                int x2 = m_pPolygon[cnt - adjust - 2].x;
-                int y2 = m_pPolygon[cnt - adjust - 2].y;
+                    int x1 = m_pPolygon[cnt - adjust - 1].x;
+                    int y1 = m_pPolygon[cnt - adjust - 1].y;
 
-                int x1 = m_pPolygon[cnt - adjust - 1].x;
-                int y1 = m_pPolygon[cnt - adjust - 1].y;
+                    int x0 = m_pPolygon[cnt - adjust].x;
+                    int y0 = m_pPolygon[cnt - adjust].y;
 
-                int x0 = m_pPolygon[cnt - adjust].x;
-                int y0 = m_pPolygon[cnt - adjust].y;
-
-                if ((x2 == x1 && x1 == x0)
-                    || (y2 == y1 && y1 == y0)
-                    || (x2 != x1
-                        && x1 != x0
-                        && 1000 * (y2 - y1) / (x2 - x1) != 1000 * (y1 - y0) / (x1 - x0))) {
-                    m_pPolygon[cnt - adjust - 1] = m_pPolygon[cnt - adjust];
-                    adjust++;
+                    if ((x2 == x1 && x1 == x0)
+                        || (y2 == y1 && y1 == y0)
+                        || (x2 != x1
+                            && x1 != x0
+                            && 1000 * (y2 - y1) / (x2 - x1) == 1000 * (y1 - y0) / (x1 - x0))) {
+                        m_pPolygon[cnt - adjust - 1] = m_pPolygon[cnt - adjust];
+                        adjust++;
+                    }
                 }
             }
-        }
 
-        m_nPolygon -= adjust;
+            m_nPolygon -= adjust;
+        }
     } else {
         m_pPolygon = NULL;
     }
@@ -647,7 +649,7 @@ BOOL CGameTrigger::IsOver(const CPoint& pt)
         }
     }
 
-    if (m_rBounding.PtInRect(pt)) {
+    if (!m_rBounding.PtInRect(pt)) {
         return FALSE;
     }
 
@@ -665,7 +667,7 @@ BOOL CGameTrigger::IsOver(const CPoint& pt)
 // 0x4CECB0
 BOOL CGameTrigger::IsOverActivate(const CPoint& pt)
 {
-    if (m_rBounding.PtInRect(pt)) {
+    if (!m_rBounding.PtInRect(pt)) {
         return FALSE;
     }
 
@@ -907,8 +909,9 @@ void CGameTrigger::RemoveFromArea()
         INFINITE);
     if (rc != CGameObjectArray::SUCCESS) {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameTrigger.cpp
-        // __LINE__: 111
+        // __LINE__: 1111
         UTIL_ASSERT(FALSE);
+        return;
     }
 
     delete this;
@@ -940,6 +943,7 @@ void CGameTrigger::SetCursor(LONG nToolTip)
             switch (pGame->GetIconIndex()) {
             case 12:
             case 18:
+            case 20:
             case 40:
             case 255:
                 CGameObject::SetCursor(nToolTip);

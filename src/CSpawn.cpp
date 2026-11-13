@@ -255,8 +255,8 @@ CSpawnFile::CSpawnFile(CMemINI* pMemINI)
 
         // NOTE: Uninline.
         if (GetINIKey(pSection, ExitEventKey, sExitEvent)) {
-            sExitEvent.TrimLeft();
             sExitEvent.TrimRight();
+            sExitEvent.TrimLeft();
 
             CMemINISection* pSpawnSection = pMemINI->GetSection(sExitEvent);
             if (pSpawnSection != NULL && pSpawnSection->GetCount() > 0) {
@@ -375,6 +375,7 @@ int CSpawnFile::ParseData(const CString& sData, CStringArray& Sections)
             }
         } else {
             Sections.Add(sMutableData);
+            count++;
             sMutableData.Empty();
         }
     }
@@ -454,7 +455,7 @@ CSpawnList::CSpawnList(CMemINI* pMemINI, const CString& sSection)
 
         // NOTE: Uninline.
         if (GetINIKey(pSection, ControlKey, sValue)) {
-            int pos = sValue.FindOneOf(ScopeStr);
+            int pos = sValue.Find(ScopeStr);
             if (pos > 0 && pos + ScopeStr.GetLength() < sValue.GetLength() - 1) {
                 pControlVar = new CSpawnVar(sValue.Left(pos),
                     sValue.Mid(pos + ScopeStr.GetLength()));
@@ -513,6 +514,7 @@ int CSpawnList::ParseData(const CString& sData, CStringArray& Sections)
             }
         } else {
             Sections.Add(sMutableData);
+            count++;
             sMutableData.Empty();
         }
     }
@@ -908,7 +910,7 @@ void CSpawn::Read(CMemINISection* pSection)
 
     // NOTE: Uninline.
     if (GetINIKey(pSection, SpecQtyKey, sValue)) {
-        if (sValue.FindOneOf(ScopeStr) > 0) {
+        if (sValue.Find(ScopeStr) > 0) {
             mpSearchQtyVar = new CSpawnVar(pSection->Get(SpecQtyKey));
             SpawnFlags |= SPAWN_SEARCH_QTY_GLOBAL;
         } else {
@@ -960,7 +962,7 @@ void CSpawn::Read(CMemINISection* pSection)
 
     // NOTE: Uninline.
     if (GetINIKey(pSection, CreateQtyKey, sValue)) {
-        int pos = sValue.FindOneOf(ScopeStr);
+        int pos = sValue.Find(ScopeStr);
         if (pos > 0) {
             mpCreateQtyScope = new CString(sValue.Left(pos));
             mpCreateQtyLabel = new CString(sValue.Mid(pos + ScopeStr.GetLength()));
@@ -1165,7 +1167,7 @@ void CSpawn::Read(CMemINISection* pSection)
 
     // NOTE: Uninline.
     if (GetINIKey(pSection, FacePointVarKey, sValue)) {
-        int pos = sValue.FindOneOf(ScopeStr);
+        int pos = sValue.Find(ScopeStr);
         if (pos > 0) {
             pExplicitSpawnFacingScope = new CString(sValue.Left(pos));
             pExplicitSpawnFacingLabel = new CString(sValue.Mid(pos + ScopeStr.GetLength()));
@@ -1179,7 +1181,7 @@ void CSpawn::Read(CMemINISection* pSection)
 
     // NOTE: Uninline.
     if (GetINIKey(pSection, SaveFacingVarKey, sValue)) {
-        int pos = sValue.FindOneOf(ScopeStr);
+        int pos = sValue.Find(ScopeStr);
         if (pos > 0) {
             pSpawnFacingStorageScope = new CString(sValue.Left(pos));
             pSpawnFacingStorageLabel = new CString(sValue.Mid(pos + ScopeStr.GetLength()));
@@ -1198,7 +1200,7 @@ void CSpawn::Read(CMemINISection* pSection)
 
     // NOTE: Uninline.
     if (GetINIKey(pSection, PointVarKey, sValue)) {
-        int pos = sValue.FindOneOf(ScopeStr);
+        int pos = sValue.Find(ScopeStr);
         pPointIndexScope = new CString(sValue.Left(pos));
         pPointIndexLabel = new CString(sValue.Mid(pos + ScopeStr.GetLength()));
     } else {
@@ -1276,7 +1278,7 @@ BOOL CSpawn::SelectSpawnPoint(CGameArea* pArea, const CRect& rect, int a3)
     if (mPointSelectMode == POINT_SELECT_EXPLICIT) {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\Spawn.cpp
         // __LINE__: 1467
-        UTIL_ASSERT_MSG(mpExplicitSpawnPoint != NULL, "Cant't reference spawn point var");
+        UTIL_ASSERT_MSG(mpExplicitSpawnPoint != NULL, "Can't reference spawn point var");
 
         CPoint pt;
         mpExplicitSpawnPoint->GetValue(pArea, pt);
@@ -1300,7 +1302,13 @@ BOOL CSpawn::SelectSpawnPoint(CGameArea* pArea, const CRect& rect, int a3)
     // __LINE__: 1484
     UTIL_ASSERT_MSG(PointCount > 0, "No points to spawn to");
 
+    if (PointCount < 1) {
+        mSpelectedPoint.SetLocation(CPoint(0, 0));
+        return TRUE;
+    }
+
     int PointIndex = GetSpawnPointIndex();
+    int StartIndex = PointIndex;
 
     if ((SpawnFlags & SPAWN_FINDSAFESTPOINT) != 0) {
         for (int index = 0; index < PointCount; index++) {
@@ -1316,6 +1324,8 @@ BOOL CSpawn::SelectSpawnPoint(CGameArea* pArea, const CRect& rect, int a3)
             }
         }
     }
+
+    PointIndex = StartIndex;
 
     for (int index = 0; index < PointCount; index++) {
         CSpawnPoint* pPoint = mSpawnPointArray[PointIndex];
@@ -1340,7 +1350,7 @@ BOOL CSpawn::SelectSpawnPoint(CGameArea* pArea, const CRect& rect, int a3)
     }
 
     if ((SpawnFlags & SPAWN_IGNORE_CAN_SEE) != 0) {
-        CSpawnPoint* pPoint = mSpawnPointArray[0];
+        CSpawnPoint* pPoint = mSpawnPointArray[StartIndex];
         mSpelectedPoint.SetLocation(pPoint->GetLocation());
         mSpelectedPoint.SetFacing(pPoint->GetFacing());
     }
@@ -1728,6 +1738,7 @@ int CSpawnPointArray::Parse(const CString& sData)
                 pt.x = atoi(sPoint.Left(separatorPos));
                 pt.y = atoi(sPoint.Mid(separatorPos + 1));
                 Add(new CSpawnPoint(pt, facing));
+                count++;
             }
 
             sMutableString = sMutableString.Mid(closePos + 1);
@@ -1765,7 +1776,7 @@ CSpawnVar::CSpawnVar(CMemINIValue* pValue)
 
     // FIXME: Odd naming.
     CString Buffer = pValue->GetValue();
-    int ScopeSeq = Buffer.FindOneOf(ScopeStr);
+    int ScopeSeq = Buffer.Find(ScopeStr);
 
     if (ScopeSeq > 0) {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\Spawn.cpp

@@ -89,6 +89,8 @@ protected:
 
 class CSpawnPointArray : public CTypedPtrArray<CPtrArray, CSpawnPoint*> {
 public:
+    // NOTE: Inlined (see CSpawn::CSpawn).
+    CSpawnPointArray() : mDefaultFacing(0) {}
     ~CSpawnPointArray() override;
     void Zark();
     int Parse(const CString& sData);
