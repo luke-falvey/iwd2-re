@@ -74,12 +74,18 @@ void CStore::SetResRef(const CResRef& resRef)
         delete m_pSpells;
     }
 
+    m_resRef = resRef;
+
     storeData.SetResRef(resRef, TRUE, TRUE);
 
     BYTE* pData = reinterpret_cast<BYTE*>(storeData.GetData());
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\CStore.cpp
     // __LINE__: 200
+    UTIL_ASSERT(pData != NULL);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\CStore.cpp
+    // __LINE__: 209
     UTIL_ASSERT(pData != NULL);
 
     DWORD nData = storeData.GetDataSize();
@@ -149,7 +155,7 @@ void CStore::SetResRef(const CResRef& resRef)
 
         m_nDrinks = m_header.m_drinkCount;
         if (m_nDrinks != 0) {
-            m_pDrinks = new CStoreFileDrinks();
+            m_pDrinks = new CStoreFileDrinks[m_nDrinks];
 
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CStore.cpp
             // __LINE__: 278
@@ -166,7 +172,7 @@ void CStore::SetResRef(const CResRef& resRef)
 
         m_nSpells = m_header.m_spellCount;
         if (m_nSpells != 0) {
-            m_pSpells = new CStoreFileSpell;
+            m_pSpells = new CStoreFileSpell[m_nSpells];
 
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CStore.cpp
             // __LINE__: 288
@@ -184,9 +190,9 @@ void CStore::SetResRef(const CResRef& resRef)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CStore.cpp
         // __LINE__: 294
         UTIL_ASSERT(cnt == nData);
-
-        storeData.Release();
     }
+
+    storeData.Release();
 }
 
 // 0x54B9A0
@@ -323,7 +329,7 @@ DWORD CStore::GetItemSellValue(CItem& cItem, unsigned char a2)
 
         if (!v2) {
             dwMarkDown = m_header.m_nSellMarkDown - v1 * m_header.m_nAdditionalMarkDown;
-            if (dwMarkDown < 20) {
+            if (static_cast<INT>(dwMarkDown) < 20) {
                 dwMarkDown = 20;
             }
         }

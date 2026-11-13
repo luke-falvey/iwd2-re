@@ -102,12 +102,15 @@ CGameAnimationTypeTownStatic::CGameAnimationTypeTownStatic(USHORT animationID, B
         } else {
             sName = "LHMC";
         }
+        m_pSndDeath = "";
         break;
     case 0x500:
         sName = "LFAM";
+        m_pSndDeath = "";
         break;
     case 0x600:
         sName = "LDMF";
+        m_pSndDeath = "";
         break;
     case 0x700:
         if ((animationID & 0xF0) != 0) {
@@ -115,9 +118,11 @@ CGameAnimationTypeTownStatic::CGameAnimationTypeTownStatic(USHORT animationID, B
         } else {
             sName = "LEMF";
         }
+        m_pSndDeath = "";
         break;
     case 0x800:
         sName = "LIMC";
+        m_pSndDeath = "";
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
