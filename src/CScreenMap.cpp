@@ -186,7 +186,7 @@ void CScreenMap::OnMouseMove(CPoint pt)
     m_cUIManager.OnMouseMove(pt);
 }
 
-// 0x686660
+// 0x699600
 SHORT CScreenMap::GetNumVirtualKeys()
 {
     return CSCREENMAP_VIRTUAL_KEYS;
@@ -198,7 +198,7 @@ CKeyInfo* CScreenMap::GetVirtualKeys()
     return m_pVirtualKeys;
 }
 
-// 0x668C30
+// 0x699620
 BYTE* CScreenMap::GetVirtualKeysFlags()
 {
     return m_pVirtualKeysFlags;
@@ -251,7 +251,8 @@ void CScreenMap::EngineDeactivated()
     if (CChitin::byte_8FB950
         && g_pChitin->cNetwork.GetSessionOpen() == TRUE
         && g_pChitin->cNetwork.GetSessionHosting() == TRUE
-        && g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL) {
+        && g_pChitin->cNetwork.GetServiceProvider() != CNetwork::SERV_PROV_NULL
+        && !g_pBaldurChitin->m_pEngineWorld->m_bPaused) {
         g_pBaldurChitin->m_pEngineWorld->TogglePauseGame(0, 1, 0);
     }
 
@@ -326,6 +327,10 @@ void CScreenMap::OnKeyDown(SHORT nKeysFlags)
 
     if (nKeysFlags > 0) {
         for (SHORT nKeyFlag = 0; nKeyFlag < nKeysFlags; nKeyFlag++) {
+            if (m_cUIManager.OnKeyDown(m_pVirtualKeysFlags[nKeyFlag])) {
+                continue;
+            }
+
             switch (m_pVirtualKeysFlags[nKeyFlag]) {
             case VK_TAB:
                 m_cUIManager.ForceToolTip();
@@ -357,7 +362,7 @@ void CScreenMap::OnKeyDown(SHORT nKeysFlags)
                 break;
             default:
                 if (GetTopPopup() == NULL) {
-                    for (SHORT index = 0; index < CINFGAME_KEYMAP_SIZE; index) {
+                    for (SHORT index = 0; index < CINFGAME_KEYMAP_SIZE; index++) {
                         // NOTE: Uninline.
                         if (pGame->GetKeymap(index) == m_pVirtualKeysFlags[nKeyFlag]
                             && pGame->GetKeymapFlag(index) == m_bCtrlKeyDown) {
@@ -662,7 +667,14 @@ void CScreenMap::TimerAsynchronousUpdate()
                     g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait),
                         CGameObjectArray::THREAD_ASYNCH,
                         INFINITE);
+
+                    break;
                 }
+
+                // FIXME: Character id should be outside of the loop.
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(g_pBaldurChitin->GetObjectGame()->GetCharacterId(nPortrait),
+                    CGameObjectArray::THREAD_ASYNCH,
+                    INFINITE);
             }
         }
 
@@ -959,7 +971,7 @@ void CScreenMap::ResetErrorPanel(CUIPanel* pPanel)
 
     strRes.cSound.SetChannel(0, 0);
     strRes.cSound.SetFireForget(TRUE);
-    strRes.cSound.Play(TRUE);
+    strRes.cSound.Play(FALSE);
 
     CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(pPanel->GetControl(3));
 
@@ -971,7 +983,7 @@ void CScreenMap::ResetErrorPanel(CUIPanel* pPanel)
     UpdateText(pText, "%s", strRes.szText);
 
     for (INT nButton = 0; nButton < m_nNumErrorButtons; nButton++) {
-        CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButton + 1));
+        CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButton));
 
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenMap.cpp
         // __LINE__: 1584
@@ -1240,6 +1252,7 @@ CUIControlButtonMapAreaMap::CUIControlButtonMapAreaMap(CUIPanel* panel, UI_CONTR
 {
     field_75B = 0;
     m_nCharInArea = 0;
+    field_7BC = FALSE;
 
     m_vmMap.SetResRef(CResRef(""), TRUE, TRUE);
     m_vmMap.m_bDoubleSize = FALSE;
@@ -1432,7 +1445,7 @@ void CUIControlButtonMapAreaMap::OnRButtonClick(CPoint pt)
                 CAreaUserNote* pNote = m_pArea->m_cGameAreaNotes.GetNoteAt(sq);
                 STRREF strRef = m_pArea->m_cGameAreaNotes.GetNoteButtonText(pNote->m_id);
                 STR_RES strRes;
-                g_pBaldurChitin->GetTlkTable().Fetch(strRef, strRes);
+                g_pBaldurChitin->GetTlkTable().m_override.Fetch(strRef, strRes);
                 pText->SetText(strRes.szText);
                 m_pArea->m_cGameAreaNotes.field_74 = m_nID;
                 m_pArea->m_cGameAreaNotes.field_70 = 0;
@@ -2453,8 +2466,11 @@ void CUIControlButtonMapShowNotes::OnLButtonClick(CPoint pt)
 CUIControlButtonMapNote::CUIControlButtonMapNote(CUIPanel* panel, UI_CONTROL_BUTTON* controlInfo)
     : CUIControlButton(panel, controlInfo, RBUTTON, 0)
 {
-    SetNeedMouseMove();
     field_666 = 0;
+
+    // FIXME: Why not `SetNeedMouseMove` (which also sets flag on panel)?
+    m_bNeedMouseMove = TRUE;
+
     field_668 = 0;
     m_nDisabledFrame = 0;
     m_nNormalFrame = 0;
@@ -2540,7 +2556,7 @@ CUIControlButtonMapNoteFlagChoice::CUIControlButtonMapNoteFlagChoice(CUIPanel* p
     : CUIControlButton3State(panel, controlInfo, LBUTTON, 0)
 {
     // NOTE: Uninline.
-    m_cVidCell.SetResRef(CResRef("FLAG1"), m_pPanel->m_pManager->m_bDoubleSize, TRUE, TRUE);
+    m_cVidCell.SetResRef(CResRef("FLAG1"), m_pPanel->m_pManager->m_bDoubleSize, FALSE, TRUE);
 
     BYTE nSequence = static_cast<BYTE>(m_nID - 4);
     BYTE nNumberSequences = static_cast<BYTE>(m_cVidCell.GetNumberSequences(FALSE));
