@@ -5,6 +5,8 @@
 
 #include <unknwn.h>
 
+class CSoundMixer;
+
 // NOTE: Interface of the objects held by `CUnknown2::field_C`. Only `Release`
 // and the method at vtable offset 0x38 are known.
 struct IUnknown2Entry : public IUnknown {
@@ -31,7 +33,7 @@ class CUnknown2 {
 public:
     CUnknown2();
     ~CUnknown2();
-    BOOL sub_799C90();
+    BOOL sub_799C90(CSoundMixer* pMixer);
     void sub_7C25B0();
 
     IUnknown* field_0;

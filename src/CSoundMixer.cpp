@@ -303,7 +303,7 @@ void CSoundMixer::Initialize(CWnd* pWnd, int nNewMaxVoices, int nNewMaxChannels)
 
     if ((m_dwEAXProperties & CSOUNDPROPERTIES_EAX_SUPPORTS_ENVIRONMENT) != 0) {
         hr = m_pPrimarySoundBuffer->QueryInterface(IID_IDirectSound3DListener, reinterpret_cast<LPVOID*>(&m_pDirectSound3DListener));
-        if (hr == DS_OK) {
+        if (SUCCEEDED(hr)) {
             m_pDirectSound3DListener->SetOrientation(0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0);
         } else {
             m_dwEAXProperties = 0;
@@ -313,7 +313,7 @@ void CSoundMixer::Initialize(CWnd* pWnd, int nNewMaxVoices, int nNewMaxChannels)
     if (field_178) {
         m_dwEAXProperties |= CSOUNDPROPERTIES_EAX_SUPPORTS_ENVIRONMENT;
     } else {
-        if (field_144.sub_799C90()) {
+        if (field_144.sub_799C90(this)) {
             field_144.sub_7C25B0();
             field_178 = FALSE;
         } else {
@@ -433,8 +433,10 @@ void CSoundMixer::SetChannelVolume(int nChannelNumber, int nNewVolume)
         POSITION pos = m_lVoices.GetHeadPosition();
         while (pos != NULL) {
             CVoice* pVoice = static_cast<CVoice*>(m_lVoices.GetNext(pos));
-            if (pVoice->GetChannel() == nChannelNumber) {
-                pVoice->ResetVolume();
+            if (pVoice != NULL) {
+                if (pVoice->GetChannel() == nChannelNumber) {
+                    pVoice->ResetVolume();
+                }
             }
         }
     }
@@ -754,11 +756,13 @@ BOOL CSoundMixer::SetMusicSongs(INT nNumSongs, CHAR** ppSongFiles)
 // 0x7AC480
 void CSoundMixer::SetMusicVolume(int nNewVolume)
 {
-    Lock();
+    if (m_bMusicInitialized) {
+        Lock();
 
-    musicSetVolume(VOLUME_MAX * nNewVolume / 100);
+        musicSetVolume(VOLUME_MAX * nNewVolume / 100);
 
-    Unlock();
+        Unlock();
+    }
 }
 
 // 0x7AC4F0
@@ -810,7 +814,7 @@ void CSoundMixer::StartSong(INT nSong, INT nSection, INT nPosition, DWORD dwFlag
                             musicFade(-1, nSection, nPosition, dwFlags & 0xFFFF);
                         } else {
                             // NOTE: Uninline.
-                            StopMusic(TRUE);
+                            StopMusic(FALSE);
                         }
                         break;
                     }
@@ -828,6 +832,7 @@ void CSoundMixer::StartSong(INT nSong, INT nSection, INT nPosition, DWORD dwFlag
                         break;
                     case 2:
                         musicSetSong(nSong, nSection, nPosition);
+                        bFadeIn = FALSE;
                         break;
                     case 3:
                         musicFade(nSong, nSection, nPosition, 1500);
@@ -1004,10 +1009,11 @@ void CSoundMixer::RemoveFromLoopingList(CSound* pSound)
     POSITION pos = m_lLooping.Find(pSound);
     if (pos != NULL) {
         m_lLooping.RemoveAt(pos);
+        Unlock();
         m_bInLoopingUpdate = FALSE;
+    } else {
+        Unlock();
     }
-
-    Unlock();
 }
 
 // NOTE: Originally named `MusicDebugFunc` which clashes with eponymous typedef.

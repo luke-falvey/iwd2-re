@@ -101,7 +101,7 @@ public:
     /* 013C */ IDirectSound3DListener* m_pDirectSound3DListener; // #guess
     /* 0140 */ DWORD m_dwEAXProperties;
     /* 0144 */ CUnknown2 field_144;
-    /* 0178 */ int field_178;
+    /* 0178 */ BYTE field_178;
 };
 
 #endif /* CSOUNDMIXER_H_ */
