@@ -1460,6 +1460,10 @@ void CGameAnimationTypeMonsterIcewind::GetAnimationResRef(CString& resRef, BYTE 
 
     switch (range) {
     case 0x00:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+        // __LINE__: 26008
+        UTIL_ASSERT(m_currentVidCell != NULL);
+
         switch (m_animationID & 0xF00) {
         case 0x200:
             switch (m_animationID & 0xF) {
@@ -1530,7 +1534,8 @@ char* CGameAnimationTypeMonsterIcewind::GetSndWalk(SHORT tableIndex)
         // __LINE__: 26114
         UTIL_ASSERT(szTemp != NULL);
 
-        strcpy(szTemp, "DRAGON12");
+        // NOTE: Copies exactly 8 bytes, the result is not NUL-terminated.
+        memcpy(szTemp, "DRAGON12", 8);
         return szTemp;
     }
 
@@ -1541,6 +1546,7 @@ char* CGameAnimationTypeMonsterIcewind::GetSndWalk(SHORT tableIndex)
     case 0xE030:
     case 0xE040:
     case 0xE050:
+    case 0xE240:
     case 0xE250:
     case 0xE260:
     case 0xE280:
@@ -2386,6 +2392,7 @@ SHORT CGameAnimationTypeMonsterIcewind::SetSequence(SHORT nSequence)
         m_currentVidCellBase = &m_deVidCellBase;
         m_currentVidCellExtend = &m_deVidCellExtend;
         m_currentBamSequence = 0;
+        break;
     case 6:
         if (m_currentBamSequence != 0
             || m_currentVidCellBase != &m_sdVidCellBase) {
@@ -2462,8 +2469,8 @@ SHORT CGameAnimationTypeMonsterIcewind::SetSequence(SHORT nSequence)
         m_currentBamSequence = 0;
         break;
     case 17:
-        m_currentVidCellBase = &m_a1VidCellBase;
-        m_currentVidCellExtend = &m_a1VidCellExtend;
+        m_currentVidCellBase = &m_slVidCellBase;
+        m_currentVidCellExtend = &m_slVidCellExtend;
         m_currentBamSequence = 0;
         break;
     default:
