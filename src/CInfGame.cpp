@@ -7607,15 +7607,14 @@ void CInfGame::StepAnimation(BYTE direction)
                         0);
                     pSprite->EquipAll(FALSE);
 
-                    for (SHORT nSequence = 0; nSequence <= 15; nSequence++) {
+                    for (SHORT nSequence = 1; nSequence <= 15; nSequence++) {
                         if (nSequence != 8) {
                             pSprite->GetAnimation()->SetSequence(nSequence);
-                            pSprite->SetSequence(nSequence);
 
                             for (SHORT nDirection = 0; nDirection <= 15; nDirection++) {
                                 pSprite->GetAnimation()->ChangeDirection(nDirection);
 
-                                for (INT nFrame = 0; nFrame < 40; nFrame--) {
+                                for (INT nFrame = 0; nFrame < 40; nFrame++) {
                                     pSprite->GetAnimation()->CalculateFxRect(rFx, ptRef, pSprite->m_posZ);
                                     pSprite->GetAnimation()->IncrementFrame();
                                 }
@@ -7632,15 +7631,14 @@ void CInfGame::StepAnimation(BYTE direction)
                         0);
                     pSprite->EquipAll(FALSE);
 
-                    for (SHORT nSequence = 0; nSequence <= 15; nSequence++) {
+                    for (SHORT nSequence = 1; nSequence <= 15; nSequence++) {
                         if (nSequence == 8) {
                             pSprite->GetAnimation()->SetSequence(nSequence);
-                            pSprite->SetSequence(nSequence);
 
                             for (SHORT nDirection = 0; nDirection <= 15; nDirection++) {
                                 pSprite->GetAnimation()->ChangeDirection(nDirection);
 
-                                for (INT nFrame = 0; nFrame < 40; nFrame--) {
+                                for (INT nFrame = 0; nFrame < 40; nFrame++) {
                                     pSprite->GetAnimation()->CalculateFxRect(rFx, ptRef, pSprite->m_posZ);
                                     pSprite->GetAnimation()->IncrementFrame();
                                 }
@@ -7667,7 +7665,7 @@ void CInfGame::StepAnimation(BYTE direction)
                 pSprite->UnequipAll(FALSE);
                 pSprite->GetAnimation()->SetAnimationType(animationList[m_currAnimation],
                     pSprite->GetBaseStats()->m_colors,
-                    0);
+                    pSprite->m_nDirection);
                 pSprite->EquipAll(FALSE);
 
                 pSprite->GetAnimation()->SetSequence(pSprite->m_nSequence);
@@ -7704,7 +7702,7 @@ void CInfGame::StepAnimation(BYTE direction)
                 pSprite->UnequipAll(FALSE);
                 pSprite->GetAnimation()->SetAnimationType(animationList[m_currAnimation],
                     pSprite->GetBaseStats()->m_colors,
-                    0);
+                    pSprite->m_nDirection);
                 pSprite->EquipAll(FALSE);
 
                 pSprite->GetAnimation()->SetSequence(pSprite->m_nSequence);

@@ -467,7 +467,7 @@ CGameAnimationTypeMonster::CGameAnimationTypeMonster(USHORT animationID, BYTE* c
         m_bPathSmooth = TRUE;
         m_falseColor = FALSE;
 
-        switch (animationID & 0xF) {
+        switch (animationID & 0xFF) {
         case 0:
             m_bSplitBams = TRUE;
             m_colorChunks = -1;
