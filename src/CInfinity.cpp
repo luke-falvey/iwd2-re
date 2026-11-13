@@ -521,13 +521,13 @@ BOOL CInfTileSet::SetResID(RESID nNewID, CResRef cResRef, RESID nNewDualID, CRes
                     // NOTE: Uninline.
                     m_pVRamPool->EmptyTile(m_pResTiles[index]->m_nVRamTile);
                 }
-            }
 
-            g_pChitin->cDimm.Dump(m_pResTiles[index], 1, 0);
+                g_pChitin->cDimm.Dump(m_pResTiles[index], 1, 0);
 
-            if (m_pResTiles[index] != NULL) {
-                delete m_pResTiles[index];
-                m_pResTiles[index] = NULL;
+                if (m_pResTiles[index] != NULL) {
+                    delete m_pResTiles[index];
+                    m_pResTiles[index] = NULL;
+                }
             }
         }
 
@@ -589,7 +589,7 @@ BOOL CInfTileSet::SetResID(RESID nNewID, CResRef cResRef, RESID nNewDualID, CRes
 // NOTE: Inlined.
 BOOLEAN CInfTileSet::GetTileRenderCode(INT nTile, TILE_CODE& tileCode)
 {
-    if (nTile < 0 || nTile > m_nTiles) {
+    if (nTile < 0 || nTile >= m_nTiles) {
         return FALSE;
     }
 
@@ -605,7 +605,7 @@ BOOLEAN CInfTileSet::GetTileRenderCode(INT nTile, TILE_CODE& tileCode)
 // NOTE: Inlined.
 BOOLEAN CInfTileSet::SetTileRenderCode(INT nTile, TILE_CODE& tileCode)
 {
-    if (nTile < 0 || nTile > m_nTiles) {
+    if (nTile < 0 || nTile >= m_nTiles) {
         return FALSE;
     }
 
@@ -716,9 +716,9 @@ BOOL CInfTileSet::ReadyTexture(INT nTextureId, INT nTile, INT nStencilTile, cons
     }
 
     if (nStencilTile != -1) {
-        bResult = m_cVidTile.ReadyTexture(nTextureId, m_pResTiles[nStencilTile], dwFlags, dwAlpha);
+        bResult = m_cVidTile.ReadyTexture(nTextureId, m_pResTiles[nStencilTile], dwTextureFlags, dwAlpha);
     } else {
-        bResult = m_cVidTile.ReadyTexture(nTextureId, dwFlags, dwAlpha);
+        bResult = m_cVidTile.ReadyTexture(nTextureId, dwTextureFlags, dwAlpha);
     }
 
     return bResult;
@@ -785,8 +785,10 @@ CResInfTile::CResInfTile(BOOLEAN a1, BOOLEAN a2)
 {
     m_nVRamTile = -1;
 
-    // TODO: Wrong.
-    m_nVRamFlags = 0;
+    // NOTE: The original sets bit 0 from `a2`, clears bit 1 and leaves the
+    // other bits uninitialized. Only bit 1 is ever tested.
+    m_nVRamFlags = (m_nVRamFlags & ~0x1) | (a2 != 0 ? 0x1 : 0x0);
+    m_nVRamFlags &= ~0x2;
 
     m_renderCode = CVisibilityMap::EXPLORED_FULL;
 
@@ -1117,7 +1119,7 @@ BOOL CInfinity::AttachWED(CResWED* resNewWED, WORD areaType, BYTE dayNightCode)
 
             // __FILE__: C:\Projects\Icewind2\src\Baldur\Infinity.cpp
             // __LINE__: 1875
-            UTIL_ASSERT_MSG(FALSE, CString("Tile set") + sTileSet + " not found");
+            UTIL_ASSERT_MSG(FALSE, CString("Tile set ") + sTileSet + " not found");
         }
 
         pTileSets[0]->SetResID(nDualID, rrDualTileSet, 0, CResRef(""));
@@ -1130,7 +1132,7 @@ BOOL CInfinity::AttachWED(CResWED* resNewWED, WORD areaType, BYTE dayNightCode)
 
             // __FILE__: C:\Projects\Icewind2\src\Baldur\Infinity.cpp
             // __LINE__: 1898
-            UTIL_ASSERT_MSG(FALSE, CString("Tile set") + sTileSet + " not found");
+            UTIL_ASSERT_MSG(FALSE, CString("Tile set ") + sTileSet + " not found");
         }
 
         pTileSets[0]->SetResID(nID, rrTileSet, 0, CResRef(""));
@@ -1183,10 +1185,10 @@ void CInfinity::CacheTiles()
         || g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL) {
         DWORD dwFlags = 0;
 
-        ULONG nTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
+        ULONG nTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime % CTimerWorld::TIMESCALE_MSEC_PER_DAY;
         ULONG nDelta = (CTimerWorld::TIME_DAY - CTimerWorld::TIME_DAWN) / 2;
-        if (nTime >= nDelta + CTimerWorld::TIME_DAWN
-            && nTime < nDelta + CTimerWorld::TIME_DUSK
+        if ((nTime < nDelta + CTimerWorld::TIME_DAWN
+                || nTime >= nDelta + CTimerWorld::TIME_DUSK)
             && (m_areaType & 0x40) != 0) {
             dwFlags |= 0x2;
         } else {
@@ -1823,7 +1825,10 @@ CPoint CInfinity::GetWorldCoordinates(const CPoint& ptScreen)
 {
     CPoint ptWorld;
 
-    if (rViewPort.PtInRect(ptScreen)) {
+    if (ptScreen.x >= rViewPort.left
+        && ptScreen.x <= rViewPort.right
+        && ptScreen.y >= rViewPort.top
+        && ptScreen.y <= rViewPort.bottom) {
         ptWorld.x = ptScreen.x + nNewX - rViewPort.left;
         ptWorld.y = ptScreen.y + nNewY - rViewPort.top;
     } else {
@@ -2410,6 +2415,8 @@ DWORD CInfinity::Render(CVidMode* pNewVidMode, INT nSurface, INT nScrollState, C
     CInfGame* pGame = g_pBaldurChitin->GetObjectGame();
     BOOL bWorldTimerActive = pGame->GetWorldTimer()->m_active;
     BOOL bTimeStop = pGame->m_nTimeStop;
+    INT nSavedNewX = nNewX;
+    INT nSavedNewY = nNewY;
 
     if (m_bScreenShake) {
         if (bWorldTimerActive && !bTimeStop) {
@@ -2428,6 +2435,9 @@ DWORD CInfinity::Render(CVidMode* pNewVidMode, INT nSurface, INT nScrollState, C
 
             if (m_screenShakeDelta.y > 0 && (currTime & 7) < 4) {
                 m_screenShakeDelta.y = min(m_screenShakeDecrease.y, m_screenShakeDelta.y) - m_screenShakeDelta.y;
+                if (rand() % 2 == 0) {
+                    m_screenShakeDelta.y = -m_screenShakeDelta.y;
+                }
             } else {
                 m_screenShakeDelta.y = -m_screenShakeDelta.y;
             }
@@ -2441,6 +2451,12 @@ DWORD CInfinity::Render(CVidMode* pNewVidMode, INT nSurface, INT nScrollState, C
             wedResRef += NIGHT_RESREF_SUFFIX;
             pNewResWED = static_cast<CResWED*>(g_pChitin->cDimm.GetResObject(wedResRef, 1001, TRUE));
         } else {
+            CString sName;
+            pResWED->GetResRef().CopyToString(sName);
+            if (strcmp(CString(sName[sName.GetLength() - 1], 1), NIGHT_RESREF_SUFFIX) == 0) {
+                sName = sName.Left(sName.GetLength() - 1);
+            }
+            pNewResWED = static_cast<CResWED*>(g_pChitin->cDimm.GetResObject(CResRef(sName), 1001, TRUE));
         }
 
         if (pNewResWED != NULL) {
@@ -2543,7 +2559,7 @@ DWORD CInfinity::Render(CVidMode* pNewVidMode, INT nSurface, INT nScrollState, C
         }
 
         if (((rViewPort.Height() - nOffsetY) & 63) != 0) {
-            nVisibleTilesX++;
+            nVisibleTilesY++;
         }
 
         if (nScrollState == 0 || nScrollState == 9) {
@@ -2576,8 +2592,8 @@ DWORD CInfinity::Render(CVidMode* pNewVidMode, INT nSurface, INT nScrollState, C
             nCurrentTileY = (nCurrentY - 63) / 64;
         }
 
-        RequestRect(nCurrentTileX,
-            nCurrentTileY,
+        RequestRect(nCurrentTileX - 3,
+            nCurrentTileY - 3,
             nCurrentTileX + nVisibleTilesX + 2,
             nCurrentTileY + nVisibleTilesY + 2);
     }
@@ -2656,7 +2672,7 @@ DWORD CInfinity::Render(CVidMode* pNewVidMode, INT nSurface, INT nScrollState, C
 
                         pTileSets[0]->m_rgbTintColor = m_rgbGlobalLighting;
 
-                        WORD nTile;
+                        INT nTile;
                         if ((CTiledObject::STATE_SECONDARY_TILE & pTileData->wFlags) != 0
                             && pTileData->nSecondary != -1) {
                             nTile = pTileData->nSecondary;
@@ -2717,9 +2733,9 @@ DWORD CInfinity::Render(CVidMode* pNewVidMode, INT nSurface, INT nScrollState, C
     if (m_bScreenShake) {
         if (bWorldTimerActive
             && !bTimeStop
-            && nNewX != -1) {
-            SetViewPosition(nNewX, nNewY, TRUE);
-            if (m_screenShakeDelta.x == 0 || m_screenShakeDelta.y == 0) {
+            && nSavedNewX != -1) {
+            SetViewPosition(nSavedNewX, nSavedNewY, TRUE);
+            if (m_screenShakeDelta.x == 0 && m_screenShakeDelta.y == 0) {
                 m_bScreenShake = FALSE;
             }
         }
@@ -2835,8 +2851,8 @@ BOOL CInfinity::RequestRect(int x1, int y1, int x2, int y2)
                 RequestTile(x, y1 + delta, flags, CDimm::PRIORITY_MEDIUM);
             }
 
-            if (r.PtInRect(CPoint(x, y1 - delta))) {
-                RequestTile(x, y1 - delta, flags, CDimm::PRIORITY_MEDIUM);
+            if (r.PtInRect(CPoint(x, y2 - delta))) {
+                RequestTile(x, y2 - delta, flags, CDimm::PRIORITY_MEDIUM);
             }
         }
     }
@@ -2847,8 +2863,8 @@ BOOL CInfinity::RequestRect(int x1, int y1, int x2, int y2)
                 RequestTile(x1 + delta, y, flags, CDimm::PRIORITY_MEDIUM);
             }
 
-            if (r.PtInRect(CPoint(x1 - delta, y))) {
-                RequestTile(x1 - delta, y, flags, CDimm::PRIORITY_MEDIUM);
+            if (r.PtInRect(CPoint(x2 - delta, y))) {
+                RequestTile(x2 - delta, y, flags, CDimm::PRIORITY_MEDIUM);
             }
         }
     }
@@ -3107,27 +3123,27 @@ void CInfinity::CancelRequestTile(int x, int y, unsigned char a3)
                             }
                         }
                     }
-                } else {
-                    for (WORD index = 0; index < pTileData->nNumTiles; index++) {
-                        int nTile = pTileList[index + pTileData->nStartingTile];
-                        if (nTile < pTileSets[0]->m_nTiles) {
-                            CResInfTile* pRes = pTileSets[0]->m_pResTiles[nTile];
-                            if (pRes != NULL) {
-                                if ((a3 & 1) != 0) {
-                                    pRes->CancelRequest();
-                                }
+                }
+            } else {
+                for (WORD index = 0; index < pTileData->nNumTiles; index++) {
+                    int nTile = pTileList[index + pTileData->nStartingTile];
+                    if (nTile < pTileSets[0]->m_nTiles) {
+                        CResInfTile* pRes = pTileSets[0]->m_pResTiles[nTile];
+                        if (pRes != NULL) {
+                            if ((a3 & 1) != 0) {
+                                pRes->CancelRequest();
+                            }
 
-                                if ((a3 & 0x2) != 0) {
-                                    if (pRes->m_pDualTileRes != NULL) {
-                                        pRes->m_pDualTileRes->CancelRequest();
-                                    }
+                            if ((a3 & 0x2) != 0) {
+                                if (pRes->m_pDualTileRes != NULL) {
+                                    pRes->m_pDualTileRes->CancelRequest();
                                 }
+                            }
 
-                                // FIXME: Will never be true.
-                                if ((a3 & 0x4) != 0) {
-                                    if (pRes->m_pDualTileRes != NULL) {
-                                        pRes->m_pDualTileRes->CancelRequest();
-                                    }
+                            // FIXME: Will never be true.
+                            if ((a3 & 0x4) != 0) {
+                                if (pRes->m_pDualTileRes != NULL) {
+                                    pRes->m_pDualTileRes->CancelRequest();
                                 }
                             }
                         }
@@ -3166,8 +3182,8 @@ void CInfinity::CancelRequestTile(int x, int y, unsigned char a3)
                         if (pTileList != NULL) {
                             for (WORD index = 0; index < pTileData->nNumTiles; index++) {
                                 int nTile = pTileList[index + pTileData->nStartingTile];
-                                if (nTile < pTileSets[0]->m_nTiles) {
-                                    CResInfTile* pRes = pTileSets[0]->m_pResTiles[nTile];
+                                if (nTile < pTileSets[nLayer]->m_nTiles) {
+                                    CResInfTile* pRes = pTileSets[nLayer]->m_pResTiles[nTile];
                                     if (pRes != NULL) {
                                         if ((v1 & 1) != 0) {
                                             pRes->CancelRequest();
@@ -3261,30 +3277,30 @@ void CInfinity::RequestTile(int x, int y, unsigned char a3, int priority)
                             }
                         }
                     }
-                } else {
-                    for (WORD index = 0; index < pTileData->nNumTiles; index++) {
-                        int nTile = pTileList[index + pTileData->nStartingTile];
-                        if (nTile < pTileSets[0]->m_nTiles) {
-                            CResInfTile* pRes = pTileSets[0]->m_pResTiles[nTile];
-                            if (pRes != NULL) {
-                                if ((a3 & 1) != 0) {
-                                    pRes->SetPriority(priority);
-                                    pRes->Request();
-                                }
+                }
+            } else {
+                for (WORD index = 0; index < pTileData->nNumTiles; index++) {
+                    int nTile = pTileList[index + pTileData->nStartingTile];
+                    if (nTile < pTileSets[0]->m_nTiles) {
+                        CResInfTile* pRes = pTileSets[0]->m_pResTiles[nTile];
+                        if (pRes != NULL) {
+                            if ((a3 & 1) != 0) {
+                                pRes->SetPriority(priority);
+                                pRes->Request();
+                            }
 
-                                if ((a3 & 0x2) != 0) {
-                                    if (pRes->m_pDualTileRes != NULL) {
-                                        pRes->m_pDualTileRes->SetPriority(priority);
-                                        pRes->m_pDualTileRes->Request();
-                                    }
+                            if ((a3 & 0x2) != 0) {
+                                if (pRes->m_pDualTileRes != NULL) {
+                                    pRes->m_pDualTileRes->SetPriority(priority);
+                                    pRes->m_pDualTileRes->Request();
                                 }
+                            }
 
-                                // FIXME: Will never be true.
-                                if ((a3 & 0x4) != 0) {
-                                    if (pRes->m_pDualTileRes != NULL) {
-                                        pRes->m_pDualTileRes->SetPriority(priority);
-                                        pRes->m_pDualTileRes->Request();
-                                    }
+                            // FIXME: Will never be true.
+                            if ((a3 & 0x4) != 0) {
+                                if (pRes->m_pDualTileRes != NULL) {
+                                    pRes->m_pDualTileRes->SetPriority(priority);
+                                    pRes->m_pDualTileRes->Request();
                                 }
                             }
                         }
@@ -3323,8 +3339,8 @@ void CInfinity::RequestTile(int x, int y, unsigned char a3, int priority)
                         if (pTileList != NULL) {
                             for (WORD index = 0; index < pTileData->nNumTiles; index++) {
                                 int nTile = pTileList[index + pTileData->nStartingTile];
-                                if (nTile < pTileSets[0]->m_nTiles) {
-                                    CResInfTile* pRes = pTileSets[0]->m_pResTiles[nTile];
+                                if (nTile < pTileSets[nLayer]->m_nTiles) {
+                                    CResInfTile* pRes = pTileSets[nLayer]->m_pResTiles[nTile];
                                     if (pRes != NULL) {
                                         if ((v1 & 1) != 0) {
                                             pRes->SetPriority(priority);
@@ -3461,8 +3477,8 @@ void CInfinity::SetScreenShake(BOOL bScreenShake, WORD duration, const CPoint& s
 {
     EnterCriticalSection(&(m_pArea->field_1FC));
     m_bScreenShake = bScreenShake;
-    m_screenShakeDelta.x = screenShakeDelta.x * CGameSprite::EXACT_SCALE;
-    m_screenShakeDelta.y = screenShakeDelta.y * CGameSprite::EXACT_SCALE;
+    m_screenShakeDelta.x = screenShakeDelta.x << CGameSprite::EXACT_SCALE;
+    m_screenShakeDelta.y = screenShakeDelta.y << CGameSprite::EXACT_SCALE;
     if (screenShakeDelta.x != 0) {
         m_screenShakeDecrease.x = abs(m_screenShakeDelta.x) / duration;
     } else {
@@ -3490,7 +3506,7 @@ BOOL CInfinity::SetViewPosition(INT x, INT y, BOOLEAN bSetExactScale)
     if (x > nAreaX - rViewPort.Width()) {
         x = nAreaX - rViewPort.Width();
         if (x < 0) {
-            x /= 2;
+            x >>= 1;
         }
         m_ptCurrentPosExact.x = 10000 * x;
     }
@@ -3776,8 +3792,8 @@ void CInfinity::AdjustViewPosition(BYTE nScrollState)
     }
 
     v1 = 10000 * nScrollSpeed;
-    v2 = (30000 * nScrollSpeed) / 4;
-    v3 = (10000 * nScrollSpeed) / 2;
+    v2 = (10000 * nScrollSpeed) / 2;
+    v3 = (30000 * nScrollSpeed) / 4;
 
     nCurrentTickCount = GetTickCount();
 
@@ -3936,7 +3952,7 @@ void CInfinity::AIUpdate()
                 || g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
                 if (g_pBaldurChitin->GetObjectGame()->GetOptions()->m_bWeatherEnabled
                     && sndThunder.GetVolume() > 85
-                    && rand() % 100 < m_lightningStrikeProb) {
+                    && rand() % 100 <= m_lightningStrikeProb) {
                     m_pArea->OnLightningStrike();
                 }
             }
@@ -3980,6 +3996,10 @@ void CInfinity::SetMessageScreen(CResRef resRef, DWORD strText, DWORD nDuration)
 {
     m_vbMessageScreen.SetResRef(resRef, TRUE, TRUE);
     m_vbMessageScreen.m_bDoubleSize = g_pBaldurChitin->field_4A2C;
+
+    if (m_vbMessageScreen.pRes != NULL) {
+        m_vbMessageScreen.pRes->Request();
+    }
 
     field_286++;
     m_strMessageText = strText;
@@ -4108,7 +4128,10 @@ CPoint CInfinity::GetScreenCoordinates(const CPoint& ptWorld)
     ptScreen.x = ptWorld.x - nNewX + rViewPort.left;
     ptScreen.y = ptWorld.y - nNewY + rViewPort.top;
 
-    if (!rViewPort.PtInRect(ptScreen)) {
+    if (ptScreen.x < rViewPort.left
+        || ptScreen.x > rViewPort.right
+        || ptScreen.y < rViewPort.top
+        || ptScreen.y > rViewPort.bottom) {
         ptScreen.x = -1;
         ptScreen.y = -1;
     }
