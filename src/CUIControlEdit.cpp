@@ -42,8 +42,11 @@ CUIControlEdit::CUIControlEdit(CUIPanel* panel, UI_CONTROL_EDIT* controlInfo, in
     field_873 = 1;
 
     m_mosBackground.SetResRef(CResRef(controlInfo->refMosaic), FALSE, TRUE);
+    m_mosBackground.m_bDoubleSize = m_pPanel->m_pManager->m_bDoubleSize;
     m_mosTextFocusedBackground.SetResRef(CResRef(controlInfo->refMosaicTextFocused), FALSE, TRUE);
+    m_mosTextFocusedBackground.m_bDoubleSize = m_pPanel->m_pManager->m_bDoubleSize;
     m_mosTextUnFocusedBackground.SetResRef(CResRef(controlInfo->refMosaicTextUnFocused), FALSE, TRUE);
+    m_mosTextUnFocusedBackground.m_bDoubleSize = m_pPanel->m_pManager->m_bDoubleSize;
 
     // NOTE: Uninline.
     m_vcCursor.SetResRef(CResRef(controlInfo->refCursor), m_pPanel->m_pManager->m_bDoubleSize, FALSE, TRUE);
@@ -154,11 +157,12 @@ BOOL CUIControlEdit::OnLButtonDown(CPoint pt)
                 LONG nStringLength;
                 if (g_pChitin->field_1A0 && IsDBCSLeadByte(m_sText[index])) {
                     nStringLength = m_cVidFont.GetStringLength(m_sText.Mid(index, 2), TRUE);
-                    index++;
                 } else {
                     nStringLength = m_cVidFont.GetStringLength(CString(m_sText[index], 1), TRUE);
                 }
 
+                // NOTE: The exe also adds (SHORT)word_85DD3C (always 0) to
+                // the measured length.
                 x -= nStringLength;
                 if (x < 0) {
                     break;
@@ -911,10 +915,10 @@ BOOL CUIControlEdit::Render(BOOL bForce)
         m_vcCursor.GetCurrentCenterPoint(ptCursorCenter, TRUE);
 
         if (m_nCursorIndex != -1) {
-            LONG nStringLength = m_cVidFont.GetStringLength(m_sText.Mid(m_nVisibleIndex, m_nCursorIndex - m_nVisibleIndex), TRUE);
+            LONG nStringLength = m_cVidFont.GetStringLength(m_sText.Mid(m_nVisibleIndex, m_nCursorIndex - m_nVisibleIndex), FALSE);
             m_vcCursor.RealizePalette(0x1);
             pVidInf->BKRender(&m_vcCursor,
-                pt.x + ptCursorCenter.x + nStringLength,
+                pt.x + ptCursorCenter.x + static_cast<SHORT>(nStringLength),
                 top + ptCursorCenter.y,
                 rClip,
                 TRUE,
