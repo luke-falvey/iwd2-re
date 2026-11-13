@@ -348,7 +348,7 @@ BOOL CResCell::Parse(void* pData)
 
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChDataTypes.cpp
         // __LINE__: 2971
-        UTIL_ASSERT(m_pFrameList != NULL);
+        UTIL_ASSERT(m_pBamHeaderCopy != NULL);
     }
 
     memcpy(m_pBamHeaderCopy, pBamHeader, sizeof(BAMHEADER));

@@ -69,6 +69,7 @@ BOOLEAN CGameSpriteSpellList::Add(const UINT& nID, const unsigned int& a2, const
             // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
             // __LINE__: 26483
             UTIL_ASSERT(FALSE);
+            return FALSE;
         }
 
         m_List[nIndex].field_4 = v1;
@@ -96,6 +97,7 @@ BOOLEAN CGameSpriteSpellList::Remove(const UINT& nID, BOOLEAN a2, const unsigned
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
         // __LINE__: 26518
         UTIL_ASSERT(FALSE);
+        return FALSE;
     }
 
     unsigned int v1 = a3;
@@ -230,7 +232,7 @@ BOOLEAN CGameSpriteSpellList::sub_725DB0(const unsigned int& a1, const BOOLEAN& 
 
     for (UINT nIndex = 0; nIndex < m_List.size(); nIndex++) {
         // NOTE: Uninline.
-        sub_725CC0(m_List[nIndex].m_nID, v1 - m_List[nIndex].field_8, FALSE);
+        sub_725CC0(m_List[nIndex].m_nID, m_List[nIndex].field_8 - v1, FALSE);
     }
 
     return TRUE;
@@ -362,7 +364,7 @@ BOOLEAN CGameSpriteGroupedSpellList::Add(const UINT& nID, const UINT& nLevel, co
 }
 
 // 0x725F90
-BOOLEAN CGameSpriteGroupedSpellList::Remove(const UINT& nID, const UINT& nLevel, const unsigned int& a3, const unsigned int& a4, const unsigned int& a5)
+BOOLEAN CGameSpriteGroupedSpellList::Remove(const UINT& nID, const UINT& nLevel, BOOLEAN a3, const unsigned int& a4, const unsigned int& a5)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
     // __LINE__: 26787

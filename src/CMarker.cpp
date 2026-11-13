@@ -87,8 +87,8 @@ void CMarker::AsynchronousUpdate(CGameSprite* pSprite)
         INT y;
         pSprite->GetArea()->GetInfinity()->GetViewPosition(x, y);
 
-        if (abs(pSprite->GetPos().x - (x + rViewPort.Width() / 2)) < 16
-            && abs(pSprite->GetPos().y - (y + rViewPort.Height() / 2)) < 12) {
+        if (abs(pSprite->GetPos().x - (x + (rViewPort.Width() >> 1))) < 16
+            && abs(pSprite->GetPos().y - (y + (rViewPort.Height() >> 1))) < 12) {
             dialogTalker = TRUE;
         }
     }
@@ -106,7 +106,7 @@ void CMarker::AsynchronousUpdate(CGameSprite* pSprite)
                         m_rgbColor = PC_SELECTED_COLOR;
                     } else {
                         if ((g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
-                                || g_pChitin->cNetwork.m_idLocalPlayer != pSprite->m_remotePlayerID)
+                                || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID)
                             && pSprite->m_nUnselectableCounter == 0) {
                             m_rgbColor = PC_COLOR;
 
@@ -153,7 +153,7 @@ void CMarker::AsynchronousUpdate(CGameSprite* pSprite)
                     m_rgbColor = PC_SELECTED_COLOR;
                 } else {
                     if ((g_pChitin->cNetwork.GetServiceProvider() == CNetwork::SERV_PROV_NULL
-                            || g_pChitin->cNetwork.m_idLocalPlayer != pSprite->m_remotePlayerID)
+                            || g_pChitin->cNetwork.m_idLocalPlayer == pSprite->m_remotePlayerID)
                         && pSprite->m_nUnselectableCounter == 0) {
                         m_rgbColor = PC_COLOR;
 
@@ -164,6 +164,8 @@ void CMarker::AsynchronousUpdate(CGameSprite* pSprite)
                         m_rgbColor = PC_NONECONTROLED_COLOR;
                     }
                 }
+            } else {
+                m_rgbColor = PC_MORALE_FAILURE_COLOR;
             }
         }
     } else {
@@ -314,6 +316,11 @@ BYTE CMarker::SetType(BYTE nType)
                 m_type = ELLIPSE;
             }
         }
+        break;
+    default:
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjItem.cpp
+        // __LINE__: 685
+        UTIL_ASSERT(FALSE);
         break;
     }
 
