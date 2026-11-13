@@ -75,6 +75,7 @@ CGameSpriteEquipment::~CGameSpriteEquipment()
 void CGameSpriteEquipment::ClearMarshal(BOOL bUnequip)
 {
     if (m_items[m_selectedWeapon] != NULL && bUnequip) {
+        // NOTE: Passes slot 0, not `m_selectedWeapon`.
         m_items[m_selectedWeapon]->Unequip(m_pSprite, 0, TRUE, FALSE);
     }
 
@@ -120,7 +121,7 @@ void CGameSpriteEquipment::Marshal(CCreatureFileEquipment* pHeader, CCreatureFil
         }
     }
 
-    // NOTE: Exclude fist.
+    // NOTE: Exclude fist. Runs without checking for zero.
     (*nItems)--;
 
     if (*nItems != 0) {
@@ -353,14 +354,14 @@ void CGameSpriteEquipment::Unmarshal(CCreatureFileEquipment* pHeader, CCreatureF
             pSprite->SetMonkAbilities();
         } else {
             m_items[SLOT_FIST] = new CItem(CResRef("00FIST"), 0, 0, 0, 0, 0);
-
-            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
-            // __LINE__: 15386
-            UTIL_ASSERT(m_items[SLOT_FIST] != NULL);
-
-            m_selectedWeapon = SLOT_FIST;
-            m_selectedWeaponAbility = 0;
         }
+
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+        // __LINE__: 15386
+        UTIL_ASSERT(m_items[SLOT_FIST] != NULL);
+
+        m_selectedWeapon = SLOT_FIST;
+        m_selectedWeaponAbility = 0;
     } else {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
         // __LINE__: 15396
@@ -369,6 +370,8 @@ void CGameSpriteEquipment::Unmarshal(CCreatureFileEquipment* pHeader, CCreatureF
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
         // __LINE__: 15397
         UTIL_ASSERT(pHeader != NULL && pItems != NULL && pSprite != NULL);
+
+        m_pSprite = pSprite;
 
         if ((pSprite->GetAIType().m_nClassMask & CLASSMASK_MONK) != 0) {
             pSprite->SetMonkAbilities();
