@@ -46,18 +46,197 @@ CGameAnimationTypeCharacterOld::CGameAnimationTypeCharacterOld(USHORT animationI
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
         // __LINE__: 20812
         UTIL_ASSERT_MSG(FALSE, "Old animation code");
+
+        m_armorMaxCode = '4';
+        switch (animationID & 0xF) {
+        case 0:
+        case 5:
+            if ((animationID & 0xF0) == 0) {
+                m_resRef = "CHMC";
+                m_heightCodeHelmet = "WPL";
+                m_heightCode = m_heightCodeHelmet;
+            } else {
+                m_resRef = "CHFC";
+                m_heightCodeHelmet = "WPM";
+                m_heightCode = m_heightCodeHelmet;
+            }
+            break;
+        case 1:
+            if ((animationID & 0xF0) == 0) {
+                m_resRef = "CEMC";
+            } else {
+                m_resRef = "CEFC";
+            }
+            m_heightCodeHelmet = "WPM";
+            m_heightCode = m_heightCodeHelmet;
+            break;
+        case 2:
+        case 4:
+            // NOTE: The original tests `animationID & 0xF0` here but both
+            // branches load the same resref.
+            m_resRef = "CDMC";
+            m_heightCodeHelmet = "WPS";
+            m_heightCode = m_heightCodeHelmet;
+            break;
+        case 3:
+            if ((animationID & 0xF0) == 0) {
+                m_resRef = "CIMC";
+            } else {
+                m_resRef = "CIFC";
+            }
+            m_heightCode = "WPS";
+            m_heightCodeHelmet = "WPT";
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+            // __LINE__: 20861
+            UTIL_ASSERT(FALSE);
+        }
+        break;
     case 0x100:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
         // __LINE__: 20866
         UTIL_ASSERT_MSG(FALSE, "Old animation code");
+
+        m_armorMaxCode = '4';
+        switch (animationID & 0xF) {
+        case 0:
+        case 5:
+            if ((animationID & 0xF0) == 0) {
+                m_resRef = "CHMF";
+            } else {
+                m_resRef = "CHFF";
+            }
+            m_heightCodeHelmet = "WPL";
+            m_heightCode = m_heightCodeHelmet;
+            break;
+        case 1:
+            if ((animationID & 0xF0) == 0) {
+                m_resRef = "CEMF";
+            } else {
+                m_resRef = "CEFF";
+            }
+            m_heightCodeHelmet = "WPM";
+            m_heightCode = m_heightCodeHelmet;
+            break;
+        case 2:
+        case 4:
+            // NOTE: The original tests `animationID & 0xF0` here but both
+            // branches load the same resref.
+            m_resRef = "CDMF";
+            m_heightCodeHelmet = "WPS";
+            m_heightCode = m_heightCodeHelmet;
+            break;
+        case 3:
+            if ((animationID & 0xF0) == 0) {
+                m_resRef = "CIMF";
+            } else {
+                m_resRef = "CIFF";
+            }
+            m_heightCode = "WPS";
+            m_heightCodeHelmet = "WPT";
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+            // __LINE__: 20906
+            UTIL_ASSERT(FALSE);
+        }
+        break;
     case 0x200:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
         // __LINE__: 20911
         UTIL_ASSERT_MSG(FALSE, "Old animation code");
+
+        m_armorMaxCode = '4';
+        switch (animationID & 0xF) {
+        case 0:
+        case 5:
+            if ((animationID & 0xF0) == 0) {
+                m_resRef = "CHMW";
+                m_heightCodeHelmet = "WPL";
+                m_heightCode = m_heightCodeHelmet;
+            } else {
+                m_resRef = "CHFW";
+                m_heightCodeHelmet = "WPM";
+                m_heightCode = m_heightCodeHelmet;
+            }
+            break;
+        case 1:
+            if ((animationID & 0xF0) == 0) {
+                m_resRef = "CEMW";
+            } else {
+                m_resRef = "CEFW";
+            }
+            m_heightCodeHelmet = "WPM";
+            m_heightCode = m_heightCodeHelmet;
+            break;
+        case 2:
+        case 4:
+            // NOTE: The original tests `animationID & 0xF0` here but both
+            // branches load the same resref.
+            m_resRef = "CDMW";
+            m_heightCodeHelmet = "WPS";
+            m_heightCode = m_heightCodeHelmet;
+            break;
+        default:
+            // NOTE: Case 3 also lands here.
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+            // __LINE__: 20947
+            UTIL_ASSERT(FALSE);
+        }
+        break;
     case 0x300:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
         // __LINE__: 20952
         UTIL_ASSERT_MSG(FALSE, "Old animation code");
+
+        m_bEquipHelmet = FALSE;
+        m_armorMaxCode = '2';
+        switch (animationID & 0xF) {
+        case 0:
+        case 5:
+            if ((animationID & 0xF0) == 0) {
+                m_resRef = "CHMT";
+                m_heightCodeHelmet = "WPL";
+                m_heightCode = m_heightCodeHelmet;
+            } else {
+                m_resRef = "CHFT";
+                m_heightCodeHelmet = "WPM";
+                m_heightCode = m_heightCodeHelmet;
+            }
+            break;
+        case 1:
+            if ((animationID & 0xF0) == 0) {
+                m_resRef = "CEMT";
+            } else {
+                m_resRef = "CEFT";
+            }
+            m_heightCodeHelmet = "WPM";
+            m_heightCode = m_heightCodeHelmet;
+            break;
+        case 2:
+        case 4:
+            // NOTE: The original tests `animationID & 0xF0` here but both
+            // branches load the same resref.
+            m_resRef = "CDMT";
+            m_heightCodeHelmet = "WPS";
+            m_heightCode = m_heightCodeHelmet;
+            break;
+        case 3:
+            if ((animationID & 0xF0) == 0) {
+                m_resRef = "CIMT";
+            } else {
+                m_resRef = "CIFT";
+            }
+            m_heightCode = "WPS";
+            m_heightCodeHelmet = "WPT";
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
+            // __LINE__: 20998
+            UTIL_ASSERT(FALSE);
+        }
+        break;
     case 0x400:
         m_armorMaxCode = '1';
         switch (animationID & 0xF) {
@@ -84,7 +263,7 @@ CGameAnimationTypeCharacterOld::CGameAnimationTypeCharacterOld(USHORT animationI
             m_nSndFreq = 5;
             break;
         case 3:
-            m_colorChunks = -1;
+            m_colorChunks = 0xFF;
             m_resRef = "MSKL";
             m_heightCodeHelmet = "WPM";
             m_heightCode = m_heightCodeHelmet;
@@ -93,7 +272,7 @@ CGameAnimationTypeCharacterOld::CGameAnimationTypeCharacterOld(USHORT animationI
             m_nSndFreq = 5;
             break;
         case 4:
-            m_colorChunks = -1;
+            m_colorChunks = 0xFF;
             m_falseColor = FALSE;
             m_bEquipHelmet = FALSE;
             m_bCanLieDown = FALSE;
@@ -104,7 +283,7 @@ CGameAnimationTypeCharacterOld::CGameAnimationTypeCharacterOld(USHORT animationI
             m_nSndFreq = 5;
             break;
         case 5:
-            m_colorChunks = -1;
+            m_colorChunks = 0xFF;
             m_resRef = "MDGU";
             m_heightCodeHelmet = "WPL";
             m_heightCode = m_heightCodeHelmet;
@@ -140,27 +319,27 @@ CGameAnimationTypeCharacterOld::CGameAnimationTypeCharacterOld(USHORT animationI
         m_a3VidCellExtend.SetResRef(CResRef(m_resRef + m_armorCode + "A5E"), FALSE, TRUE, TRUE);
     }
 
-    m_g1VidCellShadowBase.SetResRef(CResRef(m_resRef + m_armorCode + "G1"), FALSE, TRUE, TRUE);
-    m_w2VidCellShadowBase.SetResRef(CResRef(m_resRef + m_armorCode + "W2"), FALSE, TRUE, TRUE);
-    m_caVidCellShadowBase.SetResRef(CResRef(m_resRef + m_armorCode + "CA"), FALSE, TRUE, TRUE);
-    m_a1VidCellShadowBase.SetResRef(CResRef(m_resRef + m_armorCode + "A1"), FALSE, TRUE, TRUE);
-    m_a2VidCellShadowBase.SetResRef(CResRef(m_resRef + m_armorCode + "A3"), FALSE, TRUE, TRUE);
-    m_a3VidCellShadowBase.SetResRef(CResRef(m_resRef + m_armorCode + "A5"), FALSE, TRUE, TRUE);
+    m_g1VidCellShadowBase.SetResRef(CResRef(m_shadowResRef + "G1"), FALSE, TRUE, TRUE);
+    m_w2VidCellShadowBase.SetResRef(CResRef(m_shadowResRef + "W2"), FALSE, TRUE, TRUE);
+    m_caVidCellShadowBase.SetResRef(CResRef(m_shadowResRef + "CA"), FALSE, TRUE, TRUE);
+    m_a1VidCellShadowBase.SetResRef(CResRef(m_shadowResRef + "A1"), FALSE, TRUE, TRUE);
+    m_a2VidCellShadowBase.SetResRef(CResRef(m_shadowResRef + "A3"), FALSE, TRUE, TRUE);
+    m_a3VidCellShadowBase.SetResRef(CResRef(m_shadowResRef + "A5"), FALSE, TRUE, TRUE);
 
-    if (MIRROR_BAM) {
-        m_g1VidCellShadowExtend.SetResRef(CResRef(m_resRef + m_armorCode + "G1X"), FALSE, TRUE, TRUE);
-        m_w2VidCellShadowExtend.SetResRef(CResRef(m_resRef + m_armorCode + "W2X"), FALSE, TRUE, TRUE);
-        m_caVidCellShadowExtend.SetResRef(CResRef(m_resRef + m_armorCode + "CAX"), FALSE, TRUE, TRUE);
-        m_a1VidCellShadowExtend.SetResRef(CResRef(m_resRef + m_armorCode + "A1X"), FALSE, TRUE, TRUE);
-        m_a2VidCellShadowExtend.SetResRef(CResRef(m_resRef + m_armorCode + "A3X"), FALSE, TRUE, TRUE);
-        m_a3VidCellShadowExtend.SetResRef(CResRef(m_resRef + m_armorCode + "A5X"), FALSE, TRUE, TRUE);
+    if (!MIRROR_BAM) {
+        m_g1VidCellShadowExtend.SetResRef(CResRef(m_shadowResRef + "G1E"), FALSE, TRUE, TRUE);
+        m_w2VidCellShadowExtend.SetResRef(CResRef(m_shadowResRef + "W2E"), FALSE, TRUE, TRUE);
+        m_caVidCellShadowExtend.SetResRef(CResRef(m_shadowResRef + "CAE"), FALSE, TRUE, TRUE);
+        m_a1VidCellShadowExtend.SetResRef(CResRef(m_shadowResRef + "A1E"), FALSE, TRUE, TRUE);
+        m_a2VidCellShadowExtend.SetResRef(CResRef(m_shadowResRef + "A3E"), FALSE, TRUE, TRUE);
+        m_a3VidCellShadowExtend.SetResRef(CResRef(m_shadowResRef + "A5E"), FALSE, TRUE, TRUE);
     } else {
-        m_g1VidCellShadowExtend.SetResRef(CResRef(m_resRef + m_armorCode + "G1E"), FALSE, TRUE, TRUE);
-        m_w2VidCellShadowExtend.SetResRef(CResRef(m_resRef + m_armorCode + "W2E"), FALSE, TRUE, TRUE);
-        m_caVidCellShadowExtend.SetResRef(CResRef(m_resRef + m_armorCode + "CAE"), FALSE, TRUE, TRUE);
-        m_a1VidCellShadowExtend.SetResRef(CResRef(m_resRef + m_armorCode + "A1E"), FALSE, TRUE, TRUE);
-        m_a2VidCellShadowExtend.SetResRef(CResRef(m_resRef + m_armorCode + "A3E"), FALSE, TRUE, TRUE);
-        m_a3VidCellShadowExtend.SetResRef(CResRef(m_resRef + m_armorCode + "A5E"), FALSE, TRUE, TRUE);
+        m_g1VidCellShadowExtend.SetResRef(CResRef(m_shadowResRef + "G1X"), FALSE, TRUE, TRUE);
+        m_w2VidCellShadowExtend.SetResRef(CResRef(m_shadowResRef + "W2X"), FALSE, TRUE, TRUE);
+        m_caVidCellShadowExtend.SetResRef(CResRef(m_shadowResRef + "CAX"), FALSE, TRUE, TRUE);
+        m_a1VidCellShadowExtend.SetResRef(CResRef(m_shadowResRef + "A1X"), FALSE, TRUE, TRUE);
+        m_a2VidCellShadowExtend.SetResRef(CResRef(m_shadowResRef + "A3X"), FALSE, TRUE, TRUE);
+        m_a3VidCellShadowExtend.SetResRef(CResRef(m_shadowResRef + "A5X"), FALSE, TRUE, TRUE);
     }
 
     m_currentVidCellBase = &m_g1VidCellBase;
