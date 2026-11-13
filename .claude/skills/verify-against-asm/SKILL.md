@@ -26,7 +26,50 @@ Input: one function address. Don't edit anything.
    report exactly as the packet prints them, address included. Never retype an instruction
    from memory. If the packet says the stack slots are not normalised, show your ESP count at
    each line you cite.
-5. Report:
+5. Before calling something a difference, check whether the asm is an inlined copy of a
+   callee the C++ calls (read the callee's own asm). An inlined helper is not a difference.
+6. Never state a callee's signature, or what a jump or byte table holds, without reading it:
+   the callee's asm for the first, `py -I tools/peek.py` on the table for the second.
+
+## Auditing old code
+
+Use this section when the brief gives a list of old, never-verified functions in one file.
+
+- Check every address in the list, in order. Keep a tally. The final count must say
+  "checked N of N" against the list's length and name any address you did not check.
+- These defects recur in old code; look for each one in every function:
+  - **Copied from a sibling and not adapted:** wrong member, cell, list, slot index, control
+    id, panel id, strref, resref suffix or constant. Compare with the sibling when the
+    function has one (base/extend, open/closed, weapon/shield/helmet, G1/G2).
+  - **Switches:** a missing `break`, a missing or extra case, two cases swapped, a default
+    that asserts the wrong expression (the exe usually pushes the string `FALSE`), a case
+    that sets the wrong one of two similar members.
+  - **Conditions:** `||` for `&&`, `=` for `==`, an inverted test, `>` for `>=` at a
+    rectangle edge, a guard on the wrong object (`pControl->x` for `this->x`).
+  - **Constructors:** every member store in the asm needs a counterpart; look for members
+    never initialised and for sub-object stores that are an inlined constructor.
+  - **Loops:** never incremented, wrong bound, wrong start index, a counter held in a BYTE
+    in the exe (it wraps), a count that is returned but never incremented.
+  - **Returns:** wrong value on one path, a missing early return after an assert, running
+    off the end of a non-void function.
+  - **Width and sign:** a byte or word field read, written or compared at full width;
+    `~x` or `-x` on a BYTE promoted to int; unsigned divide where the exe has `IDIV` (or
+    the reverse); `/ 2` where the exe has `SAR` with no sign fix; float where the exe uses
+    double; truncate-then-add where the exe adds then truncates.
+  - **Win32 and CRT:** `FAILED(hr)` where the exe tests non-zero; `strcpy` where the exe
+    copies a fixed number of bytes; `Find` against `FindOneOf`; a `Demand` with no
+    `Release`, or the helper's `Request`/`Release` where the exe calls the resource's own.
+  - **Locks:** wrong thread index or lock kind, a missing retry loop, a flag cleared before
+    the unlock where the exe clears it after.
+  - **Calls:** a dropped call, an extra call, a call on the wrong object, a by-value
+    parameter where the exe writes through a pointer.
+- Don't report naming, comments or style. Report a wrong assert line number in one line.
+- Give the exact corrected C++ for each difference, and say when a proposed form is only
+  equivalent under an assumption (for example a loop bound that ignores byte wrap).
+
+## Report
+
+7. Report:
    - `VERDICT: MATCHES` or `VERDICT: DIFFERS`
    - one line per difference: `0xADDR: asm does X; C++ does Y; fix: Z`, followed by the
      copied asm lines
