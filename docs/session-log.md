@@ -2,6 +2,24 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-14 (midday): play tests S12 and S13, one more bug
+
+- **S12, saves across the two games** (`test_s12_cross_save.py`): each game makes a save on the docks and the other loads it. Both directions pass; the 14 compared regions (inventory, record, journal, action bar, portraits, load-screen slot) are identical. Only a start-of-game save is covered.
+- **S13, the house** (`test_s13_house.py`, about 7.5 minutes): continues S9 into AR1005. Pausing, ordering attacks while paused, the fight to its end, a goblin's ground pile, the locked footlocker (lock picked, an item taken, weights), Cure Light Wounds, and leaving to the docks. S9's steps moved into `docks_to_house()` as the shared set-up.
+
+| Found by | File | What was wrong |
+|---|---|---|
+| S13 (assert in `CVidInf::FXPrep`) | `CGameAnimationTypeEffect::Render` | The prep flags were chosen twice; a translucent or shadowed effect got both copy-from-back and clear-fill |
+
+**Experience line timing.** On the rebuild "The party has gained experience" sometimes came after S13's next pause instead of straight after the death line. Traced: the killer handles the kill on its next AI slot (every 16 AI ticks, about a second) once its last order is over 75 ticks old; while the order is fresh it is handled at once. The code for both paths matches the exe (0x72D917-0x72DA89, 0x728B70, 0x45CA10). The original showed no delay in 6 timed kills, but none of them fell in the slow case, so whether it waits too is not measured. S13 now waits 1.5 s after a kill; it then passed once on the original and twice on the rebuild.
+
+**Open.**
+- The slow-kill case on the original is unmeasured (above).
+- `docks_to_house()` failed twice in about ten uses during timing runs: once on the original ("no goblin came when the party went to the door"), once on the rebuild ("click on Reig did not change the screen").
+- S9 on the original recorded three snow/darker variants (`door-closed`, `door-open`, `scrolled-dock`).
+
+**Next.** Travel to AR1100; a store and a successful rest once reachable; later-game saves loaded across the two games.
+
 ## 2026-11-14 (morning): play tests S10 and S11, two more bugs
 
 S1–S11 pass on the rebuild in one full run (about 30 minutes).
