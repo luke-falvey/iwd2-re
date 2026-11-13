@@ -6,7 +6,8 @@ screen, going back to the world screen with Esc in between:
 
   area map      dial button
   journal       J key
-  record        R key, Sheris
+  record        dial button, Sheris (R was ignored now and then on both
+                the original and the rebuild)
   spellbook     dial button: Sheris (bard, empty at level 1), Laeris (cleric
                 tab, then the Domain tab) and Vraedna (sorcerer), clicking
                 their portraits; Sheris is selected again afterwards
@@ -136,7 +137,7 @@ def test_s8_screens_tour(game, golden_dir):
     check("journal")
     press("esc", world=True)
 
-    press("r", world=True)
+    click(DIAL["record"], world=True)
     check("record-sheris")
     for name, region in RECORD_DETAILS.items():
         check("record-sheris-" + name, region=region, settle=0.5, max_diff=0.004)
