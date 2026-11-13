@@ -12506,8 +12506,8 @@ void CGameSprite::CheckToolTipItem(BYTE buttonNum)
         CItem* pItem = m_equipment.m_items[nItemNum];
         if (pItem != NULL) {
             // FIXME: Calls `GetGenericName` twice.
-            m_quickItems[nItemNum].m_name = pItem->GetGenericName();
-            m_quickItems[nItemNum].m_abilityId.field_10 = pItem->GetGenericName();
+            m_quickItems[buttonNum].m_name = pItem->GetGenericName();
+            m_quickItems[buttonNum].m_abilityId.field_10 = pItem->GetGenericName();
         }
     }
 }
@@ -12572,7 +12572,7 @@ void CGameSprite::UnequipAll(BOOL animationOnly)
     }
 
     if (m_equipment.m_items[m_equipment.m_selectedWeapon] != NULL) {
-        m_equipment.m_items[m_equipment.m_selectedWeapon]->Unequip(this, nIndex, TRUE, animationOnly);
+        m_equipment.m_items[m_equipment.m_selectedWeapon]->Unequip(this, m_equipment.m_selectedWeapon, TRUE, animationOnly);
 
         m_equipment.m_items[m_equipment.m_selectedWeapon]->Demand();
         ITEM_ABILITY* pAbility = m_equipment.m_items[m_equipment.m_selectedWeapon]->GetAbility(m_equipment.m_selectedWeaponAbility);
@@ -12591,39 +12591,39 @@ void CGameSprite::UnequipAll(BOOL animationOnly)
 void CGameSprite::EquipAll(BOOL animationOnly)
 {
     if (m_equipment.m_items[6] != NULL) {
-        m_equipment.m_items[6]->Unequip(this, 6, TRUE, animationOnly);
+        m_equipment.m_items[6]->Equip(this, 6, animationOnly);
     }
 
     if (m_equipment.m_items[1] != NULL) {
-        m_equipment.m_items[1]->Unequip(this, 1, TRUE, animationOnly);
+        m_equipment.m_items[1]->Equip(this, 1, animationOnly);
     }
 
     if (m_equipment.m_items[5] != NULL) {
-        m_equipment.m_items[5]->Unequip(this, 5, TRUE, animationOnly);
+        m_equipment.m_items[5]->Equip(this, 5, animationOnly);
     }
 
     if (m_equipment.m_items[7] != NULL) {
-        m_equipment.m_items[7]->Unequip(this, 7, TRUE, animationOnly);
+        m_equipment.m_items[7]->Equip(this, 7, animationOnly);
     }
 
     if (m_equipment.m_items[8] != NULL) {
-        m_equipment.m_items[8]->Unequip(this, 8, TRUE, animationOnly);
+        m_equipment.m_items[8]->Equip(this, 8, animationOnly);
     }
 
     if (m_equipment.m_items[0] != NULL) {
-        m_equipment.m_items[0]->Unequip(this, 0, TRUE, animationOnly);
+        m_equipment.m_items[0]->Equip(this, 0, animationOnly);
     }
 
     if (m_equipment.m_items[2] != NULL) {
-        m_equipment.m_items[2]->Unequip(this, 2, TRUE, animationOnly);
+        m_equipment.m_items[2]->Equip(this, 2, animationOnly);
     }
 
     if (m_equipment.m_items[3] != NULL) {
-        m_equipment.m_items[3]->Unequip(this, 3, TRUE, animationOnly);
+        m_equipment.m_items[3]->Equip(this, 3, animationOnly);
     }
 
     if (m_equipment.m_items[4] != NULL) {
-        m_equipment.m_items[4]->Unequip(this, 4, TRUE, animationOnly);
+        m_equipment.m_items[4]->Equip(this, 4, animationOnly);
     }
 
     BOOL v1 = FALSE;
@@ -12690,6 +12690,7 @@ void CGameSprite::Unequip(SHORT slotNum)
             case 13:
             case 14:
             case 43:
+            case 44:
             case 45:
             case 46:
             case 47:
@@ -12706,7 +12707,7 @@ void CGameSprite::Unequip(SHORT slotNum)
                     SHORT lSlot;
                     CItem* pLauncher = GetLauncher(pAbility, lSlot);
                     if (pLauncher != NULL) {
-                        pLauncher->Unequip(this, slotNum, TRUE, FALSE);
+                        pLauncher->Unequip(this, lSlot, TRUE, FALSE);
                     }
 
                     m_equipment.m_items[slotNum]->Release();
@@ -13289,7 +13290,7 @@ SHORT CGameSprite::FindItemPersonal(const CString& sName, int number, BOOL restr
 
     for (SHORT slot = 0; slot < end; slot++) {
         if (m_equipment.m_items[slot] != NULL
-            && m_equipment.m_items[slot]->cResRef == sName) {
+            && m_equipment.m_items[slot]->cResRef == sMutableName) {
             if (number > 0) {
                 number--;
             } else {
@@ -13298,7 +13299,7 @@ SHORT CGameSprite::FindItemPersonal(const CString& sName, int number, BOOL restr
         }
     }
 
-    return 0;
+    return -1;
 }
 
 // 0x71D3D0
@@ -13311,7 +13312,7 @@ SHORT CGameSprite::CountItemPersonal(const CString& sName)
 
     for (SHORT slot = 0; slot < 51; slot++) {
         if (m_equipment.m_items[slot] != NULL
-            && m_equipment.m_items[slot]->cResRef == sName) {
+            && m_equipment.m_items[slot]->cResRef == sMutableName) {
             if (m_equipment.m_items[slot]->GetMaxStackable() > 1) {
                 number += m_equipment.m_items[slot]->GetUsageCount(0);
             } else {
@@ -13355,6 +13356,9 @@ void CGameSprite::GetQuickWeapon(BYTE buttonNum, CButtonData& buttonData)
             while (!buttons->IsEmpty()) {
                 delete buttons->RemoveHead();
             }
+
+            delete buttons;
+            return;
         }
         delete buttons;
     }
@@ -13415,6 +13419,7 @@ void CGameSprite::GetQuickWeapon(BYTE buttonNum, CButtonData& buttonData)
                 buttonData.m_name = pItem->GetGenericName();
                 buttonData.m_abilityId.m_itemType = 2;
                 buttonData.m_abilityId.m_itemNum = buttonNum + 43;
+                buttonData.m_abilityId.m_abilityNum = -1;
                 buttonData.m_abilityId.m_targetType = -1;
                 buttonData.m_abilityId.field_10 = pItem->GetGenericName();
             }
@@ -13453,7 +13458,7 @@ void CGameSprite::SetScript(SHORT level, CAIScript* script)
         }
 
         m_teamScript = script;
-        m_teamScript->m_cResRef.GetResRef(m_baseStats.m_scriptTeam);
+        field_4FFC = m_teamScript->m_cResRef;
         break;
     case 3:
         if (m_special2Script != NULL) {
@@ -13515,8 +13520,9 @@ void CGameSprite::AutoPause(DWORD type)
     STRREF strPause;
 
     if (type == 256
-        || (type == 128 && g_pBaldurChitin->GetObjectGame()->GetOptions()->m_bAutoPauseOnTrap)
-        || (type & g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nAutoPauseState) != 0) {
+        || (type == 128
+                ? g_pBaldurChitin->GetObjectGame()->GetOptions()->m_bAutoPauseOnTrap
+                : (type & g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nAutoPauseState) != 0)) {
         if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) != -1
             || g_pBaldurChitin->GetObjectGame()->IsAlly(m_id)
             || g_pBaldurChitin->GetObjectGame()->IsFamiliar(m_id)) {
@@ -13838,12 +13844,12 @@ void CGameSprite::AddKnownDivineSpells(const BYTE& nClass)
                         UTIL_ASSERT(FALSE);
                     }
 
-                    if (cSpell.pRes != NULL) {
+                    // NOTE: The exe adds the spell when `pRes` is NULL or the
+                    // spell is restricted for the class; the alignment tests
+                    // only apply otherwise.
+                    if (cSpell.pRes != NULL
+                        && (cSpell.GetNotUsableBy() & dwClassFlags) == 0) {
                         // FIXME: Calls `GetNotUsableBy` many times.
-                        if ((cSpell.GetNotUsableBy() & dwClassFlags) != 0) {
-                            continue;
-                        }
-
                         if ((cSpell.GetNotUsableBy() & 0x4) != 0
                             && IcewindMisc::IsGood(this)) {
                             continue;
@@ -13876,13 +13882,14 @@ void CGameSprite::AddKnownDivineSpells(const BYTE& nClass)
                             continue;
                         }
 
-                        // NOTE: Uninline.
-                        bool bResult = AddKnownSpell(nClass, nLevel, resRef, 0, 0, 0);
-
-                        // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
-                        // __LINE__: 21648
-                        UTIL_ASSERT(bResult == true);
                     }
+
+                    // NOTE: Uninline.
+                    bool bResult = AddKnownSpell(nClass, nLevel, resRef, 0, 0, 0);
+
+                    // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+                    // __LINE__: 21648
+                    UTIL_ASSERT(bResult == true);
                 }
             }
         }
@@ -14332,6 +14339,7 @@ void CGameSprite::sub_720B50(CMemINIValue* a1, CMemINIValue* a2)
         while (1) {
             v1 = "";
             v2 = "";
+            pos2 = -1;
             entry.field_0 = "";
             entry.field_4 = 0;
 
@@ -14378,6 +14386,7 @@ void CGameSprite::sub_720B50(CMemINIValue* a1, CMemINIValue* a2)
         while (1) {
             v1 = "";
             v2 = "";
+            pos2 = -1;
             entry.field_0 = "";
             entry.field_4 = 0;
 
@@ -14424,6 +14433,7 @@ void CGameSprite::sub_720B50(CMemINIValue* a1, CMemINIValue* a2)
         while (1) {
             v1 = "";
             v2 = "";
+            pos2 = -1;
             entry.field_0 = "";
             entry.field_4 = 0;
 
@@ -14470,6 +14480,7 @@ void CGameSprite::sub_720B50(CMemINIValue* a1, CMemINIValue* a2)
         while (1) {
             v1 = "";
             v2 = "";
+            pos2 = -1;
             entry.field_0 = "";
             entry.field_4 = 0;
 
@@ -14516,6 +14527,7 @@ void CGameSprite::sub_720B50(CMemINIValue* a1, CMemINIValue* a2)
         while (1) {
             v1 = "";
             v2 = "";
+            pos2 = -1;
             entry.field_0 = "";
             entry.field_4 = 0;
 
@@ -14562,6 +14574,7 @@ void CGameSprite::sub_720B50(CMemINIValue* a1, CMemINIValue* a2)
         while (1) {
             v1 = "";
             v2 = "";
+            pos2 = -1;
             entry.field_0 = "";
             entry.field_4 = 0;
 
@@ -14608,6 +14621,7 @@ void CGameSprite::sub_720B50(CMemINIValue* a1, CMemINIValue* a2)
         while (1) {
             v1 = "";
             v2 = "";
+            pos2 = -1;
             entry.field_0 = "";
             entry.field_4 = 0;
 
@@ -14654,6 +14668,7 @@ void CGameSprite::sub_720B50(CMemINIValue* a1, CMemINIValue* a2)
         while (1) {
             v1 = "";
             v2 = "";
+            pos2 = -1;
             entry.field_0 = "";
             entry.field_4 = 0;
 
@@ -14700,6 +14715,7 @@ void CGameSprite::sub_720B50(CMemINIValue* a1, CMemINIValue* a2)
         while (1) {
             v1 = "";
             v2 = "";
+            pos2 = -1;
             entry.field_0 = "";
             entry.field_4 = 0;
 
@@ -14746,6 +14762,7 @@ void CGameSprite::sub_720B50(CMemINIValue* a1, CMemINIValue* a2)
         while (1) {
             v1 = "";
             v2 = "";
+            pos2 = -1;
             entry.field_0 = "";
             entry.field_4 = 0;
 
@@ -19962,6 +19979,7 @@ void CGameSprite::ClearAI(BOOLEAN bSetSequence)
     ClearActions(FALSE);
     ClearTriggers();
     SetCurrAction(CAIAction::NULL_ACTION);
+    m_curAction = CAIAction::NULL_ACTION;
 
     if (bSetSequence) {
         if (m_nSequence != GetIdleSequence()
@@ -20407,6 +20425,10 @@ CPoint CGameSprite::sub_734720(LONG** ppPath, LONG* pnPath, SHORT range, BOOLEAN
         ptLast.y * CPathSearch::GRID_SQUARE_SIZEY);
 }
 
+// NOTE: The exe reads `a3`, `a4`, `a5`, `a7` and `a8` as sign-extended 16-bit
+// values (`word ptr`); `a6` is a full dword. Declared as `LONG` here because
+// the callers (200+) have not been checked for values that fit.
+//
 // 0x7349A0
 void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6, LONG a7, LONG a8)
 {
@@ -20519,7 +20541,7 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
             }
 
             if (strRes.szText != "") {
-                sText1 = strRes.szText + " " + sText2 + sText1;
+                sText1 = strRes.szText + sText2 + sText1;
             }
 
             if (a3 == 1) {
@@ -20566,7 +20588,7 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
                 strRes.cSound.Play(m_pos.x, m_pos.y, 0, FALSE);
             }
 
-            if (strRes.szText != "") {
+            if (strRes.szText != "" && a3 != 0) {
                 v1 = strRes.szText;
             }
 
@@ -20600,7 +20622,8 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
 
             CString sName;
             STR_RES strRes2;
-            if (a6 >= -7 && a6 != -1) {
+            // NOTE: Unsigned comparisons in the exe (-7..-2).
+            if (a6 >= -7 && a6 <= -2) {
                 LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetCharacterSlot(-2 - a6);
 
                 CGameSprite* pSprite;
@@ -20735,7 +20758,8 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
         break;
     case FEEDBACK_TOOHEAVY_SLOWED:
         if ((g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nEffectTextLevel & 0x10) != 0) {
-            if (m_bPlayedEncumberedSlowed || a3 == 1) {
+            if (!m_bPlayedEncumberedSlowed || a3 == 1) {
+                m_bPlayedEncumberedSlowed = TRUE;
                 g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(GetNameRef(),
                     19503, // "Encumbered: Slowed"
                     rgbNameColor,
@@ -20748,7 +20772,8 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
         break;
     case FEEDBACK_TOOHEAVY_STOPPED:
         if ((g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nEffectTextLevel & 0x10) != 0) {
-            if (m_bPlayedEncumberedStopped || a3 == 1) {
+            if (!m_bPlayedEncumberedStopped || a3 == 1) {
+                m_bPlayedEncumberedStopped = TRUE;
                 g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(GetNameRef(),
                     19504, // "Encumbered: Can not move"
                     rgbNameColor,
@@ -20760,15 +20785,14 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
         }
         break;
     case FEEDBACK_16:
-        if ((g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nEffectTextLevel & 0x10) != 0) {
-            g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(GetNameRef(),
-                a6,
-                rgbNameColor,
-                RGB(215, 215, 190),
-                -1,
-                m_id,
-                m_id);
-        }
+        // NOTE: No `m_nEffectTextLevel` test in the exe.
+        g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(GetNameRef(),
+            a6,
+            rgbNameColor,
+            RGB(215, 215, 190),
+            -1,
+            m_id,
+            m_id);
         break;
     case FEEDBACK_HIDESUCCEEDED:
         if ((g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nEffectTextLevel & 0x10) != 0) {
@@ -20872,10 +20896,13 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
         break;
     case FEEDBACK_BACKSTAB_UNUSABLE_WEAPON:
         if ((g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nEffectTextLevel & 0x2) != 0) {
-            DisplayTextRef(GetNameRef(),
+            g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(GetNameRef(),
                 10013, // "Your weapon is unsuitable for backstab."
                 rgbNameColor,
-                RGB(215, 215, 190));
+                RGB(215, 215, 190),
+                -1,
+                m_id,
+                m_id);
         }
         break;
     case FEEDBACK_PICKPOCKETFAILED_ARMOR:
@@ -21128,19 +21155,18 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
     case FEEDBACK_GAINEDBARDSONG:
         if (g_pBaldurChitin->GetActiveEngine() != g_pBaldurChitin->m_pEngineCreateChar) {
             STR_RES strRes;
-            CString sText;
             g_pBaldurChitin->GetTlkTable().Fetch(a6, strRes);
             g_pBaldurChitin->GetTlkTable().SetToken(TOKEN_SPECIALABILITY, strRes.szText);
             g_pBaldurChitin->GetTlkTable().Fetch(26320, strRes); // "Gained Bard Song: <SPECIALABILITYNAME>"
             g_pBaldurChitin->m_pEngineWorld->DisplayText(GetName(),
-                sText,
+                strRes.szText,
                 rgbNameColor,
                 RGB(215, 215, 190),
                 -1,
                 FALSE);
-        }
-        if (g_pBaldurChitin->GetActiveEngine() != g_pBaldurChitin->m_pEngineCharacter) {
-            g_pBaldurChitin->GetActiveEngine()->PlayGUISound(CResRef("GAM_11"));
+            if (g_pBaldurChitin->GetActiveEngine() != g_pBaldurChitin->m_pEngineCharacter) {
+                g_pBaldurChitin->GetActiveEngine()->PlayGUISound(CResRef("GAM_11"));
+            }
         }
         break;
     case FEEDBACK_STATICCHARGEEND:
@@ -21162,7 +21188,7 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
                 g_pBaldurChitin->GetTlkTable().Fetch(a6, strRes);
                 g_pBaldurChitin->GetTlkTable().SetToken(CString("RESOURCE"), strRes.szText);
                 g_pBaldurChitin->GetTlkTable().Fetch(26818, strRes); // "Unaffected by effects from <RESOURCE>"
-                sText.Format("%s (%+d)", strRes.szText, a3);
+                sText = strRes.szText;
                 g_pBaldurChitin->GetBaldurMessage()->DisplayText(GetName(),
                     sText,
                     rgbNameColor,
@@ -21206,15 +21232,14 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
             RGB(215, 215, 190));
         break;
     case FEEDBACK_63:
-        if ((g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nEffectTextLevel & 0x2) != 0) {
-            g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(GetNameRef(),
-                18353, // "Blinks out of existence and avoids an attack"
-                rgbNameColor,
-                RGB(215, 215, 190),
-                -1,
-                m_id,
-                m_id);
-        }
+        // NOTE: No `m_nEffectTextLevel` test in the exe.
+        g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(GetNameRef(),
+            18353, // "Blinks out of existence and avoids an attack"
+            rgbNameColor,
+            RGB(215, 215, 190),
+            -1,
+            m_id,
+            m_id);
         break;
     case FEEDBACK_CRIPPLINGSTRIKEFAILED:
         if ((g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nEffectTextLevel & 0x2) != 0) {
@@ -21242,6 +21267,7 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
                 rgbNameColor,
                 RGB(215, 215, 190));
         }
+        break;
     case FEEDBACK_SEARCHSTART:
         if ((g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nEffectTextLevel & 0x10) != 0) {
             DisplayTextRef(GetNameRef(),
@@ -21284,6 +21310,14 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
                     -1,
                     m_id,
                     m_id);
+            } else {
+                g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(GetNameRef(),
+                    25138, // "Singing Battlesong"
+                    rgbNameColor,
+                    RGB(215, 215, 190),
+                    -1,
+                    m_id,
+                    m_id);
             }
         }
         break;
@@ -21318,9 +21352,8 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
     case FEEDBACK_TARGETCONCEALED:
         if ((g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nEffectTextLevel & 0x1) != 0) {
             STR_RES strRes;
-            CString sText;
             g_pBaldurChitin->GetTlkTable().Fetch(37668, strRes); // "Missed <TARGETNAME> due to concealment."
-            sText.Format("%s (%+d)", strRes.szText, a3);
+            CString sText(strRes.szText);
             g_pBaldurChitin->GetBaldurMessage()->DisplayText(GetName(),
                 sText,
                 rgbNameColor,
@@ -21428,7 +21461,7 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
             STR_RES strRes;
             CString sText;
             g_pBaldurChitin->GetTlkTable().Fetch(39846, strRes); // "Cleave feat adds another level %d attack."
-            sText.Format("%s (%+d)", strRes.szText, a3);
+            sText.Format(strRes.szText, a3);
             g_pBaldurChitin->GetBaldurMessage()->DisplayText(GetName(),
                 sText,
                 rgbNameColor,
@@ -21451,6 +21484,14 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
 
                 g_pBaldurChitin->GetBaldurMessage()->DisplayText(GetName(),
                     sText,
+                    rgbNameColor,
+                    RGB(215, 215, 190),
+                    -1,
+                    m_id,
+                    m_id);
+            } else {
+                g_pBaldurChitin->GetBaldurMessage()->DisplayTextRef(GetNameRef(),
+                    39881, // "Using Feat: Lingering Song"
                     rgbNameColor,
                     RGB(215, 215, 190),
                     -1,
@@ -39748,12 +39789,12 @@ BOOLEAN CGameSprite::sub_724C40(const unsigned int& a1)
 BOOLEAN CGameSprite::RemoveKnownSpell(const BYTE& nClass, const UINT& nSpellLevel, const CResRef& resRef, const unsigned int& a4, const unsigned int& a5, const unsigned int& a6)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
-    // __LINE__: 25954
+    // __LINE__: 26055
     UTIL_ASSERT(nSpellLevel < CSPELLLIST_MAX_LEVELS);
 
     UINT nClassIndex = g_pBaldurChitin->GetObjectGame()->GetSpellcasterIndex(nClass);
 
-    UINT nID;
+    UINT nID = 0;
     if (g_pBaldurChitin->GetObjectGame()->m_spells.Find(resRef, nID) != TRUE) {
         return FALSE;
     }
@@ -39890,7 +39931,7 @@ BOOLEAN CGameSprite::sub_725330(const CResRef& resRef, const DWORD& dwClassMask,
 
     if (nLevel < CSPELLLIST_MAX_LEVELS) {
         nStartLevel = nLevel;
-        nStartLevel = nLevel + 1;
+        nEndLevel = nLevel + 1;
     }
 
     UINT nID;
@@ -39941,10 +39982,10 @@ BOOLEAN CGameSprite::sub_725330(const CResRef& resRef, const DWORD& dwClassMask,
                 UINT nIndex = 0;
 
                 // NOTE: Uninline.
-                v1 = m_domainSpells.Find(nID, nStartLevel, nIndex);
+                v1 = m_domainSpells.Find(nID, nCurrLevel, nIndex);
                 if (v1 == TRUE && a4 == TRUE) {
                     // NOTE: Uninline.
-                    v1 = m_innateSpells.CheckF8(nIndex);
+                    v1 = m_domainSpells.m_lists[nCurrLevel].CheckF8(nIndex);
                 }
             }
         }
@@ -39982,10 +40023,10 @@ BOOLEAN CGameSprite::sub_7256B0(const CResRef& resRef, const UINT& nLevel, BOOLE
         UINT nIndex;
 
         // NOTE: Uninline.
-        v1 = m_domainSpells.Find(nID, nStartLevel, nIndex);
+        v1 = m_domainSpells.Find(nID, nCurrLevel, nIndex);
         if (v1 == TRUE && a3 == TRUE) {
             // NOTE: Uninline.
-            v1 = m_innateSpells.CheckF8(nIndex);
+            v1 = m_domainSpells.m_lists[nCurrLevel].CheckF8(nIndex);
         }
     }
 
@@ -40097,7 +40138,7 @@ void CGameSprite::sub_726330(UINT nFeatNumber, INT nValue)
             UTIL_ASSERT_MSG(nValue >= 0, "Invalid feat level.");
 
             // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
-            // __LINE__: 269991
+            // __LINE__: 26991
             UTIL_ASSERT_MSG(nValue <= 1, "Invalid feat level.");
 
             field_4C54[4] = nValue;
@@ -40115,6 +40156,8 @@ void CGameSprite::sub_726570()
 
     if (field_4C54[1] > 0) {
         CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_FEATPOWERATTACK);
+        // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+        effect.durationType = 1;
         pEffect = CGameEffect::DecodeEffect(&effect, m_pos, m_id, CPoint(-1, -1));
         pMessage = new CMessageAddEffect(pEffect, m_id, m_id);
         g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
@@ -40122,6 +40165,8 @@ void CGameSprite::sub_726570()
 
     if (field_4C54[0] > 0) {
         CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_FEATEXPERTISE);
+        // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+        effect.durationType = 1;
         pEffect = CGameEffect::DecodeEffect(&effect, m_pos, m_id, CPoint(-1, -1));
         pMessage = new CMessageAddEffect(pEffect, m_id, m_id);
         g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
@@ -40129,6 +40174,8 @@ void CGameSprite::sub_726570()
 
     if (field_4C54[2] > 0) {
         CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_FEATARTERIALSTRIKE);
+        // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+        effect.durationType = 1;
         pEffect = CGameEffect::DecodeEffect(&effect, m_pos, m_id, CPoint(-1, -1));
         pMessage = new CMessageAddEffect(pEffect, m_id, m_id);
         g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
@@ -40136,6 +40183,8 @@ void CGameSprite::sub_726570()
 
     if (field_4C54[3] > 0) {
         CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_FEATHAMSTRING);
+        // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+        effect.durationType = 1;
         pEffect = CGameEffect::DecodeEffect(&effect, m_pos, m_id, CPoint(-1, -1));
         pMessage = new CMessageAddEffect(pEffect, m_id, m_id);
         g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
@@ -40143,6 +40192,8 @@ void CGameSprite::sub_726570()
 
     if (field_4C54[4] > 0) {
         CGameEffect::ClearItemEffect(&effect, ICEWIND_CGAMEEFFECT_FEATRAPIDSHOT);
+        // NOTE: Read from an unnamed `const WORD` at 0x8491AA.
+        effect.durationType = 1;
         pEffect = CGameEffect::DecodeEffect(&effect, m_pos, m_id, CPoint(-1, -1));
         pMessage = new CMessageAddEffect(pEffect, m_id, m_id);
         g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
