@@ -101,6 +101,8 @@ BYTE CGameObjectArray::GetShare(LONG index, BYTE threadNum, CGameObject** ptr, D
     // __LINE__: 225
     UTIL_ASSERT(ptr != NULL && threadNum < CGAMEOBJECTARRAYENTRY_MAXTHREADS);
 
+    *ptr = NULL;
+
     if (index == -1) {
         return BAD_INDEX;
     }
@@ -163,6 +165,12 @@ BYTE CGameObjectArray::GetDeny(LONG index, BYTE threadNum, CGameObject** ptr, DW
     // __LINE__: 398
     UTIL_ASSERT(threadNum == THREAD_ASYNCH);
 
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 400
+    UTIL_ASSERT(ptr != NULL && threadNum < CGAMEOBJECTARRAYENTRY_MAXTHREADS);
+
+    *ptr = NULL;
+
     if (index == -1) {
         return BAD_INDEX;
     }
@@ -187,11 +195,13 @@ BYTE CGameObjectArray::GetDeny(LONG index, BYTE threadNum, CGameObject** ptr, DW
     for (BYTE otherThreadNum = 0; otherThreadNum < CGAMEOBJECTARRAYENTRY_MAXTHREADS; otherThreadNum++) {
         if (otherThreadNum != threadNum
             && m_pArray[arrayIndex].m_shareCounts[otherThreadNum] != 0) {
-            lock.Unlock();
-            SleepEx(1, FALSE);
+            if (threadNum == THREAD_ASYNCH) {
+                lock.Unlock();
+                SleepEx(1, FALSE);
+            }
 
-            // FIXME: Redundant. There is also a implicit Unlock call in
-            // destructor, so this branch calls `Unlock` three times.
+            // NOTE: Redundant. There is also a implicit Unlock call in
+            // destructor, so this branch calls `Unlock` up to three times.
             lock.Unlock();
 
             return SHARED;
@@ -240,6 +250,9 @@ BYTE CGameObjectArray::ReleaseShare(LONG index, BYTE threadNum, DWORD dwTimeOut)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
         // __LINE__: 559
         UTIL_ASSERT(FALSE);
+
+        lock.Unlock();
+        return DELETED;
     }
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
@@ -259,6 +272,10 @@ BYTE CGameObjectArray::ReleaseDeny(LONG index, BYTE threadNum, DWORD dwTimeOut)
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
     // __LINE__: 647
     UTIL_ASSERT(threadNum == THREAD_ASYNCH);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 649
+    UTIL_ASSERT(threadNum < CGAMEOBJECTARRAYENTRY_MAXTHREADS);
 
     if (index == -1) {
         return BAD_INDEX;
@@ -287,7 +304,7 @@ BYTE CGameObjectArray::ReleaseDeny(LONG index, BYTE threadNum, DWORD dwTimeOut)
 BYTE CGameObjectArray::Add(LONG* index, CGameObject* ptr, DWORD dwTimeOut)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
-    // __LINE__: 559
+    // __LINE__: 720
     UTIL_ASSERT(index != NULL && ptr != NULL);
 
     CSingleLock lock(&m_cs, FALSE);
@@ -397,7 +414,7 @@ BYTE CGameObjectArray::Add(LONG* index, CGameObject* ptr, DWORD dwTimeOut)
                         FALSE);
                 }
 
-                ptr->m_remotePlayerID = 0;
+                ptr->m_remotePlayerID = g_pChitin->cNetwork.m_idLocalPlayer;
                 ptr->m_remoteObjectID = *index;
 
                 if (ptr->GetObjectType() == CGameObject::TYPE_CONTAINER) {
@@ -487,6 +504,10 @@ BYTE CGameObjectArray::ChangeEntry(LONG index, BYTE threadNum, CGameObject* ptr,
     UTIL_ASSERT(threadNum == THREAD_ASYNCH);
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
+    // __LINE__: 981
+    UTIL_ASSERT(threadNum < CGAMEOBJECTARRAYENTRY_MAXTHREADS);
+
+    // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
     // __LINE__: 982
     UTIL_ASSERT(ptr != NULL);
 
@@ -514,7 +535,7 @@ BYTE CGameObjectArray::ChangeEntry(LONG index, BYTE threadNum, CGameObject* ptr,
 
     for (BYTE otherThreadNum = 0; otherThreadNum < CGAMEOBJECTARRAYENTRY_MAXTHREADS; otherThreadNum++) {
         if (m_pArray[arrayIndex].m_denyCounts[otherThreadNum] != 0) {
-            if (otherThreadNum == THREAD_ASYNCH) {
+            if (otherThreadNum == threadNum) {
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
                 // __LINE__: 1012
                 UTIL_ASSERT(FALSE);
@@ -526,7 +547,7 @@ BYTE CGameObjectArray::ChangeEntry(LONG index, BYTE threadNum, CGameObject* ptr,
         }
 
         if (m_pArray[arrayIndex].m_shareCounts[otherThreadNum] != 0) {
-            if (otherThreadNum == THREAD_ASYNCH) {
+            if (otherThreadNum == threadNum) {
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
                 // __LINE__: 1024
                 UTIL_ASSERT(FALSE);
@@ -559,6 +580,8 @@ void CGameObjectArray::Clean()
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfGame.cpp
         // __LINE__: 1071
         UTIL_ASSERT(FALSE);
+
+        return;
     }
 
     while (m_nMaxArrayIndex >= 0) {
@@ -581,6 +604,8 @@ void CGameObjectArray::Clean()
 
     // NOTE: Uninline.
     g_pBaldurChitin->GetObjectGame()->GetRemoteObjectArray()->Clean();
+
+    lock.Unlock();
 }
 
 // 0x59ABD0

@@ -119,11 +119,10 @@ int CVariableHashBase::Hash(CString sName)
 {
     int length = sName.GetLength();
     int v1 = 0;
-    int v2 = 0;
     int v3 = 1;
 
     for (int index = 0; index < length && index < 32; index++) {
-        int v4 = PRIME[index] * ((v2 + length) & 0x2F);
+        int v4 = PRIME[index] * (static_cast<BYTE>(sName[index]) & 0x2F);
         v1 += v4;
         v3 *= v4 & (m_nTableEntries - 1);
     }
@@ -174,7 +173,8 @@ BOOL CVariableHash::AddKey(CVariable& var)
     BOOL bDone = FALSE;
     BOOL bResult = FALSE;
     while (!bDone) {
-        if (v1 && curr == 255) {
+        // NOTE: Compares the low byte of the slot index only.
+        if (v1 && (curr & 0xFF) == 0xFF) {
             SleepEx(10, FALSE);
         }
 
@@ -506,6 +506,7 @@ void CNamedCreatureVariableHash::Resize(LONG nSize)
 
     CNamedCreatureVariableHashEntry** oldHashEntries = m_hashEntries;
     LONG oldTableEntries = m_nTableEntries;
+    m_nTableEntries = nSize;
 
     m_hashEntries = new CNamedCreatureVariableHashEntry*[nSize];
 
@@ -541,9 +542,13 @@ BOOL CNamedCreatureVariableHash::AddKey(CVariable& var)
     CString sName = var.GetName();
     CString sTemp;
 
-    for (int index = 0; index < sName.GetLength() && index < 32; index++) {
+    // NOTE: The 32-character cap counts the characters kept, not the
+    // characters read.
+    int nKept = 0;
+    for (int index = 0; index < sName.GetLength() && nKept < 32; index++) {
         if (sName[index] != ' ') {
             sTemp += static_cast<char>(toupper(sName[index]));
+            nKept++;
         }
     }
 
@@ -559,7 +564,7 @@ BOOL CNamedCreatureVariableHash::AddKey(CVariable& var)
         CNamedCreatureVariableHashEntry* pCurr = m_hashEntries[hash];
         while (pCurr != NULL) {
             // FIXME: Unnecessary copying.
-            if (pCurr->m_variable.GetName() == sTemp) {
+            if (sTemp.CompareNoCase(pCurr->m_variable.GetName()) == 0) {
                 pCurr->m_variable = var;
                 return TRUE;
             }
@@ -574,7 +579,8 @@ BOOL CNamedCreatureVariableHash::AddKey(CVariable& var)
         m_hashEntries[hash] = pVar;
     }
 
-    // FIXME: Probably wrong.
+    // NOTE: A new key returns FALSE; only replacing an existing key returns
+    // TRUE.
     return FALSE;
 }
 
@@ -585,9 +591,13 @@ CVariable* CNamedCreatureVariableHash::FindKey(CString sVarName)
 {
     CString sTemp;
 
-    for (int index = 0; index < sVarName.GetLength(); index++) {
+    // NOTE: The 32-character cap counts the characters kept, not the
+    // characters read.
+    int nKept = 0;
+    for (int index = 0; index < sVarName.GetLength() && nKept < 32; index++) {
         if (sVarName[index] != ' ') {
             sTemp += static_cast<char>(toupper(sVarName[index]));
+            nKept++;
         }
     }
 
@@ -596,7 +606,7 @@ CVariable* CNamedCreatureVariableHash::FindKey(CString sVarName)
 
         CNamedCreatureVariableHashEntry* pEntry = m_hashEntries[hash];
         while (pEntry != NULL) {
-            if (pEntry->m_variable.GetName() == sTemp) {
+            if (sTemp.CompareNoCase(pEntry->m_variable.GetName()) == 0) {
                 return &(pEntry->m_variable);
             }
             pEntry = pEntry->m_pNext;
@@ -611,9 +621,13 @@ CVariable* CNamedCreatureVariableHash::FindKey(CString sVarName, LONG nValue)
 {
     CString sTemp;
 
-    for (int index = 0; index < sVarName.GetLength(); index++) {
+    // NOTE: The 32-character cap counts the characters kept, not the
+    // characters read.
+    int nKept = 0;
+    for (int index = 0; index < sVarName.GetLength() && nKept < 32; index++) {
         if (sVarName[index] != ' ') {
             sTemp += static_cast<char>(toupper(sVarName[index]));
+            nKept++;
         }
     }
 
@@ -622,7 +636,7 @@ CVariable* CNamedCreatureVariableHash::FindKey(CString sVarName, LONG nValue)
 
         CNamedCreatureVariableHashEntry* pEntry = m_hashEntries[hash];
         while (pEntry != NULL) {
-            if (pEntry->m_variable.GetName() == sTemp
+            if (sTemp.CompareNoCase(pEntry->m_variable.GetName()) == 0
                 && pEntry->m_variable.m_intValue == nValue) {
                 return &(pEntry->m_variable);
             }
@@ -638,9 +652,13 @@ BOOL CNamedCreatureVariableHash::RemoveKey(CString sVarName, BOOL a2, LONG nValu
 {
     CString sTemp;
 
-    for (int index = 0; index < sVarName.GetLength(); index++) {
+    // NOTE: The 32-character cap counts the characters kept, not the
+    // characters read.
+    int nKept = 0;
+    for (int index = 0; index < sVarName.GetLength() && nKept < 32; index++) {
         if (sVarName[index] != ' ') {
             sTemp += static_cast<char>(toupper(sVarName[index]));
+            nKept++;
         }
     }
 
@@ -650,7 +668,7 @@ BOOL CNamedCreatureVariableHash::RemoveKey(CString sVarName, BOOL a2, LONG nValu
         CNamedCreatureVariableHashEntry* pEntry = m_hashEntries[hash];
         CNamedCreatureVariableHashEntry* pPrev = pEntry;
         while (pEntry != NULL) {
-            if (pEntry->m_variable.GetName() == sTemp
+            if (sTemp.CompareNoCase(pEntry->m_variable.GetName()) == 0
                 && (!a2 || pEntry->m_variable.m_intValue == nValue)) {
                 if (pPrev == pEntry) {
                     delete pEntry;
