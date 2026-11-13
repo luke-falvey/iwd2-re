@@ -88,7 +88,8 @@ void CMoveList::CheckLoad(CGameArea* pArea)
 {
     CResRef areaResRef = pArea->m_resRef;
 
-    POSITION pos = GetHeadPosition();
+    POSITION posCurrent = GetHeadPosition();
+    POSITION pos = posCurrent;
     while (pos != NULL) {
         CMoveListEntry* pNode = GetNext(pos);
         if (pNode->m_areaResRef == areaResRef) {
@@ -102,14 +103,23 @@ void CMoveList::CheckLoad(CGameArea* pArea)
                     INFINITE);
             } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
 
-            if (rc == CGameObjectArray::SUCCESS) {
-                pSprite->MoveOntoArea(pArea, pNode->m_ptDestination, pNode->m_nFacing);
-
-                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(pNode->m_nSpriteId,
-                    CGameObjectArray::THREAD_ASYNCH,
-                    INFINITE);
+            if (rc != CGameObjectArray::SUCCESS) {
+                // NOTE: Original skips the `posCurrent` update here, so it
+                // goes stale.
+                continue;
             }
+
+            pSprite->MoveOntoArea(pArea, pNode->m_ptDestination, pNode->m_nFacing);
+
+            g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(pNode->m_nSpriteId,
+                CGameObjectArray::THREAD_ASYNCH,
+                INFINITE);
+
+            // NOTE: The entry is removed without being deleted (leak).
+            RemoveAt(posCurrent);
         }
+
+        posCurrent = pos;
     }
 }
 

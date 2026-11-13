@@ -124,9 +124,10 @@ void CTimerWorld::AdvanceCurrentTime(ULONG gameTime)
 
             if (g_pChitin->cNetwork.GetSessionOpen() == TRUE && g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
                 g_pBaldurChitin->m_cBaldurMessage.TimeSynchBroadcast(m_gameTime, true);
-                CheckForTriggerEventPast();
-                g_pBaldurChitin->m_pEngineWorld->CompressTime(gameTime);
             }
+
+            CheckForTriggerEventPast();
+            g_pBaldurChitin->m_pEngineWorld->CompressTime(deltaTime);
         } else {
             g_pBaldurChitin->m_cBaldurMessage.TimeChangeToServer(deltaTime);
         }
@@ -142,9 +143,10 @@ void CTimerWorld::AddCurrentTime(ULONG gameTime)
 
             if (g_pChitin->cNetwork.GetSessionOpen() == TRUE && g_pChitin->cNetwork.GetSessionHosting() == TRUE) {
                 g_pBaldurChitin->m_cBaldurMessage.TimeSynchBroadcast(m_gameTime, true);
-                CheckForTriggerEventPast();
-                g_pBaldurChitin->m_pEngineWorld->CompressTime(gameTime);
             }
+
+            CheckForTriggerEventPast();
+            g_pBaldurChitin->m_pEngineWorld->CompressTime(gameTime);
         } else {
             g_pBaldurChitin->m_cBaldurMessage.TimeChangeToServer(gameTime);
         }

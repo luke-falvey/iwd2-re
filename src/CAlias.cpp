@@ -15,7 +15,6 @@ CAlias::~CAlias()
 {
 }
 
-// #binary-identical
 // 0x781800
 BOOL CAlias::ParseRawData(CString& a2)
 {
@@ -38,7 +37,7 @@ BOOL CAlias::ParseRawData(CString& a2)
                 if (semicolonPos == -1) {
                     temp = a2;
                     if (temp.GetAt(temp.GetLength() - 1) != '\\') {
-                        temp += ";";
+                        temp += "\\";
                     }
                     field_C.AddTail(temp);
                     a2 = "";
@@ -46,7 +45,7 @@ BOOL CAlias::ParseRawData(CString& a2)
                     temp = a2.Left(semicolonPos);
 
                     if (temp.GetAt(temp.GetLength() - 1) != '\\') {
-                        temp += ";";
+                        temp += "\\";
                     }
 
                     field_C.AddTail(temp);

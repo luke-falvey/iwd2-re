@@ -24,7 +24,8 @@ CColorEffect::CColorEffect()
 // -----------------------------------------------------------------------------
 
 // 0x448430
-CColorRanges::CColorRanges()
+CColorRanges::CColorRanges(INT_PTR nBlockSize)
+    : CTypedPtrList<CPtrList, CColorRange*>(nBlockSize)
 {
 }
 
@@ -134,7 +135,8 @@ void CColorRanges::Apply(CGameSprite* pSprite)
 // -----------------------------------------------------------------------------
 
 // 0x448450
-CColorEffects::CColorEffects()
+CColorEffects::CColorEffects(INT_PTR nBlockSize)
+    : CTypedPtrList<CPtrList, CColorEffect*>(nBlockSize)
 {
 }
 

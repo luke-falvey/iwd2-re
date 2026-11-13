@@ -140,7 +140,7 @@ int CResMosaic::Release()
 BOOL CResMosaic::Parse(void* pData)
 {
     if (pData == NULL) {
-        return FALSE;
+        return m_bParsed;
     }
 
     m_pHeader = reinterpret_cast<MOSAICHEADER*>(pData);
