@@ -154,7 +154,8 @@ void deleteSound(void* userData, int action)
         if (fadeSong >= 0) {
             // NOTE: Uninline.
             musicForceSection(fadeSong, fadeSection, fadePosition);
-        } else if (nextSong >= 0 && nextSection >= 0 && nextPosition >= 0) {
+            soundVolume(songSound, currentMusicVolume);
+        } else if (nextSong >= 0 && nextPosition >= 0 && nextSection >= 0) {
             // NOTE: Uninline.
             musicForceSection(nextSong, nextSection, nextPosition);
 
