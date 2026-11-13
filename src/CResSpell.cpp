@@ -115,12 +115,14 @@ BOOL CResSpell::Parse(void* pData)
         // __FILE__: C:\Projects\Icewind2\src\Baldur\BalDataTypes.cpp
         // __LINE__: 1771
         UTIL_ASSERT_MSG(FALSE, CString("Spell file header type isn't 'SPL '") + CString(": ") + CString(reinterpret_cast<const char*>(m_pDimmKeyTableEntry->resRef.GetResRef()), RESREF_SIZE) + CString(".SPL"));
+        return FALSE;
     }
 
     if (memcmp(&(m_pHeader->nFileVersion), "V2.0", 4) != 0) {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\BalDataTypes.cpp
         // __LINE__: 1784
         UTIL_ASSERT_MSG(FALSE, CString("Spell file version isn't ") + CString("SPL V2.0") + CString(": ") + CString(reinterpret_cast<const char*>(m_pDimmKeyTableEntry->resRef.GetResRef()), RESREF_SIZE) + CString(".SPL"));
+        return FALSE;
     }
 
     m_pEffects = reinterpret_cast<ITEM_EFFECT*>(reinterpret_cast<unsigned char*>(pData) + m_pHeader->effectsOffset);
