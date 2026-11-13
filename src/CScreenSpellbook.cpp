@@ -1793,7 +1793,9 @@ int CScreenSpellbook::sub_66A8C0(CGameSprite* pSprite)
         nBonus);
     nResult += nBonus;
 
-    if (nDomainClassIndex == nClassIndex && nResult == 0) {
+    // NOTE: Unsigned compare (0x66A969). A domain has at most one slot per
+    // level.
+    if (nDomainClassIndex == nClassIndex && static_cast<UINT>(nResult) > 0) {
         nResult = 1;
     }
 
