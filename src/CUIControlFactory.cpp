@@ -66,6 +66,12 @@ CUIControlBase* CUIControlBase::CreateControl(CUIPanel* pPanel, UI_CONTROL* cont
         }
     } else if (pPanel->m_pManager->m_cResRef == "GUIMOVIE") {
         switch (pPanel->m_nID) {
+        case 0:
+            switch (controlInfo->nID) {
+            case 14:
+                return new CUIControlButtonAI(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
+            }
+            break;
         case 1:
             // 0x76D661
             switch (controlInfo->nID) {
@@ -708,7 +714,7 @@ CUIControlBase* CUIControlBase::CreateControl(CUIPanel* pPanel, UI_CONTROL* cont
             case 5:
                 return new CUIControlButtonMultiPlayerModifyPlayerPlayer(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
             case 6:
-                return new CUIControlButtonMultiPlayerModifyCharacterCancel(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
+                return new CUIControlButtonMultiPlayerModifyPlayerCancel(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
             }
             break;
         case 5:
@@ -820,6 +826,10 @@ CUIControlBase* CUIControlBase::CreateControl(CUIPanel* pPanel, UI_CONTROL* cont
                 return new CUIControlTextDisplay(pPanel, reinterpret_cast<UI_CONTROL_TEXTDISPLAY*>(controlInfo), TRUE);
             case 4:
                 return new CUIControlScrollBar(pPanel, reinterpret_cast<UI_CONTROL_SCROLLBAR*>(controlInfo));
+            default:
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\UIControlButtons.cpp
+                // __LINE__: 1452
+                UTIL_ASSERT(FALSE);
             }
             break;
         case 10:
@@ -930,6 +940,7 @@ CUIControlBase* CUIControlBase::CreateControl(CUIPanel* pPanel, UI_CONTROL* cont
             case 17:
                 return new CUIControlButtonAction(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
             }
+            break;
         case 4:
             switch (controlInfo->nID) {
             case 0:
@@ -1312,7 +1323,7 @@ CUIControlBase* CUIControlBase::CreateControl(CUIPanel* pPanel, UI_CONTROL* cont
             // 0x77041E
             switch (controlInfo->nID) {
             case 0:
-                // return new CUIControlButtonStoreRequesterItem(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
+                return new CUIControlButtonStoreRequesterItem(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
             case 1:
                 return new CUIControlButtonStoreRequesterCancel(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
             case 2:
@@ -1897,6 +1908,7 @@ CUIControlBase* CUIControlBase::CreateControl(CUIPanel* pPanel, UI_CONTROL* cont
             case 10:
                 return new CUIControlButtonInventoryHistoryCancel(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
             }
+            break;
         case 7:
         case 8:
         case 9:
@@ -2452,7 +2464,7 @@ CUIControlBase* CUIControlBase::CreateControl(CUIPanel* pPanel, UI_CONTROL* cont
             // 0x77385F
             switch (controlInfo->nID) {
             case 1:
-                return new CUIControlButtonCharacterPopupCancel(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo), 0);
+                return new CUIControlButtonCharacterPopupDone(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo), 0);
             case 2:
                 return new CUIControlTextDisplay(pPanel, reinterpret_cast<UI_CONTROL_TEXTDISPLAY*>(controlInfo), TRUE);
             case 3:
@@ -2698,6 +2710,11 @@ CUIControlBase* CUIControlBase::CreateControl(CUIPanel* pPanel, UI_CONTROL* cont
                 return new CUIControlButtonMapAreaMap(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
             case 3:
                 return new CUIControlButtonMapShowNotes(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
+            default:
+                if (controlInfo->nID >= 10) {
+                    return new CUIControlButtonMapNote(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
+                }
+                break;
             }
             break;
         case 3:
@@ -2731,6 +2748,10 @@ CUIControlBase* CUIControlBase::CreateControl(CUIPanel* pPanel, UI_CONTROL* cont
             case 10:
             case 11:
                 return new CUIControlButtonMapNoteFlagChoice(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
+            default:
+                // __FILE__: C:\Projects\Icewind2\src\Baldur\UIControlButtons.cpp
+                // __LINE__: 5026
+                UTIL_ASSERT(FALSE);
             }
             break;
         case 50:
@@ -3496,11 +3517,15 @@ CUIControlBase* CUIControlBase::CreateControl(CUIPanel* pPanel, UI_CONTROL* cont
         case 1:
             if (controlInfo->nID == 0) {
                 return new CUIControlTextDisplay(pPanel, reinterpret_cast<UI_CONTROL_TEXTDISPLAY*>(controlInfo), TRUE);
-            } else if (controlInfo->nID < CSCREENKEYMAPS_ERROR_BUTTONS + 1) {
+            } else if (controlInfo->nID < CSCREENKEYMAPS_ERROR_BUTTONS) {
                 return new CUIControlButtonKeymap(pPanel, reinterpret_cast<UI_CONTROL_BUTTON*>(controlInfo));
             }
             break;
         }
+    } else {
+        // __FILE__: C:\Projects\Icewind2\src\Baldur\UIControlButtons.cpp
+        // __LINE__: 6310
+        UTIL_ASSERT(FALSE);
     }
 
     return NULL;
@@ -3780,11 +3805,12 @@ void CUIControlButtonJournalAnnotate::OnLButtonUp(CPoint pt)
 }
 
 // 0x779AD0
-void CUIControlButtonJournalAnnotate::OnLButtonDoubleClick(CPoint pt)
+BOOL CUIControlButtonJournalAnnotate::OnLButtonDblClk(CPoint pt)
 {
     if (m_bEnabled) {
-        CUIControlButton::OnLButtonDoubleClick(pt);
+        return CUIControlButton::OnLButtonDblClk(pt);
     }
+    return FALSE;
 }
 
 // -----------------------------------------------------------------------------
@@ -4238,7 +4264,7 @@ BOOL CUIControlButtonAI::Render(BOOL bForce)
     CRect rClip;
     rClip.IntersectRect(rControlFrame, m_rDirty);
 
-    m_nNormalFrame = g_pBaldurChitin->GetObjectGame()->m_bPartyAI ? 1 : 0;
+    m_nNormalFrame = g_pBaldurChitin->GetObjectGame()->m_bPartyAI;
     m_cVidCell.FrameSet(m_nNormalFrame);
 
     m_cVidCell.Render(0, pt.x, pt.y, rClip, NULL, 0, 0, -1);
@@ -4366,6 +4392,8 @@ void CUIControlButton85C3BC::OnLButtonUp(CPoint pt)
 // 0x77B770
 void CUIControlButton85C3BC::TimerAsynchronousUpdate(BOOLEAN bInside)
 {
+    CUIControlBase::TimerAsynchronousUpdate(bInside);
+
     if (m_nAUCounter != 0) {
         if (m_nAUCounter == 20) {
             CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(m_pPanel->GetControl(3));
@@ -4419,6 +4447,8 @@ void CUIControlButton85C434::OnLButtonUp(CPoint pt)
 // 0x77B800
 void CUIControlButton85C434::TimerAsynchronousUpdate(BOOLEAN bInside)
 {
+    CUIControlBase::TimerAsynchronousUpdate(bInside);
+
     if (m_nAUCounter != 0) {
         if (m_nAUCounter == 20) {
             CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(m_pPanel->GetControl(3));
@@ -4663,6 +4693,8 @@ void CUIControlButton85D3E4::OnLButtonUp(CPoint pt)
 // 0x77B770
 void CUIControlButton85D3E4::TimerAsynchronousUpdate(BOOLEAN bInside)
 {
+    CUIControlBase::TimerAsynchronousUpdate(bInside);
+
     if (m_nAUCounter != 0) {
         if (m_nAUCounter == 20) {
             CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(m_pPanel->GetControl(3));
@@ -4716,6 +4748,8 @@ void CUIControlButton85D45C::OnLButtonUp(CPoint pt)
 // 0x77B800
 void CUIControlButton85D45C::TimerAsynchronousUpdate(BOOLEAN bInside)
 {
+    CUIControlBase::TimerAsynchronousUpdate(bInside);
+
     if (m_nAUCounter != 0) {
         if (m_nAUCounter == 20) {
             CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(m_pPanel->GetControl(3));
@@ -5096,7 +5130,7 @@ CUIControlButtonGeneralBase::CUIControlButtonGeneralBase(CUIPanel* panel, UI_CON
     : CUIControlButton3State(panel, controlInfo, LBUTTON, 0)
 {
     m_nNotSelectedFrame = m_nNormalFrame;
-    m_nSelectedFrame = m_nNotSelectedFrame / 2 + 20;
+    m_nSelectedFrame = static_cast<WORD>(m_nNotSelectedFrame) / 2 + 20;
     field_66E = NULL;
 }
 
@@ -5265,7 +5299,6 @@ CUIControlButtonGeneralMultiPlayer::CUIControlButtonGeneralMultiPlayer(CUIPanel*
 {
     m_nToolTipHotKeyIndex1 = 7;
     m_nToolTipStrRef = 16312;
-    field_66E = g_pBaldurChitin->m_pEngineOptions;
 }
 
 // 0x77D960
@@ -5347,7 +5380,7 @@ void CUIControlButton77DCC0::TimerAsynchronousUpdate(BOOLEAN bInside)
                     SHORT nCurrentHitPoints = max(pSprite->GetBaseStats()->m_hitPoints, 0);
                     field_666 = nCurrentHitPoints * field_668 / nMaxHitPoints;
 
-                    SHORT nSequence = g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nHitPointBarSequence;
+                    int nSequence = g_pBaldurChitin->GetObjectGame()->GetOptions()->m_nHitPointBarSequence;
                     if (nSequence != 0) {
                         m_cVidCell.SequenceSet(nSequence - 1);
                     } else {

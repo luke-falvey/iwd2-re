@@ -141,7 +141,7 @@ public:
     ~CUIControlButtonJournalAnnotate() override;
     BOOL OnLButtonDown(CPoint pt) override;
     void OnLButtonUp(CPoint pt) override;
-    void OnLButtonDoubleClick(CPoint pt) override;
+    BOOL OnLButtonDblClk(CPoint pt) override;
     void OnLButtonClick(CPoint pt) override;
 };
 
