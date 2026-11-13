@@ -172,7 +172,7 @@ void CResBitmap::GetImageDimensions(CSize& size, BOOL bDoubleSize)
         size.cx = pBitmapInfoHeader->biWidth;
         size.cy = pBitmapInfoHeader->biHeight;
 
-        if (bDoubleSize) {
+        if (bDoubleSize && pBitmapInfoHeader->biBitCount != 4) {
             size.cx *= 2;
             size.cy *= 2;
         }

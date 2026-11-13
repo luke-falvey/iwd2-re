@@ -20,7 +20,7 @@ public:
     /* 05AA */ CPoint* m_pSecondarySearch;
     /* 05AE */ WORD m_nSecondarySearch;
     /* 05B0 */ CTiledObject m_tiledObject;
-    /* 05C8 */ RESREF m_scriptRes;
+    /* 05C8 */ SCRIPTNAME m_scriptRes;
 };
 
 #endif /* CGAMETILEDOBJECT_H_ */

@@ -280,7 +280,7 @@ void CGameObject::OnActionButton(const CPoint& pt)
                         pGame->GetGameSave()->m_curFormation,
                         cursor);
 
-                    pGroup->GroupSetTarget(pt,
+                    pGroup->GroupSetTarget(m_pArea->m_moveDest,
                         bShift,
                         pGame->GetGameSave()->m_curFormation,
                         cursor);
@@ -327,7 +327,7 @@ void CGameObject::OnFormationButton(const CPoint& pt)
 
     switch (pGame->m_nState) {
     case 0:
-        if (m_pArea != NULL && m_pArea->m_groupMove) {
+        if (m_pArea->m_groupMove) {
             m_pArea->OnActionButtonClickGround(pt);
         }
         break;
@@ -339,7 +339,7 @@ void CGameObject::OnFormationButton(const CPoint& pt)
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameObject.cpp
-        // __LINE__ 340
+        // __LINE__: 340
         UTIL_ASSERT(FALSE);
     }
 }
