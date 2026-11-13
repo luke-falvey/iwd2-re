@@ -287,6 +287,8 @@ void CGameSpriteSpellList::Clear()
 {
     if (m_List.size() != 0) {
         m_List.clear();
+        field_14 = 0;
+        field_18 = 0;
     }
 }
 
