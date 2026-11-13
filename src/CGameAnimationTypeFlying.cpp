@@ -24,30 +24,32 @@ CGameAnimationTypeFlying::CGameAnimationTypeFlying(USHORT animationID, BYTE* col
         m_moveScale = 8;
         m_moveScaleCurrent = 8;
         v1 = "AEAG";
+        m_falseColor = FALSE;
         break;
     case 0x100:
         m_moveScale = 8;
         m_moveScaleCurrent = 8;
         v1 = "AGUL";
+        m_falseColor = FALSE;
         break;
     case 0x200:
         m_moveScale = 8;
         m_moveScaleCurrent = 8;
         v1 = "AVUL";
+        m_falseColor = FALSE;
         break;
     case 0x300:
     case 0x400:
         m_moveScale = 8;
         m_moveScaleCurrent = 8;
         v1 = "ABIR";
+        m_falseColor = FALSE;
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
         // __LINE__: 1273
         UTIL_ASSERT(FALSE);
     }
-
-    m_falseColor = FALSE;
 
     // NOTE: Uninline.
     m_g1VidCellBase.SetResRef(CResRef(v1 + "G1"), FALSE, TRUE, TRUE);
