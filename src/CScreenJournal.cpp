@@ -353,15 +353,10 @@ void CScreenJournal::OnKeyDown(SHORT nKeysFlags)
     if (nKeysFlags > 0) {
         for (SHORT nKeyFlag = 0; nKeyFlag < nKeysFlags; nKeyFlag++) {
             if (!m_cUIManager.OnKeyDown(m_pVirtualKeysFlags[nKeyFlag])) {
-                if (m_bCtrlKeyDown) {
-                    switch (m_pVirtualKeysFlags[nKeyFlag]) {
-                    case 'A':
-                        pGame->GetJournal()->SaveAll();
-                        break;
-                    case 'S':
-                        pGame->GetJournal()->Save(m_nChapter);
-                        break;
-                    }
+                if (m_bCtrlKeyDown && m_pVirtualKeysFlags[nKeyFlag] == 'A') {
+                    pGame->GetJournal()->SaveAll();
+                } else if (m_bCtrlKeyDown && m_pVirtualKeysFlags[nKeyFlag] == 'S') {
+                    pGame->GetJournal()->Save(m_nChapter);
                 } else {
                     switch (m_pVirtualKeysFlags[nKeyFlag]) {
                     case VK_TAB:
@@ -420,7 +415,7 @@ void CScreenJournal::OnKeyDown(SHORT nKeysFlags)
                         break;
                     default:
                         if (GetTopPopup() == NULL) {
-                            for (SHORT index = 0; index < CINFGAME_KEYMAP_SIZE; index) {
+                            for (SHORT index = 0; index < CINFGAME_KEYMAP_SIZE; index++) {
                                 // NOTE: Uninline.
                                 if (pGame->GetKeymap(index) == m_pVirtualKeysFlags[nKeyFlag]
                                     && pGame->GetKeymapFlag(index) == m_bCtrlKeyDown) {
@@ -514,7 +509,7 @@ void CScreenJournal::UpdateMainPanel()
     pText->m_labelFont.GetFrameSize(64, 0, size, FALSE);
 
     SHORT nFontHeight = pText->m_labelFont.GetFontHeight(FALSE);
-    pText->field_AB4 = static_cast<short>((nFontHeight - size.cy - 1) / nFontHeight);
+    pText->field_AB4 = static_cast<short>((nFontHeight + size.cy - 1) / nFontHeight);
 
     pText->DisplayString(CString(""),
         s2.Right(s2.GetLength()),
@@ -787,7 +782,7 @@ void CScreenJournal::ResetErrorPanel(CUIPanel* pPanel)
 
     strRes.cSound.SetChannel(0, 0);
     strRes.cSound.SetFireForget(TRUE);
-    strRes.cSound.Play(TRUE);
+    strRes.cSound.Play(FALSE);
 
     CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(pPanel->GetControl(3));
 
@@ -799,7 +794,7 @@ void CScreenJournal::ResetErrorPanel(CUIPanel* pPanel)
     UpdateText(pText, "%s", strRes.szText);
 
     for (INT nButton = 0; nButton < m_nNumErrorButtons; nButton++) {
-        CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButton + 1));
+        CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButton));
 
         // __FILE__: C:\Projects\Icewind2\src\Baldur\infscreenjournal.cpp
         // __LINE__: 1560
@@ -991,7 +986,7 @@ void CScreenJournal::CancelEngine()
 
 // 0x637BE0
 CUIControlButtonJournalScroll::CUIControlButtonJournalScroll(CUIPanel* panel, UI_CONTROL_BUTTON* controlInfo)
-    : CUIControlButton(panel, controlInfo, LBUTTON, 0)
+    : CUIControlButton(panel, controlInfo, LBUTTON, 1)
 {
 }
 
@@ -1018,7 +1013,7 @@ void CUIControlButtonJournalScroll::OnLButtonClick(CPoint pt)
         }
         break;
     case 4:
-        if (pJournal->m_nChapter <= CGameJournal::NUM_CHAPTERS - 1) {
+        if (pJournal->m_nChapter < CGameJournal::NUM_CHAPTERS - 1) {
             pJournal->m_nChapter++;
             pJournal->UpdateMainPanel();
             pJournal->PlayGUISound(CBaldurEngine::RESREF_SOUND_PRIESTSCROLL);
@@ -1027,7 +1022,7 @@ void CUIControlButtonJournalScroll::OnLButtonClick(CPoint pt)
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\infscreenjournal.cpp
         // __LINE__: 2006
-        UTIL_ASSERT(pJournal != NULL);
+        UTIL_ASSERT(FALSE);
     }
 }
 
