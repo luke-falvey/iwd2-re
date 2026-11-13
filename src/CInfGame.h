@@ -76,7 +76,7 @@ public:
     CSpellList();
     ~CSpellList();
     void Load(const std::vector<CSpellListEntry>& spells);
-    bool GetSpellLevel(const UINT& nID, UINT& nLevel);
+    bool GetSpellLevel(const UINT& nID, UINT& nIndex);
 
     UINT Get(UINT nIndex);
 
