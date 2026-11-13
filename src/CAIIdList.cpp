@@ -117,7 +117,7 @@ CAIId* CAIIdList::Find(CString name, BOOL caseSensitive) const
         funcName.TrimLeft();
         funcName.TrimRight();
 
-        if (!caseSensitive) {
+        if (caseSensitive) {
             if (name.Compare(funcName) == 0) {
                 return node;
             }

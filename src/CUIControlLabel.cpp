@@ -53,11 +53,31 @@ CUIControlLabel::CUIControlLabel(CUIPanel* pPanel, UI_CONTROL_LABEL* pControlInf
     m_pText = new CString[m_nMaxLines];
 
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ChUIControls.cpp
-    // __LINE__: 7620
+    // __LINE__: 7652
     UTIL_ASSERT(m_pText != NULL);
 
-    // NOTE: Uninline.
-    SetText(strRes.szText);
+    // NOTE: Same as `SetText` without the `InvalidateRect` calls.
+    if ((m_nTextFlags & 0x100) != 0) {
+        m_nTextLines = CUtil::SplitString(&m_cVidFont,
+            strRes.szText,
+            m_size.cx,
+            m_nMaxLines,
+            m_pText,
+            FALSE,
+            FALSE,
+            TRUE,
+            -1);
+    } else {
+        m_nTextLines = CUtil::SplitString(&m_cVidFont,
+            strRes.szText,
+            m_size.cx,
+            1,
+            m_pText,
+            FALSE,
+            FALSE,
+            TRUE,
+            -1);
+    }
 }
 
 // 0x4E42A0
@@ -129,7 +149,7 @@ BOOL CUIControlLabel::Render(BOOL bForce)
         if ((m_nTextFlags & 0x80) != 0) {
             pt.y += m_size.cy - nFontHeight * m_nTextLines;
         } else {
-            pt.y += m_size.cy / 2 - nFontHeight * m_nTextLines / 2;
+            pt.y += (m_size.cy >> 1) - ((nFontHeight * m_nTextLines) >> 1);
         }
     }
 
@@ -148,7 +168,7 @@ BOOL CUIControlLabel::Render(BOOL bForce)
             x = pt.x + max(m_size.cx - m_cVidFont.GetStringLength(m_pText[nLine], TRUE), 0);
         } else if ((m_nTextFlags & 0x4) != 0) {
             // FIXME: Calculating string length twice.
-            x = pt.x + max(m_size.cx / 2 - m_cVidFont.GetStringLength(m_pText[nLine], TRUE) / 2, 0);
+            x = pt.x + max((m_size.cx >> 1) - (m_cVidFont.GetStringLength(m_pText[nLine], TRUE) >> 1), 0);
         }
 
         pVidInf->BKTextOut(&m_cVidFont,

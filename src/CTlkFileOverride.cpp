@@ -479,13 +479,13 @@ BOOLEAN CTlkFileOverride::Fetch(DWORD strId, STR_RES& strRes)
     }
 
     if ((pKey->dwFlags & ENTRY_HAVE_SOUND) != 0) {
-        strRes.cSound.SetResRef(CResRef(pKey->sndResRef), TRUE, TRUE);
+        strRes.cSound.SetResRef(CResRef(pKey->sndResRef), FALSE, TRUE);
         strRes.cSound.m_nPitchVariance = pKey->pitchVariance;
         strRes.cSound.m_nVolumeVariance = pKey->volumeVariance;
     } else {
-        strRes.cSound.SetResRef(CResRef(""), TRUE, TRUE);
-        strRes.cSound.m_nPitchVariance = pKey->pitchVariance;
-        strRes.cSound.m_nVolumeVariance = pKey->volumeVariance;
+        strRes.cSound.SetResRef(CResRef(""), FALSE, TRUE);
+        strRes.cSound.m_nPitchVariance = 0;
+        strRes.cSound.m_nVolumeVariance = 0;
     }
 
     if ((pKey->dwFlags & ENTRY_HAVE_TEXT) != 0) {
