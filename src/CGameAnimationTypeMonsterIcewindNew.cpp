@@ -107,7 +107,7 @@ CGameAnimationTypeMonsterIcewindNew::CGameAnimationTypeMonsterIcewindNew(USHORT 
         m_rEllipse.top = -18;
         m_rEllipse.right = 24;
         m_rEllipse.bottom = 18;
-        m_pSndDeath = "FAL_03B";
+        m_pSndDeath = "FAL_01B";
         m_personalSpace = 3;
         break;
     case 0x300:
@@ -122,7 +122,7 @@ CGameAnimationTypeMonsterIcewindNew::CGameAnimationTypeMonsterIcewindNew(USHORT 
         m_rEllipse.top = -36;
         m_rEllipse.right = 48;
         m_rEllipse.bottom = 36;
-        m_pSndDeath = "FAL_03B";
+        m_pSndDeath = "FAL_01B";
         m_personalSpace = 3;
         m_colorChunks = -1;
         break;
@@ -141,14 +141,15 @@ CGameAnimationTypeMonsterIcewindNew::CGameAnimationTypeMonsterIcewindNew(USHORT 
         switch (animationID & 0xF0) {
         case 0x00:
             m_resRef = "MSAH";
+            field_34E8[0] = "CB";
+            field_34E8[1] = "SP";
             break;
         case 0x10:
             m_resRef = "MSAT";
+            field_34E8[0] = "CB";
+            field_34E8[1] = "SP";
             break;
         }
-
-        field_34E8[0] = "CB";
-        field_34E8[1] = "SP";
         break;
     case 0x500:
         m_rEllipse.left = -48;
@@ -186,7 +187,7 @@ CGameAnimationTypeMonsterIcewindNew::CGameAnimationTypeMonsterIcewindNew(USHORT 
         m_rEllipse.top = -12;
         m_rEllipse.right = 16;
         m_rEllipse.bottom = 12;
-        m_pSndDeath = "FAL_03B";
+        m_pSndDeath = "FAL_01B";
         m_personalSpace = 3;
         m_colorChunks = -1;
 
@@ -227,15 +228,15 @@ CGameAnimationTypeMonsterIcewindNew::CGameAnimationTypeMonsterIcewindNew(USHORT 
     }
 
     m_a1VidCellBase.SetResRef(CResRef(m_resRef + "A1"), FALSE, TRUE, TRUE);
-    m_a2VidCellBase.SetResRef(CResRef(m_resRef + "A2"), FALSE, TRUE, TRUE);
-    m_a3VidCellBase.SetResRef(CResRef(m_resRef + "A3"), FALSE, TRUE, TRUE);
-    m_a4VidCellBase.SetResRef(CResRef(m_resRef + "A4"), FALSE, TRUE, TRUE);
+    m_a2VidCellBase.SetResRef(CResRef(m_resRef + "A2"), FALSE, TRUE, FALSE);
+    m_a3VidCellBase.SetResRef(CResRef(m_resRef + "A3"), FALSE, TRUE, FALSE);
+    m_a4VidCellBase.SetResRef(CResRef(m_resRef + "A4"), FALSE, TRUE, FALSE);
     m_deVidCellBase.SetResRef(CResRef(m_resRef + "De"), FALSE, TRUE, TRUE);
-    m_ghVidCellBase.SetResRef(CResRef(m_resRef + "Gh"), FALSE, TRUE, TRUE);
+    m_ghVidCellBase.SetResRef(CResRef(m_resRef + "GH"), FALSE, TRUE, TRUE);
     m_slVidCellBase.SetResRef(CResRef(m_resRef + "Sl"), FALSE, TRUE, TRUE);
     m_guVidCellBase.SetResRef(CResRef(m_resRef + "Gu"), FALSE, TRUE, TRUE);
-    m_spVidCellBase.SetResRef(CResRef(m_resRef + "Sp"), FALSE, TRUE, TRUE);
-    m_caVidCellBase.SetResRef(CResRef(m_resRef + "Ca"), FALSE, TRUE, TRUE);
+    m_spVidCellBase.SetResRef(CResRef(m_resRef + "Sp"), FALSE, TRUE, FALSE);
+    m_caVidCellBase.SetResRef(CResRef(m_resRef + "Ca"), FALSE, TRUE, FALSE);
     m_scVidCellBase.SetResRef(CResRef(m_resRef + "Sc"), FALSE, TRUE, TRUE);
     m_sdVidCellBase.SetResRef(CResRef(m_resRef + "Sd"), FALSE, TRUE, TRUE);
     m_twVidCellBase.SetResRef(CResRef(m_resRef + "Tw"), FALSE, TRUE, TRUE);
@@ -245,15 +246,15 @@ CGameAnimationTypeMonsterIcewindNew::CGameAnimationTypeMonsterIcewindNew(USHORT 
 
     if (!MIRROR_BAM) {
         m_a1VidCellExtend.SetResRef(CResRef(m_resRef + "A1E"), FALSE, TRUE, TRUE);
-        m_a2VidCellExtend.SetResRef(CResRef(m_resRef + "A2E"), FALSE, TRUE, TRUE);
-        m_a3VidCellExtend.SetResRef(CResRef(m_resRef + "A3E"), FALSE, TRUE, TRUE);
-        m_a4VidCellExtend.SetResRef(CResRef(m_resRef + "A4E"), FALSE, TRUE, TRUE);
+        m_a2VidCellExtend.SetResRef(CResRef(m_resRef + "A2E"), FALSE, TRUE, FALSE);
+        m_a3VidCellExtend.SetResRef(CResRef(m_resRef + "A3E"), FALSE, TRUE, FALSE);
+        m_a4VidCellExtend.SetResRef(CResRef(m_resRef + "A4E"), FALSE, TRUE, FALSE);
         m_deVidCellExtend.SetResRef(CResRef(m_resRef + "DeE"), FALSE, TRUE, TRUE);
-        m_ghVidCellExtend.SetResRef(CResRef(m_resRef + "GhE"), FALSE, TRUE, TRUE);
+        m_ghVidCellExtend.SetResRef(CResRef(m_resRef + "GHE"), FALSE, TRUE, TRUE);
         m_slVidCellExtend.SetResRef(CResRef(m_resRef + "SlE"), FALSE, TRUE, TRUE);
         m_guVidCellExtend.SetResRef(CResRef(m_resRef + "GuE"), FALSE, TRUE, TRUE);
-        m_spVidCellExtend.SetResRef(CResRef(m_resRef + "SpE"), FALSE, TRUE, TRUE);
-        m_caVidCellExtend.SetResRef(CResRef(m_resRef + "CaE"), FALSE, TRUE, TRUE);
+        m_spVidCellExtend.SetResRef(CResRef(m_resRef + "SpE"), FALSE, TRUE, FALSE);
+        m_caVidCellExtend.SetResRef(CResRef(m_resRef + "CaE"), FALSE, TRUE, FALSE);
         m_scVidCellExtend.SetResRef(CResRef(m_resRef + "ScE"), FALSE, TRUE, TRUE);
         m_sdVidCellExtend.SetResRef(CResRef(m_resRef + "SdE"), FALSE, TRUE, TRUE);
         m_twVidCellExtend.SetResRef(CResRef(m_resRef + "TwE"), FALSE, TRUE, TRUE);
@@ -510,8 +511,8 @@ void CGameAnimationTypeMonsterIcewindNew::EquipWeapon(const CString& resRef, BYT
     ClearColorEffects(16);
 
     if (!resRef.IsEmpty()) {
-        BYTE cnt = 0;
-        while (cnt < 3) {
+        BYTE cnt;
+        for (cnt = 0; cnt < 3; cnt++) {
             if (field_34E8[cnt] == resRef) {
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
                 // __LINE__: 27911
@@ -577,17 +578,17 @@ void CGameAnimationTypeMonsterIcewindNew::EquipWeapon(const CString& resRef, BYT
                 if ((m_animationID & 0x2) != 0) {
                     m_a4VidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "A4"), FALSE, TRUE, TRUE);
                 }
-                m_sdVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "SDe"), FALSE, TRUE, TRUE);
+                m_deVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "SDe"), FALSE, TRUE, FALSE);
                 m_ghVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "GH"), FALSE, TRUE, TRUE);
                 m_slVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "Sl"), FALSE, TRUE, TRUE);
                 m_guVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "Gu"), FALSE, TRUE, TRUE);
                 if ((m_animationID & 0x1) != 0) {
-                    m_spVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "Sp"), FALSE, TRUE, TRUE);
-                    m_caVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "Ca"), FALSE, TRUE, TRUE);
+                    m_spVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "Sp"), FALSE, TRUE, FALSE);
+                    m_caVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "Ca"), FALSE, TRUE, FALSE);
                 }
                 m_scVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "Sc"), FALSE, TRUE, TRUE);
                 m_sdVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "Sd"), FALSE, TRUE, TRUE);
-                m_twVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "Tw"), FALSE, TRUE, TRUE);
+                m_twVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "Tw"), FALSE, TRUE, FALSE);
                 m_wkVidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "Wk"), FALSE, TRUE, TRUE);
 
                 if (!MIRROR_BAM) {
@@ -601,17 +602,17 @@ void CGameAnimationTypeMonsterIcewindNew::EquipWeapon(const CString& resRef, BYT
                     if ((m_animationID & 0x2) != 0) {
                         m_a4VidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "A4E"), FALSE, TRUE, TRUE);
                     }
-                    m_sdVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "DeE"), FALSE, TRUE, TRUE);
+                    m_deVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "DeE"), FALSE, TRUE, FALSE);
                     m_ghVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "GHE"), FALSE, TRUE, TRUE);
                     m_slVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "SlE"), FALSE, TRUE, TRUE);
                     m_guVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "GuE"), FALSE, TRUE, TRUE);
                     if ((m_animationID & 0x1) != 0) {
-                        m_spVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "SpE"), FALSE, TRUE, TRUE);
-                        m_caVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "CaE"), FALSE, TRUE, TRUE);
+                        m_spVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "SpE"), FALSE, TRUE, FALSE);
+                        m_caVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "CaE"), FALSE, TRUE, FALSE);
                     }
                     m_scVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "ScE"), FALSE, TRUE, TRUE);
                     m_sdVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "SdE"), FALSE, TRUE, TRUE);
-                    m_twVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "TwE"), FALSE, TRUE, TRUE);
+                    m_twVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "TwE"), FALSE, TRUE, FALSE);
                     m_wkVidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "WkE"), FALSE, TRUE, TRUE);
                 }
 
@@ -627,10 +628,10 @@ void CGameAnimationTypeMonsterIcewindNew::EquipWeapon(const CString& resRef, BYT
             if (!MIRROR_BAM && m_currentBamDirection > m_extendDirectionTest) {
                 m_currentVidCellWeapon = m_currentVidCellWeaponExtend;
             } else {
-                m_currentVidCellWeapon = m_currentVidCellBase;
+                m_currentVidCellWeapon = m_currentVidCellWeaponBase;
             }
 
-            if (!MIRROR_BAM && m_currentBamDirection > m_extendDirectionTest) {
+            if (MIRROR_BAM && m_currentBamDirection > m_extendDirectionTest) {
                 m_currentVidCellWeapon->SequenceSet(8 * m_currentBamSequence + ((17 - m_currentBamDirection) % 16) / 2);
             } else {
                 m_currentVidCellWeapon->SequenceSet(8 * m_currentBamSequence + m_currentBamDirection / 2);
@@ -723,7 +724,7 @@ CVidPalette* CGameAnimationTypeMonsterIcewindNew::GetAnimationPalette(BYTE range
         // __LINE__: 28129
         UTIL_ASSERT(m_currentVidCell != NULL);
 
-        break;
+        return &m_charPalette;
     case 0x10:
     case 0x20:
     case 0x30:
@@ -826,7 +827,7 @@ void CGameAnimationTypeMonsterIcewindNew::ClearColorEffects(BYTE colorRange)
 {
     // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
     // __LINE__: 28375
-    UTIL_ASSERT(FALSE);
+    UTIL_ASSERT(m_currentVidCell != NULL);
 
     switch (colorRange & 0xF0) {
     case 0x00:
@@ -1054,69 +1055,71 @@ void CGameAnimationTypeMonsterIcewindNew::SetColorEffect(BYTE effectType, BYTE c
         }
         break;
     case 0x10:
-        m_a1VidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-        m_a2VidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-        m_a3VidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-        m_a4VidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-        m_deVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-        m_ghVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-        m_slVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-        m_guVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-        m_spVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-        m_caVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-        m_scVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-        m_sdVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-        m_twVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-        m_wkVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-
-        if (effectType != 0) {
-            m_a1VidCellWeaponBase.SuppressTint(colorRange & 0xF);
-            m_a2VidCellWeaponBase.SuppressTint(colorRange & 0xF);
-            m_a3VidCellWeaponBase.SuppressTint(colorRange & 0xF);
-            m_a4VidCellWeaponBase.SuppressTint(colorRange & 0xF);
-            m_deVidCellWeaponBase.SuppressTint(colorRange & 0xF);
-            m_ghVidCellWeaponBase.SuppressTint(colorRange & 0xF);
-            m_slVidCellWeaponBase.SuppressTint(colorRange & 0xF);
-            m_guVidCellWeaponBase.SuppressTint(colorRange & 0xF);
-            m_spVidCellWeaponBase.SuppressTint(colorRange & 0xF);
-            m_caVidCellWeaponBase.SuppressTint(colorRange & 0xF);
-            m_scVidCellWeaponBase.SuppressTint(colorRange & 0xF);
-            m_sdVidCellWeaponBase.SuppressTint(colorRange & 0xF);
-            m_twVidCellWeaponBase.SuppressTint(colorRange & 0xF);
-            m_wkVidCellWeaponBase.SuppressTint(colorRange & 0xF);
-        }
-
-        if (!MIRROR_BAM) {
-            m_a1VidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-            m_a2VidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-            m_a3VidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-            m_a4VidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-            m_deVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-            m_ghVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-            m_slVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-            m_guVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-            m_spVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-            m_caVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-            m_scVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-            m_sdVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-            m_twVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
-            m_wkVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+        if (m_currentVidCellWeapon != NULL && m_currentVidCellWeapon->GetResRef().IsValid()) {
+            m_a1VidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+            m_a2VidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+            m_a3VidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+            m_a4VidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+            m_deVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+            m_ghVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+            m_slVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+            m_guVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+            m_spVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+            m_caVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+            m_scVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+            m_sdVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+            m_twVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+            m_wkVidCellWeaponBase.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
 
             if (effectType != 0) {
-                m_a1VidCellWeaponExtend.SuppressTint(colorRange & 0xF);
-                m_a2VidCellWeaponExtend.SuppressTint(colorRange & 0xF);
-                m_a3VidCellWeaponExtend.SuppressTint(colorRange & 0xF);
-                m_a4VidCellWeaponExtend.SuppressTint(colorRange & 0xF);
-                m_deVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
-                m_ghVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
-                m_slVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
-                m_guVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
-                m_spVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
-                m_caVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
-                m_scVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
-                m_sdVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
-                m_twVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
-                m_wkVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                m_a1VidCellWeaponBase.SuppressTint(colorRange & 0xF);
+                m_a2VidCellWeaponBase.SuppressTint(colorRange & 0xF);
+                m_a3VidCellWeaponBase.SuppressTint(colorRange & 0xF);
+                m_a4VidCellWeaponBase.SuppressTint(colorRange & 0xF);
+                m_deVidCellWeaponBase.SuppressTint(colorRange & 0xF);
+                m_ghVidCellWeaponBase.SuppressTint(colorRange & 0xF);
+                m_slVidCellWeaponBase.SuppressTint(colorRange & 0xF);
+                m_guVidCellWeaponBase.SuppressTint(colorRange & 0xF);
+                m_spVidCellWeaponBase.SuppressTint(colorRange & 0xF);
+                m_caVidCellWeaponBase.SuppressTint(colorRange & 0xF);
+                m_scVidCellWeaponBase.SuppressTint(colorRange & 0xF);
+                m_sdVidCellWeaponBase.SuppressTint(colorRange & 0xF);
+                m_twVidCellWeaponBase.SuppressTint(colorRange & 0xF);
+                m_wkVidCellWeaponBase.SuppressTint(colorRange & 0xF);
+            }
+
+            if (!MIRROR_BAM) {
+                m_a1VidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+                m_a2VidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+                m_a3VidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+                m_a4VidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+                m_deVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+                m_ghVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+                m_slVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+                m_guVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+                m_spVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+                m_caVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+                m_scVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+                m_sdVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+                m_twVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+                m_wkVidCellWeaponExtend.AddRangeAffect(effectType, colorRange & 0xF, tintColor, periodLength);
+
+                if (effectType != 0) {
+                    m_a1VidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                    m_a2VidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                    m_a3VidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                    m_a4VidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                    m_deVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                    m_ghVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                    m_slVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                    m_guVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                    m_spVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                    m_caVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                    m_scVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                    m_sdVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                    m_twVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                    m_wkVidCellWeaponExtend.SuppressTint(colorRange & 0xF);
+                }
             }
         }
         break;
@@ -1126,7 +1129,7 @@ void CGameAnimationTypeMonsterIcewindNew::SetColorEffect(BYTE effectType, BYTE c
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
         // __LINE__: 28716
-        UTIL_ASSERT(m_currentVidCell != NULL);
+        UTIL_ASSERT(FALSE);
     }
 }
 
@@ -1328,6 +1331,7 @@ SHORT CGameAnimationTypeMonsterIcewindNew::SetSequence(SHORT nSequence)
             m_currentVidCellWeaponBase = &m_deVidCellWeaponBase;
             m_currentVidCellWeaponExtend = &m_deVidCellWeaponExtend;
         }
+        break;
     case 6:
         if (m_currentBamSequence != 0
             || m_currentVidCellBase != &m_sdVidCellBase) {
@@ -1448,8 +1452,8 @@ SHORT CGameAnimationTypeMonsterIcewindNew::SetSequence(SHORT nSequence)
         }
         break;
     case 17:
-        m_currentVidCellBase = &m_a1VidCellBase;
-        m_currentVidCellExtend = &m_a1VidCellExtend;
+        m_currentVidCellBase = &m_slVidCellBase;
+        m_currentVidCellExtend = &m_slVidCellExtend;
         m_currentBamSequence = 0;
         if (m_currentVidCellWeapon != NULL) {
             m_currentVidCellWeaponBase = &m_slVidCellWeaponBase;
