@@ -1,5 +1,7 @@
 #include "CVidMosaic.h"
 
+#include <math.h>
+
 #include "CUtil.h"
 #include "CVidInf.h"
 #include "CVideo3d.h"
@@ -81,77 +83,120 @@ BOOL CVidMosaic::Render(INT nSurface, int x, int y, const CRect& rMosaic, const 
         // __FILE__: C:\Projects\Icewind2\src\chitin\ChVidImage.cpp
         // __LINE__: 5449
         UTIL_ASSERT(FALSE);
+
+        // NOTE: `pRes` stays demanded on this path.
+        return FALSE;
     }
 
-    // NOTE: Original code is different and hard to replicate one to one.
-    WORD nTileSize = pRes->GetTileSize(m_bDoubleSize);
-    WORD nMosaicWidth = pRes->GetMosaicWidth(m_bDoubleSize);
-    WORD nMosaicHeight = pRes->GetMosaicHeight(m_bDoubleSize);
+    INT nTileSize = pRes->GetTileSize(m_bDoubleSize);
 
-    INT nFirstTileX = rMosaic.left / nTileSize;
-    INT nFirstTileY = rMosaic.top / nTileSize;
+    // NOTE: Uninline. There is no clamp: a negative `rMosaic.left` or
+    // `rMosaic.top` gives negative tile numbers, as in the original.
+    INT nTile = GetTileNumber(rMosaic.left, rMosaic.top);
+
+    // NOTE: The row stride is computed from the mosaic width, not taken from
+    // the header's `nXTiles`.
+    INT nTilesAcross = static_cast<INT>(ceil(static_cast<double>(pRes->GetMosaicWidth(m_bDoubleSize)) / static_cast<double>(nTileSize)));
+
     INT nLastTileX = rMosaic.right % nTileSize == 0
         ? rMosaic.right / nTileSize
         : rMosaic.right / nTileSize + 1;
-    INT nLastTileY = (rMosaic.bottom % nTileSize == 0)
+    INT nLastTileY = rMosaic.bottom % nTileSize == 0
         ? rMosaic.bottom / nTileSize
         : rMosaic.bottom / nTileSize + 1;
 
-    nFirstTileX = max(nFirstTileX, 0);
-    nFirstTileY = max(nFirstTileY, 0);
-    nLastTileX = min(nLastTileX, pRes->m_pHeader->nXTiles);
-    nLastTileY = min(nLastTileY, pRes->m_pHeader->nYTiles);
-
-    CVidMode* pVidMode = g_pChitin->GetCurrentVideoMode();
+    CRect rTile;
+    rTile.SetRect(0, 0, nTileSize, nTileSize);
 
     DDSURFACEDESC surfaceDesc;
     surfaceDesc.dwSize = sizeof(surfaceDesc);
 
-    CRect rTile(0, 0, nTileSize, nTileSize);
+    INT nTileY = nTile / nTilesAcross;
+    INT nFirstTileX = nTile % nTilesAcross;
 
-    for (INT nTileY = nFirstTileY; nTileY < nLastTileY; nTileY++) {
-        int destY = y + nTileY * nTileSize;
-        if (destY + nTileSize < rClip.top || destY > rClip.bottom) {
-            continue;
+    x += nFirstTileX * nTileSize;
+    y += nTileY * nTileSize;
+
+    BOOL bResult = TRUE;
+
+    for (; nTileY < nLastTileY; nTileY++) {
+        if (y >= rClip.bottom) {
+            break;
         }
 
-        rTile.bottom = min(nMosaicHeight - nTileY * nTileSize, nTileSize);
+        int destX = x;
+        INT nTileX;
+        for (nTileX = nFirstTileX; nTileX < nLastTileX; nTileX++, nTile++, destX += nTileSize) {
+            if ((nTileX + 1) * nTileSize > pRes->GetMosaicWidth(m_bDoubleSize)) {
+                rTile.right = max(0, pRes->GetMosaicWidth(m_bDoubleSize) - nTileX * nTileSize);
+            } else {
+                rTile.right = nTileSize;
+            }
 
-        for (INT nTileX = nFirstTileX; nTileX < nLastTileX; nTileX++) {
-            int destX = x + nTileX * nTileSize;
-            if (destX + nTileSize < rClip.left || destX > rClip.right) {
+            if (rTile.right == 0) {
+                break;
+            }
+
+            if ((nTileY + 1) * nTileSize > pRes->GetMosaicHeight(m_bDoubleSize)) {
+                rTile.bottom = max(0, pRes->GetMosaicHeight(m_bDoubleSize) - nTileY * nTileSize);
+            } else {
+                rTile.bottom = nTileSize;
+            }
+
+            if (rTile.bottom == 0) {
+                break;
+            }
+
+            // NOTE: The pointer is rendered for every tile, including the
+            // ones skipped by the clip tests below.
+            g_pChitin->GetCurrentVideoMode()->RenderPointer();
+
+            if (destX + nTileSize < rClip.left
+                || destX >= rClip.right
+                || y + nTileSize < rClip.top) {
                 continue;
             }
 
-            rTile.right = min(nMosaicWidth - nTileX * nTileSize, nTileSize);
-
-            // TODO: Figure out why pointer needs to be rendered for every tile
-            // in mosaic.
-            g_pChitin->GetCurrentVideoMode()->RenderPointer();
-
-            if (pVidMode->LockSurface(m_nFxSurface, &surfaceDesc, rTile)) {
-                (this->*Blt)(reinterpret_cast<DWORD*>(surfaceDesc.lpSurface),
-                    surfaceDesc.lPitch,
-                    nTileY * pRes->m_pHeader->nXTiles + nTileX,
-                    rTile,
-                    dwFlags);
-                pVidMode->UnLockSurface(m_nFxSurface, surfaceDesc.lpSurface);
-
-                BltFromFX(pVidMode->pSurfaces[nSurface],
-                    destX,
-                    destY,
-                    rTile.Size(),
-                    rClip,
-                    dwFlags);
+            // NOTE: The original passes a temporary copy of `rTile`.
+            if (!g_pChitin->GetCurrentVideoMode()->LockSurface(m_nFxSurface, &surfaceDesc, CRect(rTile))) {
+                if (!bDemanded) {
+                    pRes->Release();
+                }
+                return FALSE;
             }
+
+            bResult = (this->*Blt)(reinterpret_cast<DWORD*>(surfaceDesc.lpSurface),
+                surfaceDesc.lPitch,
+                nTile,
+                rTile,
+                dwFlags);
+
+            g_pChitin->GetCurrentVideoMode()->UnLockSurface(m_nFxSurface, surfaceDesc.lpSurface);
+
+            if (!bResult) {
+                if (!bDemanded) {
+                    pRes->Release();
+                }
+                return FALSE;
+            }
+
+            BltFromFX(g_pChitin->GetCurrentVideoMode()->pSurfaces[nSurface],
+                destX,
+                y,
+                rTile.Size(),
+                rClip,
+                dwFlags);
         }
+
+        y += nTileSize;
+        nTile += nTilesAcross - nTileX + nFirstTileX;
     }
 
     if (!bDemanded) {
         pRes->Release();
     }
 
-    return TRUE;
+    return bResult;
 }
 
 // 0x7B1330
@@ -264,27 +309,28 @@ BOOL CVidMosaic::BltMos8To24(DWORD* pSurface, LONG lPitch, UINT nTile, const CRe
     int width = rRect.Width();
 
     if (width != 0) {
-        RGBQUAD* pPalette = pRes->GetTilePalette(nTile);
-        if (pPalette == NULL) {
-            return FALSE;
-        }
-
-        m_cPalette.SetPalette(pPalette, 256, CVidPalette::TYPE_RESOURCE);
+        m_cPalette.SetPalette(pRes->GetTilePalette(nTile), 256, CVidPalette::TYPE_RESOURCE);
         m_cPalette.Realize(CVidImage::rgbTempPal, 24, dwFlags | 0x400000, &m_paletteAffects, 255);
 
         BYTE* pTileData = pRes->GetTileData(nTile, m_bDoubleSize);
         LONG nSkip = lPitch - width * 3;
 
-        // TODO: Original code is different (more optimized).
-        BYTE* pSurfaceBytes = reinterpret_cast<BYTE*>(pSurface);
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                DWORD rgb = CVidImage::rgbTempPal[*pTileData++];
-                *pSurfaceBytes++ = rgb & 0xFF;
-                *pSurfaceBytes++ = (rgb >> 8) & 0xFF;
-                *pSurfaceBytes++ = (rgb >> 16) & 0xFF;
+        // NOTE: The original's inline assembly copies `width - 1` pixels and
+        // then the last one, and returns early when `width - 1` is zero, so a
+        // tile one pixel wide draws nothing. Its row loop is a do-while, so a
+        // zero height would not stop it.
+        if (width - 1 != 0) {
+            // TODO: Original code is different (more optimized).
+            BYTE* pSurfaceBytes = reinterpret_cast<BYTE*>(pSurface);
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    DWORD rgb = CVidImage::rgbTempPal[*pTileData++];
+                    *pSurfaceBytes++ = rgb & 0xFF;
+                    *pSurfaceBytes++ = (rgb >> 8) & 0xFF;
+                    *pSurfaceBytes++ = (rgb >> 16) & 0xFF;
+                }
+                pSurfaceBytes += nSkip;
             }
-            pSurfaceBytes += nSkip;
         }
     }
 
@@ -408,26 +454,31 @@ BOOL CVidMosaic::Render3d(int x, int y, const CRect& rMosaic, const CRect& rClip
         pRes->Demand();
     }
 
-    // NOTE: Original code is different and hard to replicate one to one. This
-    // code is based on `CVidMosaic::Render` implementation and adjusted for
-    // 3D stuff.
-    WORD nTileSize = pRes->GetTileSize(m_bDoubleSize);
-    WORD nMosaicWidth = pRes->GetMosaicWidth(m_bDoubleSize);
-    WORD nMosaicHeight = pRes->GetMosaicHeight(m_bDoubleSize);
+    INT nTileSize = pRes->GetTileSize(m_bDoubleSize);
 
-    INT nFirstTileX = rMosaic.left / nTileSize;
-    INT nFirstTileY = rMosaic.top / nTileSize;
+    // NOTE: There is no clamp: a negative `rMosaic.left` or `rMosaic.top`
+    // gives negative tile numbers, as in the original.
+    INT nTile = GetTileNumber(rMosaic.left, rMosaic.top);
+
+    // NOTE: The row stride is computed from the mosaic width, not taken from
+    // the header's `nXTiles`.
+    INT nTilesAcross = static_cast<INT>(ceil(static_cast<double>(pRes->GetMosaicWidth(m_bDoubleSize)) / static_cast<double>(nTileSize)));
+
     INT nLastTileX = rMosaic.right % nTileSize == 0
         ? rMosaic.right / nTileSize
         : rMosaic.right / nTileSize + 1;
-    INT nLastTileY = (rMosaic.bottom % nTileSize == 0)
+    INT nLastTileY = rMosaic.bottom % nTileSize == 0
         ? rMosaic.bottom / nTileSize
         : rMosaic.bottom / nTileSize + 1;
 
-    nFirstTileX = max(nFirstTileX, 0);
-    nFirstTileY = max(nFirstTileY, 0);
-    nLastTileX = min(nLastTileX, pRes->m_pHeader->nXTiles);
-    nLastTileY = min(nLastTileY, pRes->m_pHeader->nYTiles);
+    CRect rTile;
+    rTile.SetRect(0, 0, nTileSize, nTileSize);
+
+    INT nTileY = nTile / nTilesAcross;
+    INT nFirstTileX = nTile % nTilesAcross;
+
+    y += nTileY * nTileSize;
+    x += nFirstTileX * nTileSize;
 
     CVideo3d::glEnable(GL_TEXTURE_2D);
     g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
@@ -445,21 +496,45 @@ BOOL CVidMosaic::Render3d(int x, int y, const CRect& rMosaic, const CRect& rClip
     CVideo3d::glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
 
-    CRect rTile(0, 0, nTileSize, nTileSize);
+    BOOL bResult = TRUE;
 
-    for (INT nTileY = nFirstTileY; nTileY < nLastTileY; nTileY++) {
-        int destY = y + nTileY * nTileSize;
-
-        rTile.bottom = min(nMosaicHeight - nTileY * nTileSize, nTileSize);
-        if (destY + rTile.bottom < rClip.top || destY > rClip.bottom) {
-            continue;
+    for (; nTileY < nLastTileY; nTileY++) {
+        if (y >= rClip.bottom) {
+            break;
         }
 
-        for (INT nTileX = nFirstTileX; nTileX < nLastTileX; nTileX++) {
-            int destX = x + nTileX * nTileSize;
+        int destX = x;
+        INT nTileX;
+        for (nTileX = nFirstTileX; nTileX < nLastTileX; nTileX++, nTile++, destX += nTileSize) {
+            // NOTE: The pointer is rendered for every tile, before the size
+            // and clip tests.
+            g_pChitin->GetCurrentVideoMode()->RenderPointer();
 
-            rTile.right = min(nMosaicWidth - nTileX * nTileSize, nTileSize);
-            if (destX + rTile.right < rClip.left || destX > rClip.right) {
+            if ((nTileX + 1) * nTileSize > pRes->GetMosaicWidth(m_bDoubleSize)) {
+                rTile.right = max(0, pRes->GetMosaicWidth(m_bDoubleSize) - nTileX * nTileSize);
+            } else {
+                rTile.right = nTileSize;
+            }
+
+            if (rTile.right == 0) {
+                break;
+            }
+
+            if ((nTileY + 1) * nTileSize > pRes->GetMosaicHeight(m_bDoubleSize)) {
+                rTile.bottom = max(0, pRes->GetMosaicHeight(m_bDoubleSize) - nTileY * nTileSize);
+            } else {
+                rTile.bottom = nTileSize;
+            }
+
+            if (rTile.bottom == 0) {
+                break;
+            }
+
+            CSize blitSize(rTile.right, rTile.bottom);
+
+            if (destX + nTileSize < rClip.left
+                || destX >= rClip.right
+                || y + nTileSize < rClip.top) {
                 continue;
             }
 
@@ -467,12 +542,12 @@ BOOL CVidMosaic::Render3d(int x, int y, const CRect& rMosaic, const CRect& rClip
                 ? CVidTile::BYTES_PER_TEXEL * CVIDINF_FX_WIDTH
                 : CVidTile::BYTES_PER_TEXEL * rTile.right;
 
-            BOOL bSuccess = BltMos8To32(reinterpret_cast<DWORD*>(CVideo3d::texImageData),
+            bResult = BltMos8To32(reinterpret_cast<DWORD*>(CVideo3d::texImageData),
                 lPitch,
-                nTileY * pRes->m_pHeader->nXTiles + nTileX,
+                nTile,
                 rTile,
                 dwFlags);
-            if (!bSuccess) {
+            if (!bResult) {
                 if (!bDemanded) {
                     pRes->Release();
                 }
@@ -495,21 +570,24 @@ BOOL CVidMosaic::Render3d(int x, int y, const CRect& rMosaic, const CRect& rClip
                     0,
                     0,
                     0,
-                    rTile.Width(),
-                    rTile.Height(),
+                    blitSize.cx,
+                    blitSize.cy,
                     GL_RGBA,
                     GL_UNSIGNED_BYTE,
                     CVideo3d::texImageData);
                 g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
             }
 
-            RenderTexture(destX, destY, rTile.Size(), rClip, dwFlags);
+            RenderTexture(destX, y, blitSize, rClip, dwFlags);
         }
+
+        y += nTileSize;
+        nTile += nTilesAcross - nTileX + nFirstTileX;
     }
 
     if (!bDemanded) {
         pRes->Release();
     }
 
-    return TRUE;
+    return bResult;
 }
