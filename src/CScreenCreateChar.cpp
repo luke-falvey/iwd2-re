@@ -240,7 +240,7 @@ CScreenCreateChar::CScreenCreateChar()
     m_pVirtualKeys[39] = CKeyInfo(VK_END, -1, 0);
     m_pVirtualKeys[40] = CKeyInfo(VK_HOME, -1, 0);
     m_pVirtualKeys[41] = CKeyInfo(VK_LEFT, static_cast<BYTE>(CChitin::TIMER_UPDATES_PER_SECOND), static_cast<BYTE>(CChitin::TIMER_UPDATES_PER_SECOND));
-    m_pVirtualKeys[42] = CKeyInfo(VK_UP, static_cast<BYTE>(CChitin::TIMER_UPDATES_PER_SECOND), static_cast<BYTE>(CChitin::TIMER_UPDATES_PER_SECOND));
+    m_pVirtualKeys[42] = CKeyInfo(VK_UP, 0, 0);
     m_pVirtualKeys[43] = CKeyInfo(VK_RIGHT, static_cast<BYTE>(CChitin::TIMER_UPDATES_PER_SECOND), static_cast<BYTE>(CChitin::TIMER_UPDATES_PER_SECOND));
     m_pVirtualKeys[44] = CKeyInfo(VK_DOWN, 0, 0);
     m_pVirtualKeys[45] = CKeyInfo(VK_SNAPSHOT, -1, 0);

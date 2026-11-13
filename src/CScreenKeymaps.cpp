@@ -241,8 +241,8 @@ CScreenKeymaps::CScreenKeymaps()
     m_pVirtualKeys[87] = CKeyInfo(VK_OEM_PERIOD, 0, 0);
     m_pVirtualKeys[88] = CKeyInfo(VK_OEM_2, 0, 0);
     m_pVirtualKeys[89] = CKeyInfo(VK_TAB, -1, 0);
-    m_pVirtualKeys[90] = CKeyInfo(VK_PRIOR, 0, 0);
-    m_pVirtualKeys[91] = CKeyInfo(VK_NEXT, 0, 0);
+    m_pVirtualKeys[90] = CKeyInfo(VK_NEXT, 0, 0);
+    m_pVirtualKeys[91] = CKeyInfo(VK_PRIOR, 0, 0);
 
     m_bSystemKeyCtrl = FALSE;
     m_bSystemKeyShift = FALSE;
