@@ -662,7 +662,7 @@ BOOL CResCache::RefreshStatus(const CString& sDirName)
     LeaveCriticalSection(&m_criticalSection);
 
     for (unsigned int k = 0; k < g_pChitin->cDimm.m_nResFiles; k++) {
-        if (!g_pChitin->cDimm.m_cKeyTable.m_bInitialized && k >= g_pChitin->cDimm.m_cKeyTable.m_nResFiles) {
+        if (!g_pChitin->cDimm.m_cKeyTable.m_bInitialized || k >= g_pChitin->cDimm.m_cKeyTable.m_nResFiles) {
             return FALSE;
         }
 

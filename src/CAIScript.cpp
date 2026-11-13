@@ -149,6 +149,9 @@ void CAIScript::Read(CResRef cNewResRef, BOOL playerScript)
         // NOTE: Lots of inlined stuff from this point.
         CAIPlayerScript cPScript;
         cPScript.SetResRef(cNewResRef, TRUE, TRUE);
+        // NOTE: Requested a second time, on top of the auto request in
+        // `SetResRef`.
+        cPScript.Request();
 
         if (cPScript.GetRes() == NULL) {
             return;
@@ -161,6 +164,9 @@ void CAIScript::Read(CResRef cNewResRef, BOOL playerScript)
         // NOTE: Lots of inlined stuff from this point.
         CAINonPlayerScript cNPScript;
         cNPScript.SetResRef(cNewResRef, TRUE, TRUE);
+        // NOTE: Requested a second time, on top of the auto request in
+        // `SetResRef`.
+        cNPScript.Request();
 
         if (cNPScript.GetRes() != NULL) {
             cNPScript.GetRes()->Demand();
@@ -169,6 +175,7 @@ void CAIScript::Read(CResRef cNewResRef, BOOL playerScript)
         } else {
             CAIPlayerScript cPScript;
             cPScript.SetResRef(cNewResRef, TRUE, TRUE);
+            cPScript.Request();
 
             if (cPScript.GetRes() == NULL) {
                 return;
