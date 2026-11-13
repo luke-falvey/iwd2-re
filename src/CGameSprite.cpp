@@ -7444,27 +7444,27 @@ void CGameSprite::SetSequence(SHORT nSequence)
 
     if ((m_derivedStats.m_generalState & STATE_SILENCED) == 0
         && (g_pBaldurChitin->GetObjectGame()->GetOptions()->m_bFootStepsSounds
-            || g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) == -1)
-        && m_nSequence != nSequence
-        && m_pArea == g_pBaldurChitin->GetObjectGame()->GetVisibleArea()
-        && m_pArea != NULL
-        && nSequence != SEQ_DIE
-        && nSequence != SEQ_SLEEP
-        && nSequence != SEQ_TWITCH
-        && nSequence != SEQ_WALK
-        && nSequence != SEQ_AWAKE) {
-        if (!m_sndReady.IsSoundPlaying()) {
-            // NOTE: Uninline.
-            char* sndReady = m_animation.GetSndReady();
-
-            if (sndReady[0] != '\0') {
+            || g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_id) == -1)) {
+        if (m_nSequence != nSequence && m_pArea != NULL) {
+            if (nSequence == SEQ_DIE
+                || nSequence == SEQ_SLEEP
+                || nSequence == SEQ_TWITCH
+                || nSequence == SEQ_WALK
+                || nSequence == SEQ_AWAKE) {
+                m_sndReady.Stop();
+            } else if (!m_sndReady.IsSoundPlaying()) {
                 // NOTE: Uninline.
-                m_sndReady.SetResRef(CResRef(sndReady), TRUE, TRUE);
+                char* sndReady = m_animation.GetSndReady();
 
-                delete sndReady;
+                if (sndReady[0] != '\0') {
+                    // NOTE: Uninline.
+                    m_sndReady.SetResRef(CResRef(sndReady), TRUE, TRUE);
 
-                m_sndReady.SetLoopingFlag(1);
-                m_sndReady.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+                    delete sndReady;
+
+                    m_sndReady.SetLoopingFlag(1);
+                    m_sndReady.Play(m_pos.x, m_pos.y, m_posZ, FALSE);
+                }
             }
         }
     } else {
@@ -7474,6 +7474,7 @@ void CGameSprite::SetSequence(SHORT nSequence)
     SHORT nDirection = m_nDirection & 0xFE;
     CItem* curWeapon;
     const ITEM_ABILITY* curAttack;
+    SHORT index = 0;
 
     switch (nSequence) {
     case SEQ_ATTACK:
@@ -7493,7 +7494,7 @@ void CGameSprite::SetSequence(SHORT nSequence)
         if (curAttack->type != 2) {
             LONG totalProb = 0;
             LONG prob = rand() % 100 + 1;
-            for (int index = 0; index < 6 && prob > totalProb; index++) {
+            for (index = 0; index < 6 && prob > totalProb; index++) {
                 totalProb += curAttack->attackProbability[index];
                 if (prob <= totalProb) {
                     switch (index) {
@@ -7522,7 +7523,9 @@ void CGameSprite::SetSequence(SHORT nSequence)
             curWeapon->Release();
         }
 
-        if (nSequence == SEQ_HEAD_TURN) {
+        // NOTE: Only reached with `index == 6` when no probability matched in
+        // the non-ranged path.
+        if (index == 6) {
             // NOTE: Uninline.
             nSequence = GetIdleSequence();
         }
@@ -7684,7 +7687,7 @@ void CGameSprite::SetTargetFly(BYTE circleType, BYTE facing, LONG radius)
     } else {
         m_fCircleChange = static_cast<double>(m_radius) * static_cast<double>(circleType) * 3.1415926535 / static_cast<double>(m_animation.GetMoveScale()) / 2.0;
 
-        switch (abs(4 * ((m_nDirection + 2) / 4))) {
+        switch ((4 * ((m_nDirection + 2) / 4)) % 16) {
         case 0:
             m_posOld.x += m_radius * m_circleFacing;
             break;
@@ -7832,8 +7835,18 @@ void CGameSprite::StartSpriteEffect(BYTE spriteEffect, BYTE intensityLevel, BYTE
         m_spriteEffectSequenceNumber = 1;
         m_spriteEffectSequenceLength = m_spriteEffectVidCell.GetSequenceLength(m_spriteEffectVidCell.m_nCurrentSequence, FALSE);
         m_effectExtendDirection = 1;
-        m_spriteEffectBaseIntensity = 0;
-        m_spriteEffectBaseIntensity = 1;
+        switch (intensityLevel) {
+        case 0:
+        case 1:
+        case 2:
+            m_spriteEffectBaseIntensity = 0;
+            m_spriteEffectRandomIntensity = 1;
+            break;
+        default:
+            // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
+            // __LINE__: 10147
+            UTIL_ASSERT(FALSE);
+        }
         break;
     case 4:
         if (a4 == TRUE) {
@@ -7856,20 +7869,25 @@ void CGameSprite::StartSpriteEffect(BYTE spriteEffect, BYTE intensityLevel, BYTE
         UTIL_ASSERT(FALSE);
     }
 
-    int cnt = m_spriteEffectSequenceLength * (m_spriteEffectBaseIntensity + m_spriteEffectRandomIntensity - 1);
-    if (m_spriteEffectSequenceLength * (m_spriteEffectBaseIntensity + m_spriteEffectRandomIntensity - 1) > 0) {
+    // NOTE: `m_spriteEffectBaseIntensity` is sign-extended in the original.
+    int cnt = m_spriteEffectSequenceLength * (static_cast<signed char>(m_spriteEffectBaseIntensity) + m_spriteEffectRandomIntensity - 1);
+    if (m_spriteEffectSequenceLength * (static_cast<signed char>(m_spriteEffectBaseIntensity) + m_spriteEffectRandomIntensity - 1) > 0) {
         m_pSpriteEffectArray = new USHORT[cnt];
-        if (m_pSpriteEffectArray != NULL) {
+        if (m_pSpriteEffectArray == NULL) {
             // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
             // __LINE__: 10332
             UTIL_ASSERT(FALSE);
+            return;
         }
 
         m_pSpriteEffectArrayPosition = new POINT[cnt];
-        if (m_pSpriteEffectArrayPosition != NULL) {
+        if (m_pSpriteEffectArrayPosition == NULL) {
             // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
             // __LINE__: 10338
             UTIL_ASSERT(FALSE);
+            delete m_pSpriteEffectArray;
+            m_pSpriteEffectArray = NULL;
+            return;
         }
 
         memset(m_pSpriteEffectArray, 0xFF, sizeof(USHORT) * cnt);
@@ -7926,9 +7944,9 @@ void CGameSprite::RenderSpriteCover(CVidMode* pVidMode, INT nSurface, CVidCell* 
             vfx.m_nTransValue);
 
         rGCBounds.left = newPos.x - ptReference.x;
-        rGCBounds.top = newPos.y + m_posZ - ptReference.y;
+        rGCBounds.top = newPos.y - ptReference.y;
         rGCBounds.right = rGCBounds.left + rFX.Width();
-        rGCBounds.bottom = rGCBounds.top + rFX.Height() - m_posZ;
+        rGCBounds.bottom = rGCBounds.top + rFX.Height();
         m_pArea->GetInfinity()->FXRenderClippingPolys(newPos.x,
             newPos.y - m_posZ,
             m_posZ,
@@ -8748,7 +8766,11 @@ void CGameSprite::ClearMarshal(BOOL unequip)
 
     for (nClass = 0; nClass < CSPELLLIST_NUM_CLASSES; nClass++) {
         for (nLevel = 0; nLevel < CSPELLLIST_MAX_LEVELS; nLevel++) {
-            m_spells.m_spellsByClass[nClass].m_lists[nLevel].m_List.clear();
+            if (m_spells.m_spellsByClass[nClass].m_lists[nLevel].m_List.size() > 0) {
+                m_spells.m_spellsByClass[nClass].m_lists[nLevel].m_List.clear();
+                m_spells.m_spellsByClass[nClass].m_lists[nLevel].field_14 = 0;
+                m_spells.m_spellsByClass[nClass].m_lists[nLevel].field_18 = 0;
+            }
         }
         m_spells.m_spellsByClass[nClass].m_nHighestLevel = 0;
     }
@@ -8793,11 +8815,15 @@ void CGameSprite::ClearMarshal(BOOL unequip)
         delete nodeEffect;
     }
 
+    m_timedEffectList.RemoveAll();
+
     pos = m_equipedEffectList.GetHeadPosition();
     while (pos != NULL) {
         nodeEffect = m_equipedEffectList.GetNext(pos);
         delete nodeEffect;
     }
+
+    m_equipedEffectList.RemoveAll();
 
     if (m_pDialogData != NULL) {
         delete m_pDialogData;
@@ -9003,9 +9029,7 @@ void CGameSprite::Marshal(BYTE** pCreature, LONG* creatureSize, WORD* facing, BO
 
     m_baseStats.m_subrace = m_startTypeAI.m_nSubRace;
 
-    // NOTE: The original copies 0x37C bytes. The tail of `CCreatureFileHeader`
-    // is not reconstructed yet so it is smaller here, the rest of the header
-    // stays zeroed (`Unmarshal` reads back the same size).
+    // NOTE: The original copies 0x37C bytes (`sizeof(CCreatureFileHeader)`).
     memcpy(*pCreature + 8, &m_baseStats, sizeof(m_baseStats));
 
     pOffsets = reinterpret_cast<CCreatureFileOffsets*>(*pCreature + 900);
@@ -9325,7 +9349,7 @@ void CGameSprite::MarshalMessage(BYTE** pData, DWORD* dwSize)
     *reinterpret_cast<BYTE*>(*pData + cnt) = nAreaStringLength;
     cnt += sizeof(BYTE);
 
-    memcpy(*pData + cnt, sSpriteString.GetBuffer(nAreaStringLength), nAreaStringLength);
+    memcpy(*pData + cnt, sAreaString.GetBuffer(nAreaStringLength), nAreaStringLength);
     cnt += nAreaStringLength;
 
     *reinterpret_cast<LONG*>(*pData + cnt) = pos.x;
@@ -10038,6 +10062,7 @@ void CGameSprite::UnmarshalScripts()
     sFileName = m_baseStats.m_scriptTeam;
     if (sFileName != "") {
         m_teamScript = new CAIScript(CResRef(sFileName));
+        field_4FFC = m_teamScript->m_cResRef;
         if (m_teamScript->IsEmpty()) {
             delete m_teamScript;
             m_teamScript = NULL;
@@ -10073,6 +10098,8 @@ void CGameSprite::UnmarshalScripts()
     }
 
     sFileName = m_baseStats.m_scriptMovement;
+    sFileName = sFileName.Left(8);
+    sFileName.TrimRight();
     if (sFileName != "") {
         m_movementScript = new CAIScript(CResRef(sFileName));
         if (m_movementScript->IsEmpty()) {
@@ -10160,6 +10187,7 @@ void CGameSprite::LoadAreaInformation(CAreaFileCreature* pCreature)
     if (tempRes != "") {
         CAIScript* pScript = new CAIScript(CResRef(tempRes));
 
+        field_4FFC = tempRes;
         CResRef(tempRes).GetResRef(m_baseStats.m_scriptTeam);
         SetScript(2, pScript);
     }
@@ -10219,7 +10247,7 @@ void CGameSprite::RenderMirrorImage(INT placement, CRect& rFX, CRect& rGCBounds,
     CPoint pos;
 
     pos.x = m_pos.x + mirrorImagePlacementX[placement];
-    pos.y = m_pos.y += mirrorImagePlacementY[placement];
+    pos.y = m_pos.y + mirrorImagePlacementY[placement];
     pos.y += m_pArea->GetHeightOffset(pos, m_listType);
 
     m_animation.CalculateGCBoundsRect(rGCBounds,
@@ -10230,16 +10258,18 @@ void CGameSprite::RenderMirrorImage(INT placement, CRect& rFX, CRect& rGCBounds,
         rFX.Height());
 
     if (!IsRectEmpty(rViewRect & rGCBounds)) {
-        mirrorPos.x = max(pos.x, m_pArea->GetInfinity()->nAreaX - 1) / CPathSearch::GRID_SQUARE_SIZEX;
-        mirrorPos.y = max(pos.y, m_pArea->GetInfinity()->nAreaY - 1) / CPathSearch::GRID_SQUARE_SIZEY;
+        INT x = min(max(pos.x, 0), m_pArea->GetInfinity()->nAreaX - 1);
+        INT y = min(max(pos.y, 0), m_pArea->GetInfinity()->nAreaY - 1);
+        mirrorPos.x = x / CPathSearch::GRID_SQUARE_SIZEX;
+        mirrorPos.y = y / CPathSearch::GRID_SQUARE_SIZEY;
         if ((pSearch->GetLOSCost(mirrorPos, m_terrainTable, searchSquareCode, FALSE) != CPathSearch::COST_IMPASSABLE
                 || searchSquareCode == 14)
-            && pVisibility->IsTileExplored(pVisibility->PointToTile(mirrorPos))) {
+            && pVisibility->IsTileExplored(pVisibility->PointToTile(CPoint(x, y)))) {
             m_animation.Render(m_pArea->GetInfinity(),
                 pVidMode,
                 nSurface,
                 rFX,
-                mirrorPos,
+                pos,
                 ptReference,
                 dwRenderFlags | 0x2,
                 rgbTint,
@@ -10313,10 +10343,17 @@ void CGameSprite::GetWeaponButton(BYTE nButtonNum, CButtonData& cButtonData)
             cButtonData.m_abilityId.m_itemType = 2;
             cButtonData.m_abilityId.m_itemNum = nButtonNum + 43;
             cButtonData.m_abilityId.m_abilityNum = field_3D3A[nButtonNum];
+            cButtonData.m_name = pItem->GetGenericName();
             cButtonData.m_abilityId.field_10 = rule.GetItemAbilityDescription(pItem->cResRef,
                 field_3D3A[nButtonNum]);
             if (cButtonData.m_abilityId.field_10 == -1) {
                 cButtonData.m_abilityId.field_10 = pItem->GetGenericName();
+            }
+
+            // NOTE: Compares the low byte only.
+            if (static_cast<BYTE>(pAbility->type) == 4) {
+                cButtonData.m_launcherIcon = cButtonData.m_icon;
+                cButtonData.m_launcherName = cButtonData.m_name;
             }
 
             cButtonData.m_count = 0;
@@ -10395,7 +10432,7 @@ void CGameSprite::InitQuickSpellData(CResRef resRef, BYTE type, CButtonData& cBu
             if (nClass == CAIOBJECTTYPE_C_CLERIC) {
                 BOOLEAN bFound = FALSE;
                 for (UINT nLevel = 0; nLevel < m_domainSpells.m_nHighestLevel; nLevel++) {
-                    if (!bFound) {
+                    if (bFound) {
                         break;
                     }
 
@@ -10407,14 +10444,14 @@ void CGameSprite::InitQuickSpellData(CResRef resRef, BYTE type, CButtonData& cBu
             }
         } else {
             BOOLEAN bFound = FALSE;
-            for (UINT nLevel = 0; nLevel < m_spells.m_spellsByClass[nClass].m_nHighestLevel; nLevel++) {
-                if (!bFound) {
+            for (UINT nLevel = 0; nLevel < m_spells.m_spellsByClass[nClassIndex].m_nHighestLevel; nLevel++) {
+                if (bFound) {
                     break;
                 }
 
-                if (m_spells.m_spellsByClass[nClass].Find(v1, nLevel, v2) == TRUE) {
+                if (m_spells.m_spellsByClass[nClassIndex].Find(v1, nLevel, v2) == TRUE) {
                     bFound = TRUE;
-                    count += m_spells.m_spellsByClass[nClass].m_lists[nLevel].Get(v2)->field_8;
+                    count += m_spells.m_spellsByClass[nClassIndex].m_lists[nLevel].Get(v2)->field_8;
                 }
             }
         }
@@ -10466,6 +10503,8 @@ void CGameSprite::InitQuickSpellData(CResRef resRef, BYTE type, CButtonData& cBu
         nCasterLevel = 1;
     }
 
+    // NOTE: The exe initializes this pointer from `a5` (and also keeps it
+    // when there are no abilities) instead of `NULL`.
     SPELL_ABILITY* pBestAbility = NULL;
     for (INT abilityNum = 0; abilityNum < cSpell.GetAbilityCount(); abilityNum++) {
         if (cSpell.GetAbility(abilityNum)->minCasterLevel > nCasterLevel) {
@@ -10480,6 +10519,7 @@ void CGameSprite::InitQuickSpellData(CResRef resRef, BYTE type, CButtonData& cBu
         cButtonData.m_icon = CString(pBestAbility->quickSlotIcon);
         cButtonData.m_name = cSpell.GetGenericName();
         cButtonData.m_abilityId.m_itemType = 1;
+        cButtonData.m_abilityId.m_res = resRef;
         cButtonData.m_abilityId.m_targetType = pBestAbility->actionType;
         cButtonData.m_abilityId.field_1D = a5;
         cButtonData.m_abilityId.m_nClass = nClass;
@@ -10541,11 +10581,13 @@ void CGameSprite::InitQuickItemData(SHORT itemNum, SHORT abilityNum, int a3, CBu
 
             ITEM_ABILITY* ability = pItem->GetAbility(abilityNum);
             if (ability != NULL) {
-                if (ability->type != 4
-                    && (ability->type != 2 || CheckLauncherType(ability, NULL))) {
+                // NOTE: Compares the low byte only.
+                if (static_cast<BYTE>(ability->type) != 4
+                    && (static_cast<BYTE>(ability->type) != 2 || CheckLauncherType(ability, NULL))) {
                     cButtonData.m_icon = CString(ability->quickSlotIcon);
                     cButtonData.m_name = pItem->GetGenericName();
                     cButtonData.m_abilityId.m_itemNum = itemNum;
+                    cButtonData.m_abilityId.m_itemType = 2;
                     cButtonData.m_abilityId.m_abilityNum = abilityNum;
                     cButtonData.m_abilityId.m_targetType = ability->actionType;
                     cButtonData.m_abilityId.field_10 = cRule.GetItemAbilityDescription(pItem->GetResRef(), abilityNum);
@@ -11729,7 +11771,7 @@ CGameButtonList* CGameSprite::GetItemUsages(SHORT slotNum, WORD buttonType, SHOR
                             if (curAmmoAbility->maxUsageCount == 0) {
                                 pButtonData->m_bDisplayCount = FALSE;
                             }
-                            pButtonData->m_abilityId.field_10 = cRule.GetItemAbilityDescription(pAmmo->GetResRef(), nAmmoAbility);
+                            pButtonData->m_abilityId.field_10 = cRule.GetItemAbilityDescription(pItem->GetResRef(), nAmmoAbility);
                             if (pButtonData->m_abilityId.field_10 == -1) {
                                 pButtonData->m_abilityId.field_10 = pAmmo->GetGenericName();
                             }
@@ -11757,7 +11799,8 @@ CItem* CGameSprite::GetLauncher(const ITEM_ABILITY* ability, SHORT& launcherSlot
     int index;
     launcherSlot = 0;
 
-    if (ability == NULL || ability->type != 2) {
+    // NOTE: Compares the low byte only.
+    if (ability == NULL || static_cast<BYTE>(ability->type) != 2) {
         return NULL;
     }
 
@@ -11831,7 +11874,8 @@ SHORT CGameSprite::GetLauncherSlot(SHORT slotNum, SHORT abilityNum)
     pItem->Demand();
 
     ITEM_ABILITY* ability = pItem->GetAbility(abilityNum);
-    if (ability == NULL || ability->type != 2) {
+    // NOTE: Compares the low byte only.
+    if (ability == NULL || static_cast<BYTE>(ability->type) != 2) {
         pItem->Release();
         return -1;
     }
@@ -12015,7 +12059,7 @@ void CGameSprite::ReadySpell(SHORT buttonNum, INT nType, BOOLEAN firstCall)
                 m_typeAI,
                 string,
                 0,
-                m_currentUseButton.m_abilityId.m_nClass | (m_currentUseButton.m_abilityId.field_1E << 8));
+                m_currentUseButton.m_abilityId.m_nClass | (static_cast<WORD>(m_currentUseButton.m_abilityId.field_1E) << 8));
             action.m_specificID3 = m_currentUseButton.m_abilityId.field_1D;
             ClearActions(FALSE);
             m_userCommandPause = 75;
@@ -12228,7 +12272,7 @@ void CGameSprite::sub_71A0E0(CButtonData buttonData, BOOLEAN firstCall)
                 m_typeAI,
                 string,
                 0,
-                m_currentUseButton.m_abilityId.m_nClass | (m_currentUseButton.m_abilityId.field_1E << 8));
+                m_currentUseButton.m_abilityId.m_nClass | (static_cast<WORD>(m_currentUseButton.m_abilityId.field_1E) << 8));
 
             action.m_specificID3 = m_currentUseButton.m_abilityId.field_1D;
             ClearActions(FALSE);
@@ -12239,7 +12283,7 @@ void CGameSprite::sub_71A0E0(CButtonData buttonData, BOOLEAN firstCall)
             break;
         case 6:
             // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
-            // __LINE__: 16649
+            // __LINE__: 18649
             UTIL_ASSERT(FALSE);
             break;
         }
@@ -12269,12 +12313,13 @@ void CGameSprite::sub_71A550(CButtonData buttonData, BOOLEAN firstCall)
             m_currentUseButton.m_abilityId.m_res.CopyToString(string);
 
             // NOTE: Uninline.
-            action = CAIAction(CAIAction::SPELL,
+            action = CAIAction(CAIAction::SPELLNODEC,
                 m_typeAI,
                 string,
                 0,
-                m_currentUseButton.m_abilityId.m_nClass | (m_currentUseButton.m_abilityId.field_1E << 8));
+                m_currentUseButton.m_abilityId.m_nClass | (static_cast<WORD>(m_currentUseButton.m_abilityId.field_1E) << 8));
 
+            action.m_specificID3 = m_currentUseButton.m_abilityId.field_1D;
             ClearActions(FALSE);
             m_userCommandPause = 75;
             m_triggerId = CGameObjectArray::INVALID_INDEX;
@@ -12289,11 +12334,11 @@ void CGameSprite::sub_71A550(CButtonData buttonData, BOOLEAN firstCall)
             m_currentUseButton.m_abilityId.m_res.CopyToString(string);
 
             // NOTE: This call is not inlined (see above).
-            action = CAIAction(CAIAction::SPELL,
+            action = CAIAction(CAIAction::FORCESPELL,
                 m_typeAI,
                 string,
                 0,
-                m_currentUseButton.m_abilityId.m_nClass | (m_currentUseButton.m_abilityId.field_1E << 8));
+                m_currentUseButton.m_abilityId.m_nClass | (static_cast<WORD>(m_currentUseButton.m_abilityId.field_1E) << 8));
             action.m_specificID3 = m_currentUseButton.m_abilityId.field_1D;
             ClearActions(FALSE);
             m_userCommandPause = 75;
