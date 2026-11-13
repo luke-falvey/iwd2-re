@@ -2,7 +2,7 @@
 # Fix the header, then delete the line. Regenerate test: py -I tools/gen_layout_asserts.py
 CAIScriptFile::m_decompiledText
 CAIScriptFile::m_objects
-CAIScriptFile::m_triggers
+CAIScriptFile::m_actions
 CBaldurChitin::field_49AA
 CBaldurChitin::field_49AB
 CBaldurChitin::field_49AC
