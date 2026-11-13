@@ -51,7 +51,7 @@ CGameAnimationTypeMonsterLayered::CGameAnimationTypeMonsterLayered(USHORT animat
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjAnimation.cpp
         // __LINE__: 12891
-        UTIL_ASSERT(m_currentVidCell != NULL);
+        UTIL_ASSERT(FALSE);
     }
 
     m_g1VidCellBase.SetResRef(CResRef(m_resRef + "G1"), FALSE, TRUE, TRUE);
@@ -264,9 +264,9 @@ void CGameAnimationTypeMonsterLayered::ChangeDirection(SHORT nDirection)
         }
 
         if (MIRROR_BAM && m_currentBamDirection > m_extendDirectionTest) {
-            m_currentVidCellWeapon->SequenceSet(8 * m_currentBamDirection + ((17 - m_currentBamDirection) % 16) / 2);
+            m_currentVidCellWeapon->SequenceSet(8 * m_currentBamSequence + ((17 - m_currentBamDirection) % 16) / 2);
         } else {
-            m_currentVidCellWeapon->SequenceSet(8 * m_currentBamDirection + m_currentBamDirection / 2);
+            m_currentVidCellWeapon->SequenceSet(8 * m_currentBamSequence + m_currentBamDirection / 2);
         }
     }
 }
@@ -306,12 +306,12 @@ void CGameAnimationTypeMonsterLayered::EquipWeapon(const CString& resRef, BYTE* 
                     m_weaponLeftHand = TRUE;
                 }
 
-                m_g1VidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef + "G1"), FALSE, TRUE, TRUE);
-                m_g2VidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef + "G2"), FALSE, TRUE, TRUE);
+                m_g1VidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "G1"), FALSE, TRUE, TRUE);
+                m_g2VidCellWeaponBase.SetResRef(CResRef(m_resRef + resRef[0] + "G2"), FALSE, TRUE, TRUE);
 
                 if (!MIRROR_BAM) {
-                    m_g1VidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef + "G1E"), FALSE, TRUE, TRUE);
-                    m_g2VidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef + "G2E"), FALSE, TRUE, TRUE);
+                    m_g1VidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "G1E"), FALSE, TRUE, TRUE);
+                    m_g2VidCellWeaponExtend.SetResRef(CResRef(m_resRef + resRef[0] + "G2E"), FALSE, TRUE, TRUE);
                 }
 
                 break;
@@ -348,9 +348,11 @@ void CGameAnimationTypeMonsterLayered::EquipWeapon(const CString& resRef, BYTE* 
             m_g1VidCellWeaponBase.CancelRequest();
             m_g2VidCellWeaponBase.CancelRequest();
 
-            m_currentVidCellWeaponExtend = NULL;
-            m_g1VidCellWeaponExtend.CancelRequest();
-            m_g2VidCellWeaponExtend.CancelRequest();
+            if (!MIRROR_BAM) {
+                m_currentVidCellWeaponExtend = NULL;
+                m_g1VidCellWeaponExtend.CancelRequest();
+                m_g2VidCellWeaponExtend.CancelRequest();
+            }
 
             m_currentVidCellWeapon = NULL;
         }
@@ -361,9 +363,11 @@ void CGameAnimationTypeMonsterLayered::EquipWeapon(const CString& resRef, BYTE* 
         m_g1VidCellWeaponBase.CancelRequest();
         m_g2VidCellWeaponBase.CancelRequest();
 
-        m_currentVidCellWeaponExtend = NULL;
-        m_g1VidCellWeaponExtend.CancelRequest();
-        m_g2VidCellWeaponExtend.CancelRequest();
+        if (!MIRROR_BAM) {
+            m_currentVidCellWeaponExtend = NULL;
+            m_g1VidCellWeaponExtend.CancelRequest();
+            m_g2VidCellWeaponExtend.CancelRequest();
+        }
 
         m_currentVidCellWeapon = NULL;
     }
@@ -528,6 +532,7 @@ void CGameAnimationTypeMonsterLayered::ClearColorEffectsAll()
 
     for (BYTE colorRange = 0; colorRange < CVidPalette::NUM_RANGES; colorRange++) {
         ClearColorEffects(colorRange);
+        ClearColorEffects(colorRange | 0x10);
     }
 }
 
