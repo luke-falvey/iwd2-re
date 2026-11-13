@@ -126,8 +126,10 @@ INT CImmunitiesSpellLevel::GetLevelMask()
 // 0x4E7030
 CImmunitiesSpellLevel& CImmunitiesSpellLevel::operator=(const CImmunitiesSpellLevel& other)
 {
-    for (int index = 0; index < 10; index++) {
-        m_levels[index] = other.m_levels[index];
+    if (this != &other) {
+        for (int index = 0; index < 10; index++) {
+            m_levels[index] = other.m_levels[index];
+        }
     }
 
     return *this;
@@ -157,11 +159,11 @@ CWeaponIdentification::CWeaponIdentification(const CWeaponIdentification& other)
 BOOL CWeaponIdentification::OfType(const CWeaponIdentification& other) const
 {
     return (other.m_itemType == m_itemType || other.m_itemType == 0)
-        && (((other.m_itemFlags ^ m_itemFlags) & 0x2) != 0 || (other.m_itemFlagMask & 0x2) == 0)
-        && (((other.m_itemFlags ^ m_itemFlags) & 0x10) != 0 || (other.m_itemFlagMask & 0x10) == 0)
-        && (((other.m_itemFlags ^ m_itemFlags) & 0x40) != 0 || (other.m_itemFlagMask & 0x40) == 0)
-        && (((other.m_itemFlags ^ m_itemFlags) & 0x100) != 0 || (other.m_itemFlagMask & 0x100) == 0)
-        && (((other.m_itemFlags ^ m_itemFlags) & 0x200) != 0 || (other.m_itemFlagMask & 0x200) == 0)
+        && (((other.m_itemFlags ^ m_itemFlags) & 0x2) == 0 || (other.m_itemFlagMask & 0x2) == 0)
+        && (((other.m_itemFlags ^ m_itemFlags) & 0x10) == 0 || (other.m_itemFlagMask & 0x10) == 0)
+        && (((other.m_itemFlags ^ m_itemFlags) & 0x40) == 0 || (other.m_itemFlagMask & 0x40) == 0)
+        && (((other.m_itemFlags ^ m_itemFlags) & 0x100) == 0 || (other.m_itemFlagMask & 0x100) == 0)
+        && (((other.m_itemFlags ^ m_itemFlags) & 0x200) == 0 || (other.m_itemFlagMask & 0x200) == 0)
         && (other.m_attributes >= m_attributes);
 }
 
@@ -520,9 +522,10 @@ ULONG CImmunitiesProjectile::Marshal(BYTE** ptrPtr)
 
         POSITION pos = GetHeadPosition();
         while (pos != NULL) {
+            // NOTE: The node holds the projectile type itself, not a pointer.
             DWORD* pId = GetNext(pos);
 
-            *reinterpret_cast<DWORD*>(ptr + offset) = *pId;
+            *reinterpret_cast<DWORD*>(ptr + offset) = reinterpret_cast<DWORD>(pId);
             offset += sizeof(DWORD);
         }
 
@@ -543,11 +546,12 @@ void CImmunitiesProjectile::Unmarshal(BYTE* data, ULONG nSize)
     int offset = 0;
 
     for (int index = 0; index < count; index++) {
-        DWORD* pId = new DWORD;
+        DWORD* pId = new DWORD; // NOTE: Leaked in the original.
 
         *pId = *reinterpret_cast<DWORD*>(data + offset);
         offset += sizeof(DWORD);
 
-        AddTail(pId);
+        // NOTE: The node holds the value, not the pointer.
+        AddTail(reinterpret_cast<DWORD*>(*pId));
     }
 }
