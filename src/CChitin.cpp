@@ -367,6 +367,7 @@ CChitin::~CChitin()
     DeleteCriticalSection(&field_2FC);
     DeleteCriticalSection(&field_32C);
     DeleteCriticalSection(&field_314);
+    DeleteCriticalSection(&field_344);
     DeleteCriticalSection(&field_C4);
     DeleteCriticalSection(&field_35C);
 
@@ -1095,7 +1096,7 @@ int CChitin::TranslateType(const CString& sRes)
     if (sRes.CompareNoCase("PLT") == 0)
         return 6;
 
-    return 0xFFFF;
+    return 0;
 }
 
 // 0x790FE0
@@ -1527,8 +1528,8 @@ void CChitin::DestroyServices()
 // 0x78F0E0
 void CChitin::AsynchronousUpdate(UINT nTimerID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2)
 {
-    int v1 = 0;
     CSingleLock positionLock(&m_csPointerPosition, FALSE);
+    LONG nTicks = 0;
 
     if (!m_bReInitializing) {
         nAUCounter++;
@@ -1563,7 +1564,6 @@ void CChitin::AsynchronousUpdate(UINT nTimerID, UINT uMsg, DWORD dwUser, DWORD d
                 }
 
                 BOOL bForward;
-                LONG nTicks;
                 LONG nRemainder;
                 if (nDelta < 0) {
                     bForward = FALSE;
@@ -1617,9 +1617,9 @@ void CChitin::AsynchronousUpdate(UINT nTimerID, UINT uMsg, DWORD dwUser, DWORD d
                 }
 
                 if (pt.x == m_ptPointer.x && pt.y == m_ptPointer.y) {
-                    if (v1 > 0) {
+                    if (nTicks > 0) {
                         if (pActiveEngine->CheckMouseMove()) {
-                            pActiveEngine->OnMouseMove(pt);
+                            pActiveEngine->OnMouseMove(m_ptPointer);
                         }
                     }
                 } else {
@@ -1635,15 +1635,19 @@ void CChitin::AsynchronousUpdate(UINT nTimerID, UINT uMsg, DWORD dwUser, DWORD d
                 }
             } else {
                 if (field_F9 && (pt.x == 0 || pt.x == m_nScreenWidth - 1)) {
-                    pt.x = min(max(pt.x, 0), m_nScreenWidth - 1);
+                    pt.y = (CVideo::SCREENHEIGHT - 1) * pt.y / (m_nScreenHeight - 1);
+                    if (pt.x == m_nScreenWidth - 1) {
+                        pt.x = CVideo::SCREENWIDTH - 1;
+                    }
 
                     if (pVidMode != NULL) {
                         pVidMode->m_bPointerInside = TRUE;
                     }
-                    pt.y = pt.y * (CVideo::SCREENHEIGHT - 1) / (m_nScreenHeight - 1);
                 } else if (field_F9 && (pt.y == 0 || pt.y == m_nScreenHeight - 1)) {
-                    pt.x = pt.x * (CVideo::SCREENWIDTH - 1) / (m_nScreenWidth - 1);
-                    pt.y = min(max(pt.y, 0), m_nScreenHeight - 1);
+                    pt.x = (CVideo::SCREENWIDTH - 1) * pt.x / (m_nScreenWidth - 1);
+                    if (pt.y == m_nScreenHeight - 1) {
+                        pt.y = CVideo::SCREENHEIGHT - 1;
+                    }
 
                     if (pVidMode != NULL) {
                         pVidMode->m_bPointerInside = TRUE;
@@ -1658,17 +1662,15 @@ void CChitin::AsynchronousUpdate(UINT nTimerID, UINT uMsg, DWORD dwUser, DWORD d
                 }
 
                 if (pt.x == m_ptPointer.x && pt.y == m_ptPointer.y) {
-                    if (v1 > 0) {
+                    if (nTicks > 0) {
                         if (pActiveEngine->CheckMouseMove()) {
-                            pActiveEngine->OnMouseMove(pt);
+                            pActiveEngine->OnMouseMove(m_ptPointer);
                         }
                     }
                 } else {
                     positionLock.Lock();
                     m_ptPointer = pt;
                     positionLock.Unlock();
-
-                    m_bPointerUpdated = FALSE;
 
                     if (pActiveEngine->CheckMouseMove()) {
                         pActiveEngine->OnMouseMove(pt);
