@@ -2,6 +2,13 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-14 (afternoon): play test S14, travel
+
+- **S14, travel** (`test_s14_travel.py`, about 7.2 minutes): the party walks from the docks up the stairs to the town (AR1100) and back, with the loading screen, the arrival views, the town's area map, and the refusal when only one character uses an exit ("You must gather your party before venturing forth."). It then enters and leaves a second building on the docks (AR1006), killing the goblin at its door. Passed three runs in a row on the original with no variants, and passed on the rebuild as written (every checkpoint 0.00% except one at 0.13%, idle movement).
+- A full run before S14 was added: S1-S8 and S10-S13 passed; S9 failed once on the Reig dialogue (see the entry below) and passed when rerun.
+
+**Next.** A store and a successful rest in the town; later-game saves loaded across the two games; the open items below.
+
 ## 2026-11-14 (midday): play tests S12 and S13, one more bug
 
 - **S12, saves across the two games** (`test_s12_cross_save.py`): each game makes a save on the docks and the other loads it. Both directions pass; the 14 compared regions (inventory, record, journal, action bar, portraits, load-screen slot) are identical. Only a start-of-game save is covered.

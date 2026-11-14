@@ -180,3 +180,26 @@ skill.
 - `docks_to_house()` in `test_s9_docks.py` is the shared set-up for anything
   starting in the house. It fails now and then in its own fight ("no goblin
   came", "click on Reig did not change the screen"): rerun.
+
+## Notes from S14
+
+- AR1000 to AR1100 (the town): area-map jump (170,100), walk to the foot of
+  the log stairs (225,370), click the exit (190,60). Travel is direct; no
+  world map is reachable at the start of the game. The way back is (230,395)
+  in the arrival view. With part of the party selected an exit prints "You
+  must gather your party before venturing forth."
+- AR1006 (house by the cliff): door at map 259-306,1649-1713, a goblin
+  attacks when it opens; inside, the exit is at screen (200,330). AR1001 and
+  AR1002 are locked.
+- Reig starts his dialogue himself when the party passes near him. S9's
+  goblin comes when the party reaches the snow west of the AR1005 house.
+- A click on the area map where the view already is changes nothing: skip
+  that jump or `act()` fails.
+- Select All straight after a fight can be lost: check the group action bar
+  and retry.
+- The loading screen can be up for under a second: poll for two equal,
+  non-dark frames while the action bar is gone instead of `wait_stable`.
+  Its hint is random and is also printed in the message window on arrival.
+- Interior lamps flicker: keep them and the party out of interior regions.
+- `server.py` in scratchpad `s14` keeps one game open at S6's end state and
+  runs command files against it.
