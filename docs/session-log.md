@@ -2,6 +2,27 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-15: uninitialised members, constructors checked store by store
+
+| Found by | File | What was wrong |
+|---|---|---|
+| S16 (experience line 12-47 s late) | `CGameSprite::CGameSprite` | The member at 0x3428 was never set; the exe zeroes the block 0x3428..0x3DF9 (0x6EFAAB, 0x6F0792). With any of its low three bits set, the sprite never ran its 16-tick trigger slot in `ProcessAI`, so a kill made more than 75 ticks after an order was only handled at the next order. Five more members of the block were also unset. |
+| constructor check | `CGameSprite::CGameSprite` | `SequenceSet(1)` missing for the two extra fire-shield cells (0x6F14FC, 0x6F15BC) |
+| constructor check | `CInfGame::CInfGame` | `field_38A6` not cleared (0x59CDB2); the click handler reads it |
+| constructor check | `CGameContainer` | A failed polygon allocation must set the count to 0 (0x47C371) |
+| constructor check | `CWeather::CWeather` | Rain and wind sounds are built looping (0x555453, 0x555480); the default constructor was used |
+
+- **Method.** A verifier read every store of a constructor (direct stores through any register holding `this`, REP STOS blocks, sub-object constructors) and matched each to a C++ initialisation. 61 constructors done: sprite, AI base, object, area, container, door, trigger, AI action/trigger/object type, game, world screen and the other screens, stats, effects, projectiles, infinity, chitin, video, animation types, search and visibility maps, weather, UI manager/panel/control, cursor, button array, message handlers. Not done: `CGameSpriteGroupedSpellList` (0x443320 has no asm dump), most of `CGameAnimationTypeMonster`'s per-type constants, and every class not listed.
+- **Headers corrected from the same check** (missing members, members that do not exist, wrong widths, wrong order): `CGameArea`, `CGameContainer`, `CScreenWorld`, `CScreenCharacter`, `CScreenInventory`, `CScreenMap`, `CScreenSpellbook`, `CScreenJournal`, `CScreenWorldMap`, `CVidMode`, `CImm`, `CBaldurChitin`, `CGameAnimationTypeCharacter`. Known layout mismatches went from 1357 to 1227.
+- **S16 made robust** (test side): the walk from the east pier to the ship goes round the bay and takes about a minute on both games; the test now waits until no off-screen party arrow shows before clicking Hedron, and waits while a walk target is still unexplored. Passed 3 of 3 on the original.
+- **Support code (not in the original):** `UtilAssert` appends the assertion to `iwd2re-assert.txt` before suspending threads; the hang dump also writes `iwd2re-stacks-raw.txt` without the heap or the loader lock, resolved with `tools/symbolize_raw.py`.
+- Full runs of S1-S16 on the rebuild: 15 of 16 after the experience fix (S13 failed once: "Space did not pause the game"), then 14 of 16 after the first constructor fixes (the two open items below).
+
+**Open.**
+- **New-game stall, about 1 run in 20-40, rebuild only.** Half a second after the chapter screen closes, the world update stops and the picture freezes; Hedron's dialogue never opens. No assertion is reported and the symbolised stack dump is not written, which suggests a thread stuck holding a process-wide lock. The pause state is normal at that point (traced). The raw dump is in place to catch it.
+- **"No goblin came (east-pier)" in S16**, rebuild, several times. One cause was a walk click on unexplored ground (now waited for); it has happened once more since.
+- S13 "Space did not pause the game", once.
+
 ## 2026-11-14 (night): play test S16, the click handler checked in full
 
 - **S16, clearing the docks** (`test_s16_clear_docks.py`, about 10 minutes): kills the 8 goblins that exist on the docks at the default difficulty, casts Cure Light Wounds, walks aboard Hedron's ship and rests through his dialogue. It is the first part of the story gate for the inn and the other stores; the rest of the gate (AR1005, AR1004, the locked AR1002, the camp AR1007) needs about 15 more minutes and should start from a banked save.
