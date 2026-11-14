@@ -888,6 +888,9 @@ CGameSprite::CGameSprite(BYTE* pCreature, LONG creatureSize, int a3, WORD type, 
     m_bDeleteOnRemove = TRUE;
     m_lastRegenerationTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
 
+    // 0x6F0792
+    field_3428 = 0;
+
     CButtonData buttonData;
 
     for (index = 0; index < 8; index++) {
