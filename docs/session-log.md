@@ -2,6 +2,17 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-14 (night): play test S16, the click handler checked in full
+
+- **S16, clearing the docks** (`test_s16_clear_docks.py`, about 10 minutes): kills the 8 goblins that exist on the docks at the default difficulty, casts Cure Light Wounds, walks aboard Hedron's ship and rests through his dialogue. It is the first part of the story gate for the inn and the other stores; the rest of the gate (AR1005, AR1004, the locked AR1002, the camp AR1007) needs about 15 more minutes and should start from a banked save.
+- **`CGameSprite::OnActionButton` compared with a gap-free listing** (`C:\iwd2-tools\ranges\0x6FF8A0-0x700BC0.asm`). Of 979 jump tables in the per-function dumps only this function had an uncovered gap. Two more differences fixed: the first action is reset to "no action" at (-1,-1) before the dialogue order (exe 0x700266-0x700444), and the unknown-icon default still resets the game state (exe 0x7000A4-0x7000D8).
+- **Kill experience path checked against the exe, no difference**: `CGameSprite::ApplyTriggers` 0x728580, `CGameAIBase::ApplyTriggers` 0x45D6A0, `CInfGame::AddPartyXP` 0x5C0BB0, `CGameEffectDeath::OnAdd` 0x4AD3C0, `CMessageSetTrigger::Run` 0x50A360, and every place that empties the pending triggers (each applies them first, as the exe does).
+- Full run of S1-S16 on the rebuild: 13 passed. S6 failed at the prologue title (world screen black with "Paused for saving game" where the chapter text should be: the known intermittent stall). S14 failed once because a click opened a goblin's ground pile and Select All then did not show the group bar (test side). S16 failed, see below.
+
+**Open: S16 is flaky.** Hedron's rest is refused in about 3 rebuild runs in 4, and was refused once on the original. A trace of `CInfGame::CanRestParty` shows the distance test: one character is far from the others (in the traced run, slot 2 stood at 802,1282, near the south-west leg walked minutes earlier). Failing runs often show float lines from Crandall, a neutral who wanders the docks, so a click landing on him is one suspect. The click-handler change above is not the cause (same failure without it). One run also never showed the experience line after two fights, and one had "no goblin came (east-pier)"; these may share the cause.
+
+**Next.** Find when and why the character is left behind (both games), then S17/S18 from a save at the end of S16.
+
 ## 2026-11-14 (evening): play test S15, clicking a character to talk
 
 - **S15, the town** (`test_s15_town.py`, about 8.2 minutes): walks across Targos (AR1100) to Oswald Fiddlebender, talks to him, and uses his store: item description, buying a potion, selling a sword, prices, weights, gold changes (read as digits, since starting gold is random), the identify panel; then rest refused and the inventory afterwards. Inn rooms and resting are refused by the story until the docks are cleared, so a successful rest is still uncovered.
