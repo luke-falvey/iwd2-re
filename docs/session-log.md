@@ -15,7 +15,7 @@ Newest first. Each entry covers what was done, what's blocked and what's next.
 
 **Open.**
 - The slow-kill case on the original is unmeasured (above).
-- `docks_to_house()` failed twice in about ten uses during timing runs: once on the original ("no goblin came when the party went to the door"), once on the rebuild ("click on Reig did not change the screen").
+- `docks_to_house()` failed twice in about ten uses during timing runs: once on the original ("no goblin came when the party went to the door"), once on the rebuild ("click on Reig did not change the screen"). The Reig failure came again in the full run (S9 itself; the other twelve passed, and S9 passed when rerun): the party stands beside Reig, the last line is "Honest Jon- How fares your arm, Reig?", and no dialogue opens within 20 s. Seen only on the rebuild so far (3 times in about 15 runs); not yet checked whether the original refuses a dialogue during that banter.
 - S9 on the original recorded three snow/darker variants (`door-closed`, `door-open`, `scrolled-dock`).
 
 **Next.** Travel to AR1100; a store and a successful rest once reachable; later-game saves loaded across the two games.
