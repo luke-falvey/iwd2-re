@@ -318,7 +318,6 @@ public:
     /* 0AE8 */ SHORT m_nCurrentSong;
     /* 0AEA */ INT m_nBattleSongCounter;
     /* 0AEE */ CMemINI INIFile;
-    /* 0B0E */ int field_B0E;
     /* 0B12 */ CSpawnFile* mpSpawner;
     /* 0B16 */ BOOL field_B16;
 };

@@ -176,6 +176,9 @@ public:
     /* 0F32 */ BOOL m_bForceViewSize;
     /* 0F36 */ BYTE m_waitingOnResize;
     /* 0F37 */ unsigned char field_F37;
+    // NOTE: Constructed empty (0x6856E6) and destroyed (0x6867C3); no other
+    // use found.
+    /* 0F38 */ CString field_F38;
     /* 0F3C */ INT m_nTopContainerRow;
     /* 0F40 */ INT m_nTopGroupRow;
     /* 0F44 */ unsigned char field_F44;
@@ -193,7 +196,6 @@ public:
     /* 10D4 */ BOOLEAN m_bSetNightOnActivate;
     /* 10D5 */ BOOLEAN m_bSetDayOnActivate;
     /* 10D6 */ BOOL m_ambianceForce;
-    /* 10D8 */ int field_10D8;
     /* 10DA */ DWORD m_deltaTime;
     /* 10DE */ INT m_nChatMessageCount;
     /* 10E2 */ CResRef m_movie;

@@ -726,6 +726,9 @@ int CInfGame::dword_8E52F0;
 CInfGame::CInfGame()
     : m_rgbMasterBitmap(CResRef("MPALETTE"), FALSE, 24)
 {
+    // 0x59CDB2
+    field_38A6 = 0;
+
     m_nUniqueAreaID = 0;
     m_nReputation = 0;
     m_nProtagonistId = 0;

@@ -38,7 +38,6 @@ BOOLEAN CGameArea::byte_8D2138;
 // 0x469B60
 CGameArea::CGameArea(BYTE id)
 {
-    field_B0E = 0;
     m_bPicked = FALSE;
     m_pObjectMarker = NULL;
     m_firstRender = 0;

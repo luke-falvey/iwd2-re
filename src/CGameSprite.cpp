@@ -888,8 +888,15 @@ CGameSprite::CGameSprite(BYTE* pCreature, LONG creatureSize, int a3, WORD type, 
     m_bDeleteOnRemove = TRUE;
     m_lastRegenerationTime = g_pBaldurChitin->GetObjectGame()->GetWorldTimer()->m_gameTime;
 
-    // 0x6F0792
+    // NOTE: The original zeroes the whole block 0x3428..0x3DF9 (0x6EFAAB),
+    // then stores 0 to 0x3428 again (0x6F0792). The button data in the block
+    // is assigned below.
     field_3428 = 0;
+    memset(field_3D14, 0, sizeof(field_3D14));
+    m_nLastSpellbookClassIndex = 0;
+    m_nLastSpellbookSpellLevel = 0;
+    memset(field_3D3A, 0, sizeof(field_3D3A));
+    m_nLastSong = 0;
 
     CButtonData buttonData;
 
@@ -991,8 +998,12 @@ CGameSprite::CGameSprite(BYTE* pCreature, LONG creatureSize, int a3, WORD type, 
         field_7548[IWD_VFX_SEVEN_EYES_2].SetResRef(CResRef("SEyesC2"), FALSE, TRUE, TRUE);
         field_7548[IWD_VFX_FIRE_SHIELD_RED].SetResRef(CResRef("FShiRC1"), FALSE, TRUE, TRUE);
         field_7548[IWD_VFX_28].SetResRef(CResRef("FShiRC1"), FALSE, TRUE, TRUE);
+        // 0x6F14FC
+        field_7548[IWD_VFX_28].SequenceSet(1);
         field_7548[IWD_VFX_FIRE_SHIELD_BLUE].SetResRef(CResRef("FShiBC1"), FALSE, TRUE, TRUE);
         field_7548[IWD_VFX_29].SetResRef(CResRef("FShiBC1"), FALSE, TRUE, TRUE);
+        // 0x6F15BC
+        field_7548[IWD_VFX_29].SequenceSet(1);
         field_7548[IWD_VFX_DEATH_ARMOR].SetResRef(CResRef("DArmorC"), FALSE, TRUE, TRUE);
         field_7548[IWD_VFX_TORTOISE_SHELL].SetResRef(CResRef("TShellC"), FALSE, TRUE, TRUE);
         field_7548[IWD_VFX_WISP].SetResRef(CResRef("Wisp"), FALSE, TRUE, TRUE);

@@ -61,6 +61,7 @@ public:
     /* 05CA */ WORD m_containerType;
     /* 05CC */ CPoint m_ptWalkToUse;
     /* 05D4 */ CVidCell m_pileVidCell[3];
+    /* 0862 */ BYTE m_nPileVidCell;
     /* 0863 */ BOOLEAN m_bDeleteMe;
     /* 0864 */ RESREF m_scriptRes;
     /* 086C */ SCRIPTNAME m_scriptName;
@@ -71,15 +72,14 @@ public:
     /* 0896 */ WORD m_trapActivated;
     /* 0898 */ WORD m_trapDetected;
     /* 089A */ CPoint m_posTrapOrigin;
-    /* 0862 */ BYTE m_nPileVidCell;
     /* 08A2 */ WORD m_triggerRange;
     /* 08A4 */ SCRIPTNAME m_ownedBy;
     /* 08C4 */ CResRef m_keyType;
     /* 08CC */ DWORD m_breakDifficulty;
-    /* 08EA */ CAreaPoint* field_8EA;
     /* 08D0 */ SHORT m_drawPoly;
     /* 08D2 */ int field_8D2;
     /* 08D6 */ CArray<CRect*> field_8D6;
+    /* 08EA */ CAreaPoint* field_8EA;
 };
 
 #endif /* CGAMECONTAINER_H_ */

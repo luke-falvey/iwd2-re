@@ -94,6 +94,11 @@ CGameContainer::CGameContainer(CGameArea* pArea, CAreaFileContainer* pContainerO
             // __FILE__: C:\Projects\Icewind2\src\Baldur\CGameContainer.cpp
             // __LINE__: 169
             UTIL_ASSERT(FALSE);
+
+            // 0x47C371
+            // NOTE: The original jumps past the copy loop; with no points
+            // the loop below does nothing.
+            m_nPolygon = 0;
         }
 
         WORD adjust = 0;

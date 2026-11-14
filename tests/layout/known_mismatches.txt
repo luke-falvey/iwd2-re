@@ -243,7 +243,6 @@ CGameAnimationTypeCharacter::m_extendDirectionTest
 CGameAnimationTypeCharacter::m_falseColor
 CGameAnimationTypeCharacter::m_renderHelmet
 CGameAnimationTypeCharacter::m_weaponCode
-CGameArea::field_B0E
 CGameArea::field_B16
 CGameArea::mpSpawner
 CGameContainer::field_8D2
@@ -1185,7 +1184,6 @@ CScreenWorld::field_10C4
 CScreenWorld::field_10C8
 CScreenWorld::field_10CC
 CScreenWorld::field_10D0
-CScreenWorld::field_10D8
 CScreenWorld::field_114C
 CScreenWorld::field_1150
 CScreenWorld::field_119D
