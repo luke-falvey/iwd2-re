@@ -261,3 +261,27 @@ skill.
   (table offset at file offset 0x20).
 - **Keep a scenario under about 10 minutes.** Longer story stretches should
   start from a save banked by an earlier scenario.
+
+## Notes from S17
+
+- **Banked saves.** `golden/bank/<state>/save/<n>-Quick-Save/` plus
+  `world.png` (a frame with the group action bar, taken just before Q).
+  `s16-end` is S16's end state (made by `test_s17_make_s16_save`, original
+  only, skips while the bank exists); `s17-end` is S17's end, for S18.
+  `load_bank()` and the `from_s16_save` fixture in `test_s17_dock_houses.py`
+  show how to load one (Load Game, row 1 after "Autosave - Prologue") and
+  clean up. Entering the AR1000 houses writes no Auto-Save.
+- **Long walk clicks are ignored** even on explored ground (from Hedron's
+  deck to the warehouse pier the party did not move): walk in steps.
+- **Brogan** (2047,532, guarding AR1002) starts his dialogue himself when
+  the party comes along the warehouse pier, and from then on prints white
+  overhead lines into the message window every few seconds, anywhere on
+  the docks. Find a short line like "LOCKED" by its width.
+- **A locked door clicked with the whole party selected** printed nothing
+  for 9 s (once, later, "LOCKED" came). With one character selected the
+  line comes in about 2 s.
+- AR1004 (Firtha's house): view on entering shows map (x, y) at screen
+  (x+79, y-80); Firtha's circle (581,112); nine cats wander the floor (only
+  the back wall is still); exit (319,360).
+- S16's `party_arrows()` wait once failed with all six on deck (an arrow at
+  the bottom edge pointing at nobody visible); a rerun passed.
