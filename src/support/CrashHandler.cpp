@@ -120,6 +120,106 @@ static LONG WINAPI HeapCorruptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
+typedef LONG(NTAPI* NtGetNextThreadProc)(HANDLE, HANDLE, ACCESS_MASK, ULONG, ULONG, PHANDLE);
+
+// NOTE: Not declared by the headers at the Windows version this project
+// targets.
+extern "C" __declspec(dllimport) DWORD WINAPI GetThreadId(HANDLE Thread);
+
+// Looked up at startup: at dump time the loader lock may be held.
+static NtGetNextThreadProc gNtGetNextThread = NULL;
+static DWORD_PTR gImageBase = 0;
+static DWORD_PTR gImageEnd = 0;
+
+// A raw dump of every other thread made without the heap or the loader: if a
+// stuck thread holds the heap lock or the loader lock, the toolhelp snapshot,
+// fopen and the symbol lookups in DumpAllThreadStacks never return. Each thread gets its registers and the
+// stack words that point into the exe (possible return addresses), to be
+// resolved against the PDB afterwards. Threads are walked with
+// NtGetNextThread, which needs no allocation.
+static void DumpAllThreadStacksRaw()
+{
+    NtGetNextThreadProc pNtGetNextThread = gNtGetNextThread;
+
+    char path[MAX_PATH];
+    CrashPath(path, sizeof(path), "iwd2re-stacks-raw.txt");
+    HANDLE hRaw = CreateFileA(path, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hRaw == INVALID_HANDLE_VALUE) {
+        return;
+    }
+
+    char line[128];
+    DWORD written;
+    DWORD_PTR imageBase = gImageBase;
+    DWORD_PTR imageEnd = gImageEnd;
+
+    wsprintfA(line, "image %08lX %08lX\r\n", static_cast<DWORD>(imageBase), static_cast<DWORD>(imageEnd));
+    WriteFile(hRaw, line, lstrlenA(line), &written, NULL);
+
+    DWORD selfId = GetCurrentThreadId();
+    HANDLE hThread = NULL;
+    while (pNtGetNextThread != NULL) {
+        HANDLE hNext = NULL;
+        LONG status = pNtGetNextThread(GetCurrentProcess(),
+            hThread,
+            THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION,
+            0,
+            0,
+            &hNext);
+        if (hThread != NULL) {
+            CloseHandle(hThread);
+        }
+        if (status < 0) {
+            break;
+        }
+        hThread = hNext;
+
+        DWORD threadId = GetThreadId(hThread);
+        if (threadId == selfId) {
+            continue;
+        }
+
+        static CONTEXT context;
+        static DWORD words[1024];
+        SIZE_T bytesRead = 0;
+        BOOL bContext = FALSE;
+
+        if (SuspendThread(hThread) != (DWORD)-1) {
+            memset(&context, 0, sizeof(context));
+            context.ContextFlags = CONTEXT_FULL;
+            bContext = GetThreadContext(hThread, &context);
+            if (bContext) {
+                // Try smaller reads when the stack ends within the buffer.
+                for (SIZE_T size = sizeof(words); size >= 64 && bytesRead == 0; size /= 2) {
+                    ReadProcessMemory(GetCurrentProcess(),
+                        reinterpret_cast<LPCVOID>(static_cast<DWORD_PTR>(context.Esp)),
+                        words,
+                        size,
+                        &bytesRead);
+                }
+            }
+            ResumeThread(hThread);
+        }
+
+        if (!bContext) {
+            continue;
+        }
+
+        wsprintfA(line, "thread %lu eip %08lX esp %08lX ebp %08lX\r\n", threadId, context.Eip, context.Esp, context.Ebp);
+        WriteFile(hRaw, line, lstrlenA(line), &written, NULL);
+
+        for (SIZE_T word = 0; word < bytesRead / sizeof(DWORD); word++) {
+            if (words[word] >= imageBase && words[word] < imageEnd) {
+                wsprintfA(line, "  %08lX\r\n", words[word]);
+                WriteFile(hRaw, line, lstrlenA(line), &written, NULL);
+            }
+        }
+    }
+
+    WriteFile(hRaw, "== end ==\r\n", 11, &written, NULL);
+    CloseHandle(hRaw);
+}
+
 // Writes the stack of every other thread to iwd2re-stacks.txt. Used to find
 // where the game hangs. Each thread is suspended only long enough to copy its
 // registers, so no thread stays frozen while this one allocates. Stuck threads
@@ -194,6 +294,7 @@ static DWORD WINAPI DumpRequestThread(LPVOID lpParameter)
     HANDLE hEvent = reinterpret_cast<HANDLE>(lpParameter);
     EnsureSymbols();
     while (WaitForSingleObject(hEvent, INFINITE) == WAIT_OBJECT_0) {
+        DumpAllThreadStacksRaw();
         DumpAllThreadStacks();
     }
     return 0;
@@ -207,6 +308,13 @@ void InstallCrashHandler()
     }
 
     SetUnhandledExceptionFilter(UnhandledExceptionHandler);
+
+    gNtGetNextThread = reinterpret_cast<NtGetNextThreadProc>(
+        GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtGetNextThread"));
+    gImageBase = reinterpret_cast<DWORD_PTR>(GetModuleHandleA(NULL));
+    IMAGE_DOS_HEADER* dosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(gImageBase);
+    IMAGE_NT_HEADERS* ntHeaders = reinterpret_cast<IMAGE_NT_HEADERS*>(gImageBase + dosHeader->e_lfanew);
+    gImageEnd = gImageBase + ntHeaders->OptionalHeader.SizeOfImage;
 
     // Heap corruption (0xC0000374) is raised fail-fast and never reaches the
     // unhandled exception filter, so catch it first-chance.
