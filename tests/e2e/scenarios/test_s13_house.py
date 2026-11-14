@@ -78,8 +78,9 @@ LAST_LINE_REGION = (8, 576, 535, 16)
 END_LINES_REGION = (8, 550, 535, 42)
 # The gold count in the footlocker is random: mask it (second slot, then
 # first slot once the dagger is taken).
-GOLD_COUNT = (205, 522, 30, 12)
-GOLD_COUNT_TAKEN = (160, 522, 30, 12)
+# Masks are relative to the checkpoint's region (PILE_REGION starts at y 478).
+GOLD_COUNT = (205, 44, 30, 12)
+GOLD_COUNT_TAKEN = (160, 44, 30, 12)
 # Ground-item / container panel without the gold amount; the backpack weight.
 PILE_REGION = (0, 478, 640, 122)
 WEIGHT_REGION = (418, 500, 75, 72)

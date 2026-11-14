@@ -115,6 +115,9 @@ def select_all(game, group_bar):
         time.sleep(1.0)
         if diff_ratio(group_bar, game.grab(), region=ACTION_BAR_REGION) <= 0.05:
             return
+        # A click that landed on a ground pile leaves its panel over the bar.
+        game.press("esc")
+        time.sleep(0.5)
     raise AssertionError("Select All did not bring up the group action bar")
 
 
