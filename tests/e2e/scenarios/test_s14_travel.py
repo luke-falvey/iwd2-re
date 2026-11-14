@@ -155,6 +155,10 @@ def travel(game, group_bar, spot, what, prefix, check, failures):
     """Click an exit with the whole party selected: the loading screen,
     then the next area with the same action bar. `check(prefix + "-loading",
     LOADING_SCREEN)` is called with a still frame of the loading screen."""
+    # A walk or fight click on the way can land on a party member and leave
+    # only that one selected: an exit then refuses ("You must gather your
+    # party"). Select everyone again first.
+    select_all(game, group_bar)
     act(game, lambda: game.click(*spot), what, ACTION_BAR_REGION, park=FIGHT_PARK,
         threshold=0.5, wait=0.0, timeout=25.0)
     # The loading screen can be up for only a second or two: keep the last

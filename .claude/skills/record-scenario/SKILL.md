@@ -203,3 +203,26 @@ skill.
 - Interior lamps flicker: keep them and the party out of interior regions.
 - `server.py` in scratchpad `s14` keeps one game open at S6's end state and
   runs command files against it.
+
+## Notes from S15
+
+- Talking to a neutral character: click the centre of their cyan circle (the
+  feet). Characters standing among the party can't be clicked.
+- Story limits at the start of the game: no inn room and no rest anywhere
+  until the docks are cleared; Oswald Fiddlebender (AR1100, by the airship)
+  is the only open store (buy, sell, identify).
+- AR1100 area map: 1/8 scale, top-left at (158,85). Area-map clicks into
+  black are accepted; it is world clicks on unexplored ground that are
+  ignored. Keep each walk step under about 250 px (about 60 px/s).
+- Store screen: Buy/Sell panel (65,117), Identify panel (65,200), first store
+  item (155,130), first party item (420,130), Buy (721,203), Sell (721,232),
+  Done (721,397); right-click an item for its description. Park at (300,540).
+- Gold is random at party creation: read the digits (`read_number` in
+  `test_s15_town.py`) and check differences, never a picture of the amount.
+- Travel between areas writes an "Auto-Save" slot. `conftest.py` clears
+  leftover saves before every test; a test that needs a save in place must
+  put it there in its own fixture (as S12 does).
+- A walk or fight click can land on a party member and leave only that one
+  selected. `travel()` in `test_s14_travel.py` selects all again before an
+  exit; do the same before any step that needs the whole party.
+- `docks_to_town()` in `test_s14_travel.py` is the shared set-up for the town.

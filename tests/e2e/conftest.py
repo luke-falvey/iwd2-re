@@ -12,6 +12,7 @@ for the reimpl run (tests/e2e/golden/, gitignored).
 from __future__ import annotations
 
 import os
+import shutil
 import time
 from pathlib import Path
 
@@ -61,6 +62,21 @@ def pytest_runtest_makereport(item, call):
     outcome = yield
     rep = outcome.get_result()
     setattr(item, "rep_" + rep.when, rep)
+
+
+@pytest.fixture(autouse=True)
+def clean_saves(play_dir):
+    """Start every test from the same save list: travel between areas leaves
+    an "Auto-Save" slot, and a failed run can leave its own saves, either of
+    which shifts the slots other tests look at. Autouse, so it runs before a
+    test's own save fixtures."""
+    keep = {"default", "000000000-Autosave - Prologue"}
+    mpsave = play_dir / "mpsave"
+    if mpsave.is_dir():
+        for p in mpsave.iterdir():
+            if p.is_dir() and p.name not in keep:
+                shutil.rmtree(p, ignore_errors=True)
+    yield
 
 
 @pytest.fixture
