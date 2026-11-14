@@ -226,3 +226,26 @@ skill.
   selected. `travel()` in `test_s14_travel.py` selects all again before an
   exit; do the same before any step that needs the whole party.
 - `docks_to_town()` in `test_s14_travel.py` is the shared set-up for the town.
+
+## Notes from S16
+
+- **Difficulty mask.** Byte +0x2F of each ARE actor says at which difficulty
+  settings it exists; bit 0 is the default. Read it before planning fights:
+  at the default the docks have 8 goblins, not 29.
+- **Snow keeps falling while paused** (about 0.1% of the world view changes).
+  A "nothing moved" check needs a threshold of about 0.3% outdoors. Prove the
+  Space key by the new PAUSED/UNPAUSED line instead.
+- **A checkpoint `mask` is relative to its region**, not to the screen.
+- **A message line copied to a fixed spot** needs its background blacked out:
+  the window texture differs by height. Find yellow lines by colour (r and g
+  above 200, b below 40) and compare the last one, since the experience line
+  can come after PAUSED/UNPAUSED.
+- **Target clicks.** A goblin's red circle can be half hidden behind a party
+  member's, so its centre is found off to one side. Retry a few aims round it.
+- **Hedron after the opening** stands at 2503,900 on his ship. Walk the whole
+  party to 2380,830 first, wait for his cyan circle, then click its centre.
+  His rest (replies 1, 1, 2) is refused if anyone is still on the dock.
+- **Reading globals.** Quick save (Q) during exploration, then read
+  ICEWIND2.GAM: the value is at the name + 0x28. `conftest` clears the save.
+- **Keep a scenario under about 10 minutes.** Longer story stretches should
+  start from a save banked by an earlier scenario.
