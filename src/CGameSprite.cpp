@@ -4847,6 +4847,14 @@ void CGameSprite::OnActionButton(const CPoint& pt)
                                     m_id,
                                     m_id);
                                 g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
+
+                                // 0x700266
+                                action2 = CAIAction(CAIAction::PLAYERDIALOG,
+                                    targetType,
+                                    0,
+                                    0,
+                                    0);
+                                pGroup->GroupAction(action1, TRUE, &action2);
                             }
                         } else {
                             pGroup->m_groupChanged = FALSE;
