@@ -4849,6 +4849,7 @@ void CGameSprite::OnActionButton(const CPoint& pt)
                                 g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
 
                                 // 0x700266
+                                action1 = CAIAction(CAIAction::NO_ACTION, CPoint(-1, -1), 0, -1);
                                 action2 = CAIAction(CAIAction::PLAYERDIALOG,
                                     targetType,
                                     0,
@@ -4968,6 +4969,12 @@ void CGameSprite::OnActionButton(const CPoint& pt)
                 // __FILE__: C:\Projects\Icewind2\src\Baldur\ObjCreature.cpp
                 // __LINE__: 5921
                 UTIL_ASSERT(FALSE);
+
+                // NOTE: Falls into the shared tail (0x7000BC).
+                pGame->SetState(0);
+                pGame->GetButtonArray()->SetSelectedButton(100);
+                pGame->GetButtonArray()->UpdateState();
+                break;
             }
             break;
         case 3:
