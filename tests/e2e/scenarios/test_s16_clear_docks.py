@@ -50,7 +50,9 @@ party walked off the ship and S9's talk with Reig, not compared):
   spell       Laeris: Cast Spell -> Cleric (Cure Light Wounds, Summon Monster
               I), Cure Light Wounds on Sheris: the list then holds only
               Summon Monster I (compare both)
-  Hedron      walk onto the ship and click Hedron: compare his first line ("I
+  Hedron      walk onto the ship (a minute round the bay; wait until no
+              arrow at the edge of the view points at a party member still
+              out of sight) and click Hedron: compare his first line ("I
               was hoping ye might come back - what's the word from the
               docks?"), reply 1 ("goblins"), compare, reply 1: "Your journal
               has been updated." and his question about his mother (compare);
@@ -189,6 +191,24 @@ def cyan_near(img, near, dx=35, dy=20):
     if len(xs) < 8:
         return None
     return int(xs.mean()), int(ys.mean())
+
+
+def party_arrows(img):
+    """Pixels of the green arrows at the edges of the world view that point at
+    party members out of view (0 when the whole party is on screen)."""
+    a = np.asarray(img.convert("RGB"), dtype=np.int16)[:430]
+    green = (a[..., 1] > 200) & (a[..., 0] < 80) & (a[..., 2] < 80)
+    edge = np.zeros_like(green)
+    edge[:, :28] = edge[:, -28:] = edge[:28] = edge[-30:] = True
+    return int((green & edge).sum())
+
+
+def unexplored(img, xy, r=6):
+    """The world view at a screen point is still black (never seen): a walk
+    click there is ignored."""
+    x, y = xy
+    a = np.asarray(img.convert("RGB"), dtype=np.int16)[max(0, y - r):y + r + 1, max(0, x - r):x + r + 1]
+    return (a.max(axis=2) < 8).mean() > 0.8
 
 
 def docks_after_reig(game, golden_dir):
@@ -337,12 +357,22 @@ def test_s16_clear_docks(game, golden_dir):
             park=FIGHT_PARK, wait=1.0)
         return real
 
-    def walk_route(route, here):
+    def walk_route(route, here, explored=True):
         real = None
         for centre, point in route:
             if centre is not None:
                 real = jump(centre)
-            game.click(*to_screen(real, point))
+            spot = to_screen(real, point)
+            # A click on ground nobody has seen yet is ignored (once on the
+            # east pier the party, slow through the gap between the houses,
+            # had not yet seen the pier and stayed where it was). Wait a
+            # little for the party to come into sight of it. (The south-west
+            # route clicks round the hull into the black, and that click is
+            # taken: it keeps explored=False.)
+            deadline = time.time() + 10.0
+            while explored and unexplored(game.grab(), spot) and time.time() < deadline:
+                time.sleep(0.5)
+            game.click(*spot)
             game.move(*FIGHT_PARK)
             # The party walks about 60 px a second.
             time.sleep(2.0 + np.hypot(point[0] - here[0], point[1] - here[1]) / 60)
@@ -362,7 +392,7 @@ def test_s16_clear_docks(game, golden_dir):
 
     # --- South-west: two goblins and Jorun ------------------------------------
     select_all(game, group_bar)
-    here = walk_route(TO_SOUTH_WEST, (736, 985))
+    here = walk_route(TO_SOUTH_WEST, (736, 985), explored=False)
     fight(game, "south-west")
 
     # --- South-east: three goblins --------------------------------------------
@@ -398,9 +428,15 @@ def test_s16_clear_docks(game, golden_dir):
     real = jump(SHIP_VIEW)
     game.click(*to_screen(real, ON_DECK))
     game.move(*FIGHT_PARK)
-    # The party crosses the gangplank one by one (30 s was not always
-    # enough). Hedron's cyan circle shows once the party sees him; a click
-    # on him before that only walks the party to where he stands.
+    # From the pier the way to the ship goes all round the bay: west along
+    # the pier, through the gap between the half-built ship and its
+    # scaffold (around 800,1280), north and east to the gangplank, about a
+    # minute's walk. On both games some characters first walk east to the
+    # dead end of the pier (around 2300,1430) and only then turn back, and
+    # arrive up to 30 s after the others. Hedron's rest is refused while
+    # anyone is more than 512 px from the first character, so wait until no
+    # arrow at the edge of the view points at a party member out of sight,
+    # twice 10 s apart (someone just in view can still be walking).
     time.sleep(25.0)
     expected = to_screen(real, HEDRON)
     deadline = time.time() + 40.0
@@ -408,7 +444,15 @@ def test_s16_clear_docks(game, golden_dir):
         if time.time() > deadline:
             raise AssertionError(f"Hedron's circle did not show near {expected}")
         time.sleep(1.0)
-    time.sleep(15.0)
+    deadline = time.time() + 120.0
+    while True:
+        if not party_arrows(game.grab()):
+            time.sleep(10.0)
+            if not party_arrows(game.grab()):
+                break
+        if time.time() > deadline:
+            raise AssertionError("a party member was still out of view 2 minutes after Hedron's circle showed")
+        time.sleep(1.0)
     # A click while some of the party is still on the gangplank sometimes only
     # walks it: click again.
     for attempt in range(3):

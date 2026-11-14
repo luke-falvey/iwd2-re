@@ -247,5 +247,17 @@ skill.
   His rest (replies 1, 1, 2) is refused if anyone is still on the dock.
 - **Reading globals.** Quick save (Q) during exploration, then read
   ICEWIND2.GAM: the value is at the name + 0x28. `conftest` clears the save.
+- **Long walks.** From the east pier to Hedron's ship the path goes round
+  the bay (west through the gap by the half-built ship, about a minute);
+  on both games some characters first walk to the pier's east dead end.
+  Before an order that needs the whole party together, wait until no green
+  arrow at the edge of the world view points at a member out of sight
+  (`party_arrows()` in `test_s16_clear_docks.py`).
+- **A walk click into black can be dropped** when the party is slow to come
+  into sight of the spot: wait until the target is no longer pure black
+  (`unexplored()`).
+- **Reading positions while exploring:** a quick save's ICEWIND2.GAM holds
+  each party member's area and x,y at +0x18/+0x20 of its 0x340-byte entry
+  (table offset at file offset 0x20).
 - **Keep a scenario under about 10 minutes.** Longer story stretches should
   start from a save banked by an earlier scenario.
