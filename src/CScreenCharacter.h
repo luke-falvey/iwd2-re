@@ -1,6 +1,7 @@
 #ifndef CSCREENCHARACTER_H_
 #define CSCREENCHARACTER_H_
 
+#include "C2DArray.h"
 #include "CAIObjectType.h"
 #include "CBaldurEngine.h"
 #include "CGameSpriteSpells.h"
@@ -185,12 +186,16 @@ public:
     INT GetCustomSoundSetIndex() { return m_nCustomSoundSetIndex; }
 
     /* 0106 */ BYTE m_nClass;
+    // NOTE: Three tables are constructed here (0x5D5247, 0x5D52BF, 0x5D5319);
+    // no use found yet.
+    /* 0108 */ C2DArray field_108;
     /* 012C */ CAIObjectType m_typeAI;
+    /* 0168 */ C2DArray field_168;
+    /* 018C */ C2DArray field_18C;
     /* 01B0 */ BOOL m_bShiftKeyDown;
     /* 01B4 */ BOOL m_bCapsLockKeyOn;
     /* 01B8 */ BOOLEAN field_1B8;
     /* 01BA */ CGameSpriteGroupedSpellList m_spells;
-    /* 02B6 */ int field_2B6;
     /* 02BA */ SHORT m_nTopSkill;
     /* 02BC */ INT field_2BC;
     /* 02C0 */ INT m_storedSkills[16];
@@ -251,7 +256,7 @@ public:
     /* 126E */ CVidFont m_preLoadFontTool;
     /* 176E */ CString field_176E;
     /* 1772 */ int field_1772;
-    /* 1776 */ int field_1776;
+    /* 1776 */ BYTE field_1776;
     /* 1778 */ INT m_nExtraAbilityPoints;
     /* 177C */ BYTE m_nMinSTR;
     /* 177D */ BYTE m_nMinDEX;

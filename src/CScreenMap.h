@@ -93,7 +93,7 @@ public:
     /* 1368 */ STRREF m_noteStrRef;
     /* 136C */ BOOL m_bShiftKeyDown;
     /* 1370 */ BOOL m_bCapsLockKeyOn;
-    /* 1374 */ BOOL m_bCtrlKeyDown;
+    /* 1374 */ BOOLEAN m_bCtrlKeyDown;
 };
 
 class CUIControlButtonMapWorld : public CUIControlButton {

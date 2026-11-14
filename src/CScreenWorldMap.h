@@ -87,6 +87,7 @@ public:
     /* 0516 */ CVidCell m_vcAreas;
     /* 05F0 */ CVidCell m_vcMarker;
     /* 06CA */ CVidFont m_vfLabel;
+    /* 0BCA */ BYTE field_BCA[0x400];
     /* 0FCA */ COLORREF field_FCA;
     /* 0FCE */ DWORD m_nHighlightArea;
     /* 0FD2 */ DWORD m_nSelectedArea;

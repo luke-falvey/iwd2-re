@@ -103,9 +103,10 @@ public:
     /* 0F88 */ CVidFont m_preLoadFontTool;
     /* 1488 */ int field_1488;
     /* 148C */ CResRef field_148C[24];
-    /* 15C4 */ int field_154C[24];
+    /* 154C */ int field_154C[24];
     /* 15AC */ int field_15AC[24];
     /* 160C */ CResRef field_160C[8];
+    /* 164C */ int field_164C;
     /* 1650 */ DWORD m_nNumberOfSpellClasses;
     /* 1654 */ int field_1654[CSPELLLIST_NUM_CLASSES];
     /* 1670 */ int field_1670;

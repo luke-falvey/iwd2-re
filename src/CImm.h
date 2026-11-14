@@ -44,6 +44,7 @@ public:
     static const CSize PADDING;
 
     /* 0000 */ DWORD m_dwState;
+    /* 0004 */ BYTE field_4[0x100];
     /* 0104 */ HKL m_hKeyboardLayout;
     /* 0108 */ CCriticalSection m_cCriticalSection;
     /* 0128 */ int field_128;

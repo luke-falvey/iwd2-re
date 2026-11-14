@@ -86,8 +86,8 @@ public:
     /* 1400 */ CVidPalette m_helmetPalette;
     /* 1424 */ SHORT m_currentBamSequence;
     /* 1426 */ SHORT m_currentBamDirection;
-    /* 1428 */ BOOLEAN m_renderWeapons;
-    /* 142C */ BOOLEAN m_renderHelmet;
+    /* 1428 */ BOOL m_renderWeapons;
+    /* 142C */ BOOL m_renderHelmet;
     /* 1430 */ BOOL m_bEquipHelmet;
     /* 1434 */ BOOL field_1434;
     /* 1438 */ BOOL m_falseColor;

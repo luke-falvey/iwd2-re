@@ -208,6 +208,7 @@ public:
     /* 00C2 */ DWORD field_C2;
     /* 00C6 */ DWORD field_C6;
     /* 00CA */ DWORD field_CA;
+    /* 00CE */ DWORD field_CE;
     /* 00D2 */ short field_D2;
     /* 00D4 */ BOOL m_bPointerEnabled;
     /* 00D8 */ BOOL m_bPointerInside;

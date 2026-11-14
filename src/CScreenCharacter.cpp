@@ -267,7 +267,6 @@ CScreenCharacter::CScreenCharacter()
     }
     m_spells.m_nHighestLevel = 0;
 
-    field_2B6 = 0;
     field_866 = 0;
     field_1776 = 0;
     field_86A = 0;
@@ -536,10 +535,7 @@ void CScreenCharacter::EngineGameInit()
         }
     }
 
-    // NOTE: The original has one store, to offset 0x2B6, which is both
-    // `m_spells.m_nHighestLevel` and `field_2B6` going by the header offsets.
     m_spells.m_nHighestLevel = 0;
-    field_2B6 = 0;
 
     field_866 = 0;
     field_86A = 0;
@@ -5669,8 +5665,7 @@ void CScreenCharacter::OnDoneButtonClick()
             switch (m_nClass) {
             case CAIOBJECTTYPE_C_BARD:
             case CAIOBJECTTYPE_C_SORCERER:
-                // NOTE: `field_1776` is a byte in the original.
-                *reinterpret_cast<BYTE*>(&field_1776) = 0;
+                field_1776 = 0;
 
                 // FALLTHROUGH
             case CAIOBJECTTYPE_C_BARBARIAN:
@@ -5698,8 +5693,7 @@ void CScreenCharacter::OnDoneButtonClick()
             switch (m_nClass) {
             case CAIOBJECTTYPE_C_BARD:
             case CAIOBJECTTYPE_C_SORCERER:
-                // NOTE: `field_1776` is a byte in the original.
-                *reinterpret_cast<BYTE*>(&field_1776) = 0;
+                field_1776 = 0;
 
                 // FALLTHROUGH
             case CAIOBJECTTYPE_C_BARBARIAN:
@@ -5812,7 +5806,7 @@ BOOL CScreenCharacter::OnCancelButtonClick()
                 m_spells.m_lists[nLevel].field_18 = 0;
             }
         }
-        field_2B6 = 0;
+        m_spells.m_nHighestLevel = 0;
 
         // NOTE: The original calls the by-value `operator=` and discards the
         // result.

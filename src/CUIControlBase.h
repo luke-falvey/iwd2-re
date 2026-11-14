@@ -50,7 +50,7 @@ public:
     }
 
     /* 0004 */ unsigned char field_4;
-    /* 0008 */ CUIPanel* m_pPanel; // #guess
+    /* 0006 */ CUIPanel* m_pPanel; // #guess
     /* 000A */ DWORD m_nID; // #guess
     /* 000E */ CPoint m_ptOrigin;
     /* 0016 */ CSize m_size;

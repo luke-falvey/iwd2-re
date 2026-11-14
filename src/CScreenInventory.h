@@ -139,6 +139,8 @@ public:
     /* 048C */ DWORD m_nRequesterButtonId;
     /* 0490 */ CTypedPtrList<CPtrList, CUIPanel*> m_lPopupStack;
     /* 04AC */ int m_nCurrentAbility;
+    // NOTE: Constructed (0x623F11); no use found yet.
+    /* 04B0 */ CButtonData field_4B0;
     /* 04EC */ CGameButtonList* m_pAbilities;
     /* 04F0 */ INT m_nErrorState;
     /* 04F4 */ STRREF m_strErrorText;

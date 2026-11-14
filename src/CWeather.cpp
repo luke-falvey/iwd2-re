@@ -42,6 +42,9 @@ const CResRef CWeather::SOUND_RAIN("Amb_E11");
 
 // 0x5553B0
 CWeather::CWeather()
+    // 0x555453, 0x555480: both sounds are built looping.
+    : m_sndRain(CResRef(""), 0, 0, 1, INT_MAX, FALSE)
+    , m_sndWind(CResRef(""), 0, 0, 1, INT_MAX, FALSE)
 {
     m_bUpgrading = FALSE;
     m_bOverCast = FALSE;

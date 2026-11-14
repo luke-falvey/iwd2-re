@@ -185,7 +185,7 @@ public:
     /* 0132 */ CString m_sStartUpGameSpyLocation;
     /* 0136 */ int field_136;
     /* 013A */ int field_13A;
-    /* 01E3 */ int field_13E;
+    /* 013E */ int field_13E;
     /* 0142 */ int field_142;
     /* 0148 */ int m_bInMouseWheelQueue;
     // FIXME: Looks like this list stores `wParam` values of `WM_MOUSEWHEEL`

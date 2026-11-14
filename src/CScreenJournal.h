@@ -76,6 +76,7 @@ public:
     /* 0483 */ unsigned char field_483;
     /* 0484 */ CResRef field_484;
     /* 048C */ CResRef field_48C;
+    /* 0494 */ BYTE field_494[8];
     /* 049C */ CVidFont m_preLoadFontRealms;
     /* 099C */ CVidFont m_preLoadFontTool;
     /* 0E9C */ int field_E9C;
