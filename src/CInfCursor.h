@@ -32,7 +32,7 @@ public:
     /* 05DC */ short field_5DC;
     /* 05DE */ short field_5DE;
     /* 05E0 */ short field_5E0;
-    /* 05E2 */ short field_5E2;
+    /* 05E2 */ BYTE field_5E2;
     /* 05E4 */ short field_5E4;
     /* 05E6 */ short field_5E6;
     /* 05E8 */ short field_5E8;

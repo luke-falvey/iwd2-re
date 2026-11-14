@@ -29,7 +29,7 @@ public:
     /* 064C */ INT m_nBeginFade;
     /* 0650 */ BYTE m_nMaxLines;
     /* 0652 */ CString* m_szLine;
-    /* 0656 */ int m_nLines;
+    /* 0656 */ BYTE m_nLines;
 };
 
 #endif /* CGAMETEXT_H_ */

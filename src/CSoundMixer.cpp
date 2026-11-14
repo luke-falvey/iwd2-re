@@ -42,6 +42,8 @@ CSoundMixer::CSoundMixer()
     field_C0 |= 0x03;
     m_bMixerInitialized = FALSE;
     field_40 = 0;
+    // 0x7AAEB0
+    field_0 = 0;
     m_dwEAXProperties = 0;
     m_cSoundProperties.m_nPreset = 0;
     m_pDirectSound3DListener = NULL;
