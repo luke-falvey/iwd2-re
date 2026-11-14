@@ -40,6 +40,29 @@ int CUtil::Uncompress(BYTE* dest, DWORD* destLen, const BYTE* source, DWORD sour
     return err;
 }
 
+// NOTE: Not in the original. Appends the assertion text to
+// iwd2re-assert.txt (in IWD2RE_CRASH_DIR, or the current directory) with
+// Win32 calls only, before the other threads are suspended: a suspended
+// thread may hold the heap lock, and then the shut-down below hangs without
+// showing anything.
+static void ReportAssert(const char* szText)
+{
+    char path[MAX_PATH];
+    DWORD length = GetEnvironmentVariableA("IWD2RE_CRASH_DIR", path, sizeof(path) - 24);
+    if (length == 0 || length >= sizeof(path) - 24) {
+        length = GetCurrentDirectoryA(sizeof(path) - 24, path);
+    }
+    lstrcpyA(path + length, "\\iwd2re-assert.txt");
+
+    HANDLE hFile = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile != INVALID_HANDLE_VALUE) {
+        DWORD written;
+        WriteFile(hFile, szText, lstrlenA(szText), &written, NULL);
+        WriteFile(hFile, "\r\n\r\n", 4, &written, NULL);
+        CloseHandle(hFile);
+    }
+}
+
 // 0x780C00
 void CUtil::UtilAssert(int nLineNumber, const char* szFileName, const char* pExp, const char* pText)
 {
@@ -48,6 +71,9 @@ void CUtil::UtilAssert(int nLineNumber, const char* szFileName, const char* pExp
 
     char buffer[1024];
     sprintf(buffer, "ASSERTION FAILED!\nFile: %s\nLine: %d\n\nExp: %s\n\nMsg: %s\nRun Debugger?", fileName, nLineNumber, pExp, pMsg);
+
+    // NOTE: Not in the original.
+    ReportAssert(buffer);
 
     g_pChitin->SuspendThreads();
     g_pChitin->ShutDown(nLineNumber, fileName, pText);
