@@ -135,7 +135,9 @@ AR1005_ROOM = (405, 40, 255, 320)  # table, chairs, bed (the party is to the lef
 # AR1004 as the view shows it on entering.
 FIRTHA = (581, 112)
 AR1004_EXIT = (319, 360)
-AR1004_WALL = (220, 0, 390, 58)  # the back wall: crates and windows, no cats
+# The back wall: crates and windows, no cats. Stops short of x=520, where
+# Firtha's overhead line ("Get out of me home!") is drawn when she shouts.
+AR1004_WALL = (220, 0, 290, 58)
 # AR1000 outside AR1004: the house and its open door, right of the party.
 AR1004_OUTSIDE = (455, 100, 270, 300)
 
@@ -372,6 +374,9 @@ def test_s17_dock_houses(from_s16_save, game, golden_dir, out_dir, target):
         game.move(*FIGHT_PARK)
         time.sleep(8.0)
         select_all(game, group_bar)
+        # Not compared: where everyone stood when the doorway was clicked (the
+        # area changes only with all six within 256 px of the door).
+        game.grab().save(out_dir / f"before-{doorway_what.split()[-1]}.png")
         act(game, lambda: game.click(*door), doorway_what, WORLD_REGION, park=FIGHT_PARK,
             threshold=0.5, wait=2.0, timeout=25.0)
 

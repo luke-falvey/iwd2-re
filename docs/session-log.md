@@ -20,10 +20,13 @@ Newest first. Each entry covers what was done, what's blocked and what's next.
 
 - **Later the same day:** the last 49 constructors gave two member widths and one early store, no behaviour change (110 constructors checked in all; the sweep is finished). A loop of 120 new-game runs with the raw hang dump in place did not stall. The next full run of S1-S16 on the rebuild passed 16 of 16 for the first time.
 
+- **S17, the dock houses** (`test_s17_dock_houses.py`, about 6.5 minutes): loads a save banked on the original at the end of S16, talks to Brogan, tries the locked warehouse door, clears the two dock houses (AR1005, AR1004), talks to Firtha and saves for S18. The rebuild passes 13 of 15 runs. One failure was the test's (Firtha's overhead shout crossed a compared region, now narrowed).
+
 **Open.**
 - **New-game stall, about 1 run in 20-40, rebuild only.** Half a second after the chapter screen closes, the world update stops and the picture freezes; Hedron's dialogue never opens. No assertion is reported and the symbolised stack dump is not written, which suggests a thread stuck holding a process-wide lock. The pause state is normal at that point (traced). The raw dump is in place to catch it.
 - **"No goblin came (east-pier)" in S16**, rebuild, several times. One cause was a walk click on unexplored ground (now waited for); it has happened once more since.
 - S13 "Space did not pause the game", once.
+- **S17: the party did not enter AR1005, once in 15 runs.** The area change needs every character who was sent to the door within 256 px of it (`CGameSprite::sub_74CDB0`, 0x74CDB0). On the failed run one character stood still about 260 px away for 25 s; on the original the stragglers walk up and the party enters. Not caught under trace yet.
 
 ## 2026-11-14 (night): play test S16, the click handler checked in full
 
