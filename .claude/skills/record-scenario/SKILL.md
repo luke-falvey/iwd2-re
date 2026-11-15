@@ -487,3 +487,42 @@ skill.
 - S22 runs about 11.5 minutes after the load (7.5 errand, 4 for six level
   ups). Thomas fast travel saves a long walk; the west-wall walk is still
   about 75 s each way.
+
+## Notes from S23
+
+- **The battle needs three Shawford talks after S22, not two errands.**
+  Koluhm (AR1107, Dead_Goblin_Quest 2), then Shawford (S22 "Did you speak
+  to Koluhm?": he gives the Iron Collar errand), then Black Geoffrey's band
+  in the Salty Dog (AR1003 on the docks, not 12BLACK/12BLANC, which are the
+  battle's lines), then Shawford again: S32 reply "Yes - though they proved
+  to be a stubborn bunch" leads to S3, whose only reply "Did you hear that?"
+  starts the battle. `s23-end` is the party in the Salty Dog before that last
+  talk (Palisade_Iron_Collar_Quest 2, experience 1300/1265/1265/1264/6263/
+  1263).
+- **Thomas's reply keys depend on Jump_Check and the area**: S6 lists only
+  the places the party is not in, plus a "when I last saw you at ..." reply
+  first when Jump_Check names another area. Dump 12SWIFT and work them out.
+  He is never on the docks after a ride there (AR1000 has only a hidden
+  copy at the landing).
+- **Diplomacy path for Black Geoffrey** (Sheris, female human): Continue x2,
+  1, Continue x4, 2, 2, 2, Continue, 2, Continue x5, 1. Every other path
+  ends in a fight. His first panel has no replies, only Continue:
+  `replies_shown()` never turns true; wait for `speech_block()` instead.
+- **Doors into town houses**: the first click on the morgue door (the exit
+  cursor already shows) did nothing visible; a doorway click 6 s later took
+  the party in. A "step back" click by the Salty Dog door landed on a party
+  member and selected only her; `travel()` selects all again, so leave the
+  step out where nobody stands in the doorway.
+- **AR1100 west side from the bridge**: the search-map path to the morgue
+  (north up x 2056, west along y 1194/1110) takes 98 s each way; it is the
+  longest stretch of S23.
+- **Record pages**: tabs at (461,35), (548,35) (attack and armour class),
+  (632,35) (skills and feats), (712,35). The record remembers the tab: put
+  it back to the first before leaving.
+- S23 runs about 11 minutes after the load.
+- **The rebuild cannot enter the Salty Dog yet** (seen twice, 2026-11-16):
+  loading AR1003 asserts in CVidPalette::SetRange (m_nType == TYPE_RANGE)
+  from CGameAnimationTypeMonsterIcewindNew::SetColorRange while Guthewulfe
+  Henghelm (10GUTHE, animation 0xF77A) is unmarshalled with his axe and
+  leather armour (00AX1H01, 00LEAT04: colour-change effects, opcode 7).
+  Everything before it matched exactly.
