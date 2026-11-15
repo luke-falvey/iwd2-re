@@ -285,3 +285,54 @@ skill.
   the back wall is still); exit (319,360).
 - S16's `party_arrows()` wait once failed with all six on deck (an arrow at
   the bottom edge pointing at nobody visible); a rerun passed.
+
+## Notes from S18
+
+- **The docks gate needs AR1007** (the goblin caves behind AR1002's back
+  door), not only the five houses: at the default difficulty 17 goblins and
+  sappers and Rukwurm in five groups. The award ("You have cleared the
+  Targos Docks of goblins." pale green, "The party has gained experience.",
+  "Your journal has been updated.", entry 27866) comes from AR1007's script
+  the moment the last one dies; nobody has to be told. Brogan (on the pier
+  afterwards) has new lines, a second journal entry and experience, and
+  leaves for the town. There is no gate soldier.
+- **AR1002's lock**: Kylie, Thieving (268,463), the door: "Kylie- Lock Pick
+  Succeeded" in about 2 s (her name is orange: find the line by that). It
+  has not failed yet; "Lock Pick Failed" is retried.
+- **Search maps** (`<AREA>SR.BMP`, one pixel per 16x12 map pixels; 0 is
+  rock) show the walkable layout of a dark cave much better than the area
+  map. Two AR1007 goblins in the southern passage never notice a party in the
+  northern one and must be walked to.
+- **Fights out of view.** Goblins attack the party wherever it is; a fight
+  loop that only looks at the current view misses them. Centre the view on
+  the party first: its markers on the area map are dark green (0,160,0).
+- **Which creatures are still alive:** quick save, then unpack the area
+  from ICEWIND2.SAV (`SAV V1.0`: name, sizes, zlib data per file) and read
+  each ARE actor's embedded CRE (offset/size at actor +0x88): hit points at
+  CRE +0x24, state at +0x20 (0x800 dead). `sav.py` in scratchpad `s18`.
+- **Clicking a doorway the party stands in** selects a party member instead.
+  Click the door from a distance (the party walks there and opens it), then
+  the doorway with everyone selected (`enter()` in S17).
+- **A yellow creature name** ("Goblin Archer-") passes S16's
+  `last_yellow_line` colour test: require yellow beyond x=150 for an
+  experience line (`last_xp_line` in `test_s18_warehouse_caves.py`).
+- **Lines that scroll away**: the award lines are printed mid-fight and
+  scroll out under the combat lines. Wrap `game.grab` while fighting and keep
+  the last frame that shows them (`WatchAward`).
+- The area-map button click is dropped now and then: retry it.
+- **S16's pause check fails while walk-target markers are on screen** (the
+  green crosshairs keep turning while paused, so the view never looks
+  still). Prove Space by the width of the last red line instead: PAUSED
+  ends near x=62, UNPAUSED near x=81 (`pause_line()` in S18).
+- **A dialogue's first panel can show the message lines from before it**
+  above the speaker's line (here the award lines and a random loading
+  hint), and the gap to the replies shifts by a few rows with them. Compare
+  the speaker's line and the reply as separate text-only blocks found by
+  colour (`speaker_block()` in S18).
+- **Aiming above a goblin at the top edge of the view clicks the window's
+  title bar**; S16's aims (up to 24 px above the circle) once hit the close
+  button and brought up the quit prompt. Leave circles within 30 px of the
+  top edge out and re-centre instead.
+- S18 runs about 14 minutes after the load (the AR1007 clear alone is about
+  six): over the 10-minute guideline, but the caves cannot be split at a
+  save without leaving the award out.
