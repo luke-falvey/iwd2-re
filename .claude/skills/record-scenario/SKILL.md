@@ -450,3 +450,40 @@ skill.
   his replies.
 - S21 runs about 15 minutes after the load (eight long walks along the
   Palisade road and through the town).
+
+## Notes from S22
+
+- **Check the experience plan against the dialogue file, not the journal.**
+  S21's plan (Isherwood's Diplomacy reply after Deirdre) was wrong: that
+  reply (12ISHER S13) needs 300 arrows in the packs and is the alternative
+  to Deirdre, not a second award. Dump the DLG (states, reply triggers,
+  actions) before planning; `dlg.py`, `are.py`, `regions.py`, `sr.py` and
+  `res.py` (reads compressed BIFC bifs too) are in scratchpad `s22`.
+  Deirdre 600 + Shawford 600 + Niles 600 (12NILES, east of Shawford's house:
+  replies 1, 1, 1) = 300 each, enough for all six.
+- **AR1200SR value 8 is not walkable** (unlike the docks): the long building
+  south of the west road covers about 1440-2110, 2190-2600, and a party sent
+  through it stops at its east wall. Go west along y = 2150.
+- **Depot door**: after the door click the party stands in the doorway, and
+  a doorway click then selects a member. Walk them back (1430,1960) first.
+- **Shawford talks by himself** while the pointer is still at FIGHT_PARK,
+  which is inside the dialogue text area: move the pointer to DIALOG_PARK
+  before comparing a first panel.
+- **Level Up** (record screen, button (714,392) when enabled; all portraits
+  show a "+"): Class Selection (classes at x 369, y 90 + 30*k: Barbarian,
+  Bard, Cleric, Druid, Fighter, Monk, Paladin, Ranger, Rogue, Sorcerer,
+  Wizard), Next (721,394); Skill Points Left, + at x 477, rows y 94, 131,
+  168, 207, 244, 281, 321, 358, 395 (cost in brackets; Next is disabled
+  until every point is spent); a bard gets Arcane Spell Selection (choose 2,
+  icons from (278,94) 43 px apart); a fighter 2 gets the Feats panel (+ at
+  the same x); the last Next returns to the record. A sorcerer 2 and a
+  cleric 2 get only class and skills. Back/Cancel at (600,394).
+- **Hit points on level up are the full die plus Constitution** on the
+  original (bard +6, fighter +13, barbarian +14, cleric +9, sorcerer +6,
+  rogue +7), the same in every run: compare them. While the panels are open
+  the selected portrait shows the new current hit points over the old
+  maximum.
+- Levelling prints "<name>- Level Up" and "Gained Special Ability" lines.
+- S22 runs about 11.5 minutes after the load (7.5 errand, 4 for six level
+  ups). Thomas fast travel saves a long walk; the west-wall walk is still
+  about 75 s each way.

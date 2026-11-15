@@ -1138,9 +1138,8 @@ public:
     /* 725A */ unsigned char field_725A[32];
     /* 727A */ LONG m_nStealthGreyOut;
     /* 727E */ int field_727E;
-    /* 7282 */ unsigned char field_7282;
-    /* 7283 */ unsigned char field_7283;
-    /* 7284 */ unsigned char field_7284;
+    // NOTE: Class levels at the last hit point roll (11 bytes, one per class).
+    /* 7282 */ BYTE field_7282[11];
     /* 728E */ int field_728E;
     /* 7292 */ BOOL m_bForceVisualEffects;
     /* 7296 */ SHORT m_currentActionId;

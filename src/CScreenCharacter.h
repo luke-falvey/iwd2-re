@@ -278,9 +278,11 @@ public:
     /* 179C */ INT m_nModCHR;
     /* 17A0 */ INT m_nHatedRaceIndex;
     /* 17A4 */ int field_17A4;
-    /* 17A8 */ int field_17A8;
-    /* 17C0 */ int field_17C0;
-    /* 1800 */ int field_1800;
+    // NOTE: Copies of the sprite's feats, weapon feat ranks and skills, taken
+    // when a level up starts.
+    /* 17A8 */ BYTE field_17A8[24];
+    /* 17C0 */ BYTE field_17C0[64];
+    /* 1800 */ BYTE field_1800[64];
     /* 1840 */ int field_1840;
     /* 1844 */ unsigned char field_1844;
     /* 1846 */ int field_1846;

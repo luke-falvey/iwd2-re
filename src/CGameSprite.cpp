@@ -1137,9 +1137,10 @@ CGameSprite::CGameSprite(BYTE* pCreature, LONG creatureSize, int a3, WORD type, 
             m_derivedStats.m_generalState |= STATE_DEAD;
         }
 
-        field_7282 = -1;
-        field_7283 = -1;
-        field_7284 = -1;
+        // NOTE: Only the first three of the 11 bytes are set.
+        field_7282[0] = -1;
+        field_7282[1] = -1;
+        field_7282[2] = -1;
         field_728E = -1;
         m_bPlayedEncumberedStopped = 0;
         m_bPlayedEncumberedSlowed = 0;

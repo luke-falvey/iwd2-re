@@ -148,9 +148,10 @@ CScreenCharacter::CScreenCharacter()
     m_nModINT = 0;
     m_nModWIS = 0;
     m_nModCHR = 0;
-    field_17A8 = 0;
-    field_17C0 = 0;
-    field_1800 = 0;
+    // NOTE: The original clears only the first four bytes of each array.
+    *reinterpret_cast<DWORD*>(field_17A8) = 0;
+    *reinterpret_cast<DWORD*>(field_17C0) = 0;
+    *reinterpret_cast<DWORD*>(field_1800) = 0;
 
     SetVideoMode(0);
 
@@ -1338,15 +1339,13 @@ void CScreenCharacter::sub_5D8EA0(CGameSprite* pSprite)
     // NOTE: `nHitPoints` is uninitialized when the class levels are unchanged.
     INT nHitPoints;
 
-    // NOTE: Compares 11 bytes starting at `field_7282`.
-    if (memcmp(&pSprite->field_7282, pSprite->m_derivedStats.m_nClassLevels, 11) != 0) {
+    if (memcmp(pSprite->field_7282, pSprite->m_derivedStats.m_nClassLevels, 11) != 0) {
         nHitPoints = ruleTables.GetStartingHitPoints(pSprite->m_startTypeAI,
             DStatsOld,
             pSprite->m_derivedStats,
             pSprite->m_baseStats.m_CONBase);
 
-        // NOTE: Copies 11 bytes starting at `field_7282`.
-        memcpy(&pSprite->field_7282, pSprite->m_baseStats.m_classLevels, 11);
+        memcpy(pSprite->field_7282, pSprite->m_baseStats.m_classLevels, 11);
         pSprite->field_728E = nHitPoints;
     }
 
@@ -1365,11 +1364,9 @@ void CScreenCharacter::sub_5D8EA0(CGameSprite* pSprite)
     pSprite->m_derivedStats.m_nLayOnHandsAmount = ruleTables.GetLayOnHandsAmount(pSprite->m_startTypeAI,
         pSprite->m_derivedStats);
 
-    // NOTE: The header declares only the first member of each of these
-    // saved arrays (24, 64 and 64 bytes).
-    memcpy(&field_1800, pSprite->m_baseStats.m_skills, 64);
-    memcpy(&field_17C0, &pSprite->m_baseStats.m_featBow, 64);
-    memcpy(&field_17A8, pSprite->m_baseStats.m_feats, 24);
+    memcpy(field_1800, pSprite->m_baseStats.m_skills, 64);
+    memcpy(field_17C0, &pSprite->m_baseStats.m_featBow, 64);
+    memcpy(field_17A8, pSprite->m_baseStats.m_feats, 24);
 
     pSprite->m_baseStats.m_characterLevel = pSprite->m_derivedStats.m_nLevel;
     memcpy(pSprite->m_baseStats.m_classLevels, pSprite->m_derivedStats.m_nClassLevels, 11);
