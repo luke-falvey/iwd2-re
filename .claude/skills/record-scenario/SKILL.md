@@ -371,3 +371,51 @@ skill.
   S19 finds the replies by their red and keeps the last paragraph above
   them.
 - S19 runs about 9 minutes after the load.
+
+## Notes from S20
+
+- **Nobody can level up after the docks**: 563-600 experience each (1000
+  for level 2); Vraedna is a drow with an effective character level of 3, at
+  5563 of 6000. The record's Experience block is at (405,131,150,40) for
+  everyone but Vraedna, whose is 13 px lower. The Level Up panels need a
+  later scenario (Shawford pays for Olap's lumber with
+  AddXpVar("Level_2_Average"); whether that reaches 1000 is not checked).
+- **Rest is refused everywhere but the inn** in the Prologue's town phase:
+  Town Hall, town streets, AR1200, AR1201 all print "You may not rest at
+  this time." Returning to Cahl-Hyred gives "All hail, the sell-sword of
+  Targos 'as returned!" with four replies; 3 opens the Rooms panel. With
+  every hit point full the rest prints only "You have rested for N hours."
+  (N varies: 8 here, 16 in S19), and it turns the town to night.
+- **A dialogue's first panel can stay empty for seconds** while the speaker
+  is walked to: wait for the red replies before comparing
+  (`replies_shown()` in S20).
+- **A rest reorders memorised spells**: Laeris's new Armor of Faith comes
+  before Cure Light Wounds afterwards, in the spellbook and on the cast bar.
+  Casting prints no message line on the original (as S11); prove a cast by
+  the counts on the cast bar. A sorcerer's spells of one level share the
+  count (Magic Missile 4 / Sleep 4 -> 3 / 3 after one Sleep). Action bar:
+  Cast Spell is (186,463) for Laeris and Vraedna; Laeris then picks Cleric
+  (26,463) or Domain (67,463).
+- **Town Hall to the inn**: down the gully path at x=2072 (S20's
+  `HALL_TO_INN`); the inn's door is closed again in the s19-end bank. **To
+  the Palisade**: `INN_TO_GATE`; a rain barrel at 1620-1641,766-797 opens its
+  container panel if a walk click hits it (Esc closes it). The gate (DOOR6)
+  opens when clicked once Ulbrec has sent the party.
+- **AR1200** area map origin (99,40). Shawford's house door HOUSE2 at
+  2712,2483: the open door and the doorway are the same spot (the exit cursor
+  shows at 2705-2715,2473-2493). AR1201 on entering: screen = map - (1,140),
+  Shawford at (495,128), exit (129,300). Trainees and soldiers print overhead
+  lines into the message window all the time.
+- **Shawford's first dialogue does not start the Palisade battle**: replies 1,
+  Continue x4, 1, Continue x2 (journal), 1. The battle comes only from his
+  dialogue after Olap's lumber, Isherwood's arrows, Koluhm and the Iron
+  Collar. His pay, GiveItemCreate("Misc07", 250), is a weightless 250-gold
+  pile in Sheris's backpack; the party gold label does not change.
+- There is no hostile creature anywhere the party can reach before then;
+  the training keg (12KEGMEL) and trainees in AR1200 are neutral.
+- A doorway click right after the door click did nothing once (the party
+  was still on its way): S20's `enter()` tries the doorway a second time.
+- After a reboot another window can cover the game: check `.alt*` files for
+  a foreign window and delete them (S20's interrupted run left six).
+- `s20-end` is the party on the Palisade outside AR1201 after Shawford, 120
+  gold plus the pile. S20 runs about 9.5 minutes after the load.
