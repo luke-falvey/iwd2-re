@@ -336,3 +336,38 @@ skill.
 - S18 runs about 14 minutes after the load (the AR1007 clear alone is about
   six): over the 10-minute guideline, but the caves cannot be split at a
   save without leaving the award out.
+
+## Notes from S19
+
+- **Banked saves fix the gold** (126 at s18-end): from a bank, gold labels
+  can be compared as pictures and read as exact values, not only as
+  differences. `s19-end` is the party in the Town Hall (AR1101) after
+  Ulbrec, 123 gold.
+- **Search maps decide walk clicks in town too.** A click on a cell that is
+  not walkable does nothing, and next to the AR1100 cliff ledge many cells
+  are. Check route points with the SR map before using them (`sr.py` in
+  scratchpad `s19`: value at a point and a 4-connected path). Value 8 is
+  walkable on the docks (wood) but is the gully wall east of the depot.
+  Even a snow cell (1796,1945) once took no click while (1696,1975) did.
+- **A "party arrived" check by green pixels does not work**: the green
+  walk-target crosshairs count too. Fixed waits (2 s + distance/50) on
+  checked points worked.
+- **Interiors with a clamped view**: AR1102 is so small the view is clamped
+  at its left edge; a dialogue there recentres it on the speaker. An
+  area-map jump (origin (278,168)) puts it back to the view on entering.
+- **Inn rooms** (Cahl-Hyred, AR1104, after the docks): replies 2, 1, 1,
+  Continue, 3 open the Rooms panel (Peasant 3 gold, Merchant; Noble and
+  Royal greyed); Rent (721,135) asks "Are you sure you wish to rest?" (Rest
+  at (451,260)); the rest is instant (no movie): "You have rested for 16
+  hours." (yellow) and one "Healed N hit points" line per wounded member.
+- **Deirdre's store** (AR1102): Buy/Sell and Identify only. Buying Arrows
+  ("1 GP", Cost 1) takes 2 gold; Sheris's Short Sword sells for 2. A bought
+  item joining a short list changes under 0.5% of STORE_LISTS: use
+  `threshold=0.001` for Buy and Sell.
+- **Ulbrec** (AR1101) gives journal entries but no experience for the docks:
+  replies 1, 1, Continue, Continue, 1, 1, Continue, 1, 2, 2.
+- **Dialogue first panels without fixed colours**: speaker names are not
+  always cyan (Cahl-Hyred's is orange, Ulbrec's grey). `speech_block()` in
+  S19 finds the replies by their red and keeps the last paragraph above
+  them.
+- S19 runs about 9 minutes after the load.
