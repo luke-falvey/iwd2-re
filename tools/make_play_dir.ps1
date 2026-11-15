@@ -62,6 +62,10 @@ $lines = Set-Ini $lines "Program Options" "BitsPerPixel" "32"
 $lines = Set-Ini $lines "Program Options" "Screen Position X" "0"
 $lines = Set-Ini $lines "Program Options" "Screen Position Y" "0"
 $lines = Set-Ini $lines "Game Options" "Cheats" "1"
+# The play tests look for selection circles and feedback markers, which the
+# game only draws at the highest feedback levels.
+$lines = Set-Ini $lines "Game Options" "GUI Feedback Level" "5"
+$lines = Set-Ini $lines "Game Options" "Locator Feedback Level" "5"
 foreach ($m in "BISLOGO", "INFELOGO", "WOTC", "INTRO") { $lines = Set-Ini $lines "Movies" $m "1" }
 Set-Content -Path $ini -Value $lines -Encoding ASCII
 

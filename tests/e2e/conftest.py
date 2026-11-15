@@ -27,6 +27,10 @@ def pytest_addoption(parser):
     parser.addoption("--target", default="original", choices=["original", "reimpl"])
     parser.addoption("--play-dir", default=os.environ.get("IWD2_PLAY_DIR", r"C:\iwd2-play"))
     parser.addoption("--exe", default=None, help="override the exe to launch")
+    parser.addoption("--virtual", action="store_true", default=os.environ.get("IWD2_VIRTUAL") == "1",
+                     help="drive the game through tools/hook (virtual input, window capture) so several "
+                          "instances can run at once, each with its own --play-dir")
+    parser.addoption("--cpu", type=int, default=None, help="with --virtual: the CPU to pin the game to")
 
 
 @pytest.fixture(scope="session")
@@ -82,9 +86,10 @@ def clean_saves(play_dir):
 @pytest.fixture
 def game(request, target, play_dir, out_dir):
     exe = request.config.getoption("--exe")
-    g = Game(target=target, play_dir=play_dir, out_dir=out_dir, exe=Path(exe) if exe else None)
-    g.launch()
+    g = Game(target=target, play_dir=play_dir, out_dir=out_dir, exe=Path(exe) if exe else None,
+             virtual=request.config.getoption("--virtual"), cpu=request.config.getoption("--cpu"))
     try:
+        g.launch()
         yield g
         rep = getattr(request.node, "rep_call", None)
         if rep is not None and rep.failed:

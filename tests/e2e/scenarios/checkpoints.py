@@ -34,8 +34,10 @@ def checkpoint(game, golden_dir: Path, name: str, max_diff: float = 0.02, mask=N
         return d <= max_diff, d
 
     results = [matches(p) for p in variants]
-    if game.target == "original":
+    if game.target == "original" and not getattr(game, "virtual", False):
         # Record the first image, and any later one that matches no variant.
+        # (Never in virtual mode: there the original is checked like the
+        # rebuild, so a parallel run cannot add variants.)
         if not variants:
             img.save(golden)
         elif not any(ok for ok, _ in results):

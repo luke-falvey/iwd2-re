@@ -179,3 +179,37 @@ def signal_event(name: str) -> bool:
     ok = bool(kernel32.SetEvent(h))
     kernel32.CloseHandle(h)
     return ok
+
+
+# ---- virtual input (tools/hook) -----------------------
+#
+# With iwd2hook.dll loaded in the game, its mouse and keyboard reads are
+# answered from a shared block instead of the real devices, so several
+# instances can run at once and none of them needs the foreground.
+
+class HookShared(ctypes.Structure):
+    _fields_ = [("magic", wt.LONG), ("hwnd", wt.LONG), ("cursorValid", wt.LONG), ("cursorX", wt.LONG),
+                ("cursorY", wt.LONG), ("subclassed", wt.LONG), ("reserved", wt.LONG * 10),
+                ("down", ctypes.c_ubyte * 256), ("pressed", ctypes.c_ubyte * 256)]
+
+
+kernel32.OpenFileMappingW.restype = wt.HANDLE
+kernel32.OpenFileMappingW.argtypes = [wt.DWORD, wt.BOOL, wt.LPCWSTR]
+kernel32.MapViewOfFile.restype = ctypes.c_void_p
+kernel32.MapViewOfFile.argtypes = [wt.HANDLE, wt.DWORD, wt.DWORD, wt.DWORD, ctypes.c_size_t]
+
+
+def open_hook_shared(pid: int, timeout: float = 20.0) -> HookShared:
+    """Map the block that iwd2hook.dll created in process `pid`."""
+    deadline = time.time() + timeout
+    while True:
+        h = kernel32.OpenFileMappingW(0x000F001F, False, "Local" + chr(92) + f"iwd2hook-{pid}")  # FILE_MAP_ALL_ACCESS
+        if h:
+            addr = kernel32.MapViewOfFile(h, 0x000F001F, 0, 0, ctypes.sizeof(HookShared))
+            if addr:
+                shared = HookShared.from_address(addr)
+                if shared.magic == 0x31485749:
+                    return shared
+        if time.time() > deadline:
+            raise TimeoutError(f"no hook block for pid {pid}")
+        time.sleep(0.1)

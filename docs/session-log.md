@@ -2,6 +2,19 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-16: play tests two at a time (injected input)
+
+- **What it is.** `tools/hook` builds a 32-bit DLL (`iwd2hook.dll`) and a launcher (`iwd2launch.exe`) that starts either exe suspended and loads the DLL into it. The DLL replaces the game's imports of `GetCursorPos`, `GetAsyncKeyState`, `GetKeyState` and `GetFocus` with versions that read a shared memory block (`Local\iwd2hook-<pid>`) the test harness writes to, so a test no longer needs the real mouse, keyboard or foreground. It also gives each process its own mutex and timer-event names (the game allows one instance), creates the window at 800×600 instead of screen size, keeps it topmost, lets sound play without focus, and pins the process to the CPU named in `IWD2_HOOK_CPU`.
+- **How to run.** `python tools/play_parallel.py --jobs 2` (play folders `C:\iwd2-play-1`, `-2`, made on first use). One scenario: `pytest <file> --target reimpl --virtual --play-dir C:\iwd2-play-1`. Build the hook with `cmake -S tools/hook -B build/hook -G "Visual Studio 17 2022" -A Win32` then `cmake --build build/hook --config Release`. `tools/play.ps1` (real input, serial) is unchanged and is still the reference run.
+- **Result on the rebuild, S1-S23, two at a time:** 19 of 23 in 71 minutes (serial takes over two hours). S11, S19 and S23 failed beside another game and passed alone; S14 failed both times (it is also intermittent in serial runs). The runner now reruns failed scenarios alone at the end and reports them separately.
+- **Limits.**
+  - Screenshots are still read from the screen, so the game windows are tiled and must stay visible; don't cover them during a run. (`PrintWindow` returned stale frames with several instances.)
+  - Three or more instances are unreliable: some steps after starting a new game take 2.2-2.8 s instead of about 0.25 s, on the original as well as the rebuild. Stack samples show the game idle or rendering. Ruled out: focus, CPU pinning, play folder, capture load, update rate (30/s in every instance), window messages, each hook feature (switched off one at a time with `IWD2_HOOK_OFF`). Cause not found.
+  - Even two at a time, a click sometimes lands late and a test fails (3 of 23 above; S3 once beside S2). Treat a parallel failure as real only if the rerun alone also fails.
+  - Injected runs of the original only compare; they never record goldens or bank saves' screenshots. Don't run S17 and later on the original this way: those scenarios bank saves when the target is the original.
+- **Settings the tests depend on:** `GUI Feedback Level=5` and `Locator Feedback Level=5` in `icewind2.ini` (selection circles and markers). A fresh play folder had 4 and 3, which made "circle did not show" failures; `make_play_dir.ps1` and the runner now set both.
+- **Open:** the slow steps with three or more instances; S14 (door click after the fight, "screen never settled" at a checkpoint).
+
 ## 2026-11-15: uninitialised members, constructors checked store by store
 
 | Found by | File | What was wrong |
