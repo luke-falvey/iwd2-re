@@ -26,6 +26,9 @@ Newest first. Each entry covers what was done, what's blocked and what's next.
 
 - **S19, errands in town** (`test_s19_town_errands.py`, about 9 minutes): from the S18 save, rents a room at the Weeping Widow and rests, buys arrows and sells a sword at Deirdre's store (gold read as exact amounts: 126, 123, 121, 123), opens the Identify panel, takes Ulbrec's dialogue at the Town Hall to its end, checks the journal and saves for S20. The rebuild passed both runs with every checkpoint identical.
 
+- **S20, the palisade** (`test_s20_palisade.py`, about 9.5 minutes): from the S19 save, compares all six record pages and experience numbers (nobody can level up yet), swaps a memorised spell in the spellbook, rests at the inn, walks to the palisade, takes Shawford's dialogue (his 250 gold arrives as an item), casts Armor of Faith and Sleep (shown by the spell counts on the action bar), checks the journal and saves for S21. The rebuild passed both runs.
+- **Running tests in a VM was tried and dropped.** Windows Sandbox ran S1 on the original correctly (it needs the host's DirectPlay DLLs beside the exe), but during the trial every read of the host screen began to hang until the machine was restarted. Play tests stay on the host, one game at a time.
+
 **Open.**
 - **New-game stall, about 1 run in 20-40, rebuild only.** Half a second after the chapter screen closes, the world update stops and the picture freezes; Hedron's dialogue never opens. No assertion is reported and the symbolised stack dump is not written, which suggests a thread stuck holding a process-wide lock. The pause state is normal at that point (traced). The raw dump is in place to catch it.
 - **"No goblin came (east-pier)" in S16**, rebuild, several times. One cause was a walk click on unexplored ground (now waited for); it has happened once more since.
