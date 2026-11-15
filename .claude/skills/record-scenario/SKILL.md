@@ -419,3 +419,34 @@ skill.
   a foreign window and delete them (S20's interrupted run left six).
 - `s20-end` is the party on the Palisade outside AR1201 after Shawford, 120
   gold plus the pile. S20 runs about 9.5 minutes after the load.
+
+## Notes from S21
+
+- **Quest experience is shared, not per character.** AddXpVar(entry) reads
+  EXPTABLE.2DA (Level_1_Easy 300, Level_2_Average 600, ...) and AddPartyXP
+  divides it among the living members. Olap's lumber (crane 300 + Shawford
+  600) gives 150 each: 750/715/715/714/5713/713 at `s21-end`. The first
+  level up needs 1722 more party XP: Isherwood -> Deirdre (600, Arrow_Quest
+  3) -> Isherwood's Diplomacy reply in S9 (600; Sheris has Diplomacy 9,
+  Bluff 7, Intimidate 3, CON 10, INT 14, human) -> Shawford (600) gives 300
+  each, enough for all six. Plan experience from EXPTABLE / 6.
+- **Swift Thomas** (AR1200 2565,2390) is the fast travel: after Olap's first
+  dialogue (Lumber_Quest 2) Sheris's Bluff reply makes him guide; replies
+  take the party to the town (lands 2035-2176,1837-1886; Thomas then stands
+  on the bridge at 2228,1872), the docks (lands 334-464,871-1007) or the
+  Palisade (lands next to Shawford's house). A fade to black (world mean 0),
+  then the loading screen: wait for the fade, not for the bar to change.
+  He was not found on the docks after Jorun: walk up the log stairs.
+- **Wanderers**: Olap (round 2560-2670,480-500, two cyan soldiers next to
+  him) and Lumbar (1060-1220 along y 1660) move; S16's `cyan_near` averages
+  neighbours. `cyan_circles()` in S21 separates circles.
+- **The crane** (AR1100_Wheel container, 11DCRAN0) is clickable only on the
+  left of its end stub (map 986,1853); a click a few px right gets the "no"
+  cursor and just walks. The container panel shows Sheris's items; clicking
+  the wheel moves it in (only the icon and weight change: threshold 0.001)
+  and the award prints while the panel is open.
+- **Shawford can start his dialogue himself** as the party enters AR1201
+  (once in three runs): after the doorway accept either the world screen or
+  his replies.
+- S21 runs about 15 minutes after the load (eight long walks along the
+  Palisade road and through the town).
