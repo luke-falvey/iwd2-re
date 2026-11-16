@@ -50,6 +50,28 @@ Read-only count taken on 2026-11-16 at commit 56098996 (437 files and about 411,
   member order shared with in-memory classes; how the software blitters depend on the DirectDraw
   surface format; byte-order assumptions (not a concern for Apple Silicon, which is little-endian).
 
+## Compile-only 64-bit build (MSVC x64, MFC, no code changes)
+
+Built `iwd2-core` for x64 in a separate worktree to let the compiler list the pointer-size problems.
+
+- **One error:** the `timeSetEvent` callback in `CChitin.cpp` has the 32-bit signature.
+- **About 470 pointer-to-32-bit truncations** (940 warning lines, two per site) in 40 files:
+  `CGameArea.cpp` 272 lines, `CAIGroup.cpp` 155, `CGameSprite.cpp` 133, `CInfGame.cpp` 75, the rest
+  35 or fewer. By kind:
+  - list elements read back as `LONG` (object ids kept in `CTypedPtrList<CPtrList, LONG>`): the
+    value was an integer to begin with, so these are safe once the list type stores integers;
+  - `CGameArea*` passed as a `DWORD` (the sound channel's owner tag): about 114;
+  - `CVidCell*`/`CVidImage*` stored in an `int`: about 31;
+  - a handful of others (`CAreaPoint*`, `BYTE*`, `CGameSprite*`).
+- **79 integer-to-pointer widenings** in 8 files (`CInfGame.cpp` 23, `CGameArea.cpp` 21,
+  `CGameSprite.cpp` 14): the other side of the same list idiom.
+- About 220 `size_t`/`int` narrowing warnings (C4244, C4267), ordinary 64-bit noise.
+- No layout assertion fails at compile time because the layout checks live in the test project,
+  which was not built here. Every checked offset would fail in a 64-bit build.
+
+So the 64-bit compile problem is three idioms (ids in pointer lists, the area pointer as a sound
+tag, image pointers in ints) plus the layout change; it does not need a file-by-file rewrite.
+
 ## Low-risk steps available now (behaviour unchanged, play tests still apply)
 
 1. Build with clang on Windows (`clang-cl`, 32-bit, still with MFC) and fix what it rejects. Needs

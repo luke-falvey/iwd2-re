@@ -3658,7 +3658,7 @@ void CScreenCreateChar::UpdateHatedRacePanel(CUIPanel* pPanel, CGameSprite* pSpr
     // NOTE: Uninline.
     pScrollBar->UpdateScrollBar();
 
-    CUIControlButton* pDone = static_cast<CUIControlButton*>(pPanel->GetControl(0));
+    CUIControlButton* pDone = static_cast<CUIControlButton*>(pPanel->GetControl(11));
     pDone->SetEnabled(IsDoneButtonClickable(pSprite));
 }
 
