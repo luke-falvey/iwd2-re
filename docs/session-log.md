@@ -15,6 +15,9 @@ Newest first. Each entry covers what was done, what's blocked and what's next.
 - **Settings the tests depend on:** `GUI Feedback Level=5` and `Locator Feedback Level=5` in `icewind2.ini` (selection circles and markers). A fresh play folder had 4 and 3, which made "circle did not show" failures; `make_play_dir.ps1` and the runner now set both.
 - **Open:** the slow steps with three or more instances; S14 (door click after the fight, "screen never settled" at a checkpoint).
 
+- **S24, the battle begins** (`test_s24_battle_begins.py`, about 6.5 minutes): from the S23 save, walks from the Salty Dog to Shawford's house at the Palisade (a named autosave must appear), reports to Shawford (journal and experience lines), sits through the cutscene that starts the goblin attack (his order compared as float text), quick-saves for S25, checks the journal and all six experience totals, then steps outside, pauses, gives one attack order and fights for 10 seconds. The rebuild passed with all 12 checkpoints identical to the original and no assert.
+  - The battle itself is not covered: about 60 creatures in four waves, and a plain attack loop lost most of the party in two minutes on the original. S25 needs tactics (Sleep on Phaen's group, staying near the allied soldiers) and checkpoints on the three Caballus cutscenes, the final award and journal entry 27868; probably one scenario per wave.
+
 ## 2026-11-15: uninitialised members, constructors checked store by store
 
 | Found by | File | What was wrong |
