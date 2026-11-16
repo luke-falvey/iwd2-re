@@ -20,6 +20,11 @@ add_executable(iwd2-tests
     "unit/test_resref.cpp"
     "unit/test_vidpalette.cpp"
     "unit/test_aiscript.cpp"
+    "unit/test_compat_string.cpp"
+    "unit/test_compat_geometry.cpp"
+    "unit/test_compat_collections.cpp"
+    "unit/test_compat_file.cpp"
+    "unit/test_strings.rc"
     "${LAYOUT_TEST}"
 )
 target_include_directories(iwd2-tests PRIVATE "${PROJECT_SOURCE_DIR}/third_party/doctest" "unit")

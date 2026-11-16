@@ -60,3 +60,23 @@ Read-only count taken on 2026-11-16 at commit 56098996 (437 files and about 411,
    the existing Win32 calls.
 4. Do the same for sound output and the video surface calls.
 5. Compile-only x64 build to list every pointer-size problem, without changing the code yet.
+
+## Step 2: building without MFC (2026-11-16)
+
+`cmake -DIWD2RE_NO_MFC=ON` builds the game and the tests without MFC. `src/mfc.h` then includes
+`src/compat/afxcompat.h`, which defines the MFC names the game uses: `CString`, `CPoint`, `CSize`,
+`CRect`, the lists, arrays and maps, `CFile`, `CFileFind`, `CFileStatus`, `CFileException`,
+`CException`, `CTime`, `CCriticalSection`, `CSingleLock`, `CObject`, `CWnd` (handle holder only),
+`AfxIsValidAddress` and `AfxSetResourceHandle`. The default build is unchanged.
+
+- Every class has the size and member order of the installed MFC class, so all 5,868 annotated
+  member offsets come out the same in both builds.
+- `tests/unit/test_compat_*.cpp` run in both builds. They pass against MFC, which shows they
+  describe MFC, and against the replacement, which shows it behaves the same. They cover details
+  the game depends on without saying so: the capacity `CString::GetAllocLength` reports (game
+  code copies that many bytes), `+=` stopping at a terminator inside the appended string, the
+  order in which maps are iterated, list nodes being reused, and which wrong arguments throw.
+- Win32 calls of the replacement are confined to `src/compat/cstring.cpp`, `cfile.cpp` and the
+  inline bodies of the lock and window classes.
+- Not covered by unit tests: the game itself running on the replacement. That needs the play
+  tests against `build-nomfc\RelWithDebInfo\iwd2-re.exe`.

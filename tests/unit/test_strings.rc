@@ -1,0 +1,7 @@
+// String resources for the CString::LoadString tests.
+
+STRINGTABLE
+BEGIN
+    101 "Loaded from the string table."
+    102 "%s has %d items"
+END
