@@ -9478,6 +9478,9 @@ void CGameSprite::Unmarshal(CSavedGamePartyCreature* pCreature, BOOLEAN bPartyMe
     m_nLastSpellbookSpellLevel = pCreature->m_nLastSpellbookSpellLevel;
     m_nLastSong = pCreature->m_nLastSong;
 
+    // NOTE: Uninline (0x70C8E6).
+    ResetQuickSlots();
+
     m_nNumberOfTimesTalkedTo = pCreature->m_nNumberOfTimesTalkedTo;
     m_nHappiness = pCreature->m_nHappiness;
 
