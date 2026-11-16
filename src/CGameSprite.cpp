@@ -2757,8 +2757,11 @@ void CGameSprite::AIUpdate()
                             || (pGame->GetCharacterPortraitNum(m_id) != -1
                                 && (m_derivedStats.m_generalState & STATE_STONE_DEATH) != 0)) {
                             if (InControl()) {
+                                // NOTE: Read before the call (0x6F8A60), which
+                                // clears `m_pArea`.
+                                CGameArea* pArea = m_pArea;
                                 RemoveFromArea();
-                                if (m_pArea->m_nCharacters == 0) {
+                                if (pArea->m_nCharacters == 0) {
                                     pGame->SelectCharacter(pGame->GetProtagonist(), FALSE);
                                     pGame->SelectToolbar();
                                     if (g_pBaldurChitin->GetActiveEngine() != g_pBaldurChitin->GetScreenWorld()
