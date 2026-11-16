@@ -2,6 +2,17 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-17: port groundwork (branch `port/prep`), S16 unstable
+
+- **Asked for:** the low-risk first steps towards an Apple Silicon port. Everything is on `port/prep` (worktree `iwd2-re-wt/port`), not merged. `docs/port-audit.md` there has the detail.
+  - Dependency audit; compile-only x64 build (one error, about 470 pointer truncations in three idioms).
+  - `IWD2RE_NO_MFC` build option with `src/compat/` (same-named classes, same 32-bit layouts). Unit and layout tests identical with and without MFC (86 cases, 231,850 assertions, 1,225 known mismatches, 0 new).
+  - clang-cl installed (VS component). All 219 files now pass `clang-cl -fsyntax-only`: 186 `(LPCSTR)` casts on `CString` varargs and 11 small fixes (commit ab776315).
+- **Play tests on the no-MFC build before the clang edits:** 28 of 29 serial; S2 failed once (new-game stall) and passed 3 of 3 reruns.
+- **After the clang edits, two at a time:** 28 of 29; S16 failed beside another game and alone.
+- **S16 with real input, same night, by executable:** main build 3 of 5, port with MFC 3 of 3, port without MFC 1 of 5. Failures, on main as well as port: "no goblin came", "a party member was still out of view", "area map button did not change the screen" (twice), the new-game stall once. The clang edits are cleared by the with-MFC result. The no-MFC result is worse than main but the sample is too small to say it is different, and S16 on main is itself failing 2 in 5.
+- **Open, most important:** inputs that do not register on the rebuild (S27 a key, S29 a click, the area map button twice here) and never on the original in dozens of runs. Next step is to compare how the rebuild and the original poll the mouse and keyboard, and to rule out machine load (compilers were running during some of these, not all).
+
 ## 2026-11-16: play tests two at a time (injected input)
 
 - **What it is.** `tools/hook` builds a 32-bit DLL (`iwd2hook.dll`) and a launcher (`iwd2launch.exe`) that starts either exe suspended and loads the DLL into it. The DLL replaces the game's imports of `GetCursorPos`, `GetAsyncKeyState`, `GetKeyState` and `GetFocus` with versions that read a shared memory block (`Local\iwd2hook-<pid>`) the test harness writes to, so a test no longer needs the real mouse, keyboard or foreground. It also gives each process its own mutex and timer-event names (the game allows one instance), creates the window at 800×600 instead of screen size, keeps it topmost, lets sound play without focus, and pins the process to the CPU named in `IWD2_HOOK_CPU`.
