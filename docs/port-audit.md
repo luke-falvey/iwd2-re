@@ -123,3 +123,13 @@ tag, image pointers in ints) plus the layout change; it does not need a file-by-
 
 The script used is not in the repo; it runs `clang-cl -fsyntax-only` per file with the project's
 flags so that one failing file does not hide the rest.
+
+## Play tests on the no-MFC build (2026-11-17)
+
+All 29 scenarios, serial, real input, against `build-nomfc\RelWithDebInfo\iwd2-re.exe`
+(port/prep at d965ba54): **28 passed first time.** S2 failed once at `targos-opening-dialog` (the
+party was on the ship, the game unpaused, and Hedron's dialogue had not started), then passed 3 of
+3 reruns. That picture is the "new-game stall" already listed as an intermittent open item on the
+MFC build, so it is not counted against the replacement, but it has not been explained either.
+
+No scenario showed a difference in any compared screen, save, exported character or text.
