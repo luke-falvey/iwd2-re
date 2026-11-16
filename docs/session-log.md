@@ -22,6 +22,8 @@ Newest first. Each entry covers what was done, what's blocked and what's next.
   - **Bug found (crash when a party member dies):** `CGameSprite::AIUpdate` read `m_pArea->m_nCharacters` after `RemoveFromArea()`, which clears `m_pArea`; the exe keeps the pointer in EDI from before the call (0x6F8A60). Fixed. No party member had died in any earlier scenario. Three more rebuild runs passed after the fix, but nobody died in them, so the fix rests on the disassembly, not on a reproduced death.
   - The fight to the first Caballus cutscene is not covered. On the original, three full attempts with retreat-and-heal tactics all went badly (Phaen's Sleep lands within 4 s and removes the retreat; saving outside is refused). Untried: start from `s23-end`, rest and buy potions and Sleep scrolls before reporting to Shawford. Note for tests: with Attack armed, a click that lands on a party member orders the party to attack them.
 
+- **S26, a party member dies** (`test_s26_party_death.py`, about 3.8 minutes, banks nothing; the story continues from `s25-end`): inside Shawford's house three members are ordered to attack Vraedna until she dies. Checks the death line, 22 s of running afterwards, the grey portrait and "0/12" tooltip, Select All framing five, the record page (DEAD, Export and Customize greyed), her empty inventory, the ground pile with her three items, Nolan's healing (she stays dead), a quick save, and the same state after loading it. The rebuild passed both runs with all 30 checkpoints identical and no crash, so the S25 fix is now exercised by a real death.
+
 ## 2026-11-15: uninitialised members, constructors checked store by store
 
 | Found by | File | What was wrong |
