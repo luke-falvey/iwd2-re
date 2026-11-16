@@ -1909,9 +1909,10 @@ void CAIGroup::GroupSetTarget(LONG iObject)
             // FIXME: Both params immediately destroyed after call which means
             // they are constructed just for the call which leads to pretty
             // ugly invocation.
+            CAIAction cLeaderAction(CAIAction::ATTACK, target, 0, 0, 0);
             GroupAction(CAIAction(CAIAction::ATTACK, target, 0, 0, 0),
                 FALSE,
-                &CAIAction(CAIAction::ATTACK, target, 0, 0, 0));
+                &cLeaderAction);
 
             g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(iObject,
                 CGameObjectArray::THREAD_ASYNCH,

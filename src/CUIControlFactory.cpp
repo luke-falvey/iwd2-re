@@ -4871,7 +4871,8 @@ void CUIControlEditLua::OnEditReturn(CString sText)
                 -1,
                 FALSE);
         } else {
-            g_pBaldurChitin->m_cBaldurMessage.SendChatMessage(sText.Right(sText.GetLength() - strRes.szText.GetLength()));
+            CString sChat = sText.Right(sText.GetLength() - strRes.szText.GetLength());
+            g_pBaldurChitin->m_cBaldurMessage.SendChatMessage(sChat);
         }
     } else {
         int nColon = CUtil::Find(sText, ':', 0);

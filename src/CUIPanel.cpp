@@ -437,7 +437,8 @@ void CUIPanel::RenderDither(const CRect& rClip)
             CVidMode::RenderQuad(verts, 4);
         } else {
             CVidInf* pVidInf = static_cast<CVidInf*>(g_pBaldurChitin->GetCurrentVideoMode());
-            if (pVidInf->BKLock(CRect(rClip))) {
+            CRect rLock(rClip);
+            if (pVidInf->BKLock(rLock)) {
                 CVIDPOLY_VERTEX verts[4];
                 verts[0].x = static_cast<WORD>(rClip.left);
                 verts[0].y = static_cast<WORD>(rClip.top);

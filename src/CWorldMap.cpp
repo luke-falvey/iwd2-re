@@ -352,7 +352,8 @@ BOOL CWorldMap::GetAreaIndex(DWORD nMap, const CResRef& cResArea, DWORD& nArea)
     CString v1;
 
     CPoint pt;
-    if (g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_tAreaLoad.Find(CString(cResArea.GetResRef()), pt, TRUE) != TRUE) {
+    CString sResArea(cResArea.GetResRef());
+    if (g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_tAreaLoad.Find(sResArea, pt, TRUE) != TRUE) {
         return FALSE;
     }
 

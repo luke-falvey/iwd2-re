@@ -563,8 +563,9 @@ BOOL CGameDialogSprite::StartDialog(CGameSprite* pSprite)
 
     for (INT nIndex = 0; nIndex < m_dialogEntriesOrdered.GetCount(); nIndex++) {
         CGameDialogEntry* pEntry = m_dialogEntriesOrdered.GetAt(nIndex);
+        CTypedPtrList<CPtrList, CAITrigger*> triggerList;
         if (pEntry != NULL
-            && pEntry->m_startCondition.Hold(CTypedPtrList<CPtrList, CAITrigger*>(), pSprite)) {
+            && pEntry->m_startCondition.Hold(triggerList, pSprite)) {
             // FIXME: Unused.
             LONG nCharacterId = g_pBaldurChitin->GetObjectGame()->GetProtagonist();
 
@@ -593,8 +594,9 @@ BOOL CGameDialogSprite::FetchRumor(const CResRef& file, CGameSprite* pSprite, LO
 
     for (INT n = 0; n < m_dialogEntriesOrdered.GetSize(); n++) {
         CGameDialogEntry* pEntry = m_dialogEntriesOrdered[n];
+        CTypedPtrList<CPtrList, CAITrigger*> triggerList;
         if (pEntry != NULL
-            && pEntry->m_startCondition.Hold(CTypedPtrList<CPtrList, CAITrigger*>(), pSprite)) {
+            && pEntry->m_startCondition.Hold(triggerList, pSprite)) {
             validEntries.Add(m_dialogEntriesOrdered[n]);
         }
     }

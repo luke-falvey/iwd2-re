@@ -2719,7 +2719,8 @@ void CBaldurMessage::BroadcastUpdateCharacterSlot(BOOLEAN bUpdateAllCharacters, 
                     bProgressStarted = TRUE;
                 }
 
-                sub_42E1B0(CString(""), nSlot, TRUE);
+                CString sEmpty("");
+                sub_42E1B0(sEmpty, nSlot, TRUE);
             }
         }
 
@@ -10230,9 +10231,9 @@ BOOLEAN CBaldurMessage::GetGameSpyQueryBasic(CString& sResponse)
     sLocation.ReleaseBuffer();
 
     sResponse.Format("\\gamename\\%s\\gamever\\%s\\location\\%s",
-        sGameName,
-        sGameVersion,
-        sLocation);
+        (LPCSTR)sGameName,
+        (LPCSTR)sGameVersion,
+        (LPCSTR)sLocation);
 
     return TRUE;
 }
@@ -10326,15 +10327,15 @@ BOOLEAN CBaldurMessage::GetGameSpyQueryInfo(CString& sResponse)
                      "\\numplayers\\%s"
                      "\\maxplayers\\%s"
                      "\\gamemode\\%s",
-        sSessionName,
-        sPortNumber,
-        sMapName,
-        sGameType,
-        sNumCharacters,
-        sMaxCharacters,
-        sNumPlayers,
-        sMaxPlayers,
-        sGameMode);
+        (LPCSTR)sSessionName,
+        (LPCSTR)sPortNumber,
+        (LPCSTR)sMapName,
+        (LPCSTR)sGameType,
+        (LPCSTR)sNumCharacters,
+        (LPCSTR)sMaxCharacters,
+        (LPCSTR)sNumPlayers,
+        (LPCSTR)sMaxPlayers,
+        (LPCSTR)sGameMode);
 
     return TRUE;
 }
@@ -10432,19 +10433,19 @@ BOOLEAN CBaldurMessage::GetGameSpyQueryRules(CString& sResponse)
                      "\\Permit:ViewCharacters\\%s"
                      "\\Permit:Pausing\\%s"
                      "\\Permit:Leader\\%s",
-        sPasswordProtection,
-        sFrameRate,
-        sReputation,
-        sDifficulty,
-        sImportXP,
-        sImportItems,
-        sModifyCharacters,
-        sBuyAndSell,
-        sAreaTransition,
-        sDialog,
-        sViewCharacters,
-        sPausing,
-        sLeader);
+        (LPCSTR)sPasswordProtection,
+        (LPCSTR)sFrameRate,
+        (LPCSTR)sReputation,
+        (LPCSTR)sDifficulty,
+        (LPCSTR)sImportXP,
+        (LPCSTR)sImportItems,
+        (LPCSTR)sModifyCharacters,
+        (LPCSTR)sBuyAndSell,
+        (LPCSTR)sAreaTransition,
+        (LPCSTR)sDialog,
+        (LPCSTR)sViewCharacters,
+        (LPCSTR)sPausing,
+        (LPCSTR)sLeader);
 
     return TRUE;
 }
@@ -10492,15 +10493,15 @@ BOOLEAN CBaldurMessage::GetGameSpyQueryPlayers(CString& sResponse)
 
             string.Format("\\player_%d\\%s\\team_%d\\%s\\race_%d\\%s\\class_%d\\%s\\level_%d\\%s",
                 nCharacters,
-                sName,
+                (LPCSTR)sName,
                 nCharacters,
-                sPlayerName,
+                (LPCSTR)sPlayerName,
                 nCharacters,
-                sRace,
+                (LPCSTR)sRace,
                 nCharacters,
-                sClass,
+                (LPCSTR)sClass,
                 nCharacters,
-                sLevel);
+                (LPCSTR)sLevel);
 
             sResponse += string;
 
@@ -27578,7 +27579,8 @@ void CMessageStoreAddItem::Run()
         // __LINE__: 26111
         UTIL_ASSERT(pStore != NULL);
 
-        pStore->AddItemExt(CItem(m_item), 1);
+        CItem cItem(m_item);
+        pStore->AddItemExt(cItem, 1);
     } else if (g_pChitin->cNetwork.GetSessionOpen()) {
         CStore::InvalidateStore(m_store);
     }
@@ -34392,15 +34394,15 @@ void CMessageSaveGame::Run()
     g_pBaldurChitin->GetTlkTable().Fetch(m_strText, strRes);
 
     sSaveName.Format("000000000-%s - %s",
-        CBaldurEngine::FetchString(0x9BFF),
-        strRes.szText);
+        (LPCSTR)(CBaldurEngine::FetchString(0x9BFF)),
+        (LPCSTR)strRes.szText);
 
     if (g_pBaldurChitin->GetObjectGame()->m_cOptions.m_nNightmareMode == 1) {
         STR_RES strResNightmare;
 
         if (g_pBaldurChitin->GetTlkTable().Fetch(0xA193, strResNightmare) == TRUE) {
             CString sNightmare;
-            sNightmare.Format(" (%s)", strResNightmare.szText);
+            sNightmare.Format(" (%s)", (LPCSTR)strResNightmare.szText);
             sSaveName += sNightmare;
         }
     }

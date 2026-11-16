@@ -443,7 +443,7 @@ void CScreenStart::ResetErrorPanel(CUIPanel* pPanel)
     UTIL_ASSERT(pText != NULL);
 
     pText->RemoveAll();
-    UpdateText(pText, "%s", strRes.szText);
+    UpdateText(pText, "%s", (LPCSTR)strRes.szText);
 
     for (INT nButton = 0; nButton < m_nNumErrorButtons; nButton++) {
         CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButton + 1));
@@ -536,7 +536,7 @@ void CScreenStart::ResetVersionMismatchPanel(CUIPanel* pPanel)
         break;
     }
 
-    UpdateText(pText, "%s", FetchString(strText));
+    UpdateText(pText, "%s", (LPCSTR)(FetchString(strText)));
 }
 
 // 0x6702C0

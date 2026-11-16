@@ -1963,7 +1963,7 @@ BOOL CAIObjectType::IsClassValid(BYTE nClass) const
 {
     if (nClass == 0) {
         CString sError;
-        sError.Format("CAIObjectType::IsClassValid() - '%s' has no classes set.", GetName());
+        sError.Format("CAIObjectType::IsClassValid() - '%s' has no classes set.", (LPCSTR)(GetName()));
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CAIObjectType.cpp
         // __LINE__: 2818
         UTIL_ASSERT_MSG(FALSE, sError);

@@ -2539,7 +2539,7 @@ BOOL CVidMode::CheckResults3d(int rc)
 
             if (err != prevErr) {
                 CString sMessage;
-                sMessage.Format("%s: %d occurences\n", sFunction, cnt);
+                sMessage.Format("%s: %d occurences\n", (LPCSTR)sFunction, cnt);
                 cnt = 0;
 
                 switch (err) {
@@ -2579,7 +2579,7 @@ BOOL CVidMode::CheckResults3d(int rc)
 
         if (cnt != 0) {
             CString sMessage;
-            sMessage.Format("%s: %d occurences\n", sFunction, cnt);
+            sMessage.Format("%s: %d occurences\n", (LPCSTR)sFunction, cnt);
             cnt = 0;
         }
     }

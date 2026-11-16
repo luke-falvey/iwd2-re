@@ -1050,7 +1050,8 @@ SHORT CGameAIBase::ExecuteAction()
             actionReturn = ACTION_DONE;
 
             CPoint ptLocation(-1, -1);
-            if (g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_tMasterArea.Find(m_curAction.GetString1(), ptLocation, TRUE)) {
+            CString sAreaName = m_curAction.GetString1();
+            if (g_pBaldurChitin->GetObjectGame()->GetRuleTables().m_tMasterArea.Find(sAreaName, ptLocation, TRUE)) {
                 CGameArea* pArea = g_pBaldurChitin->GetObjectGame()->GetArea(m_curAction.GetString1());
                 if (pArea == NULL) {
                     actionReturn = ACTION_ERROR;

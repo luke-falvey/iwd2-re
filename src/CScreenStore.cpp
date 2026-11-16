@@ -1169,7 +1169,7 @@ void CScreenStore::ResetErrorPanel(CUIPanel* pPanel)
     UTIL_ASSERT(pText != NULL);
 
     pText->RemoveAll();
-    UpdateText(pText, "%s", strRes.szText);
+    UpdateText(pText, "%s", (LPCSTR)strRes.szText);
 
     for (INT nButton = 0; nButton < m_nNumErrorButtons; nButton++) {
         CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButton));
@@ -1237,14 +1237,14 @@ void CScreenStore::sub_6734F0(CUIPanel* pPanel)
     UpdateLabel(pPanel,
         0x10000000,
         "%s",
-        FetchString(pItem->GetGenericName()));
+        (LPCSTR)(FetchString(pItem->GetGenericName())));
 
     if ((pItem->m_flags & 0x1) == 0) {
         // "NOT IDENTIFIED"
         UpdateLabel(pPanel,
             0x10000007,
             "%s",
-            FetchString(17108));
+            (LPCSTR)(FetchString(17108)));
     } else {
         UpdateLabel(pPanel, 0x10000007, "");
     }
@@ -1262,7 +1262,7 @@ void CScreenStore::sub_673740(CUIPanel* pPanel)
     UpdateLabel(pPanel,
         0x10000000,
         "%s",
-        FetchString(cSpell.GetGenericName()));
+        (LPCSTR)(FetchString(cSpell.GetGenericName())));
 
     CUIControlTextDisplay* pText = static_cast<CUIControlTextDisplay*>(pPanel->GetControl(3));
 
@@ -1274,7 +1274,7 @@ void CScreenStore::sub_673740(CUIPanel* pPanel)
 
     UpdateText(pText,
         "%s",
-        FetchString(cSpell.GetDescription()));
+        (LPCSTR)(FetchString(cSpell.GetDescription())));
 
     CUIControlButtonSpellbookSpellInfoIcon* pIcon = static_cast<CUIControlButtonSpellbookSpellInfoIcon*>(pPanel->GetControl(2));
 
@@ -4799,7 +4799,7 @@ void CScreenStore::OnIdentifyItemButtonClick()
                     pStoreItem->m_pItem->m_flags |= 0x1;
                     nPartyGold -= pStoreItem->m_nValue;
                     pStoreItem->m_bSelected = FALSE;
-                    UpdateText(pText, "%s", FetchString(pStoreItem->m_pItem->GetDescription()));
+                    UpdateText(pText, "%s", (LPCSTR)(FetchString(pStoreItem->m_pItem->GetDescription())));
                     UpdateText(pText, "");
                     UpdateText(pText, "-----------------------------");
                     UpdateText(pText, "");
@@ -5106,7 +5106,7 @@ void CScreenStore::OnBuyDrinkButtonClick(INT nButton)
                             m_nDrinkRumorIndex,
                             strRes);
 
-                        UpdateText(pText, "%s", strRes.szText);
+                        UpdateText(pText, "%s", (LPCSTR)strRes.szText);
                         UpdateText(pText, "");
                     }
 
@@ -5114,7 +5114,7 @@ void CScreenStore::OnBuyDrinkButtonClick(INT nButton)
                 } else {
                     UpdateText(pText,
                         "%s",
-                        FetchString(10832));
+                        (LPCSTR)(FetchString(10832)));
                     UpdateText(pText, "");
                 }
 
@@ -5577,7 +5577,7 @@ SHORT CScreenStore::GetPanelButtonSequence(INT nButtonIndex)
 
     SHORT nSequence;
     switch (m_adwButtonPanelId[nButtonIndex]) {
-    case -1:
+    case static_cast<DWORD>(-1):
         nSequence = 0;
         break;
     case 2:
@@ -5617,7 +5617,7 @@ STRREF CScreenStore::GetPanelButtonToolTip(INT nButtonIndex)
 
     STRREF strText;
     switch (m_adwButtonPanelId[nButtonIndex]) {
-    case -1:
+    case static_cast<DWORD>(-1):
         strText = -1;
         break;
     case 2:
@@ -5891,7 +5891,7 @@ void CScreenStore::RestParty()
 
     UpdateText(pText,
         "%s",
-        FetchString(16476));
+        (LPCSTR)(FetchString(16476)));
 
     CInfGame::m_bHealPartyOnRest = TRUE;
 

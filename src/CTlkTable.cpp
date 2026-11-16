@@ -193,7 +193,7 @@ BOOLEAN CTlkTable::Fetch(DWORD dwStrId, STR_RES& strRes)
 
         if (STRREF_ON) {
             CString sFormatted;
-            sFormatted.Format("%ld : %s", dwStrId & dword_85DD64, sText);
+            sFormatted.Format("%ld : %s", dwStrId & dword_85DD64, (LPCSTR)sText);
             sText = sFormatted;
         }
 

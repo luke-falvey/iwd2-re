@@ -609,7 +609,7 @@ void CScreenKeymaps::HandleKeyDown(BYTE nKey)
 
     CString sValue;
     if (m_bSystemKeyCtrl) {
-        sValue.Format("%s%c", FetchString(24638), g_pBaldurChitin->GetObjectGame()->sub_5A9780(nKey));
+        sValue.Format("%s%c", (LPCSTR)(FetchString(24638)), g_pBaldurChitin->GetObjectGame()->sub_5A9780(nKey));
     } else {
         sValue.Format("%c", g_pBaldurChitin->GetObjectGame()->sub_5A9780(nKey));
     }
@@ -727,7 +727,7 @@ void CScreenKeymaps::UpdateMainPanel()
             int ch = g_pBaldurChitin->GetObjectGame()->sub_5A9780(m_pKeymap[dword_8B3FE0[m_nPage][index]]);
             if (ch > 0) {
                 if (m_pKeymapFlags[dword_8B3FE0[m_nPage][index]] == 1) {
-                    sValue.Format("%s%c", FetchString(24638), ch);
+                    sValue.Format("%s%c", (LPCSTR)(FetchString(24638)), ch);
                     pKeyLabel->SetText(sValue);
                 } else {
                     sValue.Format("%c", ch);
@@ -981,7 +981,7 @@ void CScreenKeymaps::ResetErrorPanel(CUIPanel* pPanel)
     UTIL_ASSERT(pText != NULL);
 
     pText->RemoveAll();
-    UpdateText(pText, "%s", strRes.szText);
+    UpdateText(pText, "%s", (LPCSTR)strRes.szText);
 
     for (INT nButton = 0; nButton < m_nNumErrorButtons; nButton++) {
         CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButton + 1));
@@ -1219,7 +1219,7 @@ void CScreenKeymaps::SetKeymap(INT nPage, INT nIndex, BYTE nKey, BYTE nKeyFlag)
 
     if (nKeyFlag != 0) {
         sKey.Format("%s%c",
-            FetchString(24638),
+            (LPCSTR)(FetchString(24638)),
             g_pBaldurChitin->GetObjectGame()->sub_5A9780(m_pKeymap[dword_8B3FE0[nPage][nIndex]]));
     } else {
         sKey.Format("%c", g_pBaldurChitin->GetObjectGame()->sub_5A9780(m_pKeymap[dword_8B3FE0[nPage][nIndex]]));

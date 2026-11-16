@@ -4730,7 +4730,7 @@ void CScreenWorld::StartDeath()
     UpdateLabel(pPanel,
         0x0FFFFFFF,
         "%s",
-        FetchString(strRef));
+        (LPCSTR)(FetchString(strRef)));
 
     CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(2));
 

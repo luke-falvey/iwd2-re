@@ -2438,7 +2438,7 @@ void CScreenMultiPlayer::ResetErrorPanel(CUIPanel* pPanel)
     UTIL_ASSERT(pText != NULL);
 
     pText->RemoveAll();
-    UpdateText(pText, "%s", strRes.szText);
+    UpdateText(pText, "%s", (LPCSTR)strRes.szText);
 
     for (INT nButton = 0; nButton < m_nNumErrorButtons; nButton++) {
         CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButton + 1));
@@ -2580,7 +2580,7 @@ void CScreenMultiPlayer::UpdateExperienceEntry(CUIControlTextDisplay* pText, con
             sValue.Format("%d", nLevel);
             tlk.SetToken(CRuleTables::TOKEN_LEVEL, sValue);
 
-            UpdateText(pText, "%s", FetchString(11293)); // "<CLASS>: Level <LEVEL>"
+            UpdateText(pText, "%s", (LPCSTR)(FetchString(11293))); // "<CLASS>: Level <LEVEL>"
         }
     }
 }
@@ -2921,7 +2921,7 @@ void CScreenMultiPlayer::UpdateHelp(DWORD dwPanelId, DWORD dwTextId, DWORD dwStr
     pText->RemoveAll();
 
     g_pBaldurChitin->GetTlkTable().Fetch(dwStrId, strRes);
-    UpdateText(pText, "%s", strRes.szText);
+    UpdateText(pText, "%s", (LPCSTR)strRes.szText);
 }
 
 // 0x64F3B0

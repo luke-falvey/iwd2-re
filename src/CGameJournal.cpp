@@ -42,7 +42,7 @@ void CGameJournalEntry::UpdateTextDisplay(CUIControlTextDisplay* pText)
 
     CTimerWorld::GetCurrentTimeString(m_nTime, 15980, sTime);
     g_pBaldurChitin->GetTlkTable().Fetch(m_strText, strRes);
-    CBaldurEngine::UpdateTextForceColor(pText, RGB(200, 200, 0), "%s", sTime);
+    CBaldurEngine::UpdateTextForceColor(pText, RGB(200, 200, 0), "%s", (LPCSTR)sTime);
 
     COLORREF rgbTextColor;
     switch (m_wType) {

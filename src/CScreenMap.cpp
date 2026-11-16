@@ -980,7 +980,7 @@ void CScreenMap::ResetErrorPanel(CUIPanel* pPanel)
     UTIL_ASSERT(pText != NULL);
 
     pText->RemoveAll();
-    UpdateText(pText, "%s", strRes.szText);
+    UpdateText(pText, "%s", (LPCSTR)strRes.szText);
 
     for (INT nButton = 0; nButton < m_nNumErrorButtons; nButton++) {
         CUIControlButton* pButton = static_cast<CUIControlButton*>(pPanel->GetControl(nButton));
@@ -1081,7 +1081,7 @@ void CScreenMap::UpdateNoteText(STRREF strRef)
         m_noteStrRef = strRef;
 
         CString sString = FetchString(strRef);
-        UpdateLabel(GetManager()->GetPanel(2), 0x10000003, "%s", sString);
+        UpdateLabel(GetManager()->GetPanel(2), 0x10000003, "%s", (LPCSTR)sString);
     }
 }
 

@@ -20303,7 +20303,7 @@ void CGameSprite::SetCurrAction(const CAIAction& action)
 
                         CString sError(" ");
                         sError.Format("Error setting action for %s (%s): could not find spell (%s) in any spell casting class.",
-                            m_sName,
+                            (LPCSTR)m_sName,
                             (LPCSTR)m_resRef.GetResRefStr(),
                             (LPCSTR)resSpell.GetResRefStr());
 
@@ -20517,7 +20517,7 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
                 STR_RES strRes;
                 CString sText;
                 g_pBaldurChitin->GetTlkTable().Fetch(16462, strRes); // "Critical Hit!"
-                sText.Format("%s (%+d)", strRes.szText, a3);
+                sText.Format("%s (%+d)", (LPCSTR)strRes.szText, a3);
                 g_pBaldurChitin->GetBaldurMessage()->DisplayText(GetName(),
                     sText,
                     rgbNameColor,
@@ -21339,7 +21339,7 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
 
                 g_pBaldurChitin->GetTlkTable().Fetch(25138, strRes1); // "Singing Battlesong"
                 g_pBaldurChitin->GetTlkTable().Fetch(a6, strRes2);
-                sText.Format("%s: %s", strRes1.szText, strRes2.szText);
+                sText.Format("%s: %s", (LPCSTR)strRes1.szText, (LPCSTR)strRes2.szText);
 
                 g_pBaldurChitin->GetBaldurMessage()->DisplayText(GetName(),
                     sText,
@@ -21454,7 +21454,7 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
 
                 g_pBaldurChitin->GetTlkTable().Fetch(39742, strRes1); // "Spontaneous Casting"
                 g_pBaldurChitin->GetTlkTable().Fetch(a6, strRes2);
-                sText.Format("%s: %s", strRes1.szText, strRes2.szText);
+                sText.Format("%s: %s", (LPCSTR)strRes1.szText, (LPCSTR)strRes2.szText);
 
                 g_pBaldurChitin->GetBaldurMessage()->DisplayText(GetName(),
                     sText,
@@ -21479,9 +21479,9 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
                 g_pBaldurChitin->GetTlkTable().Fetch(a6, strRes2);
 
                 if (a4 > 0) {
-                    sText.Format("%s: %s %d", strRes1.szText, strRes2.szText, a4);
+                    sText.Format("%s: %s %d", (LPCSTR)strRes1.szText, (LPCSTR)strRes2.szText, a4);
                 } else {
-                    sText.Format("%s: %s", strRes1.szText, strRes2.szText);
+                    sText.Format("%s: %s", (LPCSTR)strRes1.szText, (LPCSTR)strRes2.szText);
                 }
 
                 g_pBaldurChitin->GetBaldurMessage()->DisplayText(GetName(),
@@ -21518,7 +21518,7 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
 
                 g_pBaldurChitin->GetTlkTable().Fetch(39881, strRes1); // "Using Feat: Lingering Song"
                 g_pBaldurChitin->GetTlkTable().Fetch(a6, strRes2);
-                sText.Format("%s: %s", strRes1.szText, strRes2.szText);
+                sText.Format("%s: %s", (LPCSTR)strRes1.szText, (LPCSTR)strRes2.szText);
 
                 g_pBaldurChitin->GetBaldurMessage()->DisplayText(GetName(),
                     sText,
@@ -21544,7 +21544,7 @@ void CGameSprite::FeedBack(WORD nFeedBackId, LONG a3, LONG a4, LONG a5, LONG a6,
                 STR_RES strRes;
                 CString sText(" ");
                 g_pBaldurChitin->GetTlkTable().Fetch(a6, strRes);
-                sText.Format("%s", strRes.szText);
+                sText.Format("%s", (LPCSTR)strRes.szText);
                 g_pBaldurChitin->GetBaldurMessage()->DisplayText(GetName(),
                     sText,
                     rgbNameColor,

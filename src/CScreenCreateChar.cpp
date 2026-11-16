@@ -866,7 +866,7 @@ void CScreenCreateChar::UpdateMainPanel(CGameSprite* pSprite)
         if (m_nCurrentStep > 7) {
             UpdateText(pText,
                 "%s: %s",
-                FetchString(1047),
+                (LPCSTR)(FetchString(1047)),
                 (LPCSTR)pSprite->GetName());
         }
 
@@ -874,7 +874,7 @@ void CScreenCreateChar::UpdateMainPanel(CGameSprite* pSprite)
             ruleTables.GetGenderStringMixed(pSprite->m_startTypeAI.m_nGender, sGender);
             UpdateText(pText,
                 "%s: %s",
-                FetchString(12135),
+                (LPCSTR)(FetchString(12135)),
                 (LPCSTR)sGender);
         }
 
@@ -882,7 +882,7 @@ void CScreenCreateChar::UpdateMainPanel(CGameSprite* pSprite)
             ruleTables.GetRaceStringMixed(pSprite->m_startTypeAI.m_nRace, sRace, pSprite->m_startTypeAI.m_nSubRace);
             UpdateText(pText,
                 "%s: %s",
-                FetchString(1048),
+                (LPCSTR)(FetchString(1048)),
                 (LPCSTR)sRace);
         }
 
@@ -913,7 +913,7 @@ void CScreenCreateChar::UpdateMainPanel(CGameSprite* pSprite)
             ruleTables.GetAlignmentStringMixed(pSprite->m_startTypeAI.m_nAlignment, sAlignment);
             UpdateText(pText,
                 "%s: %s",
-                FetchString(1049),
+                (LPCSTR)(FetchString(1049)),
                 (LPCSTR)sAlignment);
         }
 
@@ -1225,10 +1225,10 @@ void CScreenCreateChar::ResetMonkPaladinSpecializationPanel(CUIPanel* pPanel, CG
 
     switch (typeAI.m_nClass) {
     case CAIOBJECTTYPE_C_MONK:
-        UpdateLabel(pPanel, 0x1000000A, "%s", FetchString(33));
+        UpdateLabel(pPanel, 0x1000000A, "%s", (LPCSTR)(FetchString(33)));
         break;
     case CAIOBJECTTYPE_C_PALADIN:
-        UpdateLabel(pPanel, 0x1000000A, "%s", FetchString(1078));
+        UpdateLabel(pPanel, 0x1000000A, "%s", (LPCSTR)(FetchString(1078)));
         break;
     default:
         // __FILE__: C:\Projects\Icewind2\src\Baldur\InfScreenCreateChar.cpp
@@ -1608,11 +1608,11 @@ void CScreenCreateChar::ResetClericWizardSpecializationPanel(CUIPanel* pPanel, C
     switch (typeAI.m_nClass) {
     case CAIOBJECTTYPE_C_WIZARD:
         strDescription = 10942;
-        UpdateLabel(pPanel, 0x10000000, "%s", FetchString(1081));
+        UpdateLabel(pPanel, 0x10000000, "%s", (LPCSTR)(FetchString(1081)));
         break;
     case CAIOBJECTTYPE_C_CLERIC:
         strDescription = 9559;
-        UpdateLabel(pPanel, 0x10000000, "%s", FetchString(1079));
+        UpdateLabel(pPanel, 0x10000000, "%s", (LPCSTR)(FetchString(1079)));
         break;
     }
 
@@ -2883,7 +2883,7 @@ void CScreenCreateChar::UpdateCustomPortraitsPanel(CUIPanel* pPanel, CGameSprite
     // NOTE: Uninline.
     pPortrait->SetPortrait(CResRef(sPortrait));
 
-    UpdateLabel(pPanel, 0x10000008, "%s", sPortrait);
+    UpdateLabel(pPanel, 0x10000008, "%s", (LPCSTR)sPortrait);
 
     pPortrait = static_cast<CUIControlButtonCharGenPortrait*>(pPanel->GetControl(0));
 
@@ -2905,7 +2905,7 @@ void CScreenCreateChar::UpdateCustomPortraitsPanel(CUIPanel* pPanel, CGameSprite
     // NOTE: Uninline.
     pPortrait->SetPortrait(CResRef(sPortrait));
 
-    UpdateLabel(pPanel, 0x10000007, "%s", sPortrait);
+    UpdateLabel(pPanel, 0x10000007, "%s", (LPCSTR)sPortrait);
 
     CUIControlButton* pDone = static_cast<CUIControlButton*>(pPanel->GetControl(6));
     pDone->SetEnabled(IsDoneButtonClickable(pSprite));
@@ -2967,7 +2967,7 @@ void CScreenCreateChar::UpdateFeatsPanel(CUIPanel* pPanel, CGameSprite* pSprite)
         UpdateLabel(pPanel,
             0x10000001 + index,
             "%s",
-            FetchString(strName));
+            (LPCSTR)(FetchString(strName)));
     }
 
     CUIControlButton* pDone = static_cast<CUIControlButton*>(pPanel->GetControl(0));
@@ -3682,7 +3682,7 @@ void CScreenCreateChar::UpdateHelp(DWORD dwPanelId, DWORD dwTextId, DWORD dwStrI
     pText->RemoveAll();
 
     g_pBaldurChitin->GetTlkTable().Fetch(dwStrId, strRes);
-    UpdateText(pText, "%s", strRes.szText);
+    UpdateText(pText, "%s", (LPCSTR)strRes.szText);
 }
 
 // 0x6104B0
@@ -4162,12 +4162,12 @@ void CScreenCreateChar::UpdateCharacterSummary(const CString& sCharacter, CUICon
         UpdateTextForceColor(pText,
             RGB(200, 200, 0),
             "%s",
-            FetchString(1047));
+            (LPCSTR)(FetchString(1047)));
 
         if (pSprite->m_baseStats.m_name == 0xFFFFFFFF) {
             UpdateText(pText, "%s", pHeader->szName);
         } else {
-            UpdateText(pText, "%s", FetchString(pSprite->m_baseStats.m_name));
+            UpdateText(pText, "%s", (LPCSTR)(FetchString(pSprite->m_baseStats.m_name)));
         }
 
         UpdateText(pText, "");
@@ -4175,13 +4175,13 @@ void CScreenCreateChar::UpdateCharacterSummary(const CString& sCharacter, CUICon
         UpdateTextForceColor(pText,
             RGB(200, 200, 0),
             "%s",
-            FetchString(1048));
+            (LPCSTR)(FetchString(1048)));
 
         g_pBaldurChitin->GetObjectGame()->GetRuleTables().GetRaceStringMixed(pSprite->m_startTypeAI.m_nRace,
             sTemp,
             pSprite->m_startTypeAI.m_nSubRace);
 
-        UpdateText(pText, "%s", sTemp);
+        UpdateText(pText, "%s", (LPCSTR)sTemp);
 
         UpdateText(pText, "");
 
@@ -4191,7 +4191,7 @@ void CScreenCreateChar::UpdateCharacterSummary(const CString& sCharacter, CUICon
         UpdateTextForceColor(pText,
             RGB(200, 200, 0),
             "%s",
-            FetchString(12136));
+            (LPCSTR)(FetchString(12136)));
 
         for (INT nClass = 1; nClass <= 11; nClass++) {
             INT nLevel = pSprite->GetClassLevel(nClass);
@@ -4208,7 +4208,7 @@ void CScreenCreateChar::UpdateCharacterSummary(const CString& sCharacter, CUICon
 
                 pTlkTable->m_mapTokens[CRuleTables::TOKEN_LEVEL] = static_cast<LPCTSTR>(sTemp);
 
-                UpdateText(pText, "%s", FetchString(16480));
+                UpdateText(pText, "%s", (LPCSTR)(FetchString(16480)));
             }
         }
 
@@ -4217,52 +4217,52 @@ void CScreenCreateChar::UpdateCharacterSummary(const CString& sCharacter, CUICon
         UpdateTextForceColor(pText,
             RGB(200, 200, 0),
             "%s",
-            FetchString(1049));
+            (LPCSTR)(FetchString(1049)));
 
         pGame->GetRuleTables().GetAlignmentStringMixed(pSprite->m_startTypeAI.m_nAlignment, sTemp);
 
-        UpdateText(pText, "%s", sTemp);
+        UpdateText(pText, "%s", (LPCSTR)sTemp);
 
         UpdateText(pText, "");
 
         UpdateTextForceColor(pText,
             RGB(200, 200, 0),
             "%s",
-            FetchString(17088));
+            (LPCSTR)(FetchString(17088)));
 
         UpdateText(pText,
             "%s: %d  (%+d)",
-            FetchString(1145),
+            (LPCSTR)(FetchString(1145)),
             pSprite->m_baseStats.m_STRBase,
             pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_STRBase));
 
         UpdateText(pText,
             "%s: %d  (%+d)",
-            FetchString(1151),
+            (LPCSTR)(FetchString(1151)),
             pSprite->m_baseStats.m_DEXBase,
             pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_DEXBase));
 
         UpdateText(pText,
             "%s: %d  (%+d)",
-            FetchString(1178),
+            (LPCSTR)(FetchString(1178)),
             pSprite->m_baseStats.m_CONBase,
             pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_CONBase));
 
         UpdateText(pText,
             "%s: %d  (%+d)",
-            FetchString(1179),
+            (LPCSTR)(FetchString(1179)),
             pSprite->m_baseStats.m_INTBase,
             pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_INTBase));
 
         UpdateText(pText,
             "%s: %d  (%+d)",
-            FetchString(1180),
+            (LPCSTR)(FetchString(1180)),
             pSprite->m_baseStats.m_WISBase,
             pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_WISBase));
 
         UpdateText(pText,
             "%s: %d  (%+d)",
-            FetchString(1181),
+            (LPCSTR)(FetchString(1181)),
             pSprite->m_baseStats.m_CHRBase,
             pGame->GetRuleTables().GetAbilityScoreModifier(pSprite->m_baseStats.m_CHRBase));
 
@@ -6656,7 +6656,7 @@ void CScreenCreateChar::UpdateClassEntry(CUIControlTextDisplay* pText, const CAI
         sClass,
         typeAI.m_nGender != CAIOBJECTTYPE_SEX_FEMALE);
 
-    UpdateText(pText, "%s", FetchString(12136) + ": " + sClass);
+    UpdateText(pText, "%s", (LPCSTR)(FetchString(12136) + ": " + sClass));
 }
 
 // 0x623BF0

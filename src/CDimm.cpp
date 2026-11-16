@@ -1954,9 +1954,9 @@ BOOL CDimm::GetResFileName(UINT nIndex, CString& sResFileName, WORD& nDrive, BOO
     }
 
     if (sFileName.GetAt(0) == '\\' || sDrive.Right(1).Compare("\\") == 0) {
-        sResFileName.Format("%s%s", sDrive, sFileName);
+        sResFileName.Format("%s%s", (LPCSTR)sDrive, (LPCSTR)sFileName);
     } else {
-        sResFileName.Format("%s\\%s", sDrive, sFileName);
+        sResFileName.Format("%s\\%s", (LPCSTR)sDrive, (LPCSTR)sFileName);
     }
 
     return TRUE;

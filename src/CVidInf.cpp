@@ -1956,10 +1956,10 @@ BOOLEAN CVidInf::SaveScreen()
         bFound = FALSE;
 
         sPath.Format("%s\\%s%03d.%s",
-            SCREEN_SHOT_DIR_NAME,
-            sPrefix,
+            (LPCSTR)SCREEN_SHOT_DIR_NAME,
+            (LPCSTR)sPrefix,
             m_nPrintFile,
-            SCREEN_SHOT_EXTENSION);
+            (LPCSTR)SCREEN_SHOT_EXTENSION);
 
         hFileFind = FindFirstFileA(sPath, &fileFindData);
         if (hFileFind != INVALID_HANDLE_VALUE) {

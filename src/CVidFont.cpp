@@ -1146,7 +1146,7 @@ void CVidFont::RenderCharacters(const CString& sString, INT x, INT y, CVidFontRe
             }
         } else {
             CString sMessage;
-            sMessage.Format("The String %s has a bad character at position %d", sString, nIndex);
+            sMessage.Format("The String %s has a bad character at position %d", (LPCSTR)sString, nIndex);
         }
         nIndex++;
     }
