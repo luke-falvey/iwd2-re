@@ -1,10 +1,17 @@
 #ifndef MFC_H_
 #define MFC_H_
 
+#ifdef IWD2RE_NO_MFC
+// The MFC names the game uses, defined without MFC.
+#include <windows.h>
+
+#include "compat/afxcompat.h"
+#else
 #include <afx.h>
 #include <afxmt.h>
 #include <afxtempl.h>
 #include <afxwin.h>
+#endif
 
 // NOTE: These constants are missing in VC6.
 #if _MSC_VER == 1200

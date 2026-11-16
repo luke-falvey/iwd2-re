@@ -8,7 +8,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
 
-set(CMAKE_MFC_FLAG 2)
+# The game uses a small set of MFC classes. By default they come from MFC
+# (shared DLL). With IWD2RE_NO_MFC they come from src/compat instead, which
+# defines the same names with the same layouts and no MFC dependency.
+option(IWD2RE_NO_MFC "Build without MFC, using the compatibility classes in src/compat" OFF)
+if(NOT IWD2RE_NO_MFC)
+    set(CMAKE_MFC_FLAG 2)
+endif()
 
 # All game code lives in a static library so tests and tools can link it.
 add_library(iwd2-core STATIC)
@@ -460,8 +466,27 @@ target_sources(iwd2-core PRIVATE
 
 target_include_directories(iwd2-core PUBLIC src)
 
+if(IWD2RE_NO_MFC)
+    target_sources(iwd2-core PRIVATE
+        "src/compat/afxcompat.h"
+        "src/compat/cfile.cpp"
+        "src/compat/cfile.h"
+        "src/compat/collections.h"
+        "src/compat/cstring.cpp"
+        "src/compat/cstring.h"
+        "src/compat/geometry.h"
+        "src/compat/object.cpp"
+        "src/compat/object.h"
+        "src/compat/sync.h"
+    )
+    target_compile_definitions(iwd2-core PUBLIC IWD2RE_NO_MFC)
+    # The MFC headers ask the linker for Winsock; without them it is named here.
+    target_link_libraries(iwd2-core PUBLIC ws2_32)
+else()
+    target_compile_definitions(iwd2-core PUBLIC _AFXDLL)
+endif()
+
 target_compile_definitions(iwd2-core PUBLIC
-    _AFXDLL
     _CRT_NONSTDC_NO_WARNINGS
     _CRT_SECURE_NO_WARNINGS
     _MBCS

@@ -19,12 +19,19 @@
 // rename CFile::GetFileTitle in the MFC headers below.
 #undef GetFileTitle
 
+#ifdef IWD2RE_NO_MFC
+// The replacement classes set their own packing, like the MFC headers do.
+#include <windows.h>
+
+#include "compat/afxcompat.h"
+#else
 #include <afx.h>
 #include <afxmt.h>
 #include <afxtempl.h>
 #include <afxwin.h>
 
 #include <windows.h>
+#endif
 
 #include <dbghelp.h>
 #include <ddraw.h>

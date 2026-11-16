@@ -1,7 +1,11 @@
 #include "resource.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
+#ifdef IWD2RE_NO_MFC
+#include <winres.h>
+#else
 #include "afxres.h"
+#endif
 #undef APSTUDIO_READONLY_SYMBOLS
 
 #ifdef _WIN32
