@@ -979,8 +979,7 @@ void SearchThreadMain(void* userInfo)
                                     if (rc != CGameObjectArray::DENIED) {
                                         break;
                                     }
-                                    deadLockCnt++;
-                                } while (deadLockCnt != 255);
+                                } while (deadLockCnt++ != 255);
 
                                 if (rc == CGameObjectArray::SUCCESS
                                     && pObject->OnSearchMap()
@@ -1036,8 +1035,7 @@ void SearchThreadMain(void* userInfo)
                                             if (rc != CGameObjectArray::DENIED) {
                                                 break;
                                             }
-                                            deadLockCnt++;
-                                        } while (deadLockCnt != 255);
+                                        } while (deadLockCnt++ != 255);
 
                                         if (rc == CGameObjectArray::SUCCESS
                                             && pObject->OnSearchMap()
@@ -1168,7 +1166,10 @@ void SearchThreadMain(void* userInfo)
                                                 bBump,
                                                 &rGrid);
                                         } else {
-                                            searchRequest->m_searchRc = g_pBaldurChitin->GetObjectGame()->m_pathSearch->FindPath(&startPt,
+                                            // NOTE: A back-list search continues from the
+                                            // request's own source point (0x549FFC), not
+                                            // from the sprite's current square.
+                                            searchRequest->m_searchRc = g_pBaldurChitin->GetObjectGame()->m_pathSearch->FindPath(&(searchRequest->m_sourcePt),
                                                 goalPts,
                                                 searchRequest->m_nTargetPoints + searchRequest->m_nTargetIds,
                                                 searchRequest->m_minNodesBack,

@@ -656,9 +656,13 @@ int CPathSearch::FindPath(POINT* startPoint, POINT* goalPoints, int nGoalPoints,
     startPosition = PointToPosition(startPoint);
 
     goalPositions = new LONG[nGoalPoints];
+    if (goalPositions == NULL) {
+        return -1;
+    }
+
     for (cnt = 0; cnt < nGoalPoints; cnt++) {
         // __FILE__: C:\Projects\Icewind2\src\Baldur\CPathSearch.cpp
-        // __LINE__: 756
+        // __LINE__: 768
         UTIL_ASSERT(goalPoints[cnt].x >= -1 && goalPoints[cnt].x < GRID_ACTUALX && goalPoints[cnt].y >= -1 && goalPoints[cnt].y < GRID_ACTUALY);
 
         if (goalPoints[cnt].x != -1 && goalPoints[cnt].y != -1) {
