@@ -102,3 +102,24 @@ tag, image pointers in ints) plus the layout change; it does not need a file-by-
   inline bodies of the lock and window classes.
 - Not covered by unit tests: the game itself running on the replacement. That needs the play
   tests against `build-nomfc\RelWithDebInfo\iwd2-re.exe`.
+
+## Clang on Windows (clang-cl 17, 32-bit, MFC, syntax check of all 219 files)
+
+- **187 files compile unchanged. 32 files have 197 errors**, of five kinds:
+  - 186: a `CString` object passed through `...` (to `Format`, `sprintf` and similar). MSVC allows
+    it and it works because the object is one pointer; every other compiler rejects it. The fix is
+    an explicit `(LPCSTR)` cast at each site, which does not change behaviour on MSVC.
+  - 6: a temporary bound to a non-const reference (`CGameDialog.cpp` and others).
+  - 2: `case -1` on an unsigned switch value.
+  - 2: an overload that only resolves under MSVC's rules (`Find` in `CGameAIBase.cpp`).
+  - 1: address of a temporary (`CAIGroup.cpp:1914`).
+- **About 180 warnings.** The ones that could have been translation bugs were read one by one
+  (out-of-bounds index, always-true and always-false comparisons, self-assignment, uninitialised
+  variable, unused expression): every one is already marked in the source as a quirk of the
+  original. Clang found no new bug.
+- Left for the port itself: 29 `new[]`/`delete` mismatches and 18 deletes through `void*` (these
+  mirror the original and are harmless with MSVC's allocator), 19 `printf` format/argument type
+  notes that only matter where `long` is not 32 bits.
+
+The script used is not in the repo; it runs `clang-cl -fsyntax-only` per file with the project's
+flags so that one failing file does not hide the rest.
