@@ -28,6 +28,9 @@ Newest first. Each entry covers what was done, what's blocked and what's next.
   - **Bug found (action bar of a created character):** slots 4-12 showed placeholder buttons. `CGameSprite::UnmarshalGlobal` lacked the inlined `ResetQuickSlots()` at 0x70C8E6, which fills empty custom button slots from QSLOTS.2DA by class; premade characters carry their buttons in the file, so nothing showed before. Fixed; S27 then passed 2 of 3 rebuild runs, and S5, S8 and S22 still pass.
   - The one failed run stopped at "typing 'r' did not change the screen" in the name box (a key not registered, once in eight runs across both games). Open.
 
+- **S28, class variety** (`test_s28_class_variety.py`, about 13 minutes, banks nothing): creates a half-orc barbarian, half-elf bard, shield dwarf cleric of Lathander, wild elf druid, human monk of the Old Order and rock gnome ranger, comparing the class-specific panels (deity and order lists, greyed alignments, cross-class skill costs, divine and domain spell memorisation, Favored Enemy). In Targos, each one's action bar and sub-bars (Special Abilities, Bard Songs, Cast Spell), three record pages, inventory and spellbooks; Rage, Stunning Attack and a bard song are used. About 730 comparisons. Rogue and sorcerer are not covered. `S28_WITHOUT_RANGER=1` runs a party of five.
+  - **Bug found (crash creating a ranger):** `CScreenCreateChar::UpdateHatedRacePanel` fetched the Done button as control 0; on that panel it is control 11 (0x610364). Fixed; the rebuild then passed both full runs with no differences.
+
 ## 2026-11-15: uninitialised members, constructors checked store by store
 
 | Found by | File | What was wrong |
