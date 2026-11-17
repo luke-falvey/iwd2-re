@@ -1435,12 +1435,16 @@ void CGameSprite::AddToArea(CGameArea* pNewArea, const CPoint& pos, LONG posZ, B
         // __LINE__: 1548
         UTIL_ASSERT(pGame != NULL);
 
-        if (pGame->GetCharacterPortraitNum(m_id) != -1
-            && Animate()) {
-            m_posLastVisMapEntry = pos;
-            pNewArea->m_visibility.AddCharacter(m_posLastVisMapEntry,
-                m_id,
-                m_visibleTerrainTable);
+        if (pGame->GetCharacterPortraitNum(m_id) != -1) {
+            // NOTE: `Animate` gates only the visibility map; a dead party
+            // member is still counted (0x6F44DE).
+            if (Animate()) {
+                m_posLastVisMapEntry = pos;
+                pNewArea->m_visibility.AddCharacter(m_posLastVisMapEntry,
+                    m_id,
+                    m_visibleTerrainTable);
+            }
+
             if (pNewArea->m_nCharacters != 0xFF) {
                 pNewArea->m_nCharacters++;
             } else {
