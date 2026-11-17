@@ -3203,7 +3203,7 @@ BOOLEAN CBaldurMessage::sub_42E630(INT nMsgFrom, BYTE* pMessage, DWORD dwSize)
             pSprite->m_portraitIcons.RemoveAll();
 
             for (INT nIcon = 0; nIcon < nPortraitIcons; nIcon++) {
-                pSprite->m_portraitIcons.AddTail(reinterpret_cast<int*>(aPortraitIcons[nIcon]));
+                pSprite->m_portraitIcons.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(aPortraitIcons[nIcon])));
             }
 
             DWORD nCustomBio = *reinterpret_cast<DWORD*>(pMessage + dwBioPos);
@@ -24134,7 +24134,7 @@ void CMessageSpriteUpdate::Run()
                         pSprite->m_portraitIcons.RemoveAll();
 
                         for (SHORT nIndex = 0; nIndex < field_74; nIndex++) {
-                            pSprite->m_portraitIcons.AddTail(reinterpret_cast<int*>(reinterpret_cast<LONG*>(field_76)[nIndex]));
+                            pSprite->m_portraitIcons.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(reinterpret_cast<LONG*>(field_76)[nIndex])));
                         }
                     }
                 }

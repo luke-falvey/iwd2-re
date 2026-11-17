@@ -5065,7 +5065,7 @@ void CGameSprite::MakeGlobal()
     if (!m_bGlobal) {
         m_bGlobal = TRUE;
 
-        g_pBaldurChitin->GetObjectGame()->m_lstGlobalCreatures.AddTail(reinterpret_cast<int*>(m_id));
+        g_pBaldurChitin->GetObjectGame()->m_lstGlobalCreatures.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(m_id)));
 
         CVariable v;
         v.SetName(CString(GetScriptName()));
@@ -12405,7 +12405,7 @@ void CGameSprite::CheckQuickLists(CAbilityId* ab, SHORT changeAmount, BOOL remov
     INT nIndex;
 
     if (!m_bGlobal) {
-        if (g_pBaldurChitin->GetObjectGame()->m_allies.Find(reinterpret_cast<int*>(m_id), 0) == NULL) {
+        if (g_pBaldurChitin->GetObjectGame()->m_allies.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(m_id)), 0) == NULL) {
             return;
         }
     }
@@ -14105,7 +14105,7 @@ void CGameSprite::SetModalState(BYTE modalState, BOOL bUpdateToolbar)
                         FALSE,
                         FALSE);
 
-                    targets.AddTail(reinterpret_cast<LONG*>(m_id));
+                    targets.AddTail(reinterpret_cast<LONG*>(static_cast<INT_PTR>(m_id)));
 
                     POSITION pos = targets.GetHeadPosition();
                     while (pos != NULL) {
@@ -19012,7 +19012,7 @@ void CGameSprite::CheckModal()
                     FALSE,
                     FALSE);
 
-                targets.AddTail(reinterpret_cast<LONG*>(m_id));
+                targets.AddTail(reinterpret_cast<LONG*>(static_cast<INT_PTR>(m_id)));
 
                 POSITION pos = targets.GetHeadPosition();
                 while (pos != NULL) {
@@ -28921,7 +28921,7 @@ SHORT CGameSprite::Follow()
             return ACTION_DONE;
         } else {
             m_pPathTemp.AddHead(reinterpret_cast<int*>(pPath));
-            m_nPathTemp.AddHead(reinterpret_cast<int*>(nPath));
+            m_nPathTemp.AddHead(reinterpret_cast<int*>(static_cast<INT_PTR>(nPath)));
             return ACTION_INTERRUPTABLE;
         }
     } else {
@@ -28942,7 +28942,7 @@ SHORT CGameSprite::Follow()
                 return ACTION_DONE;
             } else {
                 m_pPathTemp.AddHead(reinterpret_cast<int*>(pPath));
-                m_nPathTemp.AddHead(reinterpret_cast<int*>(nPath));
+                m_nPathTemp.AddHead(reinterpret_cast<int*>(static_cast<INT_PTR>(nPath)));
                 return ACTION_INTERRUPTABLE;
             }
         }
@@ -29318,7 +29318,7 @@ SHORT CGameSprite::LeaveArea()
     }
 
     if (nPortrait == -1
-        && pGame->m_familiars.Find(reinterpret_cast<int*>(m_id)) == NULL) {
+        && pGame->m_familiars.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(m_id))) == NULL) {
         return ACTION_DONE;
     }
 
@@ -29584,7 +29584,7 @@ SHORT CGameSprite::sub_74CDB0()
     CPoint ptTrigger = pTrigger->GetPos();
 
     if ((nPortrait == -1
-            && pGame->m_familiars.Find(reinterpret_cast<int*>(m_id)) == NULL)
+            && pGame->m_familiars.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(m_id))) == NULL)
         || !Orderable(FALSE)
         || (ptTrigger.y - m_pos.y) * (ptTrigger.y - m_pos.y) * 16 / 9 + (ptTrigger.x - m_pos.x) * (ptTrigger.x - m_pos.x) > dword_84C7B8) {
         pGame->GetObjectArray()->ReleaseShare(nTriggerId,
@@ -31027,7 +31027,7 @@ SHORT CGameSprite::LeaveParty()
 
             if (nOverflowId != CGameObjectArray::INVALID_INDEX) {
                 if (!g_pBaldurChitin->GetObjectGame()->AddCharacterToParty(nOverflowId, -1)) {
-                    pGame->m_characterOverflow.Add(reinterpret_cast<int*>(nOverflowId));
+                    pGame->m_characterOverflow.Add(reinterpret_cast<int*>(static_cast<INT_PTR>(nOverflowId)));
                     break;
                 }
 
@@ -32157,7 +32157,7 @@ SHORT CGameSprite::UseContainer()
     LONG iContainer = m_curAction.m_specificID;
 
     if (pGame->GetCharacterPortraitNum(m_id) == -1) {
-        if (pGame->m_familiars.Find(reinterpret_cast<int*>(m_id), NULL) == NULL) {
+        if (pGame->m_familiars.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(m_id)), NULL) == NULL) {
             return ACTION_DONE;
         }
     }
@@ -34197,7 +34197,7 @@ SHORT CGameSprite::UseDoor()
     LONG nDoorId = m_curAction.m_specificID;
 
     if (pGame->GetCharacterPortraitNum(m_id) == -1
-        && pGame->m_familiars.Find(reinterpret_cast<int*>(m_id)) == NULL) {
+        && pGame->m_familiars.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(m_id))) == NULL) {
         return ACTION_DONE;
     }
 
@@ -39122,15 +39122,15 @@ void CGameSprite::SetStealthGreyOut(LONG greyOut)
 // 0x4AEF20
 void CGameSprite::AddPortraitIcon(int icon)
 {
-    if (m_portraitIcons.Find(reinterpret_cast<int*>(icon), 0) == NULL) {
-        m_portraitIcons.AddTail(reinterpret_cast<int*>(icon));
+    if (m_portraitIcons.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(icon)), 0) == NULL) {
+        m_portraitIcons.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(icon)));
     }
 }
 
 // NOTE: Inlined.
 void CGameSprite::RemovePortraitIcon(int icon)
 {
-    POSITION pos = m_portraitIcons.Find(reinterpret_cast<int*>(icon), 0);
+    POSITION pos = m_portraitIcons.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(icon)), 0);
     if (pos != NULL) {
         m_portraitIcons.RemoveAt(pos);
     }

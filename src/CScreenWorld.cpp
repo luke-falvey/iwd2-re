@@ -1154,7 +1154,7 @@ void CScreenWorld::OnKeyDown(SHORT nKeysFlags)
                 if (1) {
                     // NOTE: Uninline.
                     CPoint ptWorld = g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_cInfinity.GetWorldCoordinates(g_pChitin->m_ptPointer);
-                    sText.Format("Mouse Position:%ld,%ld  Tile Position:%ld,%ld  Search Square:%ld,%ld",
+                    sText.Format("Mouse Position:%d,%d  Tile Position:%d,%d  Search Square:%d,%d",
                         ptWorld.x,
                         ptWorld.y,
                         ptWorld.x / 64,
@@ -1682,7 +1682,7 @@ void CScreenWorld::OnKeyDown(SHORT nKeysFlags)
 
                             // NOTE: Uninline.
                             CPoint ptWorld = g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_cInfinity.GetWorldCoordinates(g_pChitin->m_ptPointer);
-                            sText.Format("Mouse Position: x=%ld, y=%ld  ", ptWorld.x, ptWorld.y);
+                            sText.Format("Mouse Position: x=%d, y=%d  ", ptWorld.x, ptWorld.y);
 
                             // NOTE: Uninline.
                             g_pBaldurChitin->GetObjectGame()->GetVisibleArea()->m_resRef.CopyToString(sAreaName);

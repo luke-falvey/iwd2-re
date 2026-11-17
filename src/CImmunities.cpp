@@ -552,6 +552,6 @@ void CImmunitiesProjectile::Unmarshal(BYTE* data, ULONG nSize)
         offset += sizeof(DWORD);
 
         // NOTE: The node holds the value, not the pointer.
-        AddTail(reinterpret_cast<DWORD*>(*pId));
+        AddTail(reinterpret_cast<DWORD*>(static_cast<UINT_PTR>(*pId)));
     }
 }

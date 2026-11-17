@@ -4800,7 +4800,7 @@ BOOL CGameAIBase::sub_464950(CItem* pItem, BOOL a2, BOOL a3, INT nCount, BOOL bF
 
     pItem->m_flags |= 0x2;
 
-    if (g_pBaldurChitin->GetObjectGame()->m_familiars.Find(reinterpret_cast<int*>(m_id), NULL) != NULL) {
+    if (g_pBaldurChitin->GetObjectGame()->m_familiars.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(m_id)), NULL) != NULL) {
         CMessageAddInventoryItem* pMessage = new CMessageAddInventoryItem(*pItem,
             m_id,
             g_pBaldurChitin->GetObjectGame()->GetProtagonist());

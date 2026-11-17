@@ -2604,7 +2604,7 @@ void CVidMode::AddDisposableTexture(INT nTextureId)
     }
 
     if (!bFound) {
-        m_lDisposableTextureIds.AddTail(reinterpret_cast<INT*>(nTextureId));
+        m_lDisposableTextureIds.AddTail(reinterpret_cast<INT*>(static_cast<INT_PTR>(nTextureId)));
     }
 
     lock.Unlock();

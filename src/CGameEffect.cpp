@@ -10874,7 +10874,7 @@ CGameEffect* CGameEffectImmunityToProjectile::Copy()
 // 0x4B63E0
 BOOL CGameEffectImmunityToProjectile::ApplyEffect(CGameSprite* pSprite)
 {
-    pSprite->GetDerivedStats()->m_cImmunitiesProjectile.AddTail(reinterpret_cast<DWORD*>(m_dwFlags));
+    pSprite->GetDerivedStats()->m_cImmunitiesProjectile.AddTail(reinterpret_cast<DWORD*>(static_cast<UINT_PTR>(m_dwFlags)));
 
     return TRUE;
 }

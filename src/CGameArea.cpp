@@ -198,7 +198,7 @@ void CGameArea::AddObject(LONG id, BYTE listType)
         UTIL_ASSERT(FALSE);
     }
 
-    pList->AddTail(reinterpret_cast<int*>(id));
+    pList->AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(id)));
 }
 
 // 0x46A3D0
@@ -1170,7 +1170,7 @@ void CGameArea::GetAllInRange(POSITION posVertList, const CPoint& center, const 
                                 && static_cast<CGameSprite*>(pObject)->m_activeAI))
                         && (pObject->GetObjectType() != CGameObject::TYPE_SPRITE
                             || static_cast<CGameSprite*>(pObject)->GetAnimation()->GetAboveGround())) {
-                        targets.AddTail(reinterpret_cast<LONG*>(pObject->GetId()));
+                        targets.AddTail(reinterpret_cast<LONG*>(static_cast<INT_PTR>(pObject->GetId())));
                     }
                 } else {
                     posBack = NULL;
@@ -1214,7 +1214,7 @@ void CGameArea::GetAllInRange(POSITION posVertList, const CPoint& center, const 
                                 && static_cast<CGameSprite*>(pObject)->m_activeAI))
                         && (pObject->GetObjectType() != CGameObject::TYPE_SPRITE
                             || static_cast<CGameSprite*>(pObject)->GetAnimation()->GetAboveGround())) {
-                        targets.AddTail(reinterpret_cast<LONG*>(pObject->GetId()));
+                        targets.AddTail(reinterpret_cast<LONG*>(static_cast<INT_PTR>(pObject->GetId())));
                     }
                 } else {
                     posFront = NULL;
@@ -1270,7 +1270,7 @@ void CGameArea::GetAllInRange(const CPoint& center, const CAIObjectType& type, S
                             && static_cast<CGameSprite*>(pObject)->m_activeAI))
                     && (pObject->GetObjectType() != CGameObject::TYPE_SPRITE
                         || static_cast<CGameSprite*>(pObject)->GetAnimation()->GetAboveGround())) {
-                    targets.AddTail(reinterpret_cast<LONG*>(nId));
+                    targets.AddTail(reinterpret_cast<LONG*>(static_cast<INT_PTR>(nId)));
                 }
             }
 
@@ -1382,7 +1382,7 @@ void CGameArea::GetAllInRangeBack(const CPoint& center, const CAIObjectType& typ
                     && (pObject->GetObjectType() != CGameObject::TYPE_SPRITE
                         || ignoreDead
                         || (static_cast<CGameSprite*>(pObject)->GetDerivedStats()->m_generalState & STATE_DEAD) == 0)) {
-                    targets.AddTail(reinterpret_cast<LONG*>(nId));
+                    targets.AddTail(reinterpret_cast<LONG*>(static_cast<INT_PTR>(nId)));
                 }
             }
 
@@ -1422,7 +1422,7 @@ void CGameArea::GetAllInPoly(const CRect& rBounding, CPoint* pPoly, SHORT nPoly,
                         && static_cast<CGameSprite*>(pObject)->m_activeAI))
                 && (pObject->GetObjectType() != CGameObject::TYPE_SPRITE
                     || static_cast<CGameSprite*>(pObject)->GetAnimation()->GetAboveGround())) {
-                targets.AddTail(reinterpret_cast<LONG*>(nId));
+                targets.AddTail(reinterpret_cast<LONG*>(static_cast<INT_PTR>(nId)));
             }
 
             m_pGame->GetObjectArray()->ReleaseShare(nId,
@@ -1455,7 +1455,7 @@ void CGameArea::GetAllInPoly(const CRect& rBounding, CPoint* pPoly, SHORT nPoly,
                     && (pObject->GetObjectType() != CGameObject::TYPE_SPRITE
                         || ((static_cast<CGameSprite*>(pObject)->GetDerivedStats()->m_generalState & STATE_DEAD) == 0
                             && (static_cast<CGameSprite*>(pObject)->GetBaseStats()->m_generalState & STATE_DEAD) == 0))) {
-                    targets.AddTail(reinterpret_cast<LONG*>(nId));
+                    targets.AddTail(reinterpret_cast<LONG*>(static_cast<INT_PTR>(nId)));
                 }
 
                 m_pGame->GetObjectArray()->ReleaseShare(nId,
@@ -6180,10 +6180,10 @@ void CGameArea::SortLists()
             if (rc == CGameObjectArray::SUCCESS) {
                 POSITION posVertList;
                 if (m_lVertSortBack.IsEmpty()) {
-                    posVertList = m_lVertSortBack.AddTail(reinterpret_cast<int*>(pObject->GetId()));
+                    posVertList = m_lVertSortBack.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(pObject->GetId())));
                 } else {
                     posVertList = m_lVertSortBack.InsertBefore(m_lVertSortBack.GetTailPosition(),
-                        reinterpret_cast<int*>(pObject->GetId()));
+                        reinterpret_cast<int*>(static_cast<INT_PTR>(pObject->GetId())));
                 }
                 pObject->SetVertListPos(posVertList);
 
@@ -6214,10 +6214,10 @@ void CGameArea::SortLists()
             if (rc == CGameObjectArray::SUCCESS) {
                 POSITION posVertList;
                 if (m_lVertSortFlight.IsEmpty()) {
-                    posVertList = m_lVertSortFlight.AddTail(reinterpret_cast<int*>(pObject->GetId()));
+                    posVertList = m_lVertSortFlight.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(pObject->GetId())));
                 } else {
                     posVertList = m_lVertSortFlight.InsertBefore(m_lVertSortFlight.GetTailPosition(),
-                        reinterpret_cast<int*>(pObject->GetId()));
+                        reinterpret_cast<int*>(static_cast<INT_PTR>(pObject->GetId())));
                 }
                 pObject->SetVertListPos(posVertList);
 
@@ -6285,14 +6285,14 @@ void CGameArea::SortLists()
             while (cnt < nFrontAdd || cnt2 < nFront) {
                 if (cnt2 != nFront
                     && (cnt == nFrontAdd || pObjects[cnt]->GetPos().y > pObjects[nFrontAdd + cnt2]->GetPos().y)) {
-                    pos = m_lVertSort.AddTail(reinterpret_cast<int*>(pObjects[nFrontAdd + cnt2]->GetId()));
+                    pos = m_lVertSort.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(pObjects[nFrontAdd + cnt2]->GetId())));
                     pObjects[nFrontAdd + cnt2]->SetVertListPos(pos);
                     m_pGame->GetObjectArray()->ReleaseShare(pObjects[nFrontAdd + cnt2]->GetId(),
                         CGameObjectArray::THREAD_ASYNCH,
                         INFINITE);
                     cnt2++;
                 } else {
-                    pos = m_lVertSort.AddTail(reinterpret_cast<int*>(pObjects[cnt]->GetId()));
+                    pos = m_lVertSort.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(pObjects[cnt]->GetId())));
                     pObjects[cnt]->SetVertListPos(pos);
                     m_pGame->GetObjectArray()->ReleaseShare(pObjects[cnt]->GetId(),
                         CGameObjectArray::THREAD_ASYNCH,

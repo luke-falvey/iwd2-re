@@ -325,7 +325,7 @@ void CAIAction::Read(CString sData)
     m_acteeID2.Read(v2);
 
     sscanf(sData,
-        "%ld %d %d %d %d",
+        "%d %d %d %d %d",
         &m_specificID,
         &(m_dest.x),
         &(m_dest.y),

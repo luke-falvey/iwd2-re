@@ -99,9 +99,9 @@ public:
     /* 001C */ virtual LONG DrawEllipse32(const CPoint& ptCenter, const CSize& axis, const DDSURFACEDESC& ddsd, const CRect* rClip, COLORREF rgbColor);
     /* 0020 */ virtual LONG DrawEllipseHOctant32(LONG x, LONG y, INT nArcLength, DWORD* pSurface, LONG lpitch, BOOLEAN clockwise, BYTE* pPixelList, const CRect* rClip, DWORD color);
     /* 0024 */ virtual LONG DrawEllipseVOctant32(LONG x, LONG y, INT nArcLength, DWORD* pSurface, LONG lpitch, BOOLEAN clockwise, BYTE* pPixelList, const CRect* rClip, DWORD color);
-    /* 0028 */ virtual void DrawLightingEffect16(WORD* pSurface, LONG lpitch, const CPoint& a4, const CSize& a5, unsigned long a6, unsigned long a7);
-    /* 002C */ virtual void DrawLightingEffect24(BYTE* pSurface, LONG lpitch, const CPoint& a4, const CSize& a5, unsigned long a6, unsigned long a7);
-    /* 0030 */ virtual void DrawLightingEffect32(DWORD* pSurface, LONG lpitch, const CPoint& a4, const CSize& a5, unsigned long a6, unsigned long a7);
+    /* 0028 */ virtual void DrawLightingEffect16(WORD* pSurface, LONG lpitch, const CPoint& a4, const CSize& a5, DWORD a6, DWORD a7);
+    /* 002C */ virtual void DrawLightingEffect24(BYTE* pSurface, LONG lpitch, const CPoint& a4, const CSize& a5, DWORD a6, DWORD a7);
+    /* 0030 */ virtual void DrawLightingEffect32(DWORD* pSurface, LONG lpitch, const CPoint& a4, const CSize& a5, DWORD a6, DWORD a7);
     /* 0034 */ virtual BOOL DrawRecticle(const CVIDMODE_RECTICLE_DESCRIPTION& rd, const CRect& rClip, COLORREF rgbColor);
     /* 0038 */ virtual void DrawRecticle(const CVIDMODE_RECTICLE_DESCRIPTION& rd, const DDSURFACEDESC& ddsd, const CRect* rClip, COLORREF rgbColor);
     /* 003C */ virtual void DrawRecticle16(const CVIDMODE_RECTICLE_DESCRIPTION& rd, const DDSURFACEDESC& ddsd, const CRect* rClip, COLORREF rgbColor);
@@ -124,7 +124,7 @@ public:
     /* 0080 */ virtual void DoTextOut(UINT nSurface, const CString& sText, int x, int y, COLORREF color);
     /* 0084 */ virtual void DrawEllipse(const CPoint& ptCenter, const CSize& axis, const DDSURFACEDESC& ddsd, const CRect* rClip, COLORREF rgbColor);
     /* 0088 */ virtual BOOL DrawEllipse(const CPoint& ptCenter, const CSize& axis, const CRect& rClip, COLORREF rgbColor);
-    /* 008C */ virtual void DrawLightingEffect(const DDSURFACEDESC& ddsd, const CPoint& a3, const CSize& a4, unsigned long a5, unsigned long a6);
+    /* 008C */ virtual void DrawLightingEffect(const DDSURFACEDESC& ddsd, const CPoint& a3, const CSize& a4, DWORD a5, DWORD a6);
     /* 0090 */ virtual BOOL DrawPoints(CPoint* pPoints, INT nPoints, WORD* pSurface, LONG lPitch, const CRect& rSurface, COLORREF rgbColor, BOOL bClipped);
     /* 0094 */ virtual BOOL DrawLine(INT nXFrom, INT nYFrom, INT nXTo, INT nYTo, const DDSURFACEDESC& ddsd, const CRect& rSurface, COLORREF, BOOLEAN bClipped);
     /* 0098 */ virtual BOOL DrawLine(INT nXFrom, INT nYFrom, INT nXTo, INT nYTo, UINT nSurface, const CRect& rSurface, COLORREF rgbColor);

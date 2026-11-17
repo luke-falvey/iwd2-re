@@ -345,7 +345,7 @@ void CGameContainer::AddEffect(CGameEffect* pEffect, BYTE list, BOOL noSave, BOO
 
                 // NOTE: Original passes `m_id` where the callee expects a
                 // `CGameAIBase*` caller.
-                CGameObject* pObject = m_typeAI.sub_40CCA0(reinterpret_cast<CGameAIBase*>(m_id), FALSE);
+                CGameObject* pObject = m_typeAI.sub_40CCA0(reinterpret_cast<CGameAIBase*>(static_cast<INT_PTR>(m_id)), FALSE);
                 if (pObject != NULL) {
                     // NOTE: Uninline.
                     if (pObject->GetAIType().Equal(CAIObjectType(CGameObject::TYPE_SPRITE))) {

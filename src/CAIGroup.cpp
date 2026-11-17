@@ -1001,7 +1001,7 @@ POSITION CAIGroup::Add(LONG characterId)
     SHORT portraitNum = g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(characterId);
     m_groupChanged = TRUE;
     if (portraitNum == -1) {
-        return m_memberList.AddTail(reinterpret_cast<LONG*>(characterId));
+        return m_memberList.AddTail(reinterpret_cast<LONG*>(static_cast<INT_PTR>(characterId)));
     }
 
     POSITION pos = m_memberList.GetHeadPosition();
@@ -1009,12 +1009,12 @@ POSITION CAIGroup::Add(LONG characterId)
         LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetAt(pos)));
         SHORT memberPortraitNum = g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(memberId);
         if (memberPortraitNum == -1 || memberPortraitNum > portraitNum) {
-            return m_memberList.InsertBefore(pos, reinterpret_cast<LONG*>(characterId));
+            return m_memberList.InsertBefore(pos, reinterpret_cast<LONG*>(static_cast<INT_PTR>(characterId)));
         }
         m_memberList.GetNext(pos);
     }
 
-    return m_memberList.AddTail(reinterpret_cast<LONG*>(characterId));
+    return m_memberList.AddTail(reinterpret_cast<LONG*>(static_cast<INT_PTR>(characterId)));
 }
 
 // 0x406210
@@ -1040,7 +1040,7 @@ BOOL CAIGroup::IsPartyLeader()
         return TRUE;
     }
 
-    return g_pBaldurChitin->GetObjectGame()->m_familiars.Find(reinterpret_cast<int*>(memberId)) != NULL;
+    return g_pBaldurChitin->GetObjectGame()->m_familiars.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(memberId))) != NULL;
 }
 
 // 0x4062B0
@@ -1074,7 +1074,7 @@ void CAIGroup::Sort()
         } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
 
         if (rc == CGameObjectArray::SUCCESS) {
-            pSprite->m_groupPosition = m_memberList.AddTail(reinterpret_cast<LONG*>(memberId));
+            pSprite->m_groupPosition = m_memberList.AddTail(reinterpret_cast<LONG*>(static_cast<INT_PTR>(memberId)));
 
             g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(memberId,
                 CGameObjectArray::THREAD_ASYNCH,
@@ -1958,7 +1958,7 @@ void CAIGroup::AddTrigger(CAITrigger& trigger)
 // 0x4093E0
 BOOL CAIGroup::InList(LONG characterId)
 {
-    return m_memberList.Find(reinterpret_cast<LONG*>(characterId)) != NULL;
+    return m_memberList.Find(reinterpret_cast<LONG*>(static_cast<INT_PTR>(characterId))) != NULL;
 }
 
 // 0x409400
@@ -2149,7 +2149,7 @@ void CAIGroup::HandleFollowPath(LONG* pPath, SHORT nPath, CPoint target, CPoint 
             memcpy(pPathCopy, pPath, nPath * sizeof(LONG));
 
             pSprite->m_pPathTemp.AddTail(reinterpret_cast<int*>(pPathCopy));
-            pSprite->m_nPathTemp.AddTail(reinterpret_cast<int*>(static_cast<INT>(nPath)));
+            pSprite->m_nPathTemp.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(nPath)));
         }
 
         pSprite->m_inFormation = TRUE;
