@@ -2,7 +2,6 @@
 #include "PortPointer.h"
 
 #include "CAIScript.h"
-#include "PortPointer.h"
 #include "CAIUtil.h"
 #include "CBaldurChitin.h"
 #include "CCreatureFile.h"
