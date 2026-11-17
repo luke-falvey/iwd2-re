@@ -208,7 +208,7 @@ BOOLEAN CGameTrigger::DoAIUpdate(BOOLEAN active, LONG counter)
 
             POSITION pos = targets.GetHeadPosition();
             while (pos != NULL) {
-                LONG nId = reinterpret_cast<LONG>(targets.GetNext(pos));
+                LONG nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
                 CGameSprite* pSprite;
                 BYTE rc = pObjectArray->GetShare(nId,

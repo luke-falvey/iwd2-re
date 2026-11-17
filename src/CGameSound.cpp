@@ -50,7 +50,7 @@ CGameSound::CGameSound(CGameArea* pArea, CAreaFileSoundObject* pSoundObject)
             m_looping.SetResRef(CResRef(m_soundObject.m_soundObject[0]), TRUE, TRUE);
         }
 
-        m_looping.SetChannel(16, reinterpret_cast<DWORD>(pArea));
+        m_looping.SetChannel(16, reinterpret_cast<DWORD_PTR>(pArea));
         m_looping.SetLoopingFlag(1);
         if ((m_soundObject.m_dwFlags & 0x4) == 0) {
             m_looping.SetRange(m_soundObject.m_range);
@@ -175,7 +175,7 @@ BOOLEAN CGameSound::DoAIUpdate(BOOLEAN active, LONG counter)
                 }
 
                 sound.SetFireForget(TRUE);
-                sound.SetChannel(17, reinterpret_cast<DWORD>(m_pArea));
+                sound.SetChannel(17, reinterpret_cast<DWORD_PTR>(m_pArea));
 
                 if ((m_soundObject.m_dwFlags & 0x4) == 0) {
                     sound.SetRange(m_soundObject.m_range);

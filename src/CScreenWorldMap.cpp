@@ -2061,7 +2061,7 @@ void CScreenWorldMap::sub_69D0F0(CResRef& cResArea, CString sText, SHORT nFacing
 
         POSITION pos = pGame->m_familiars.GetHeadPosition();
         while (pos != NULL) {
-            LONG nCharacterId = reinterpret_cast<LONG>(pGame->m_familiars.GetNext(pos));
+            LONG nCharacterId = static_cast<LONG>(reinterpret_cast<INT_PTR>(pGame->m_familiars.GetNext(pos)));
 
             do {
                 rc = pGame->GetObjectArray()->GetDeny(nCharacterId,

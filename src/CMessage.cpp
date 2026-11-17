@@ -2853,7 +2853,7 @@ BOOLEAN CBaldurMessage::sub_42E1B0(CString& sPlayerName, SHORT nCharacterSlot, B
                 INT nIcon = 0;
                 pos = pSprite->m_portraitIcons.GetHeadPosition();
                 while (pos != NULL) {
-                    aPortraitIcons[nIcon] = reinterpret_cast<INT>(pSprite->m_portraitIcons.GetNext(pos));
+                    aPortraitIcons[nIcon] = static_cast<INT>(reinterpret_cast<INT_PTR>(pSprite->m_portraitIcons.GetNext(pos)));
                     dwSize += sizeof(INT);
                     nIcon++;
                 }
@@ -4759,7 +4759,7 @@ BOOLEAN CBaldurMessage::CharacterPartyOrderRequest()
         }
 
         for (index = 0; index < nOverflow; index++) {
-            pOverflowIds[index] = reinterpret_cast<LONG>(g_pBaldurChitin->GetObjectGame()->m_characterOverflow.GetAt(index));
+            pOverflowIds[index] = static_cast<LONG>(reinterpret_cast<INT_PTR>(g_pBaldurChitin->GetObjectGame()->m_characterOverflow.GetAt(index)));
         }
     }
 
@@ -5029,7 +5029,7 @@ BOOLEAN CBaldurMessage::sub_432610()
         }
 
         for (index = 0; index < nOverflow; index++) {
-            pOverflowIds[index] = reinterpret_cast<LONG>(g_pBaldurChitin->GetObjectGame()->m_characterOverflow.GetAt(index));
+            pOverflowIds[index] = static_cast<LONG>(reinterpret_cast<INT_PTR>(g_pBaldurChitin->GetObjectGame()->m_characterOverflow.GetAt(index)));
         }
     }
 
@@ -16719,7 +16719,7 @@ void CMessageDisplayTextRef::Run()
                 strResText.cSound.SetFireForget(TRUE);
             }
 
-            strResText.cSound.SetChannel(14, reinterpret_cast<DWORD>(pSprite->GetArea()));
+            strResText.cSound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pSprite->GetArea()));
 
             // FIXME: Calls `GetPos` twice.
             strResText.cSound.Play(pSprite->GetPos().x,
@@ -18698,7 +18698,7 @@ void CMessagePlaySoundRef::Run()
 
     if (rc == CGameObjectArray::SUCCESS) {
         cSound.SetChannel(m_nChannel,
-            reinterpret_cast<DWORD>(pObject->GetArea()));
+            reinterpret_cast<DWORD_PTR>(pObject->GetArea()));
         cSound.Play(pObject->GetPos().x,
             pObject->GetPos().y,
             0,
@@ -18709,7 +18709,7 @@ void CMessagePlaySoundRef::Run()
             INFINITE);
     } else {
         cSound.SetChannel(14,
-            reinterpret_cast<DWORD>(g_pBaldurChitin->GetObjectGame()->GetVisibleArea()));
+            reinterpret_cast<DWORD_PTR>(g_pBaldurChitin->GetObjectGame()->GetVisibleArea()));
         cSound.Play(FALSE);
     }
 }
@@ -22959,7 +22959,7 @@ void CMessageSpriteUpdate::MarshalMessage(BYTE** pData, DWORD* dwSize)
         INT nIndex = 0;
         pos = pSprite->m_portraitIcons.GetHeadPosition();
         while (pos != NULL) {
-            reinterpret_cast<LONG*>(field_76)[nIndex++] = reinterpret_cast<LONG>(pSprite->m_portraitIcons.GetNext(pos));
+            reinterpret_cast<LONG*>(field_76)[nIndex++] = static_cast<LONG>(reinterpret_cast<INT_PTR>(pSprite->m_portraitIcons.GetNext(pos)));
         }
     }
 
@@ -24122,7 +24122,7 @@ void CMessageSpriteUpdate::Run()
                         POSITION pos = pSprite->m_portraitIcons.GetHeadPosition();
                         SHORT nIndex = 0;
                         while (nIndex < nIcons && pos != NULL) {
-                            if (reinterpret_cast<INT>(pSprite->m_portraitIcons.GetNext(pos)) != reinterpret_cast<LONG*>(field_76)[nIndex]) {
+                            if (static_cast<INT>(reinterpret_cast<INT_PTR>(pSprite->m_portraitIcons.GetNext(pos))) != reinterpret_cast<LONG*>(field_76)[nIndex]) {
                                 bMatches = FALSE;
                                 break;
                             }
@@ -26105,7 +26105,7 @@ void CMessageDisplayTextRefSend::Run()
                 strResText.cSound.SetFireForget(TRUE);
             }
 
-            strResText.cSound.SetChannel(14, reinterpret_cast<DWORD>(pSprite->GetArea()));
+            strResText.cSound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pSprite->GetArea()));
 
             // FIXME: Calls `GetPos` twice.
             strResText.cSound.Play(pSprite->GetPos().x,
@@ -34634,7 +34634,7 @@ void CMessagePlaySoundPoint::Run()
 
     if (rc == CGameObjectArray::SUCCESS) {
         cSound.SetChannel(m_nChannel,
-            reinterpret_cast<DWORD>(pObject->GetArea()));
+            reinterpret_cast<DWORD_PTR>(pObject->GetArea()));
         cSound.Play(m_ptPos.x,
             m_ptPos.y,
             0,
@@ -34645,7 +34645,7 @@ void CMessagePlaySoundPoint::Run()
             INFINITE);
     } else {
         cSound.SetChannel(2,
-            reinterpret_cast<DWORD>(g_pBaldurChitin->GetObjectGame()->GetVisibleArea()));
+            reinterpret_cast<DWORD_PTR>(g_pBaldurChitin->GetObjectGame()->GetVisibleArea()));
         cSound.Play(FALSE);
     }
 }

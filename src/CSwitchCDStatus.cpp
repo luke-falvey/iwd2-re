@@ -159,7 +159,7 @@ void CSwitchCDStatus::FUN_0054e220(CVidInf* pVidInf, int x, int y, const CSize* 
     // NOTE: When none of the three horizontal alignment flags (0x8, 0x10,
     // 0x4) is set, the original leaves the stack slot that held `sText` as
     // the x position.
-    int nTextX = reinterpret_cast<int>(sText);
+    int nTextX = static_cast<int>(reinterpret_cast<INT_PTR>(sText));
 
     if (static_cast<WORD>(0x8 & dwFlags) != 0) {
         nTextX = (nMargin >> 1) + x;

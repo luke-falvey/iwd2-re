@@ -466,7 +466,7 @@ void CCacheStatus::Update(BOOLEAN bEnabled, LONG nProgressBarCaption, INT nBytes
             }
 
             if (g_pBaldurChitin->GetObjectGame()->GetVisibleArea() != NULL) {
-                g_pBaldurChitin->cSoundMixer.m_nActiveArea = reinterpret_cast<DWORD>(g_pBaldurChitin->GetObjectGame()->GetVisibleArea());
+                g_pBaldurChitin->cSoundMixer.m_nActiveArea = reinterpret_cast<DWORD_PTR>(g_pBaldurChitin->GetObjectGame()->GetVisibleArea());
                 g_pBaldurChitin->cSoundMixer.UpdateSoundList();
                 g_pBaldurChitin->m_pEngineWorld->m_weather.OnAreaChange(FALSE);
                 if (g_pBaldurChitin->cSoundMixer.sub_7ACA10()) {

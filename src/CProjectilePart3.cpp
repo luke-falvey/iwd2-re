@@ -573,7 +573,7 @@ CProjectile84E9C0::CProjectile84E9C0(const CString& sVidCell, const CString& sSo
         m_sound.SetFireForget(TRUE);
     }
 
-    m_sound.SetChannel(14, reinterpret_cast<DWORD>(field_EA));
+    m_sound.SetChannel(14, reinterpret_cast<DWORD_PTR>(field_EA));
     m_fireSoundRef = sSound;
     field_32B = a5;
     field_326 = a4;
@@ -720,7 +720,7 @@ CProjectile850F9C::CProjectile850F9C(const CString& sVidCell, const CString& sSo
         m_sound.SetFireForget(TRUE);
     }
 
-    m_sound.SetChannel(4, reinterpret_cast<DWORD>(field_EA));
+    m_sound.SetChannel(4, reinterpret_cast<DWORD_PTR>(field_EA));
     m_fireSoundRef = sSound;
 
     field_32C = a3;

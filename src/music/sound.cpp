@@ -1607,7 +1607,7 @@ int internalSoundFade(Sound* sound, int millis, int end, int pause)
         return soundErrorno;
     }
 
-    fadeEventHandle = timeSetEvent(40, 10, doTimerEvent, (DWORD)fadeSounds, 1);
+    fadeEventHandle = timeSetEvent(40, 10, doTimerEvent, reinterpret_cast<DWORD_PTR>(fadeSounds), 1);
     if (fadeEventHandle == 0) {
         fadeEventHandle = -1;
         soundErrorno = SOUND_UNKNOWN_ERROR;

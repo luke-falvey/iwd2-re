@@ -2603,7 +2603,7 @@ SHORT CGameAIBase::PlaySound(CPoint pos, BOOL bUsePoint)
     }
 
     sound.SetFireForget(TRUE);
-    sound.SetChannel(2, reinterpret_cast<DWORD>(m_pArea));
+    sound.SetChannel(2, reinterpret_cast<DWORD_PTR>(m_pArea));
     sound.Play(pos.x, pos.y, 0, FALSE);
 
     return ACTION_DONE;
@@ -4078,7 +4078,7 @@ SHORT CGameAIBase::ClearAllActions()
     // NOTE: Walks the area's vertical sort list backwards.
     POSITION pos = m_pArea->m_lVertSort.GetTailPosition();
     while (pos != NULL) {
-        LONG id = reinterpret_cast<LONG>(m_pArea->m_lVertSort.GetPrev(pos));
+        LONG id = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_pArea->m_lVertSort.GetPrev(pos)));
         if (id != m_id) {
             CGameAIBase* pObject;
             if (g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(id,
@@ -5892,7 +5892,7 @@ SHORT CGameAIBase::Shout()
 
     POSITION pos = targets.GetHeadPosition();
     while (pos != NULL) {
-        LONG nId = reinterpret_cast<LONG>(targets.GetNext(pos));
+        LONG nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
         CMessage* message = new CMessageSetTrigger(trigger, m_id, nId);
         g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
@@ -6031,9 +6031,9 @@ SHORT CGameAIBase::DisplayString(CGameAIBase* sprite)
 
             if (sprite->GetObjectType() == TYPE_SPRITE) {
                 strRes.cSound.SetChannel(static_cast<CGameSprite*>(sprite)->GetChannel(),
-                    reinterpret_cast<DWORD>(m_pArea));
+                    reinterpret_cast<DWORD_PTR>(m_pArea));
             } else {
-                strRes.cSound.SetChannel(14, reinterpret_cast<DWORD>(m_pArea));
+                strRes.cSound.SetChannel(14, reinterpret_cast<DWORD_PTR>(m_pArea));
             }
 
             strRes.cSound.Play(FALSE);
@@ -6055,9 +6055,9 @@ SHORT CGameAIBase::DisplayString(CGameAIBase* sprite)
 
         if (sprite->GetObjectType() == TYPE_SPRITE) {
             strRes.cSound.SetChannel(static_cast<CGameSprite*>(sprite)->GetChannel(),
-                reinterpret_cast<DWORD>(m_pArea));
+                reinterpret_cast<DWORD_PTR>(m_pArea));
         } else {
-            strRes.cSound.SetChannel(14, reinterpret_cast<DWORD>(m_pArea));
+            strRes.cSound.SetChannel(14, reinterpret_cast<DWORD_PTR>(m_pArea));
         }
 
         strRes.cSound.Play(m_pos.x, m_pos.y, 0, FALSE);
@@ -8208,20 +8208,20 @@ BOOL CGameAIBase::EvaluateStatusTrigger(const CAITrigger& trigger)
 
         CTypedPtrArray<CPtrArray, int*>& overflow = g_pBaldurChitin->GetObjectGame()->GetCharacterOverflow();
         for (int nIndex = 0; nIndex < overflow.GetSize(); nIndex++) {
-            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(reinterpret_cast<LONG>(overflow.ElementAt(nIndex)),
+            BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(static_cast<LONG>(reinterpret_cast<INT_PTR>(overflow.ElementAt(nIndex))),
                 CGameObjectArray::THREAD_ASYNCH,
                 reinterpret_cast<CGameObject**>(&pSprite),
                 INFINITE);
             if (rc == CGameObjectArray::SUCCESS) {
                 if (pSprite->GetAIType().OfType(statusTrigger.GetCause(), FALSE, FALSE)
                     && (pSprite->GetDerivedStats()->m_generalState & 0x800) == 0) {
-                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(reinterpret_cast<LONG>(overflow.ElementAt(nIndex)),
+                    g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(static_cast<LONG>(reinterpret_cast<INT_PTR>(overflow.ElementAt(nIndex))),
                         CGameObjectArray::THREAD_ASYNCH,
                         INFINITE);
                     return TRUE;
                 }
 
-                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(reinterpret_cast<LONG>(overflow.ElementAt(nIndex)),
+                g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseShare(static_cast<LONG>(reinterpret_cast<INT_PTR>(overflow.ElementAt(nIndex))),
                     CGameObjectArray::THREAD_ASYNCH,
                     INFINITE);
             }
@@ -9598,7 +9598,7 @@ BOOL CGameAIBase::EvaluateStatusTrigger(const CAITrigger& trigger)
 
                     POSITION pos = targets.GetHeadPosition();
                     while (pos != NULL) {
-                        LONG nId = reinterpret_cast<LONG>(targets.GetNext(pos));
+                        LONG nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
                         CGameObject* pTarget;
                         BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nId,

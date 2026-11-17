@@ -584,7 +584,7 @@ void CProjectileBAM84E69C::Fire(CGameArea* pArea, LONG source, LONG target, CPoi
 
     POSITION pos = targets.GetHeadPosition();
     while (pos != NULL) {
-        LONG nTarget = reinterpret_cast<LONG>(targets.GetNext(pos));
+        LONG nTarget = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
         rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTarget,
             CGameObjectArray::THREAD_ASYNCH,

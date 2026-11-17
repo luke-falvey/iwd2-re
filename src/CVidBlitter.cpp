@@ -250,7 +250,7 @@ void CVidBlitter::FUN_007b6cc0(BYTE* pDest, BYTE* pSrc, int nBytes)
         d = pDest - 4;
         nRemainder = nCount;
     } else {
-        DWORD nAlign = reinterpret_cast<DWORD>(pDest) & 3;
+        DWORD nAlign = static_cast<DWORD>(reinterpret_cast<UINT_PTR>(pDest)) & 3;
         if (nAlign == 1 || nAlign == 3) {
             // NOTE: The original jumps out of the `__asm` block without
             // popping the two registers it pushed, so the function returns
@@ -325,7 +325,7 @@ void CVidBlitter::FUN_007b6dc0(BYTE* pDest, BYTE* pSrc, int nBytes, DWORD dwColo
         d = pDest - 4;
         nRemainder = nCount;
     } else {
-        DWORD nAlign = reinterpret_cast<DWORD>(pDest) & 3;
+        DWORD nAlign = static_cast<DWORD>(reinterpret_cast<UINT_PTR>(pDest)) & 3;
         if (nAlign == 1 || nAlign == 3) {
             // NOTE: The original jumps out of the `__asm` block without
             // popping the two registers it pushed, so the function returns
@@ -415,7 +415,7 @@ void CVidBlitter::FUN_007b6f20(BYTE* pDest, BYTE* pSrc, int nBytes, DWORD dwColo
     if (nCount < 4) {
         nRemainder = nCount;
     } else {
-        DWORD nAlign = reinterpret_cast<DWORD>(pDest) & 3;
+        DWORD nAlign = static_cast<DWORD>(reinterpret_cast<UINT_PTR>(pDest)) & 3;
         if (nAlign == 1 || nAlign == 3) {
             // NOTE: The original jumps out of the `__asm` block without
             // popping the two registers it pushed, so the function returns
@@ -541,7 +541,7 @@ HRESULT CVidBlitter::FUN_007b7070(IDirectDrawSurface* lpDDSurface, LPRECT lpDest
         BYTE* pDest = m_pDestSurface;
         DWORD nCount = nWidth;
 
-        if ((reinterpret_cast<DWORD>(pDest) & 3) != 0) {
+        if ((static_cast<DWORD>(reinterpret_cast<UINT_PTR>(pDest)) & 3) != 0) {
             // NOTE: With a zero width this makes the count 0xFFFFFFFF and the
             // following `REP STOSD` runs away, as in the original.
             *reinterpret_cast<WORD*>(pDest) = static_cast<WORD>(dwColor);

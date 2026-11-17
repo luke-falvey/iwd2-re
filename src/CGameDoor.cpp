@@ -1465,7 +1465,7 @@ void CGameDoor::ToggleDoor(const CAIObjectType& cause, BOOL bIgnoreLock)
                 m_sndDoor.SetResRef(CResRef("AMB_D03B"), TRUE, TRUE);
             }
 
-            m_sndDoor.SetChannel(2, reinterpret_cast<DWORD>(m_pArea));
+            m_sndDoor.SetChannel(2, reinterpret_cast<DWORD_PTR>(m_pArea));
 
             CPoint ear;
             LONG earZ;
@@ -1555,7 +1555,7 @@ void CGameDoor::ToggleDoor(const CAIObjectType& cause, BOOL bIgnoreLock)
                 m_sndDoor.SetResRef(CResRef("AMB_D03A"), TRUE, TRUE);
             }
 
-            m_sndDoor.SetChannel(2, reinterpret_cast<DWORD>(m_pArea));
+            m_sndDoor.SetChannel(2, reinterpret_cast<DWORD_PTR>(m_pArea));
 
             CPoint ear;
             LONG earZ;

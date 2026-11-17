@@ -1949,7 +1949,7 @@ void CGameEffect::PlaySound(const CResRef& soundResRef, CGameSprite* pSprite)
         m_sound.SetFireForget(TRUE);
     }
 
-    m_sound.SetChannel(14, reinterpret_cast<DWORD>(pSprite->GetArea()));
+    m_sound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pSprite->GetArea()));
     m_sound.Play(pSprite->GetPos().x, pSprite->GetPos().y, 0, FALSE);
 }
 
@@ -4440,7 +4440,7 @@ void CGameEffectDamage::sub_4A8DF0(DWORD nDamageType, CGameSprite* pSprite)
     // NOTE: Uninline.
     sound.SetResRef(CResRef(sSound), TRUE, TRUE);
 
-    sound.SetChannel(14, reinterpret_cast<DWORD>(pSprite->GetArea()));
+    sound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pSprite->GetArea()));
 
     if (sound.m_nLooping == 0) {
         sound.SetFireForget(TRUE);
@@ -4816,7 +4816,7 @@ void CGameEffectDamage::sub_4AA6D0(CGameSprite* pSprite, LONG nResisted)
             strRes.cSound.SetFireForget(TRUE);
         }
 
-        strRes.cSound.SetChannel(14, reinterpret_cast<DWORD>(pSprite->GetArea()));
+        strRes.cSound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pSprite->GetArea()));
         strRes.cSound.Play(pSprite->GetPos().x, pSprite->GetPos().y, 0, FALSE);
     }
 
@@ -5659,7 +5659,7 @@ void CGameEffectDeath::OnAdd(CGameSprite* pSprite)
 
     POSITION pos = targets.GetHeadPosition();
     while (pos != NULL) {
-        LONG nTarget = reinterpret_cast<LONG>(targets.GetNext(pos));
+        LONG nTarget = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
         CMessage* message = new CMessageSetTrigger(died, pSprite->GetId(), nTarget);
         g_pBaldurChitin->GetMessageHandler()->AddMessage(message, FALSE);
@@ -14108,7 +14108,7 @@ BOOL CGameEffectVisualSpellHit::ApplyEffect(CGameSprite* pSprite)
 
     // NOTE: The original reuses the stack slot of `pSprite` for the projectile
     // type, so it is left over from the argument for unhandled values.
-    LONG nProjectileType = reinterpret_cast<LONG>(pSprite);
+    LONG nProjectileType = static_cast<LONG>(reinterpret_cast<INT_PTR>(pSprite));
 
     if (pSprite->GetArea() == NULL) {
         m_done = TRUE;
@@ -18377,7 +18377,7 @@ void CPersistantEffect::PlaySound(const CResRef& res, CGameSprite* pSprite)
         cSound.SetFireForget(TRUE);
     }
 
-    cSound.SetChannel(14, reinterpret_cast<DWORD>(pSprite->GetArea()));
+    cSound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pSprite->GetArea()));
     cSound.Play(pSprite->GetPos().x, pSprite->GetPos().y, 0, FALSE);
 }
 

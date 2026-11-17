@@ -431,7 +431,7 @@ void CAIGroup::GroupAction(CAIAction action, BOOL override, CAIAction* leaderAct
 
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
 
         CGameSprite* pSprite;
 
@@ -533,7 +533,7 @@ void CAIGroup::SetGroupTriggerId(LONG triggerId)
 
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
 
         CGameSprite* pSprite;
 
@@ -579,7 +579,7 @@ CPoint* CAIGroup::GetOffsets(SHORT formationType, SHORT direction, BOOLEAN bMinS
     }
 
     if (m_memberList.GetHeadPosition() != NULL) {
-        LONG leaderId = reinterpret_cast<LONG>(m_memberList.GetHead());
+        LONG leaderId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetHead()));
 
         CGameObject* pLeader;
         BYTE rc;
@@ -607,7 +607,7 @@ CPoint* CAIGroup::GetOffsets(SHORT formationType, SHORT direction, BOOLEAN bMinS
         LONG* pMember = pMembers;
         POSITION pos = m_memberList.GetHeadPosition();
         while (pos != NULL) {
-            *pMember++ = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+            *pMember++ = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
         }
     }
 
@@ -625,7 +625,7 @@ CPoint* CAIGroup::GetOffsets(SHORT formationType, SHORT direction, BOOLEAN bMinS
         LONG* pMember = pMembers;
         POSITION pos = m_memberList.GetHeadPosition();
         while (pos != NULL) {
-            *pMember++ = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+            *pMember++ = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
         }
     }
 
@@ -749,7 +749,7 @@ SHORT* CAIGroup::GetFacings(SHORT formationType, SHORT direction)
     }
 
     if (m_memberList.GetHeadPosition() != NULL) {
-        LONG leaderId = reinterpret_cast<LONG>(m_memberList.GetHead());
+        LONG leaderId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetHead()));
 
         BYTE rc;
         do {
@@ -766,7 +766,7 @@ SHORT* CAIGroup::GetFacings(SHORT formationType, SHORT direction)
                 LONG* pMember = pMembers;
                 POSITION pos = m_memberList.GetHeadPosition();
                 while (pos != NULL) {
-                    *pMember++ = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+                    *pMember++ = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
                 }
             }
 
@@ -780,7 +780,7 @@ SHORT* CAIGroup::GetFacings(SHORT formationType, SHORT direction)
                 LONG* pMember = pMembers;
                 POSITION pos = m_memberList.GetHeadPosition();
                 while (pos != NULL) {
-                    *pMember++ = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+                    *pMember++ = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
                 }
             }
 
@@ -891,7 +891,7 @@ void CAIGroup::RemoveFromSearch(CSearchBitmap* search)
 {
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
 
         CGameSprite* pSprite;
 
@@ -928,7 +928,7 @@ void CAIGroup::AddToSearch(CSearchBitmap* search)
 {
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
 
         CGameSprite* pSprite;
 
@@ -964,7 +964,7 @@ void CAIGroup::AddToSearch(CSearchBitmap* search)
 LONG CAIGroup::GetGroupLeader()
 {
     if (m_memberList.GetCount() > 0) {
-        return reinterpret_cast<LONG>(m_memberList.GetHead());
+        return static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetHead()));
     }
 
     return CGameObjectArray::INVALID_INDEX;
@@ -978,7 +978,7 @@ LONG* CAIGroup::GetGroupList()
     int index = 0;
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        pList[index++] = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        pList[index++] = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
     }
 
     return pList;
@@ -1006,7 +1006,7 @@ POSITION CAIGroup::Add(LONG characterId)
 
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetAt(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetAt(pos)));
         SHORT memberPortraitNum = g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(memberId);
         if (memberPortraitNum == -1 || memberPortraitNum > portraitNum) {
             return m_memberList.InsertBefore(pos, reinterpret_cast<LONG*>(characterId));
@@ -1035,7 +1035,7 @@ BOOL CAIGroup::IsPartyLeader()
         return FALSE;
     }
 
-    LONG memberId = reinterpret_cast<LONG>(m_memberList.GetHead());
+    LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetHead()));
     if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(memberId) != -1) {
         return TRUE;
     }
@@ -1053,7 +1053,7 @@ void CAIGroup::Sort()
 
     pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
         tempGroup.Add(memberId);
     }
 
@@ -1061,7 +1061,7 @@ void CAIGroup::Sort()
 
     pos = tempGroup.m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(tempGroup.m_memberList.GetNext(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(tempGroup.m_memberList.GetNext(pos)));
 
         CGameSprite* pSprite;
 
@@ -1105,7 +1105,7 @@ void CAIGroup::GroupSetTarget(CPoint target, BOOL additive, SHORT formationType,
     }
 
     if (m_memberList.GetCount() == 1) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetHead());
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetHead()));
 
         CGameSprite* pSprite;
 
@@ -1174,7 +1174,7 @@ void CAIGroup::GroupSetTarget(CPoint target, BOOL additive, SHORT formationType,
 
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
 
         CGameSprite* pSprite;
 
@@ -1386,7 +1386,7 @@ void CAIGroup::GroupProtectPoint(CPoint target, SHORT formationType, CPoint curs
     }
 
     if (m_memberList.GetCount() == 1) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetHead());
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetHead()));
 
         CGameSprite* pSprite;
 
@@ -1430,7 +1430,7 @@ void CAIGroup::GroupProtectPoint(CPoint target, SHORT formationType, CPoint curs
 
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
 
         CGameSprite* pSprite;
 
@@ -1606,7 +1606,7 @@ void CAIGroup::GroupDrawMove(CPoint target, SHORT formationType, CPoint cursor)
             return;
         }
 
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetHead());
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetHead()));
 
         CGameSprite* pSprite;
 
@@ -1652,7 +1652,7 @@ void CAIGroup::GroupDrawMove(CPoint target, SHORT formationType, CPoint cursor)
 
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
 
         CGameSprite* pSprite;
 
@@ -1813,7 +1813,7 @@ void CAIGroup::GroupCancelMove()
 
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
 
         CGameSprite* pSprite;
 
@@ -1846,7 +1846,7 @@ void CAIGroup::ClearActions()
 
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
         if (memberId == CGameObjectArray::INVALID_INDEX) {
             continue;
         }
@@ -1930,7 +1930,7 @@ void CAIGroup::AddTrigger(CAITrigger& trigger)
 {
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
 
         CGameSprite* pSprite;
 
@@ -1974,7 +1974,7 @@ void CAIGroup::FollowLeader(CPoint target, BOOL additive)
         CAIAction* action = new CAIAction(CAIAction::LEADER, target, additive, -1);
         actions.AddTail(action);
 
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetHead());
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetHead()));
 
         CGameSprite* pSprite;
 
@@ -2030,7 +2030,7 @@ void CAIGroup::FollowLeader(CPoint target, BOOL additive)
 
             POSITION pos = m_memberList.GetHeadPosition();
             while (pos != NULL) {
-                LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+                LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
 
                 CMessageStopFollow* pMessage = new CMessageStopFollow(memberId, memberId);
                 g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
@@ -2048,7 +2048,7 @@ void CAIGroup::HandleFollowPath(LONG* pPath, SHORT nPath, CPoint target, CPoint 
 
     POSITION pos = m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG memberId = reinterpret_cast<LONG>(m_memberList.GetNext(pos));
+        LONG memberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(pos)));
 
         CGameSprite* pSprite;
 
@@ -2072,7 +2072,7 @@ void CAIGroup::HandleFollowPath(LONG* pPath, SHORT nPath, CPoint target, CPoint 
 
             if (pos != NULL) {
                 POSITION posNext = pos;
-                LONG nextMemberId = reinterpret_cast<LONG>(m_memberList.GetNext(posNext));
+                LONG nextMemberId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(posNext)));
 
                 CMessageStartFollow* pMessage = new CMessageStartFollow(memberId, nextMemberId);
                 g_pBaldurChitin->GetMessageHandler()->AddMessage(pMessage, FALSE);
@@ -2101,7 +2101,7 @@ void CAIGroup::HandleFollowPath(LONG* pPath, SHORT nPath, CPoint target, CPoint 
 
                     if (pos != NULL) {
                         POSITION posNext = pos;
-                        pSprite->m_followLeaderNext = reinterpret_cast<LONG>(m_memberList.GetNext(posNext));
+                        pSprite->m_followLeaderNext = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(posNext)));
                     }
 
                     actions.AddTail(pActionNext);
@@ -2125,7 +2125,7 @@ void CAIGroup::HandleFollowPath(LONG* pPath, SHORT nPath, CPoint target, CPoint 
 
                 if (pos != NULL) {
                     POSITION posNext = pos;
-                    pSprite->m_followLeaderNext = reinterpret_cast<LONG>(m_memberList.GetNext(posNext));
+                    pSprite->m_followLeaderNext = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_memberList.GetNext(posNext)));
                 }
 
                 actions.AddTail(pActionNext);

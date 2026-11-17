@@ -347,7 +347,7 @@ void CProjectileArea850384::AIUpdate()
 
         POSITION pos = targets.GetHeadPosition();
         while (pos != NULL) {
-            DWORD nId = reinterpret_cast<DWORD>(targets.GetNext(pos));
+            DWORD nId = static_cast<DWORD>(reinterpret_cast<UINT_PTR>(targets.GetNext(pos)));
             if (nId != m_sourceId) {
                 rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nId,
                     CGameObjectArray::THREAD_ASYNCH,
@@ -447,7 +447,7 @@ void CProjectileArea850420::AIUpdate()
 
     POSITION pos = targets.GetHeadPosition();
     while (pos != NULL) {
-        LONG nId = reinterpret_cast<LONG>(targets.GetNext(pos));
+        LONG nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
         CGameObject* pObject;
 
         BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nId,
@@ -807,7 +807,7 @@ std::list<LONG> CProjectileArea8507C8::Virtual90()
 
         POSITION pos = targets.GetHeadPosition();
         while (pos != NULL) {
-            LONG nId = reinterpret_cast<LONG>(targets.GetNext(pos));
+            LONG nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
             if (nId == it->first) {
                 bFound = TRUE;
                 break;
@@ -825,7 +825,7 @@ std::list<LONG> CProjectileArea8507C8::Virtual90()
 
     POSITION pos = targets.GetHeadPosition();
     while (pos != NULL) {
-        LONG nId = reinterpret_cast<LONG>(targets.GetNext(pos));
+        LONG nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
         if (field_4C4.find(nId) == field_4C4.end()) {
             field_4C4[nId] = 0;

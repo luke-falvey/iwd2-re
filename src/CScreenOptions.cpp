@@ -2452,7 +2452,7 @@ CUIControlButtonOptionsGameCommand::CUIControlButtonOptionsGameCommand(CUIPanel*
     case 6:
         // NOTE: Original passes the `controlInfo` pointer itself as the
         // string id.
-        dwStrId = reinterpret_cast<DWORD>(controlInfo);
+        dwStrId = static_cast<DWORD>(reinterpret_cast<UINT_PTR>(controlInfo));
         break;
     case 7:
         switch (m_nID) {

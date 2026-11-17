@@ -649,7 +649,7 @@ void CGameDialogSprite::EndDialog()
     if (cSound.m_nLooping == 0) {
         cSound.SetFireForget(TRUE);
     }
-    cSound.SetChannel(6, reinterpret_cast<DWORD>(g_pBaldurChitin->GetObjectGame()->GetVisibleArea()));
+    cSound.SetChannel(6, reinterpret_cast<DWORD_PTR>(g_pBaldurChitin->GetObjectGame()->GetVisibleArea()));
     cSound.Play(FALSE);
 }
 
@@ -940,7 +940,7 @@ void CGameDialogEntry::Handle(CGameSprite* pSprite, COLORREF playerColor, int a3
     DWORD nMode = g_pBaldurChitin->GetObjectGame()->GetGameSave()->m_mode;
 
     g_pBaldurChitin->GetTlkTable().Fetch(m_dialogText, strRes);
-    strRes.cSound.SetChannel(6, reinterpret_cast<DWORD>(pSprite->GetArea()));
+    strRes.cSound.SetChannel(6, reinterpret_cast<DWORD_PTR>(pSprite->GetArea()));
 
     CPoint pos = pSprite->GetPos();
 
@@ -1036,7 +1036,7 @@ void CGameDialogEntry::Handle(CGameSprite* pSprite, COLORREF playerColor, int a3
             FALSE);
     }
 
-    strRes.cSound.SetChannel(6, reinterpret_cast<DWORD>(pSprite->GetArea()));
+    strRes.cSound.SetChannel(6, reinterpret_cast<DWORD_PTR>(pSprite->GetArea()));
     PlayDialogSound(strRes.cSound);
 
     CString sNumber;
@@ -1068,7 +1068,7 @@ void CGameDialogEntry::Handle(CGameSprite* pSprite, COLORREF playerColor, int a3
                         pReply->m_displayListId = static_cast<BYTE>(nCount);
                     }
 
-                    strRes.cSound.SetChannel(6, reinterpret_cast<DWORD>(pSprite->GetArea()));
+                    strRes.cSound.SetChannel(6, reinterpret_cast<DWORD_PTR>(pSprite->GetArea()));
                     PlayDialogSound(strRes.cSound);
 
                     rgbTextColor = g_pBaldurChitin->m_pEngineWorld->m_bInControlOfDialog
@@ -1167,7 +1167,7 @@ void CGameDialogEntry::Handle(CGameSprite* pSprite, COLORREF playerColor, int a3
                     }
                 }
 
-                strRes.cSound.SetChannel(6, reinterpret_cast<DWORD>(pSprite->GetArea()));
+                strRes.cSound.SetChannel(6, reinterpret_cast<DWORD_PTR>(pSprite->GetArea()));
                 PlayDialogSound(strRes.cSound);
 
                 rgbTextColor = g_pBaldurChitin->m_pEngineWorld->m_bInControlOfDialog
