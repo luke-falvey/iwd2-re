@@ -262,6 +262,13 @@ class Game:
 
     def _ensure_focus(self) -> None:
         if not self.virtual and not win32.is_foreground(self.hwnd):
+            # Something else took the foreground: note what, since input sent
+            # around this moment may not have reached the game.
+            try:
+                with open(Path(self.out_dir) / "focus-lost.txt", "a", encoding="utf-8") as f:
+                    print(f"{time.strftime('%H:%M:%S')} foreground was {win32.foreground_title()}", file=f)
+            except OSError:
+                pass
             win32.bring_to_front(self.hwnd)
 
     # Input primitives: the real devices, or this instance's virtual ones.

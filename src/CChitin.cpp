@@ -54,9 +54,65 @@ BOOL CChitin::SCREEN_SAVE_ACTIVE_LOADED;
 // 0x8FB950
 BOOLEAN CChitin::byte_8FB950;
 
+// NOTE: Not in the original. The game learns of a key press or a quick click
+// only from the "pressed since the last call" bit of `GetAsyncKeyState`, and
+// Windows clears that bit when any program asks about the same key, so a
+// press can be lost. The window procedure notes each press here and the
+// polling code adds it back.
+static volatile LONG s_inputPressed[256];
+
+static void NoteInputPressed(int vk)
+{
+    InterlockedExchange(&s_inputPressed[vk & 0xFF], 1);
+}
+
+// A keyboard key: the system state, with the "pressed since" bit restored.
+static SHORT PollKey(int vk)
+{
+    SHORT nState = GetAsyncKeyState(vk);
+    if (InterlockedExchange(&s_inputPressed[vk & 0xFF], 0) != 0) {
+        nState |= 1;
+    }
+    return nState;
+}
+
+// A mouse button: while it is held the level bit is enough, so the note is
+// only used for a click that began and ended between two polls.
+static SHORT PollButton(int vk)
+{
+    SHORT nState = GetAsyncKeyState(vk);
+    LONG bNoted = InterlockedExchange(&s_inputPressed[vk & 0xFF], 0);
+    if (nState >= 0 && bNoted != 0) {
+        nState |= 1;
+    }
+    return nState;
+}
+
 // 0x78D960
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
+    // NOTE: Not in the original, see `s_inputPressed`.
+    switch (Msg) {
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
+        if ((lParam & 0x40000000) == 0) {
+            NoteInputPressed(static_cast<int>(wParam));
+        }
+        break;
+    case WM_LBUTTONDOWN:
+    case WM_LBUTTONDBLCLK:
+        NoteInputPressed(g_pChitin->m_mouseLButton);
+        break;
+    case WM_RBUTTONDOWN:
+    case WM_RBUTTONDBLCLK:
+        NoteInputPressed(g_pChitin->m_mouseRButton);
+        break;
+    case WM_MBUTTONDOWN:
+    case WM_MBUTTONDBLCLK:
+        NoteInputPressed(VK_MBUTTON);
+        break;
+    }
+
     if ((g_pChitin->field_16C && Msg == g_pChitin->field_170)
         || Msg == WM_MOUSEWHEEL) {
         if (!g_pChitin->m_bInMouseWheelQueue) {
@@ -1014,19 +1070,19 @@ void CChitin::SelectEngine(CWarp* pNewEngine)
             }
 
             m_mouseLDblClickCount = m_mouseDblClickTime;
-            GetAsyncKeyState(m_mouseLButton);
+            PollButton(m_mouseLButton);
 
             m_mouseRDblClickCount = m_mouseDblClickTime;
-            GetAsyncKeyState(m_mouseRButton);
+            PollButton(m_mouseRButton);
 
             m_mouseMDblClickCount = m_mouseDblClickTime;
-            GetAsyncKeyState(VK_MBUTTON);
+            PollButton(VK_MBUTTON);
 
             SHORT nKeys = pNewEngine->GetNumVirtualKeys();
             if (nKeys > 0) {
                 CKeyInfo* keys = pNewEngine->GetVirtualKeys();
                 for (SHORT nKey = 0; nKey < nKeys; nKey++) {
-                    keys[nKey].m_repeatCount = GetAsyncKeyState(keys[nKey].m_keyCode) != 0;
+                    keys[nKey].m_repeatCount = PollKey(keys[nKey].m_keyCode) != 0;
                 }
             }
         }
@@ -1714,7 +1770,7 @@ void CChitin::AsynchronousUpdate(UINT nTimerID, UINT uMsg, DWORD dwUser, DWORD d
             if (pActiveEngine->CheckSystemKeyMenu() || nMenuState == 0) {
                 if (m_ptPointer.x != -1) {
                     if (pActiveEngine->CheckMouseLButton()) {
-                        SHORT nLButtonState = GetAsyncKeyState(m_mouseLButton);
+                        SHORT nLButtonState = PollButton(m_mouseLButton);
                         m_mouseLDblClickCount++;
 
                         if (m_bMouseLButtonDown) {
@@ -1755,7 +1811,7 @@ void CChitin::AsynchronousUpdate(UINT nTimerID, UINT uMsg, DWORD dwUser, DWORD d
                     }
 
                     if (pActiveEngine->CheckMouseRButton()) {
-                        SHORT nRButtonState = GetAsyncKeyState(m_mouseRButton);
+                        SHORT nRButtonState = PollButton(m_mouseRButton);
                         m_mouseRDblClickCount++;
 
                         if (m_bMouseRButtonDown) {
@@ -1796,7 +1852,7 @@ void CChitin::AsynchronousUpdate(UINT nTimerID, UINT uMsg, DWORD dwUser, DWORD d
                     }
 
                     if (pActiveEngine->CheckMouseMButton()) {
-                        SHORT nMButtonState = GetAsyncKeyState(VK_MBUTTON);
+                        SHORT nMButtonState = PollButton(VK_MBUTTON);
                         m_mouseMDblClickCount++;
 
                         if (m_bMouseMButtonDown) {
@@ -1845,7 +1901,7 @@ void CChitin::AsynchronousUpdate(UINT nTimerID, UINT uMsg, DWORD dwUser, DWORD d
                 BYTE* pKeysFlags = pActiveEngine->GetVirtualKeysFlags();
 
                 for (SHORT nKey = 0; nKey < nKeys; nKey++) {
-                    SHORT nState = GetAsyncKeyState(pKeys[nKey].m_keyCode);
+                    SHORT nState = PollKey(pKeys[nKey].m_keyCode);
                     if (nState == 0) {
                         pKeys[nKey].m_repeatCount = 0;
                     } else if (nState == SHRT_MIN) {
@@ -1890,20 +1946,20 @@ CWnd* CChitin::GetWnd()
 void CChitin::Resume()
 {
     m_mouseLDblClickCount = m_mouseDblClickTime;
-    GetAsyncKeyState(m_mouseLButton);
+    PollButton(m_mouseLButton);
 
     m_mouseRDblClickCount = m_mouseDblClickTime;
-    GetAsyncKeyState(m_mouseRButton);
+    PollButton(m_mouseRButton);
 
     m_mouseMDblClickCount = m_mouseDblClickTime;
-    GetAsyncKeyState(VK_MBUTTON);
+    PollButton(VK_MBUTTON);
 
     if (pActiveEngine != NULL) {
         SHORT nKeys = pActiveEngine->GetNumVirtualKeys();
         if (nKeys > 0) {
             CKeyInfo* keys = pActiveEngine->GetVirtualKeys();
             for (SHORT nKey = 0; nKey < nKeys; nKey++) {
-                keys[nKey].m_repeatCount = GetAsyncKeyState(keys[nKey].m_keyCode) != 0;
+                keys[nKey].m_repeatCount = PollKey(keys[nKey].m_keyCode) != 0;
             }
         }
     }

@@ -797,6 +797,10 @@ CSearchRequest::CSearchRequest(const CSearchRequest& other)
     m_serviceState = STATE_WAITING;
     m_removeSelf = other.m_removeSelf;
     m_frontList = 0;
+    // NOTE: The exe leaves `m_sourceSide` unset in a copy (no store to
+    // offset 6 in 0x549110), so whether a copied request may cross unexplored
+    // squares depends on what the heap held. Copying it was tried and gave no
+    // improvement, so this follows the exe.
     m_searchBitmap = other.m_searchBitmap;
     memcpy(m_terrainTable, other.m_terrainTable, sizeof(m_terrainTable));
     m_pathSmooth = other.m_pathSmooth;
@@ -979,8 +983,7 @@ void SearchThreadMain(void* userInfo)
                                     if (rc != CGameObjectArray::DENIED) {
                                         break;
                                     }
-                                    deadLockCnt++;
-                                } while (deadLockCnt != 255);
+                                } while (deadLockCnt++ != 255);
 
                                 if (rc == CGameObjectArray::SUCCESS
                                     && pObject->OnSearchMap()
@@ -1036,8 +1039,7 @@ void SearchThreadMain(void* userInfo)
                                             if (rc != CGameObjectArray::DENIED) {
                                                 break;
                                             }
-                                            deadLockCnt++;
-                                        } while (deadLockCnt != 255);
+                                        } while (deadLockCnt++ != 255);
 
                                         if (rc == CGameObjectArray::SUCCESS
                                             && pObject->OnSearchMap()
@@ -1049,9 +1051,11 @@ void SearchThreadMain(void* userInfo)
                                             if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
                                                 goalObjectSpaces[cnt + searchRequest->m_nTargetIds] = static_cast<CGameSprite*>(pObject)->GetAnimation()->GetPersonalSpace();
                                                 goalBumpable[cnt + searchRequest->m_nTargetIds] = static_cast<CGameSprite*>(pObject)->field_54A8;
-                                                // NOTE: Original writes index `cnt` here, not
+                                                // NOTE: Original writes index `cnt` here (0x549AF9), not
                                                 // `cnt + m_nTargetIds` as the other paths and the
-                                                // later reader use. Probably an original bug.
+                                                // later reader use. Probably an original bug. Writing
+                                                // the other slot was tried and gave no improvement,
+                                                // so this follows the exe.
                                                 goalRemoveObject[cnt].x = static_cast<CGameSprite*>(pObject)->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX;
                                                 goalRemoveObject[cnt].y = static_cast<CGameSprite*>(pObject)->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY;
                                                 isWalking[cnt] = static_cast<CGameSprite*>(pObject)->m_nSequence == CGameSprite::SEQ_WALK
@@ -1168,7 +1172,10 @@ void SearchThreadMain(void* userInfo)
                                                 bBump,
                                                 &rGrid);
                                         } else {
-                                            searchRequest->m_searchRc = g_pBaldurChitin->GetObjectGame()->m_pathSearch->FindPath(&startPt,
+                                            // NOTE: A back-list search continues from the
+                                            // request's own source point (0x549FFC), not
+                                            // from the sprite's current square.
+                                            searchRequest->m_searchRc = g_pBaldurChitin->GetObjectGame()->m_pathSearch->FindPath(&(searchRequest->m_sourcePt),
                                                 goalPts,
                                                 searchRequest->m_nTargetPoints + searchRequest->m_nTargetIds,
                                                 searchRequest->m_minNodesBack,

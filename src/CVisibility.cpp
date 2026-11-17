@@ -144,21 +144,40 @@ CVisibilityMap::~CVisibilityMap()
 // 0x551840
 BOOL CVisibilityMap::AddCharacter(const CPoint& pos, LONG charId, const BYTE* pVisibleTerrainTable)
 {
+    // NOTE: Differs from the original on purpose. The exe takes the first
+    // free slot even when the id already holds a later one, and gives up
+    // silently when all six are taken, so a party member could be left
+    // without a slot and never clear the fog of war around them. Here the
+    // id's own slot is reused, then a free one, then one whose id is no
+    // longer a party member.
     SHORT nIndex;
     for (nIndex = 0; nIndex < 6; nIndex++) {
-        if (m_aCharacterIds[nIndex] == CGameObjectArray::INVALID_INDEX) {
-            m_aCharacterIds[nIndex] = charId;
-            break;
-        }
-
         if (m_aCharacterIds[nIndex] == charId) {
             break;
         }
     }
 
     if (nIndex == 6) {
+        for (nIndex = 0; nIndex < 6; nIndex++) {
+            if (m_aCharacterIds[nIndex] == CGameObjectArray::INVALID_INDEX) {
+                break;
+            }
+        }
+    }
+
+    if (nIndex == 6) {
+        for (nIndex = 0; nIndex < 6; nIndex++) {
+            if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(m_aCharacterIds[nIndex]) == -1) {
+                break;
+            }
+        }
+    }
+
+    if (nIndex == 6) {
         return FALSE;
     }
+
+    m_aCharacterIds[nIndex] = charId;
 
     PrivateAddCharacter(pos, 1 << nIndex, pVisibleTerrainTable);
 
@@ -1179,6 +1198,11 @@ void CVisibilityMap::UpDate(const CPoint& ptOldPos, const CPoint& ptNewPos, LONG
         ClearEllipseCaps(pt, visId);
         ClearEllipseSides(pt, visId);
         PrivateAddCharacter(ptNewPos, visId, pVisibleTerrainTable);
+    } else if (g_pBaldurChitin->GetObjectGame()->GetCharacterPortraitNum(charId) != -1) {
+        // NOTE: Differs from the original on purpose. The exe does nothing
+        // for a party member that has no slot, so the fog of war stayed over
+        // everything that member walked through. Give it a slot now.
+        AddCharacter(ptNewPos, charId, pVisibleTerrainTable);
     }
 }
 

@@ -141,6 +141,16 @@ def bring_to_front(hwnd: int) -> None:
     time.sleep(0.2)
 
 
+def foreground_title() -> str:
+    """Title and class of whatever window has the foreground (for diagnostics)."""
+    hwnd = user32.GetForegroundWindow()
+    title = ctypes.create_unicode_buffer(200)
+    cls = ctypes.create_unicode_buffer(100)
+    user32.GetWindowTextW(hwnd, title, 200)
+    user32.GetClassNameW(hwnd, cls, 100)
+    return f"{title.value!r} [{cls.value}] hwnd={hwnd:#x}"
+
+
 def is_foreground(hwnd: int) -> bool:
     return user32.GetForegroundWindow() == hwnd
 
