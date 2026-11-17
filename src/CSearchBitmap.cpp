@@ -797,6 +797,10 @@ CSearchRequest::CSearchRequest(const CSearchRequest& other)
     m_serviceState = STATE_WAITING;
     m_removeSelf = other.m_removeSelf;
     m_frontList = 0;
+    // NOTE: Differs from the original on purpose. The exe leaves the side
+    // unset in a copy (no store to offset 6 in 0x549110), so whether a copied
+    // request may cross unexplored squares depended on what the heap held.
+    m_sourceSide = other.m_sourceSide;
     m_searchBitmap = other.m_searchBitmap;
     memcpy(m_terrainTable, other.m_terrainTable, sizeof(m_terrainTable));
     m_pathSmooth = other.m_pathSmooth;
@@ -1047,11 +1051,13 @@ void SearchThreadMain(void* userInfo)
                                             if (pObject->GetObjectType() == CGameObject::TYPE_SPRITE) {
                                                 goalObjectSpaces[cnt + searchRequest->m_nTargetIds] = static_cast<CGameSprite*>(pObject)->GetAnimation()->GetPersonalSpace();
                                                 goalBumpable[cnt + searchRequest->m_nTargetIds] = static_cast<CGameSprite*>(pObject)->field_54A8;
-                                                // NOTE: Original writes index `cnt` here, not
-                                                // `cnt + m_nTargetIds` as the other paths and the
-                                                // later reader use. Probably an original bug.
-                                                goalRemoveObject[cnt].x = static_cast<CGameSprite*>(pObject)->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX;
-                                                goalRemoveObject[cnt].y = static_cast<CGameSprite*>(pObject)->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY;
+                                                // NOTE: Differs from the original on purpose. The
+                                                // exe writes index `cnt` here (0x549AF9), but the
+                                                // other paths and the later reader use
+                                                // `cnt + m_nTargetIds`, so with target ids present
+                                                // it read an unset stack slot.
+                                                goalRemoveObject[cnt + searchRequest->m_nTargetIds].x = static_cast<CGameSprite*>(pObject)->GetPos().x / CPathSearch::GRID_SQUARE_SIZEX;
+                                                goalRemoveObject[cnt + searchRequest->m_nTargetIds].y = static_cast<CGameSprite*>(pObject)->GetPos().y / CPathSearch::GRID_SQUARE_SIZEY;
                                                 isWalking[cnt] = static_cast<CGameSprite*>(pObject)->m_nSequence == CGameSprite::SEQ_WALK
                                                     || static_cast<CGameSprite*>(pObject)->m_curAction.GetActionID() == CAIAction::MOVETOPOINT;
                                             } else {
