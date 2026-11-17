@@ -75,8 +75,21 @@ UINT GetACP()
 // CNetwork::InitDirectPlay (installs the failing fakes), CInfGame and CResCache
 // (CResCache keeps its cache size; CInfGame only needs it when the 4 GB check
 // of GetDiskFreeSpaceA failed, which it does not here).
-HMODULE LoadLibraryA(LPCSTR)
+namespace platform {
+// dplay_fake.cpp
+void* CreateFakeDirectPlay();
+void* FakeDirectPlayCreateAddress();
+void* FakeDirectPlayLobbyCreateAddress();
+}
+
+static int s_dplayModule;
+
+// Only "dplayx" exists, and it offers no connections (dplay_fake.cpp).
+HMODULE LoadLibraryA(LPCSTR lpLibFileName)
 {
+    if (lpLibFileName != NULL && strcasecmp(lpLibFileName, "dplayx") == 0) {
+        return reinterpret_cast<HMODULE>(&s_dplayModule);
+    }
     SetLastError(ERROR_MOD_NOT_FOUND_PORT);
     return NULL;
 }
@@ -87,8 +100,16 @@ BOOL FreeLibrary(HMODULE)
     return FALSE;
 }
 
-FARPROC GetProcAddress(HMODULE, LPCSTR)
+FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName)
 {
+    if (hModule == reinterpret_cast<HMODULE>(&s_dplayModule) && lpProcName != NULL) {
+        if (strcmp(lpProcName, "DirectPlayCreate") == 0) {
+            return reinterpret_cast<FARPROC>(platform::FakeDirectPlayCreateAddress());
+        }
+        if (strcmp(lpProcName, "DirectPlayLobbyCreateA") == 0) {
+            return reinterpret_cast<FARPROC>(platform::FakeDirectPlayLobbyCreateAddress());
+        }
+    }
     SetLastError(ERROR_PROC_NOT_FOUND_PORT);
     return NULL;
 }
@@ -527,8 +548,14 @@ void CoUninitialize()
 {
 }
 
-HRESULT CoCreateInstance(REFCLSID, LPUNKNOWN, DWORD, REFIID, LPVOID* ppv)
+// The only class is DirectPlay, the one that offers no connections.
+HRESULT CoCreateInstance(REFCLSID rclsid, LPUNKNOWN, DWORD, REFIID, LPVOID* ppv)
 {
+    static const GUID clsidDirectPlay = { 0xd1eb6d20, 0x8923, 0x11d0, { 0x9d, 0x97, 0x00, 0xa0, 0xc9, 0x0a, 0x43, 0xcb } };
+    if (ppv != NULL && memcmp(&rclsid, &clsidDirectPlay, sizeof(GUID)) == 0) {
+        *ppv = platform::CreateFakeDirectPlay();
+        return S_OK;
+    }
     if (ppv != NULL) {
         *ppv = NULL;
     }
