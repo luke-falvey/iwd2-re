@@ -772,9 +772,9 @@ public:
 template <class ARG_KEY>
 inline UINT HashKey(ARG_KEY key)
 {
-    long value = static_cast<long>(key);
-    long quot = value / 127773;
-    long rem = value % 127773;
+    LONG value = static_cast<LONG>(key);
+    LONG quot = value / 127773;
+    LONG rem = value % 127773;
     rem = 16807 * rem - 2836 * quot;
     if (rem < 0) {
         rem += 2147483647;

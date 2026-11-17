@@ -628,7 +628,12 @@ TEST_CASE("CString Format")
     // the character pointer.
     CString name("Imoen");
     CString t;
+#ifdef _WIN32
     t.Format("%s has %d hp", name, 12);
+#else
+    // NOTE: Port: Clang refuses to pass a class with a destructor through `...`.
+    t.Format("%s has %d hp", static_cast<LPCSTR>(name), 12);
+#endif
     CHECK(S(t) == "Imoen has 12 hp");
     t.Format("%s/%s", static_cast<LPCSTR>(name), static_cast<LPCSTR>(name));
     CHECK(S(t) == "Imoen/Imoen");
