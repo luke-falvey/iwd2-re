@@ -5,6 +5,58 @@ by the session that runs the translation and bug fixing on `phase-a/stubs-and-la
 (called **the main session** below). Read this file, then `docs/port-audit.md`, before doing
 anything else. Keep the status table at the end up to date as you go.
 
+## 0. Revision 2026-11-18: the port runs on the Mac first
+
+The user started the port session on an Apple Silicon Mac (M1, 8 GB, macOS 27, Apple clang 15),
+not on the Windows PC. This Mac has no Windows toolchain, no goldens and no second session.
+Sections 1–7 below are kept as written; where they conflict with this section, this section
+wins. Section 2.1, 2.3 and 2.4 still apply in full; the machine-sharing rules of 2.2 have no
+object here.
+
+**What changes, and why:**
+
+- **The seam is the Win32 API itself, not new `platform::` interfaces.** Without a Windows
+  build here, "the Win32 implementation is the old code, moved" (old M1) cannot be proven.
+  So nothing is moved: non-Windows builds get their own `<windows.h>`, `<ddraw.h>`,
+  `<dsound.h>`, `<mmsystem.h>` and so on under `src/platform/posix/include/`, declaring the
+  subset the game uses, implemented in `src/platform/posix/` on SDL3 and the C++ standard
+  library. The Windows builds don't see these files, so rule 10 (default build unchanged)
+  holds by construction, and game files change far less (rule 11).
+  - DirectDraw: a software `IDirectDrawSurface` (memory surface with `Lock`, `Blt`, `BltFast`,
+    colour key, `GetDC` for the font path), presented through an SDL streaming texture.
+  - DirectSound: software voices mixed into an SDL audio stream, volume in dB×100 as before.
+  - Window and input: SDL events turned into the `WM_*` messages and `GetAsyncKeyState` /
+    `GetCursorPos` state the game already reads, VK codes kept.
+  - DirectPlay: every call fails, so no session opens. Bink: `LoadLibrary` fails, movies skip.
+    OpenGL path: declared, not implemented (`3D Acceleration=0`).
+- **Game files change only for:** what Apple clang rejects, the 64-bit idioms (`port-64bit`
+  task A), and `long` (64-bit on macOS; `LONG` is `int32_t`).
+- **Packing stays 2 bytes on arm64 for now.** File structures keep their layout for free.
+  Types that need alignment (mutexes, atomics) are held by pointer in the shim, never embedded.
+  The natural-packing work of old M5 step 2 is done only if misalignment shows up as a fault.
+- **Checks owed on the PC** (any session there): `tools\check.ps1` on the default and no-MFC
+  builds of `port/macos`, and the play suite. The risk is small because only the 64-bit and
+  clang edits touch files the Windows build compiles, but it is not zero. The log keeps the
+  list of such edits.
+- **Environment on the Mac:** tree `~/Projects/iwd2-re` (branch `port/macos`), task worktrees
+  `~/Projects/iwd2-re-wt/<task>` on `port/macos-<task>`. Game data: the GOG install inside
+  `~/Documents/Icewind Dale 2 Complete.app` (read-only, never edited); play folder
+  `~/iwd2-play-port`, a disposable copy. Build: CMake + Ninja, `build-mac`, at most 4 jobs
+  (8 GB of memory). `phase-a/stubs-and-layout` is not on this Mac's remote, so merges from
+  the main session wait until the user makes it reachable.
+- **Tests:** goldens exist only on the PC. From milestone P3 the user is asked to copy
+  `tests/e2e/golden` over.
+
+**Milestones on the Mac** (these replace M0–M7; M8 and M9 are unchanged):
+
+| # | Milestone | Gate |
+|---|---|---|
+| P0 | Set up: toolchain, play folder, CMake for non-Windows | `cmake` configures on the Mac |
+| P1 | Everything compiles: shim headers (declarations), POSIX parts of `src/compat/`, 64-bit sites | Every source file compiles with Apple clang (arm64); compat unit tests pass |
+| P2 | Shim implementations on SDL3: time, threads, sync, files (case-insensitive paths), ini, window/input, video, sound, stubs | The game links, boots to the main menu, starts a new game and reaches Targos |
+| P3 | Test driver (old M3) and `--driver` mode of the harness on the Mac | S1–S3 pass in driver mode against the PC's goldens |
+| P4 | Full suite on the Mac (old M7), MSVC `rand`, sort ties | The suite passes as well as the default Windows build does; the user has listened to the sound |
+
 ## 1. Goal and starting point
 
 **Goal:** the rebuilt Icewind Dale II (`iwd2-re`) runs natively on Apple Silicon Macs (arm64,
@@ -480,13 +532,11 @@ them.
 
 | Milestone | State | Date | Notes |
 |---|---|---|---|
-| M0 Set up | not started | | |
-| M1 Seams (Win32) | not started | | |
-| M2 SDL on Windows | not started | | |
-| M3 Test driver | not started | | |
-| M4 Types and libc | not started | | |
-| M5 64-bit on Windows | not started | | |
-| M6 macOS build | not started | | needs the Mac |
-| M7 Suite on the Mac | not started | | |
+| M0–M7 as written | replaced | 2026-11-18 | by P0–P4, section 0 |
+| P0 Set up on the Mac | in progress | 2026-11-18 | |
+| P1 Everything compiles | not started | | |
+| P2 Boots and plays | not started | | |
+| P3 Test driver | not started | | needs goldens copied from the PC |
+| P4 Suite on the Mac | not started | | sound: the user listens |
 | M8 Mac application | not started | | signing is the user's decision |
 | M9 Movies, multiplayer | not started | | multiplayer only if asked |
