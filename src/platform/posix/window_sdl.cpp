@@ -91,6 +91,12 @@ struct Window {
 
 Window g_window;
 WNDPROC g_classProc = NULL;
+std::string g_className;
+
+// A window of any other class (the unit tests make a message-only "STATIC"
+// one): it exists and can be destroyed, nothing more.
+int g_plainWindow;
+bool g_plainWindowAlive = false;
 std::thread::id g_mainThread;
 bool g_videoReady = false;
 int g_screenW = 1024;
@@ -599,13 +605,19 @@ void InjectClose()
 ATOM RegisterClassExA(const WNDCLASSEXA* lpWndClass)
 {
     g_classProc = lpWndClass->lpfnWndProc;
+    g_className = lpWndClass->lpszClassName != NULL ? lpWndClass->lpszClassName : "";
     return 1;
 }
 
 HWND CreateWindowExA(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
 {
+    if (g_classProc == NULL || lpClassName == NULL || g_className != lpClassName) {
+        g_plainWindowAlive = true;
+        return reinterpret_cast<HWND>(&g_plainWindow);
+    }
+
     EnsureVideo();
-    if (g_window.created || g_classProc == NULL) {
+    if (g_window.created) {
         return NULL;
     }
 
@@ -638,6 +650,11 @@ HWND CreateWindowExA(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, D
 
 BOOL DestroyWindow(HWND hWnd)
 {
+    if (hWnd == reinterpret_cast<HWND>(&g_plainWindow)) {
+        BOOL alive = g_plainWindowAlive;
+        g_plainWindowAlive = false;
+        return alive;
+    }
     if (hWnd != TheHwnd() || !g_window.created || g_window.destroyed) {
         return FALSE;
     }
@@ -651,6 +668,9 @@ BOOL DestroyWindow(HWND hWnd)
 
 BOOL IsWindow(HWND hWnd)
 {
+    if (hWnd == reinterpret_cast<HWND>(&g_plainWindow)) {
+        return g_plainWindowAlive;
+    }
     return hWnd == TheHwnd() && g_window.created && !g_window.destroyed;
 }
 

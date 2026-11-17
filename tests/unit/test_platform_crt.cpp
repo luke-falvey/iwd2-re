@@ -231,7 +231,7 @@ TEST_CASE("system: version, memory, language and the things that are switched of
     CHECK((GetLogicalDrives() & 4) != 0);
 }
 
-TEST_CASE("winsock and COM: the network is down, DirectPlay is not registered")
+TEST_CASE("winsock and COM: the network is down, DirectPlay offers nothing")
 {
     WSADATA wsa;
     CHECK(WSAStartup(MAKEWORD(2, 0), &wsa) == 0);
@@ -245,7 +245,16 @@ TEST_CASE("winsock and COM: the network is down, DirectPlay is not registered")
     CHECK(WSACleanup() == 0);
 
     CHECK(CoInitialize(NULL) == S_OK);
+    // Any class but DirectPlay is not registered. DirectPlay exists, because
+    // the game needs the object even for a single-player game, but it offers
+    // no connections (src/platform/posix/dplay_fake.cpp).
     void* object = reinterpret_cast<void*>(1);
-    CHECK(CoCreateInstance(CLSID_DirectPlay, NULL, CLSCTX_INPROC_SERVER, IID_IDirectPlay4A, &object) == REGDB_E_CLASSNOTREG);
+    GUID other = CLSID_DirectPlay;
+    other.Data1 ^= 1;
+    CHECK(CoCreateInstance(other, NULL, CLSCTX_INPROC_SERVER, IID_IDirectPlay4A, &object) == REGDB_E_CLASSNOTREG);
+    CHECK(object == NULL);
+    CHECK(CoCreateInstance(CLSID_DirectPlay, NULL, CLSCTX_INPROC_SERVER, IID_IDirectPlay4A, &object) == S_OK);
+    REQUIRE(object != NULL);
+    static_cast<IUnknown*>(object)->Release();
     CoUninitialize();
 }
