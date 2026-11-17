@@ -578,6 +578,31 @@ else()
         -Wno-nonportable-include-path
     )
     target_compile_options(iwd2-core PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${IWD2RE_POSIX_FLAGS}>")
+
+    # Port: SDL3, pinned. The hash is the one published with the release.
+    include(FetchContent)
+    set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+    set(SDL_STATIC ON CACHE BOOL "" FORCE)
+    set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(SDL3
+        URL "https://github.com/libsdl-org/SDL/releases/download/release-3.4.20/SDL3-3.4.20.tar.gz"
+        URL_HASH SHA256=f3bb06f55bed9557227a700af2ea62e49497ebdf58037732a731a5fb3ef8581f
+        EXCLUDE_FROM_ALL
+    )
+    FetchContent_MakeAvailable(SDL3)
+
+    # Port: the implementations of the Win32 subset declared in
+    # src/platform/posix/include. Every .cpp in the folder is built; the
+    # game's 2-byte packing prefix is not applied to them.
+    file(GLOB IWD2RE_PLATFORM_SOURCES CONFIGURE_DEPENDS
+        "${PROJECT_SOURCE_DIR}/src/platform/posix/*.cpp"
+        "${PROJECT_SOURCE_DIR}/src/platform/posix/*.h")
+    add_library(iwd2-platform STATIC ${IWD2RE_PLATFORM_SOURCES})
+    target_include_directories(iwd2-platform PUBLIC "src/platform/posix/include" PRIVATE "src/platform/posix" "third_party/directplay/include")
+    target_compile_definitions(iwd2-platform PUBLIC _MBCS GL_SILENCE_DEPRECATION)
+    target_compile_options(iwd2-platform PRIVATE -fms-extensions -fdeclspec -Wno-microsoft -Wno-deprecated-declarations -Wno-nonportable-include-path)
+    target_link_libraries(iwd2-platform PUBLIC SDL3::SDL3-static)
+    target_link_libraries(iwd2-core PUBLIC iwd2-platform)
 endif()
 
 option(IWD2RE_BUILD_TESTS "Build tests" ON)
