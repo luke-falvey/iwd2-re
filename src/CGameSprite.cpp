@@ -24877,10 +24877,15 @@ SHORT CGameSprite::MoveToPoint()
             return ACTION_ERROR;
         }
 
+        // NOTE: Differs from the original on purpose. The exe gives up here
+        // (0x73F75A) when the destination square itself cannot be stood on,
+        // although the first search for the same order accepts such a
+        // destination and walks to the nearest open square. A party member
+        // whose path and request were both lost part-way (seen after a
+        // collision re-path) then stood still for good. The retry below is
+        // still limited by the counter above.
         SHORT searchSquareCode;
-        if (m_pArea->m_search.GetLOSCost(CPoint(x / CPathSearch::GRID_SQUARE_SIZEX, y / CPathSearch::GRID_SQUARE_SIZEY), m_terrainTable, searchSquareCode, FALSE) == CPathSearch::COST_IMPASSABLE) {
-            return ACTION_ERROR;
-        }
+        m_pArea->m_search.GetLOSCost(CPoint(x / CPathSearch::GRID_SQUARE_SIZEX, y / CPathSearch::GRID_SQUARE_SIZEY), m_terrainTable, searchSquareCode, FALSE);
 
         m_curDest.x = x;
         m_curDest.y = y;
