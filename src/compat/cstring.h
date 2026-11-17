@@ -20,7 +20,7 @@
 [[noreturn]] void AfxThrowInvalidStringArgException();
 
 struct CStringData {
-    long nRefs; // -1 marks the shared empty string, which is never written
+    LONG nRefs; // -1 marks the shared empty string, which is never written
     int nDataLength;
     int nAllocLength;
 

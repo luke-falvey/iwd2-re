@@ -23,8 +23,8 @@ NilString g_nil = { { -1, 0, 0 }, { 0, 0, 0, 0 } };
 
 HINSTANCE g_hResource = NULL;
 
-inline long AtomicIncrement(long* p) { return InterlockedIncrement(p); }
-inline long AtomicDecrement(long* p) { return InterlockedDecrement(p); }
+inline LONG AtomicIncrement(LONG* p) { return InterlockedIncrement(p); }
+inline LONG AtomicDecrement(LONG* p) { return InterlockedDecrement(p); }
 
 // Multi-byte aware text primitives (the CRT's current multi-byte code page).
 inline const unsigned char* U(const char* p) { return reinterpret_cast<const unsigned char*>(p); }

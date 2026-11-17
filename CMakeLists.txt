@@ -13,11 +13,20 @@ set(CMAKE_CXX_EXTENSIONS NO)
 # defines the same names with the same layouts and no MFC dependency.
 option(IWD2RE_NO_MFC "Build without MFC, using the compatibility classes in src/compat" OFF)
 if(NOT IWD2RE_NO_MFC)
+    if(NOT WIN32)
+        message(FATAL_ERROR "Port: only the no-MFC configuration exists off Windows; use -DIWD2RE_NO_MFC=ON")
+    endif()
     set(CMAKE_MFC_FLAG 2)
 endif()
 
 # All game code lives in a static library so tests and tools can link it.
-add_library(iwd2-core STATIC)
+if(WIN32)
+    add_library(iwd2-core STATIC)
+else()
+    # Port: an object library, so that `ninja compile-all` can compile every
+    # object without linking (the shim implementations come later).
+    add_library(iwd2-core OBJECT)
+endif()
 
 target_sources(iwd2-core PRIVATE
     "src/music/adecode.cpp"
@@ -480,12 +489,15 @@ if(IWD2RE_NO_MFC)
         "src/compat/sync.h"
     )
     target_compile_definitions(iwd2-core PUBLIC IWD2RE_NO_MFC)
-    # The MFC headers ask the linker for Winsock; without them it is named here.
-    target_link_libraries(iwd2-core PUBLIC ws2_32)
+    if(WIN32)
+        # The MFC headers ask the linker for Winsock; without them it is named here.
+        target_link_libraries(iwd2-core PUBLIC ws2_32)
+    endif()
 else()
     target_compile_definitions(iwd2-core PUBLIC _AFXDLL)
 endif()
 
+if(WIN32)
 target_compile_definitions(iwd2-core PUBLIC
     _CRT_NONSTDC_NO_WARNINGS
     _CRT_SECURE_NO_WARNINGS
@@ -524,9 +536,64 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE iwd2-core)
 # every system header with the default packing and then switches to 2, so the
 # project's own types are laid out as in the original.
 target_compile_options(iwd2-core PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:/FIpack_prefix.h>")
+else()
+    # Port: macOS and other POSIX systems. The Windows headers come from
+    # src/platform/posix/include (declarations only for now).
+    target_include_directories(iwd2-core SYSTEM PUBLIC "src/platform/posix/include")
+    target_compile_definitions(iwd2-core PUBLIC
+        _MBCS
+        GL_SILENCE_DEPRECATION
+    )
+    find_package(ZLIB REQUIRED)
+    target_link_libraries(iwd2-core PUBLIC ZLIB::ZLIB)
+
+    # CrashHandler.cpp (dbghelp/toolhelp) and resource.rc are Windows only.
+    add_executable(${EXECUTABLE_NAME}
+        "src/main.cpp"
+    )
+    target_link_libraries(${EXECUTABLE_NAME} PRIVATE iwd2-core)
+
+    set(IWD2RE_POSIX_FLAGS
+        -include pack_prefix.h
+        -ferror-limit=0
+        -fms-extensions
+        -fdeclspec
+        -Wno-microsoft
+        -Wno-invalid-offsetof
+        -Wno-address-of-packed-member
+        -Wno-deprecated-declarations
+        -Wno-writable-strings
+        -Wno-c++11-narrowing
+        -Wno-unused-value
+        -Wno-switch
+        -Wno-dangling-else
+        -Wno-parentheses
+        -Wno-logical-op-parentheses
+        -Wno-tautological-compare
+        -Wno-unknown-pragmas
+        -Wno-pragma-pack
+        -Wno-return-type
+        -Wno-inconsistent-missing-override
+        -Wno-delete-non-abstract-non-virtual-dtor
+        -Wno-nonportable-include-path
+    )
+    target_compile_options(iwd2-core PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${IWD2RE_POSIX_FLAGS}>")
+endif()
 
 option(IWD2RE_BUILD_TESTS "Build tests" ON)
 if(IWD2RE_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+if(NOT WIN32)
+    # `ninja -C build-mac compile-all` compiles every object of the game
+    # library, the executable and the unit tests, without linking.
+    get_target_property(IWD2RE_EXE_SOURCES ${EXECUTABLE_NAME} SOURCES)
+    add_library(iwd2-exe-objs OBJECT ${IWD2RE_EXE_SOURCES})
+    target_link_libraries(iwd2-exe-objs PRIVATE iwd2-core)
+    add_custom_target(compile-all DEPENDS iwd2-core iwd2-exe-objs)
+    if(IWD2RE_BUILD_TESTS)
+        add_dependencies(compile-all iwd2-tests-objs)
+    endif()
 endif()

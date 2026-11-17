@@ -536,7 +536,7 @@ void CBaldurProjector::EngineActivated()
     g_pBaldurChitin->cSoundMixer.StartSong(-1, 5);
 
     if (m_hBink == NULL) {
-        m_pfnBinkSetSoundSystem(m_pfnBinkOpenDirectSound, reinterpret_cast<unsigned int>(pSoundMixer->m_pDirectSound));
+        m_pfnBinkSetSoundSystem(reinterpret_cast<void*>(m_pfnBinkOpenDirectSound), reinterpret_cast<unsigned int>(pSoundMixer->m_pDirectSound));
         m_hBink = m_pfnBinkOpen(m_sCurrentMovieFileName, 0x4000);
 
         if (m_hBink == NULL) {

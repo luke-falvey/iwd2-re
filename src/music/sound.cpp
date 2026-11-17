@@ -1712,7 +1712,7 @@ void soundClearFades()
 // NOTE: Inlined.
 int soundGetVolume(Sound* sound)
 {
-    long volume;
+    LONG volume;
     int v1;
     int v2;
     int diff;

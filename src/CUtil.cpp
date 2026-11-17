@@ -15,7 +15,10 @@ int CUtil::Compress(BYTE* pDest, DWORD* nDestSize, const BYTE* pSrc, DWORD nSrcS
     CSingleLock compressionLock(&ZLIB_CRITICAL_SECTION, FALSE);
     compressionLock.Lock(INFINITE);
 
-    int err = compress2(pDest, nDestSize, pSrc, nSrcSize, nLevel);
+    // NOTE: Port: zlib takes `uLongf*`, which is not `DWORD*` where `long` is 64 bits.
+    uLongf nDestLen = *nDestSize;
+    int err = compress2(pDest, &nDestLen, pSrc, nSrcSize, nLevel);
+    *nDestSize = static_cast<DWORD>(nDestLen);
 
     compressionLock.Unlock();
 
@@ -31,7 +34,10 @@ int CUtil::Uncompress(BYTE* dest, DWORD* destLen, const BYTE* source, DWORD sour
     int err;
     DWORD nTries = 0;
     do {
-        err = uncompress(dest, destLen, source, sourceLen);
+        // NOTE: Port: zlib takes `uLongf*`, which is not `DWORD*` where `long` is 64 bits.
+        uLongf nDestLen = *destLen;
+        err = uncompress(dest, &nDestLen, source, sourceLen);
+        *destLen = static_cast<DWORD>(nDestLen);
         nTries++;
     } while (err != 0 && nTries < 3);
 
