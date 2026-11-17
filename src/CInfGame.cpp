@@ -1,4 +1,5 @@
 #include "CInfGame.h"
+#include "PortPointer.h"
 
 #include <process.h>
 
@@ -2520,9 +2521,9 @@ void CInfGame::Marshal(BYTE** pGame, LONG* nGame, BOOLEAN bProgressBarInPlace)
 
             if (partyCreatures[cnt3].m_creatureSize > 0) {
                 memcpy(*pGame + cnt,
-                    reinterpret_cast<BYTE*>(partyCreatures[cnt3].m_creatureOffset),
+                    static_cast<BYTE*>(PortPeekPointer(partyCreatures[cnt3].m_creatureOffset)),
                     partyCreatures[cnt3].m_creatureSize);
-                delete reinterpret_cast<BYTE*>(partyCreatures[cnt3].m_creatureOffset);
+                delete static_cast<BYTE*>(PortTakePointer(partyCreatures[cnt3].m_creatureOffset));
 
                 pPartyCreature->m_creatureOffset = cnt;
                 cnt += partyCreatures[cnt3].m_creatureSize;
@@ -2557,9 +2558,9 @@ void CInfGame::Marshal(BYTE** pGame, LONG* nGame, BOOLEAN bProgressBarInPlace)
 
         if (pGlobalCreature[index].m_creatureSize > 0) {
             memcpy(*pGame + cnt,
-                reinterpret_cast<BYTE*>(pGlobalCreature[index].m_creatureOffset),
+                static_cast<BYTE*>(PortPeekPointer(pGlobalCreature[index].m_creatureOffset)),
                 pGlobalCreature[index].m_creatureSize);
-            delete reinterpret_cast<BYTE*>(pGlobalCreature[index].m_creatureOffset);
+            delete static_cast<BYTE*>(PortTakePointer(pGlobalCreature[index].m_creatureOffset));
 
             pPartyCreature->m_creatureOffset = cnt;
             cnt += pGlobalCreature[index].m_creatureSize;

@@ -1,4 +1,5 @@
 #include "CGameSprite.h"
+#include "PortPointer.h"
 
 #include "CAIScript.h"
 #include "CAIUtil.h"
@@ -8935,7 +8936,7 @@ void CGameSprite::Marshal(CAreaFileCreature** pCreature)
     Marshal(&creatureData, &creatureSize, &((*pCreature)->m_facing), TRUE, TRUE);
 
     // FIXME: Unsafe x64 conversion.
-    (*pCreature)->m_creatureOffset = reinterpret_cast<DWORD>(creatureData);
+    (*pCreature)->m_creatureOffset = PortStashPointer(creatureData);
     (*pCreature)->m_creatureSize = creatureSize;
 
     (*pCreature)->m_numberTimesTalkedTo = m_nNumberOfTimesTalkedTo;
@@ -9222,7 +9223,7 @@ void CGameSprite::Marshal(CSavedGamePartyCreature& partyCreature, BOOLEAN bNetwo
     Marshal(&pCreature, &nCreatureSize, &facing, TRUE, TRUE);
 
     // FIXME: Unsafe x64 conversion.
-    partyCreature.m_creatureOffset = reinterpret_cast<DWORD>(pCreature);
+    partyCreature.m_creatureOffset = PortStashPointer(pCreature);
     partyCreature.m_creatureSize = nCreatureSize;
     partyCreature.m_creatureFacing = facing;
 

@@ -1,4 +1,5 @@
 #include "CGameTrigger.h"
+#include "PortPointer.h"
 
 #include "CAIScript.h"
 #include "CAITrigger.h"
@@ -1030,7 +1031,7 @@ void CGameTrigger::Marshal(CAreaFileTriggerObject** pTriggerObject)
         }
 
         // FIXME: Unsafe x64 conversion.
-        (*pTriggerObject)->m_pickPointStart = reinterpret_cast<DWORD>(pPoints);
+        (*pTriggerObject)->m_pickPointStart = PortStashPointer(pPoints);
         (*pTriggerObject)->m_pickPointCount = m_nPolygon;
     }
 

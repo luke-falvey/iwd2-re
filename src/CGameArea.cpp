@@ -1,4 +1,5 @@
 #include "CGameArea.h"
+#include "PortPointer.h"
 
 #include "CAIScript.h"
 #include "CBaldurChitin.h"
@@ -3510,7 +3511,7 @@ void CGameArea::Marshal(BYTE** pArea, LONG* areaSize, BOOLEAN bProgressBarInPlac
                 pCreature = lCreatures.GetNext(pos);
 
                 // FIXME: Unsafe x64 conversion.
-                BYTE* pCreatureData = reinterpret_cast<BYTE*>(pCreature->m_creatureOffset);
+                BYTE* pCreatureData = static_cast<BYTE*>(PortTakePointer(pCreature->m_creatureOffset));
                 memcpy(*pArea + cnt, pCreatureData, pCreature->m_creatureSize);
                 delete[] pCreatureData;
 
@@ -3549,7 +3550,7 @@ void CGameArea::Marshal(BYTE** pArea, LONG* areaSize, BOOLEAN bProgressBarInPlac
                 pContainerObject = lContainers.GetNext(pos);
                 if (pContainerObject->m_pickPointCount > 0) {
                     // FIXME: Unsafe x64 conversion.
-                    pPoints = reinterpret_cast<CAreaPoint*>(pContainerObject->m_pickPointStart);
+                    pPoints = static_cast<CAreaPoint*>(PortTakePointer(pContainerObject->m_pickPointStart));
                     memcpy(*pArea + cnt, pPoints, sizeof(CAreaPoint) * pContainerObject->m_pickPointCount);
                     delete[] pPoints;
                     pContainerObject->m_pickPointStart = nPoint;
@@ -3564,7 +3565,7 @@ void CGameArea::Marshal(BYTE** pArea, LONG* areaSize, BOOLEAN bProgressBarInPlac
 
                 if (pDoorObject->m_openSelectionPointCount > 0) {
                     // FIXME: Unsafe x64 conversion.
-                    pPoints = reinterpret_cast<CAreaPoint*>(pDoorObject->m_openSelectionPointStart);
+                    pPoints = static_cast<CAreaPoint*>(PortTakePointer(pDoorObject->m_openSelectionPointStart));
                     memcpy(*pArea + cnt, pPoints, sizeof(CAreaPoint) * pDoorObject->m_openSelectionPointCount);
                     delete[] pPoints;
                     pDoorObject->m_openSelectionPointStart = nPoint;
@@ -3574,7 +3575,7 @@ void CGameArea::Marshal(BYTE** pArea, LONG* areaSize, BOOLEAN bProgressBarInPlac
 
                 if (pDoorObject->m_closedSelectionPointCount > 0) {
                     // FIXME: Unsafe x64 conversion.
-                    pPoints = reinterpret_cast<CAreaPoint*>(pDoorObject->m_closedSelectionPointStart);
+                    pPoints = static_cast<CAreaPoint*>(PortTakePointer(pDoorObject->m_closedSelectionPointStart));
                     memcpy(*pArea + cnt, pPoints, sizeof(CAreaPoint) * pDoorObject->m_closedSelectionPointCount);
                     delete[] pPoints;
                     pDoorObject->m_closedSelectionPointStart = nPoint;
@@ -3584,7 +3585,7 @@ void CGameArea::Marshal(BYTE** pArea, LONG* areaSize, BOOLEAN bProgressBarInPlac
 
                 if (pDoorObject->m_openSearchSquaresCount > 0) {
                     // FIXME: Unsafe x64 conversion.
-                    pPoints = reinterpret_cast<CAreaPoint*>(pDoorObject->m_openSearchSquaresStart);
+                    pPoints = static_cast<CAreaPoint*>(PortTakePointer(pDoorObject->m_openSearchSquaresStart));
                     memcpy(*pArea + cnt, pPoints, sizeof(CAreaPoint) * pDoorObject->m_openSearchSquaresCount);
                     delete[] pPoints;
                     pDoorObject->m_openSearchSquaresStart = nPoint;
@@ -3594,7 +3595,7 @@ void CGameArea::Marshal(BYTE** pArea, LONG* areaSize, BOOLEAN bProgressBarInPlac
 
                 if (pDoorObject->m_closedSearchSquaresCount > 0) {
                     // FIXME: Unsafe x64 conversion.
-                    pPoints = reinterpret_cast<CAreaPoint*>(pDoorObject->m_closedSearchSquaresStart);
+                    pPoints = static_cast<CAreaPoint*>(PortTakePointer(pDoorObject->m_closedSearchSquaresStart));
                     memcpy(*pArea + cnt, pPoints, sizeof(CAreaPoint) * pDoorObject->m_closedSearchSquaresCount);
                     delete[] pPoints;
                     pDoorObject->m_closedSearchSquaresStart = nPoint;
@@ -3608,7 +3609,7 @@ void CGameArea::Marshal(BYTE** pArea, LONG* areaSize, BOOLEAN bProgressBarInPlac
                 pTriggerObject = lTriggers.GetNext(pos);
                 if (pTriggerObject->m_pickPointCount > 0) {
                     // FIXME: Unsafe x64 conversion.
-                    pPoints = reinterpret_cast<CAreaPoint*>(pTriggerObject->m_pickPointStart);
+                    pPoints = static_cast<CAreaPoint*>(PortTakePointer(pTriggerObject->m_pickPointStart));
                     memcpy(*pArea + cnt, pPoints, sizeof(CAreaPoint) * pTriggerObject->m_pickPointCount);
                     delete[] pPoints;
                     pTriggerObject->m_pickPointStart = nPoint;
@@ -3675,7 +3676,7 @@ void CGameArea::Marshal(BYTE** pArea, LONG* areaSize, BOOLEAN bProgressBarInPlac
                 pContainerObject = lContainers.GetNext(pos);
                 if (pContainerObject->m_itemCount > 0) {
                     // FIXME: Unsafe x64 conversion.
-                    pItems = reinterpret_cast<CCreatureFileItem*>(pContainerObject->m_startingItem);
+                    pItems = static_cast<CCreatureFileItem*>(PortTakePointer(pContainerObject->m_startingItem));
                     memcpy(*pArea + cnt, pItems, sizeof(CCreatureFileItem) * pContainerObject->m_itemCount);
                     delete[] pItems;
                     pContainerObject->m_startingItem = nItem;

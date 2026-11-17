@@ -1,4 +1,5 @@
 #include "CGameContainer.h"
+#include "PortPointer.h"
 
 #include "CAIScript.h"
 #include "CAITrigger.h"
@@ -1597,7 +1598,7 @@ void CGameContainer::Marshal(CAreaFileContainer** pContainerObject)
         }
 
         // FIXME: Unsafe x64 conversion.
-        (*pContainerObject)->m_pickPointStart = reinterpret_cast<DWORD>(pPoints);
+        (*pContainerObject)->m_pickPointStart = PortStashPointer(pPoints);
         (*pContainerObject)->m_pickPointCount = m_nPolygon;
     }
 
@@ -1621,7 +1622,7 @@ void CGameContainer::Marshal(CAreaFileContainer** pContainerObject)
             UTIL_ASSERT(pItems != NULL)
 
             // FIXME: Unsafe x64 conversion.
-            (*pContainerObject)->m_startingItem = reinterpret_cast<DWORD>(pItems);
+            (*pContainerObject)->m_startingItem = PortStashPointer(pItems);
             (*pContainerObject)->m_itemCount = cnt;
 
             cnt = 0;

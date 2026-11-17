@@ -1,4 +1,5 @@
 #include "CGameDoor.h"
+#include "PortPointer.h"
 
 #include "CAIScript.h"
 #include "CAITrigger.h"
@@ -1693,7 +1694,7 @@ void CGameDoor::Marshal(CAreaFileDoorObject** pDoorObject)
         }
 
         // FIXME: Unsafe x64 conversion.
-        (*pDoorObject)->m_closedSearchSquaresStart = reinterpret_cast<DWORD>(pPoints);
+        (*pDoorObject)->m_closedSearchSquaresStart = PortStashPointer(pPoints);
         (*pDoorObject)->m_closedSearchSquaresCount = m_nClosedSearch;
     }
 
@@ -1710,7 +1711,7 @@ void CGameDoor::Marshal(CAreaFileDoorObject** pDoorObject)
         }
 
         // FIXME: Unsafe x64 conversion.
-        (*pDoorObject)->m_openSearchSquaresStart = reinterpret_cast<DWORD>(pPoints);
+        (*pDoorObject)->m_openSearchSquaresStart = PortStashPointer(pPoints);
         (*pDoorObject)->m_openSearchSquaresCount = m_nOpenSearch;
     }
 
@@ -1727,7 +1728,7 @@ void CGameDoor::Marshal(CAreaFileDoorObject** pDoorObject)
         }
 
         // FIXME: Unsafe x64 conversion.
-        (*pDoorObject)->m_closedSelectionPointStart = reinterpret_cast<DWORD>(pPoints);
+        (*pDoorObject)->m_closedSelectionPointStart = PortStashPointer(pPoints);
         (*pDoorObject)->m_closedSelectionPointCount = m_nClosedPolygon;
     }
 
@@ -1744,7 +1745,7 @@ void CGameDoor::Marshal(CAreaFileDoorObject** pDoorObject)
         }
 
         // FIXME: Unsafe x64 conversion.
-        (*pDoorObject)->m_openSelectionPointStart = reinterpret_cast<DWORD>(pPoints);
+        (*pDoorObject)->m_openSelectionPointStart = PortStashPointer(pPoints);
         (*pDoorObject)->m_openSelectionPointCount = m_nOpenPolygon;
     }
 

@@ -40,6 +40,8 @@ target_sources(iwd2-core PRIVATE
     "src/music/sound.cpp"
     "src/music/sound.h"
     "src/BalDataTypes.h"
+    "src/PortPointer.cpp"
+    "src/PortPointer.h"
     "src/C2DArray.cpp"
     "src/C2DArray.h"
     "src/CAIAction.cpp"
