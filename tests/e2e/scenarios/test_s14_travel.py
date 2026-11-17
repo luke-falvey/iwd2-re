@@ -144,6 +144,14 @@ def fight(game, what):
             if not hostile_circles(game.grab()):
                 break
             continue
+        # An earlier click that landed on a party member in the crowd leaves
+        # only that member selected, and one member alone may not win.
+        game.click(*SELECT_ALL)
+        game.move(*FIGHT_PARK)
+        time.sleep(0.3)
+        targets = hostile_circles(game.grab())
+        if not targets:
+            continue
         x, y = max(targets, key=lambda t: t[1])
         game.click(x, y - 12)
         game.move(*FIGHT_PARK)
