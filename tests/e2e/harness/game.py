@@ -113,6 +113,15 @@ class Game:
     vpos: tuple = (400, 300)
     cpu: int | None = None  # virtual mode: the CPU this instance is pinned to
     _holds_input_lock: bool = False
+    # Driver mode (macOS port): a harness.driver_backend.DriverBackend, set by use_driver().
+    backend: object = None
+    no_compare: bool = False
+    compare_skipped: list = field(default_factory=list)
+
+    def use_driver(self, port: int, no_compare: bool = False) -> None:
+        from .driver_backend import DriverBackend
+        self.backend = DriverBackend(port, no_compare)
+        self.no_compare = no_compare
 
     # ---- lifecycle -------------------------------------------------------
 
@@ -145,6 +154,8 @@ class Game:
         ini.write_text("\n".join(out) + "\n")
 
     def launch(self, timeout: float = 60.0) -> None:
+        if self.backend:
+            return self.backend.launch(self, timeout)
         exe = self.exe or self.default_exe()
         env = dict(os.environ)
         # Treat the old game as DPI aware so its window isn't bitmap-stretched
@@ -247,6 +258,8 @@ class Game:
     def dump_stacks(self) -> Path | None:
         """Ask the rebuild to write the stacks of all its threads (it listens
         on "iwd2re-dump-<pid>"). Returns the stacks file, if written."""
+        if self.backend:
+            return self.backend.collect()
         if self.target != "reimpl" or not self.proc or self.proc.poll() is not None:
             return None
         path = Path(os.environ.get("IWD2RE_CRASH_DIR", str(self.out_dir))) / "iwd2re-stacks.txt"
@@ -266,6 +279,8 @@ class Game:
         return ext if ext.exists() else None
 
     def close(self) -> None:
+        if self.backend:
+            return self.backend.close()
         try:
             if self.proc and self.proc.poll() is None:
                 self.proc.kill()
@@ -291,6 +306,8 @@ class Game:
 
     def check_alive(self) -> None:
         """Fail on process exit or an assert or error dialog."""
+        if self.backend:
+            return self.backend.check_alive()
         if self.proc is None:
             raise GameCrashed("not launched")
         rc = self.proc.poll()
@@ -305,9 +322,13 @@ class Game:
     # ---- seeing ----------------------------------------------------------
 
     def client_rect(self) -> tuple[int, int, int, int]:
+        if self.backend:
+            return self.backend.client_rect()
         return win32.client_rect_on_screen(self.hwnd)
 
     def grab(self):
+        if self.backend:
+            return self.backend.grab()
         self.check_alive()
         # Virtual mode also reads the screen: capturing from the window
         # (PrintWindow) returns frames a second or two old when several games
@@ -323,6 +344,8 @@ class Game:
         return img
 
     def screenshot_desktop(self, name: str) -> None:
+        if self.backend:
+            return self.backend.screenshot_desktop(name)
         img = win32.capture_screen_rect(0, 0, 1920, 1080)
         img.save(self.out_dir / f"desktop-{name}.png")
 
@@ -355,10 +378,14 @@ class Game:
     # ---- acting like a player ------------------------------------------
 
     def _to_screen(self, x: int, y: int) -> tuple[int, int]:
+        if self.backend:  # driver mode: positions are client pixels
+            return x, y
         cx, cy, _, _ = self.client_rect()
         return cx + x, cy + y
 
     def _ensure_focus(self) -> None:
+        if self.backend:
+            return
         if not self.virtual and not win32.is_foreground(self.hwnd):
             # Something else took the foreground: note what, since input sent
             # around this moment may not have reached the game.
@@ -373,9 +400,13 @@ class Game:
     # Positions are screen pixels in real mode and client pixels in virtual.
 
     def _cursor(self) -> tuple[int, int]:
+        if self.backend:
+            return self.backend.pos
         return self.vpos if self.virtual else win32.cursor_pos()
 
     def _move_to(self, x: int, y: int) -> None:
+        if self.backend:
+            return self.backend.move_to(x, y)
         if self.virtual:
             self.vpos = (x, y)
             self.shared.cursorX, self.shared.cursorY = x, y
@@ -383,6 +414,8 @@ class Game:
             win32.mouse_move_abs(x, y)
 
     def _key(self, vk: int, down: bool) -> None:
+        if self.backend:
+            return self.backend.key(vk, down)
         if self.virtual:
             if down:
                 self.shared.pressed[vk] = 1
@@ -391,6 +424,8 @@ class Game:
             win32.key(vk, down)
 
     def _button(self, button: str, down: bool) -> None:
+        if self.backend:
+            return self.backend.button(button, down)
         if self.virtual:
             self._key({"left": 0x01, "right": 0x02}[button], down)
         else:
