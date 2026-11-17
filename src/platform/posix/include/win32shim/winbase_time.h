@@ -21,6 +21,10 @@ typedef struct _SYSTEMTIME {
 } SYSTEMTIME, *PSYSTEMTIME, *LPSYSTEMTIME;
 
 DWORD GetTickCount();
+void GetSystemTime(LPSYSTEMTIME lpSystemTime);
+void GetLocalTime(LPSYSTEMTIME lpSystemTime);
+BOOL QueryPerformanceCounter(LARGE_INTEGER* lpPerformanceCount);
+BOOL QueryPerformanceFrequency(LARGE_INTEGER* lpFrequency);
 void Sleep(DWORD dwMilliseconds);
 DWORD SleepEx(DWORD dwMilliseconds, BOOL bAlertable);
 

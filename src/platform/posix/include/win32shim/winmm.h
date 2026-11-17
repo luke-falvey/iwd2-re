@@ -31,6 +31,9 @@ typedef const WAVEFORMATEX* LPCWAVEFORMATEX;
 #define PlaySound PlaySoundA
 
 #define TIMERR_NOERROR 0
+#define TIME_ONESHOT 0x0000
+#define TIME_PERIODIC 0x0001
+#define TIME_CALLBACK_FUNCTION 0x0000
 
 typedef struct timecaps_tag {
     UINT wPeriodMin;
@@ -41,6 +44,7 @@ typedef void(CALLBACK TIMECALLBACK)(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, 
 typedef TIMECALLBACK* LPTIMECALLBACK;
 typedef UINT MMRESULT;
 
+DWORD timeGetTime();
 MMRESULT timeGetDevCaps(LPTIMECAPS ptc, UINT cbtc);
 MMRESULT timeBeginPeriod(UINT uPeriod);
 MMRESULT timeEndPeriod(UINT uPeriod);
