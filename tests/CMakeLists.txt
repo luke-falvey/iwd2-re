@@ -29,6 +29,7 @@ add_executable(iwd2-tests
     "unit/test_platform_strings.cpp"
     "unit/test_platform_sync.cpp"
     "unit/test_platform_crt.cpp"
+    "unit/test_platform_sound.cpp"
     "${LAYOUT_TEST}"
 )
 if(WIN32)

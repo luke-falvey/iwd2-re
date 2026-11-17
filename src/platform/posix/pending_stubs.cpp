@@ -38,7 +38,4 @@ int ChoosePixelFormat(HDC hdc, const PIXELFORMATDESCRIPTOR* ppfd) { PENDING_LOG(
 BOOL SetPixelFormat(HDC hdc, int format, const PIXELFORMATDESCRIPTOR* ppfd) { PENDING_LOG("SetPixelFormat"); return BOOL(); }
 BOOL SwapBuffers(HDC hdc) { PENDING_LOG("SwapBuffers"); return BOOL(); }
 
-// ---- dsound_decl.h (1 stubs)
-HRESULT DirectSoundCreate(LPCGUID pcGuidDevice, LPDIRECTSOUND* ppDS, LPUNKNOWN pUnkOuter) { PENDING_LOG("DirectSoundCreate"); return E_FAIL; }
-
 // ---- wgl.h (0 stubs)
