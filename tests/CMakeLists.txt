@@ -24,6 +24,11 @@ add_executable(iwd2-tests
     "unit/test_compat_geometry.cpp"
     "unit/test_compat_collections.cpp"
     "unit/test_compat_file.cpp"
+    "unit/test_platform_ini.cpp"
+    "unit/test_platform_files.cpp"
+    "unit/test_platform_strings.cpp"
+    "unit/test_platform_sync.cpp"
+    "unit/test_platform_crt.cpp"
     "${LAYOUT_TEST}"
 )
 if(WIN32)

@@ -1,6 +1,7 @@
 #ifndef WIN32SHIM_WINBASE_PROCESS_MEMORY_H_
 #define WIN32SHIM_WINBASE_PROCESS_MEMORY_H_
 #include <win32shim/wintypes.h>
+#include <win32shim/winbase_thread_sync.h>
 
 // Modules, processes, global memory, lstr* string helpers, environment.
 
@@ -49,7 +50,9 @@ typedef struct _MEMORYSTATUS {
 
 #define NORMAL_PRIORITY_CLASS 0x00000020
 #define PROCESS_ALL_ACCESS 0x001F0FFF
+#define GMEM_FIXED 0x0000
 #define GMEM_MOVEABLE 0x0002
+#define GMEM_ZEROINIT 0x0040
 #define GMEM_SHARE 0x2000
 
 UINT GetACP();
@@ -68,6 +71,8 @@ BOOL GlobalUnlock(HGLOBAL hMem);
 HGLOBAL GlobalFree(HGLOBAL hMem);
 void GlobalMemoryStatus(LPMEMORYSTATUS lpBuffer);
 BOOL IsBadReadPtr(const void* lp, UINT_PTR ucb);
+LPSTR GetCommandLineA();
+void OutputDebugStringA(LPCSTR lpOutputString);
 
 int lstrlenA(LPCSTR lpString);
 LPSTR lstrcpyA(LPSTR lpString1, LPCSTR lpString2);

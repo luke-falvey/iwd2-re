@@ -11,21 +11,35 @@
 #define FILE_APPEND_DATA 0x00000004u
 #define FILE_SHARE_READ 0x00000001
 #define FILE_SHARE_WRITE 0x00000002
+#define FILE_SHARE_DELETE 0x00000004
+#define CREATE_NEW 1
 #define CREATE_ALWAYS 2
 #define OPEN_EXISTING 3
 #define OPEN_ALWAYS 4
+#define TRUNCATE_EXISTING 5
 #define FILE_ATTRIBUTE_READONLY 0x00000001
+#define FILE_ATTRIBUTE_HIDDEN 0x00000002
+#define FILE_ATTRIBUTE_ARCHIVE 0x00000020
 #define FILE_ATTRIBUTE_DIRECTORY 0x00000010
 #define FILE_ATTRIBUTE_NORMAL 0x00000080
 #define FILE_FLAG_WRITE_THROUGH 0x80000000u
 #define FILE_FLAG_NO_BUFFERING 0x20000000
 #define FILE_FLAG_RANDOM_ACCESS 0x10000000
 #define FILE_FLAG_SEQUENTIAL_SCAN 0x08000000
+#define FILE_BEGIN 0
 #define FILE_CURRENT 1
+#define FILE_END 2
+#define DRIVE_UNKNOWN 0
+#define DRIVE_NO_ROOT_DIR 1
+#define DRIVE_REMOVABLE 2
+#define DRIVE_FIXED 3
+#define DRIVE_REMOTE 4
 #define DRIVE_CDROM 5
 
 #define NO_ERROR 0L
 #define ERROR_SUCCESS 0L
+#define ERROR_NO_MORE_FILES 18L
+#define ERROR_FILE_EXISTS 80L
 #define ERROR_FILE_NOT_FOUND 2L
 #define ERROR_BAD_ARGUMENTS 160L
 #define ERROR_PATH_NOT_FOUND 3L
@@ -98,6 +112,8 @@ BOOL FindClose(HANDLE hFindFile);
 
 DWORD GetLogicalDrives();
 UINT GetDriveTypeA(LPCSTR lpRootPathName);
+BOOL GetDiskFreeSpaceExA(LPCSTR lpDirectoryName, PULARGE_INTEGER lpFreeBytesAvailableToCaller, PULARGE_INTEGER lpTotalNumberOfBytes, PULARGE_INTEGER lpTotalNumberOfFreeBytes);
+DWORD GetLogicalDriveStringsA(DWORD nBufferLength, LPSTR lpBuffer);
 BOOL GetDiskFreeSpaceA(LPCSTR lpRootPathName, LPDWORD lpSectorsPerCluster, LPDWORD lpBytesPerSector, LPDWORD lpNumberOfFreeClusters, LPDWORD lpTotalNumberOfClusters);
 BOOL GetVolumeInformationA(LPCSTR lpRootPathName, LPSTR lpVolumeNameBuffer, DWORD nVolumeNameSize, LPDWORD lpVolumeSerialNumber, LPDWORD lpMaximumComponentLength, LPDWORD lpFileSystemFlags, LPSTR lpFileSystemNameBuffer, DWORD nFileSystemNameSize);
 UINT SetErrorMode(UINT uMode);

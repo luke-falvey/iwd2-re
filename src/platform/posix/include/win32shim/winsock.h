@@ -69,6 +69,7 @@ typedef struct WSAData {
 #define MSG_PEEK 0x2
 #define INADDR_NONE 0xffffffff
 #define WSAEWOULDBLOCK 10035
+#define WSAENETDOWN 10050
 #define FD_CONNECT 0x10
 
 int WSAStartup(WORD wVersionRequested, LPWSADATA lpWSAData);
@@ -78,6 +79,7 @@ HANDLE WSAAsyncGetHostByName(HWND hWnd, UINT wMsg, const char* name, char* buf, 
 int WSACancelAsyncRequest(HANDLE hAsyncTaskHandle);
 int WSAAsyncSelect(SOCKET s, HWND hWnd, UINT wMsg, LONG lEvent);
 
+int gethostname(char* name, int namelen);
 SOCKET socket(int af, int type, int protocol);
 int closesocket(SOCKET s);
 int ioctlsocket(SOCKET s, LONG cmd, u_long* argp);

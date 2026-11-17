@@ -44,6 +44,7 @@ DWORD ResumeThread(HANDLE hThread);
 HANDLE CreateSemaphoreA(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCSTR lpName);
 BOOL ReleaseSemaphore(HANDLE hSemaphore, LONG lReleaseCount, LPLONG lpPreviousCount);
 HANDLE CreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName);
+BOOL ReleaseMutex(HANDLE hMutex);
 BOOL ResetEvent(HANDLE hEvent);
 BOOL SetEvent(HANDLE hEvent);
 
