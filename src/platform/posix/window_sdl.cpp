@@ -106,6 +106,11 @@ std::atomic<int> g_mouseX { 0 };
 std::atomic<int> g_mouseY { 0 };
 std::atomic<bool> g_capsLock { false };
 
+// Set once the test driver has sent input: real devices are then ignored.
+std::atomic<bool> g_injected { false };
+uint32_t g_injectClickTime[8];
+int g_injectClickCount[8];
+
 // The last frame handed to PresentFrame.
 std::mutex g_frameMutex;
 std::vector<uint32_t> g_frame;
@@ -375,7 +380,9 @@ void UploadFrame()
         SDL_SetTextureScaleMode(g_window.texture, SDL_SCALEMODE_NEAREST);
         SDL_SetWindowSize(g_window.window, g_frameW, g_frameH);
         SDL_SetRenderLogicalPresentation(g_window.renderer, g_frameW, g_frameH, SDL_LOGICAL_PRESENTATION_LETTERBOX);
-        SDL_ShowWindow(g_window.window);
+        if (getenv("IWD2RE_HIDE_WINDOW") == NULL) {
+            SDL_ShowWindow(g_window.window);
+        }
     }
 
     SDL_UpdateTexture(g_window.texture, NULL, g_frame.data(), g_frameW * 4);
@@ -399,23 +406,33 @@ void Pump()
             Post(WM_CLOSE, 0, 0);
             break;
         case SDL_EVENT_KEY_DOWN:
-            OnKey(ev.key, true);
+            if (!g_injected) {
+                OnKey(ev.key, true);
+            }
             break;
         case SDL_EVENT_KEY_UP:
-            OnKey(ev.key, false);
+            if (!g_injected) {
+                OnKey(ev.key, false);
+            }
             break;
         case SDL_EVENT_MOUSE_MOTION:
-            SetMouse(ev.motion.x, ev.motion.y);
+            if (!g_injected) {
+                SetMouse(ev.motion.x, ev.motion.y);
+            }
             break;
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
-            OnButton(ev.button, true);
+            if (!g_injected) {
+                OnButton(ev.button, true);
+            }
             break;
         case SDL_EVENT_MOUSE_BUTTON_UP:
-            OnButton(ev.button, false);
+            if (!g_injected) {
+                OnButton(ev.button, false);
+            }
             break;
         case SDL_EVENT_MOUSE_WHEEL: {
             int delta = static_cast<int>(ev.wheel.y * 120.0f);
-            if (delta != 0) {
+            if (delta != 0 && !g_injected) {
                 Post(WM_MOUSEWHEEL, static_cast<WPARAM>(static_cast<uint32_t>(delta & 0xFFFF) << 16), MouseLParam());
             }
             break;
@@ -480,6 +497,101 @@ uint32_t GrabFrame(std::vector<uint32_t>& pixels, int& w, int& h)
     return g_frameCount;
 }
 
+void InjectMouseMove(int x, int y)
+{
+    g_injected = true;
+    g_mouseX = x;
+    g_mouseY = y;
+}
+
+void InjectButton(int vk, bool down)
+{
+    g_injected = true;
+
+    UINT downMsg;
+    UINT dblMsg;
+    UINT upMsg;
+    switch (vk) {
+    case 0x01:
+        downMsg = WM_LBUTTONDOWN;
+        dblMsg = WM_LBUTTONDBLCLK;
+        upMsg = WM_LBUTTONUP;
+        break;
+    case 0x02:
+        downMsg = WM_RBUTTONDOWN;
+        dblMsg = WM_RBUTTONDBLCLK;
+        upMsg = WM_RBUTTONUP;
+        break;
+    case 0x04:
+        downMsg = WM_MBUTTONDOWN;
+        dblMsg = WM_MBUTTONDBLCLK;
+        upMsg = WM_MBUTTONUP;
+        break;
+    default:
+        return;
+    }
+
+    SetKey(vk, down);
+    if (!down) {
+        Post(upMsg, 0, MouseLParam());
+        return;
+    }
+
+    // As Windows with CS_DBLCLKS: a second press within the double-click
+    // time is a double-click message, a third is a plain press again.
+    uint32_t now = GetTickCount();
+    if (g_injectClickCount[vk] == 1 && now - g_injectClickTime[vk] <= 500) {
+        g_injectClickCount[vk] = 0;
+        Post(dblMsg, 0, MouseLParam());
+    } else {
+        g_injectClickCount[vk] = 1;
+        Post(downMsg, 0, MouseLParam());
+    }
+    g_injectClickTime[vk] = now;
+}
+
+void InjectKey(int vk, bool down)
+{
+    g_injected = true;
+    if (vk <= 0 || vk > 255) {
+        return;
+    }
+
+    bool wasDown = (g_keys[vk].load() & 0x8000) != 0;
+    SetKey(vk, down);
+
+    // The side keys also hold the side-less key, and the other way round.
+    int generic = 0;
+    if (vk >= 0xA0 && vk <= 0xA5) {
+        generic = 0x10 + (vk - 0xA0) / 2;
+        SetKey(generic, down);
+    }
+
+    bool alt = (g_keys[0x12].load() & 0x8000) != 0;
+    int code = generic != 0 ? generic : vk;
+    LPARAM lParam = 1;
+    if (down) {
+        if (wasDown) {
+            lParam |= 0x40000000;
+        }
+        Post(alt ? WM_SYSKEYDOWN : WM_KEYDOWN, code, lParam);
+    } else {
+        lParam |= 0xC0000000;
+        Post(alt || code == 0x12 ? WM_SYSKEYUP : WM_KEYUP, code, lParam);
+    }
+}
+
+void InjectWheel(int delta)
+{
+    g_injected = true;
+    Post(WM_MOUSEWHEEL, static_cast<WPARAM>(static_cast<uint32_t>(delta & 0xFFFF) << 16), MouseLParam());
+}
+
+void InjectClose()
+{
+    Post(WM_CLOSE, 0, 0);
+}
+
 } // namespace platform
 
 // Window class and window ------------------------------------------------
@@ -516,6 +628,7 @@ HWND CreateWindowExA(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, D
     SDL_HideCursor();
 
     g_window.created = true;
+    platform::StartTestDriver();
 
     CallProc(WM_SIZE, SIZE_RESTORED, (g_window.w & 0xFFFF) | ((g_window.h & 0xFFFF) << 16));
     CallProc(WM_MOVE, 0, (g_window.x & 0xFFFF) | ((g_window.y & 0xFFFF) << 16));

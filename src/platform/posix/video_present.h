@@ -26,6 +26,19 @@ void PresentFrame(const uint32_t* pixels, int w, int h, int pitch);
 // the test driver).
 uint32_t GrabFrame(std::vector<uint32_t>& pixels, int& w, int& h);
 
+// Input from the test driver instead of the real devices. Coordinates are
+// client pixels of the game; keys and buttons are Windows virtual-key codes
+// (VK_LBUTTON = 1, VK_RBUTTON = 2, VK_MBUTTON = 4). Callable from any thread.
+// Once any of these is used, the real mouse and keyboard are ignored.
+void InjectMouseMove(int x, int y);
+void InjectButton(int vk, bool down);
+void InjectKey(int vk, bool down);
+void InjectWheel(int delta);
+void InjectClose();
+
+// Start the test driver if IWD2RE_TEST_DRIVER=<port> is set (test_driver.cpp).
+void StartTestDriver();
+
 } // namespace platform
 
 #endif /* IWD2RE_PLATFORM_POSIX_VIDEO_PRESENT_H_ */
