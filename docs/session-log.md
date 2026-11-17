@@ -2,6 +2,16 @@
 
 Newest first. Each entry covers what was done, what's blocked and what's next.
 
+## 2026-11-18: open issues worked through (main tree)
+
+Asked for: fix all the open issues, including by differing from the original where that is what it takes. Changes that differ from the exe are marked `// NOTE: Differs from the original on purpose` in the source.
+
+- **Lost key presses and quick clicks** (`CChitin.cpp`, differs on purpose): the game sees a key press or a short click only through the "pressed since last call" bit of `GetAsyncKeyState`, which Windows clears when any program asks about the same key. The window procedure now notes each `WM_KEYDOWN`/`WM_*BUTTONDOWN` and the polling code restores the bit. S27 (the lost 'r') passed every run since.
+- **Party member stops short on a long walk** (`CGameSprite::MoveToPoint`, differs on purpose): traced in S16. After a collision re-path a member could end up with neither a path nor a request; the order's retry then gave up because the destination square (a formation spot on the ship) cannot be stood on (0x73F75A), although the first search for the same order accepts it. The retry no longer gives up on that; the 4-retry limit stays. S16 then passed 11 of 11. Why the path and request were both lost is not identified.
+- **Tried and taken out again:** copying `m_sourceSide` in the `CSearchRequest` copy constructor, writing the remove-object slot the search thread reads, and 30 move retries for party members (that made S14 fail 4 of 4: members holding a move order cannot be bumped aside, so they blocked the fight). The source keeps comments saying the first two were tried.
+- **S14 test fix:** its fight loop now selects the whole party before each attack click. A click that landed on a party member in the crowd had left one member fighting alone (the goblin "still alive" failure) and the party unable to gather at the door. Then 9 passes in a row.
+- **Full serial run after all of this: 28 of 29.** S9 failed "no goblin came when the party went to the door": the party stood where it does in the golden picture but the whole area round the house was still black (unexplored), so the goblin was never seen. That is the same symptom as S14's "darker areas after travel": the fog of war not being cleared. Next: the visibility map.
+
 ## 2026-11-17: port groundwork (branch `port/prep`), S16 unstable
 
 - **Asked for:** the low-risk first steps towards an Apple Silicon port. Everything is on `port/prep` (worktree `iwd2-re-wt/port`), not merged. `docs/port-audit.md` there has the detail.
