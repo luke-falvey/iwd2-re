@@ -1,6 +1,8 @@
 #include "CMessage.h"
+#include "PortPointer.h"
 
 #include "CAIScript.h"
+#include "PortPointer.h"
 #include "CAIUtil.h"
 #include "CBaldurChitin.h"
 #include "CCreatureFile.h"
@@ -2909,7 +2911,7 @@ BOOLEAN CBaldurMessage::sub_42E1B0(CString& sPlayerName, SHORT nCharacterSlot, B
             cnt += nPortraitIcons * sizeof(INT);
         }
 
-        BYTE* pCreature = reinterpret_cast<BYTE*>(partyCreature.m_creatureOffset);
+        BYTE* pCreature = static_cast<BYTE*>(PortTakePointer(partyCreature.m_creatureOffset));
         partyCreature.m_creatureOffset = dwCreatureDataLoc;
 
         memcpy(pMessage + cnt, &partyCreature, sizeof(CSavedGamePartyCreature));
@@ -3465,7 +3467,7 @@ BOOLEAN CBaldurMessage::DemandCharacterSlotReply(CString& sSendTo, SHORT nCharac
     cnt += sizeof(BOOLEAN);
 
     if (bSendCharInfo == TRUE) {
-        BYTE* pCreature = reinterpret_cast<BYTE*>(partyCreature.m_creatureOffset);
+        BYTE* pCreature = static_cast<BYTE*>(PortTakePointer(partyCreature.m_creatureOffset));
         partyCreature.m_creatureOffset = dwCreatureDataLoc;
 
         memcpy(pMessage + cnt, &partyCreature, sizeof(CSavedGamePartyCreature));

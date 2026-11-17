@@ -562,9 +562,3 @@ HRESULT CoCreateInstance(REFCLSID rclsid, LPUNKNOWN, DWORD, REFIID, LPVOID* ppv)
     return REGDB_E_CLASSNOTREG;
 }
 
-// ---------------------------------------------------------------------------
-// Not in the original: CrashHandler.cpp (dbghelp) is not built here.
-void InstallCrashHandler();
-void InstallCrashHandler()
-{
-}
