@@ -208,7 +208,7 @@ BOOLEAN CGameTrigger::DoAIUpdate(BOOLEAN active, LONG counter)
 
             POSITION pos = targets.GetHeadPosition();
             while (pos != NULL) {
-                LONG nId = reinterpret_cast<LONG>(targets.GetNext(pos));
+                LONG nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
                 CGameSprite* pSprite;
                 BYTE rc = pObjectArray->GetShare(nId,
@@ -219,7 +219,7 @@ BOOLEAN CGameTrigger::DoAIUpdate(BOOLEAN active, LONG counter)
                     if (pSprite->GetObjectType() == CGameObject::TYPE_SPRITE) {
                         if ((m_dwFlags & 0x40) != 0
                             || pGame->GetCharacterPortraitNum(pSprite->GetId()) != -1
-                            || pGame->m_familiars.Find(reinterpret_cast<int*>(pSprite->GetId()), NULL) != NULL) {
+                            || pGame->m_familiars.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(pSprite->GetId())), NULL) != NULL) {
                             // NOTE: Uninline.
                             if (g_pChitin->cNetwork.GetSessionOpen() == TRUE
                                 && g_pChitin->cNetwork.GetSessionHosting() == TRUE
@@ -317,7 +317,7 @@ void CGameTrigger::AddEffect(CGameEffect* pEffect, BYTE list, BOOL noSave, BOOL 
 
                 // NOTE: Original passes `m_id` where the callee expects a
                 // `CGameAIBase*` caller.
-                CGameObject* pObject = m_typeAI.sub_40CCA0(reinterpret_cast<CGameAIBase*>(m_id), FALSE);
+                CGameObject* pObject = m_typeAI.sub_40CCA0(reinterpret_cast<CGameAIBase*>(static_cast<INT_PTR>(m_id)), FALSE);
                 if (pObject != NULL) {
                     // NOTE: Uninline.
                     if (pObject->GetAIType().Equal(CAIObjectType(CGameObject::TYPE_SPRITE))) {

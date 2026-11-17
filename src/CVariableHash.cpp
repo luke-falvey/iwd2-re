@@ -1073,7 +1073,7 @@ void CCtrlAltDelete::AddSpell(CString sName, UINT nAmount)
         // NOTE: Uninline.
         POSITION pos = g_pBaldurChitin->GetObjectGame()->m_group.m_memberList.GetHeadPosition();
         while (pos != NULL) {
-            LONG nId = reinterpret_cast<LONG>(g_pBaldurChitin->GetObjectGame()->m_group.m_memberList.GetNext(pos));
+            LONG nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(g_pBaldurChitin->GetObjectGame()->m_group.m_memberList.GetNext(pos)));
 
             BYTE rc;
             do {
@@ -1179,7 +1179,7 @@ void CCtrlAltDelete::AddAllSpellsOfClass(const BYTE& nClass, UINT nAmount)
     // NOTE: Uninline.
     POSITION pos = g_pBaldurChitin->GetObjectGame()->m_group.m_memberList.GetHeadPosition();
     while (pos != NULL) {
-        LONG nId = reinterpret_cast<LONG>(g_pBaldurChitin->GetObjectGame()->m_group.m_memberList.GetNext(pos));
+        LONG nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(g_pBaldurChitin->GetObjectGame()->m_group.m_memberList.GetNext(pos)));
 
         BYTE rc;
         do {

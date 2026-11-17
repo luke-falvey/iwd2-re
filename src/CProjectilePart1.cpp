@@ -155,7 +155,7 @@ void CProjectileBAM84DA4C::Fire(CGameArea* pArea, LONG source, LONG target, CPoi
             m_sound.SetLoopingFlag(TRUE);
         }
 
-        m_sound.SetChannel(15, reinterpret_cast<DWORD>(field_EA));
+        m_sound.SetChannel(15, reinterpret_cast<DWORD_PTR>(field_EA));
         m_sound.Play(m_pos.x, m_pos.y, 0, 0);
     }
 
@@ -596,7 +596,7 @@ BOOL CProjectileBAM84DBDC::sub_52D430(BOOLEAN a1)
 
     POSITION pos = targets.GetHeadPosition();
     while (pos != NULL) {
-        LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+        LONG nTargetId = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
         CGameObject* pObject;
         BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
@@ -1130,7 +1130,7 @@ void CProjectileBAM84DD80::Virtual88()
     // NOTE: Inlined.
     cSound.SetResRef(CResRef(field_4B4), TRUE, TRUE);
     cSound.SetFireForget(TRUE);
-    cSound.SetChannel(14, reinterpret_cast<DWORD>(field_EA));
+    cSound.SetChannel(14, reinterpret_cast<DWORD_PTR>(field_EA));
     cSound.Play(m_pos.x, m_pos.y, 0, 0);
 
     // NOTE: Uninitialized in the original, the colors are passed to the chunks
@@ -1296,7 +1296,7 @@ void CProjectileBAM84DFA4::Virtual88(CGameArea* pArea, CPoint pos)
             m_sound.SetLoopingFlag(TRUE);
         }
 
-        m_sound.SetChannel(15, reinterpret_cast<DWORD>(field_EA));
+        m_sound.SetChannel(15, reinterpret_cast<DWORD_PTR>(field_EA));
         m_sound.Play(m_pos.x, m_pos.y, 0, 0);
     }
 }

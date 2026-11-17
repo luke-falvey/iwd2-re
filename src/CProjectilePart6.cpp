@@ -162,7 +162,7 @@ std::set<DWORD> CProjectileHelper84EEA8::Virtual4()
 
     POSITION pos = targets.GetHeadPosition();
     while (pos != NULL) {
-        LONG nTarget = reinterpret_cast<LONG>(targets.GetNext(pos));
+        LONG nTarget = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
         // NOTE: Inlined `std::set::insert` with a begin() hint.
         result.insert(result.begin(), nTarget);
@@ -250,7 +250,7 @@ std::set<DWORD> CProjectileHelper84EEB0::Virtual4()
 
     POSITION pos = targets.GetHeadPosition();
     while (pos != NULL) {
-        LONG nTarget = reinterpret_cast<LONG>(targets.GetNext(pos));
+        LONG nTarget = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
         // NOTE: Inlined `std::set::insert` with a begin() hint.
         result.insert(result.begin(), nTarget);
@@ -473,7 +473,7 @@ void CProjectileSingleTarget850DDC::DeliverEffects()
 
     POSITION pos = targets.GetHeadPosition();
     while (pos != NULL) {
-        LONG nTarget = reinterpret_cast<LONG>(targets.GetNext(pos));
+        LONG nTarget = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
         if (nTarget != m_sourceId) {
             CGameObject* pObject;
@@ -827,7 +827,7 @@ void CProjectileSingleTarget850E84::Virtual88()
 
     POSITION pos = targets.GetHeadPosition();
     while (pos != NULL) {
-        LONG nTarget = reinterpret_cast<LONG>(targets.GetNext(pos));
+        LONG nTarget = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
         // NOTE: Inlined `std::set::find`.
         if (field_2B6.find(nTarget) == field_2B6.end() && nTarget != m_sourceId) {
@@ -1568,7 +1568,7 @@ void CProjectileSingleTarget851444::AIUpdate()
     field_2F0.SetResRef(CResRef("AFT_P23"), TRUE, TRUE);
 
     field_2F0.SetFireForget(TRUE);
-    field_2F0.SetChannel(15, reinterpret_cast<DWORD>(field_EA));
+    field_2F0.SetChannel(15, reinterpret_cast<DWORD_PTR>(field_EA));
     field_2F0.Play(m_pos.x, m_pos.y, 0, FALSE);
 
     field_354 = TRUE;
@@ -1582,7 +1582,7 @@ void CProjectileSingleTarget851444::Fire(CGameArea* pArea, LONG source, LONG tar
     field_2F0.SetResRef(CResRef("ARE_P23"), TRUE, TRUE);
 
     field_2F0.SetFireForget(TRUE);
-    field_2F0.SetChannel(15, reinterpret_cast<DWORD>(field_EA));
+    field_2F0.SetChannel(15, reinterpret_cast<DWORD_PTR>(field_EA));
     field_2F0.Play(m_pos.x, m_pos.y, 0, FALSE);
 
     CProjectileSingleTarget::Fire(pArea, source, CGameObjectArray::INVALID_INDEX, targetPos, nHeight, nType);
@@ -1770,7 +1770,7 @@ void CProjectileSingleTarget8514CC::OnArrival()
         field_310.SetResRef(CResRef("ARE_P22"), TRUE, TRUE);
 
         field_310.SetFireForget(TRUE);
-        field_310.SetChannel(15, reinterpret_cast<DWORD>(field_EA));
+        field_310.SetChannel(15, reinterpret_cast<DWORD_PTR>(field_EA));
         field_310.Play(m_pos.x, m_pos.y, 0, FALSE);
     }
 
@@ -2287,7 +2287,7 @@ void CProjectileSingleTarget851664::OnArrival()
         field_310.SetResRef(CResRef("ARE_P22"), TRUE, TRUE);
 
         field_310.SetFireForget(TRUE);
-        field_310.SetChannel(15, reinterpret_cast<DWORD>(field_EA));
+        field_310.SetChannel(15, reinterpret_cast<DWORD_PTR>(field_EA));
         field_310.Play(m_pos.x, m_pos.y, 0, FALSE);
     }
 

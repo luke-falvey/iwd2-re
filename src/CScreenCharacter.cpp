@@ -2973,7 +2973,7 @@ void CScreenCharacter::UpdateGeneralInformation(CUIControlTextDisplay* pText, CG
 
         POSITION pos = pSprite->m_portraitIcons.GetHeadPosition();
         while (pos != NULL) {
-            INT nState = reinterpret_cast<int>(pSprite->m_portraitIcons.GetAt(pos));
+            INT nState = static_cast<int>(reinterpret_cast<INT_PTR>(pSprite->m_portraitIcons.GetAt(pos)));
             sCode.Format("%c", nState + 'B');
             rule.GetCharacterStateDescription(nState, sDescription);
             pText->DisplayString(sCode,
@@ -4926,7 +4926,7 @@ BOOL CScreenCharacter::sub_5E0FD0(DWORD dwPopupId, CGameSprite* pSprite)
                 break;
             default:
                 // NOTE: The original reloads the `pSprite` argument here.
-                nDomain = reinterpret_cast<INT>(pSprite);
+                nDomain = static_cast<INT>(reinterpret_cast<INT_PTR>(pSprite));
                 break;
             }
 
@@ -4961,7 +4961,7 @@ BOOL CScreenCharacter::sub_5E1910(DWORD dwPopupId, CGameSprite* pSprite)
 {
     // NOTE: Initial value is the `pSprite` argument slot (never a valid popup
     // id); it is only observable when the assertion below fails.
-    DWORD dwNextPopupId = reinterpret_cast<DWORD>(pSprite);
+    DWORD dwNextPopupId = static_cast<DWORD>(reinterpret_cast<UINT_PTR>(pSprite));
 
     while (1) {
         switch (dwPopupId) {
@@ -5043,7 +5043,7 @@ BOOL CScreenCharacter::sub_5E1B20(DWORD dwPopupId, CGameSprite* pSprite)
 {
     // NOTE: Initial value is the `pSprite` argument slot (never a valid popup
     // id); it is only observable when the assertion below fails.
-    DWORD dwNextPopupId = reinterpret_cast<DWORD>(pSprite);
+    DWORD dwNextPopupId = static_cast<DWORD>(reinterpret_cast<UINT_PTR>(pSprite));
 
     while (1) {
         switch (dwPopupId) {
@@ -8780,7 +8780,7 @@ CString CScreenCharacter::sub_5EFFD0(BOOLEAN& bFlag)
 
         POSITION pos = pSprite->m_portraitIcons.GetHeadPosition();
         while (pos != NULL) {
-            INT nState = reinterpret_cast<int>(pSprite->m_portraitIcons.GetAt(pos));
+            INT nState = static_cast<int>(reinterpret_cast<INT_PTR>(pSprite->m_portraitIcons.GetAt(pos)));
             rule.GetCharacterStateDescription(nState, sDescription);
             fprintf(pFile, "%s- %s\n", szLineIndent, (LPCSTR)sDescription);
             pSprite->m_portraitIcons.GetNext(pos);

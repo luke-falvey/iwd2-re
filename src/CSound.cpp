@@ -819,7 +819,7 @@ BOOL CSound::Play(int nNewXCoordinate, int nNewYCoordinate, int nNewZCoordinate,
 }
 
 // 0x7AA4B0
-BOOL CSound::SetChannel(int nNewChannel, DWORD nArea)
+BOOL CSound::SetChannel(int nNewChannel, DWORD_PTR nArea)
 {
     if (!m_pSoundMixer->GetMixerInitialized()) {
         return FALSE;

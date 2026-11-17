@@ -3177,7 +3177,7 @@ void CProjectile::PlaySound(CResRef resRef, BOOL loop, BOOL fireAndForget)
         if (fireAndForget) {
             m_sound.SetFireForget(TRUE);
         }
-        m_sound.SetChannel(15, reinterpret_cast<DWORD>(field_EA));
+        m_sound.SetChannel(15, reinterpret_cast<DWORD_PTR>(field_EA));
         m_sound.Play(m_pos.x, m_pos.y, 0, FALSE);
     }
 }

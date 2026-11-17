@@ -217,7 +217,7 @@ CGameAnimationTypeMonsterMulti::CGameAnimationTypeMonsterMulti(USHORT animationI
 
             m_g2VidCellBase[quad].SetResRef(CResRef(m_resRef + '2' + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-            m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g2VidCellBase);
+            m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g2VidCellBase));
         }
     } else {
         for (BYTE quad = 0; quad < m_nQuadrants; quad++) {
@@ -229,11 +229,11 @@ CGameAnimationTypeMonsterMulti::CGameAnimationTypeMonsterMulti(USHORT animationI
             m_g4VidCellBase[quad].SetResRef(CResRef(m_resRef + "G4" + sSuffix), m_bDoubleBlit, TRUE, TRUE);
             m_g5VidCellBase[quad].SetResRef(CResRef(m_resRef + "G5" + sSuffix), m_bDoubleBlit, TRUE, TRUE);
 
-            m_g1VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g1VidCellBase);
-            m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g2VidCellBase);
-            m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g3VidCellBase);
-            m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g4VidCellBase);
-            m_g5VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g5VidCellBase);
+            m_g1VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g1VidCellBase));
+            m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g2VidCellBase));
+            m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g3VidCellBase));
+            m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g4VidCellBase));
+            m_g5VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g5VidCellBase));
         }
     }
 
@@ -420,7 +420,7 @@ void CGameAnimationTypeMonsterMulti::ChangeDirection(SHORT nDirection)
                 // NOTE: Uninline.
                 m_currentVidCell[quad].SetResRef(CResRef(m_currentVidCell[quad].GetResRef().GetResRefStr().Left(7) + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_currentVidCell[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_currentVidCell);
+                m_currentVidCell[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_currentVidCell));
             }
 
             m_currentVidCell[quad].SequenceSet(9 * m_currentBamSequence - m_currentBamDirection + 16);
@@ -434,7 +434,7 @@ void CGameAnimationTypeMonsterMulti::ChangeDirection(SHORT nDirection)
                 // inlined here (but not in the branch above).
                 m_currentVidCell[quad].SetResRef(CResRef(m_currentVidCell[quad].GetResRef().GetResRefStr().Left(7) + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_currentVidCell[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_currentVidCell);
+                m_currentVidCell[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_currentVidCell));
             }
 
             m_currentVidCell[quad].SequenceSet(9 * m_currentBamSequence + m_currentBamDirection);
@@ -1018,7 +1018,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g4VidCellBase[quad].SetResRef(CResRef(m_resRef + "4" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g4VidCellBase);
+                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g4VidCellBase));
             }
         }
         break;
@@ -1037,7 +1037,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g5VidCellBase[quad].SetResRef(CResRef(m_resRef + "5" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g5VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g5VidCellBase);
+                m_g5VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g5VidCellBase));
             }
         }
         break;
@@ -1056,7 +1056,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g2VidCellBase[quad].SetResRef(CResRef(m_resRef + "2" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g2VidCellBase);
+                m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g2VidCellBase));
             }
         }
         break;
@@ -1075,7 +1075,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g4VidCellBase[quad].SetResRef(CResRef(m_resRef + "4" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g4VidCellBase);
+                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g4VidCellBase));
             }
         }
         break;
@@ -1094,7 +1094,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g4VidCellBase[quad].SetResRef(CResRef(m_resRef + "4" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g4VidCellBase);
+                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g4VidCellBase));
             }
         }
         break;
@@ -1117,7 +1117,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g2VidCellBase[quad].SetResRef(CResRef(m_resRef + "2" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g2VidCellBase);
+                m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g2VidCellBase));
             }
         }
         break;
@@ -1144,7 +1144,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g2VidCellBase[quad].SetResRef(CResRef(m_resRef + "2" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g2VidCellBase);
+                m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g2VidCellBase));
             }
         }
         break;
@@ -1163,7 +1163,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g5VidCellBase[quad].SetResRef(CResRef(m_resRef + "5" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g5VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g5VidCellBase);
+                m_g5VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g5VidCellBase));
             }
         }
         break;
@@ -1182,7 +1182,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g4VidCellBase[quad].SetResRef(CResRef(m_resRef + "4" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g4VidCellBase);
+                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g4VidCellBase));
             }
         }
         break;
@@ -1201,7 +1201,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g1VidCellBase[quad].SetResRef(CResRef(m_resRef + "1" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g1VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g1VidCellBase);
+                m_g1VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g1VidCellBase));
             }
         }
         break;
@@ -1221,7 +1221,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g3VidCellBase[quad].SetResRef(CResRef(m_resRef + "3" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g3VidCellBase);
+                m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g3VidCellBase));
             }
         }
         break;
@@ -1241,7 +1241,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g3VidCellBase[quad].SetResRef(CResRef(m_resRef + "3" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g3VidCellBase);
+                m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g3VidCellBase));
             }
         }
         break;
@@ -1261,7 +1261,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g3VidCellBase[quad].SetResRef(CResRef(m_resRef + "3" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g3VidCellBase);
+                m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g3VidCellBase));
             }
         }
         break;
@@ -1280,7 +1280,7 @@ SHORT CGameAnimationTypeMonsterMulti::SetSequence(SHORT nSequence)
                 // NOTE: Uninline.
                 m_g4VidCellBase[quad].SetResRef(CResRef(m_resRef + "4" + sSuffix + m_splitBamChar + m_splitDirectionBamChar), m_bDoubleBlit, TRUE, TRUE);
 
-                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g4VidCellBase);
+                m_g4VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g4VidCellBase));
             }
         }
         break;

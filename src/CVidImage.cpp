@@ -127,7 +127,7 @@ BOOL CVidImage::GetTint(INT& nRed, INT& nGreen, INT& nBlue, INT& nShiftBack, DWO
     INT nAddPercentage = 0;
 
     COLORREF rgbGlobalTintColor = g_pChitin->GetCurrentVideoMode()->GetGlobalTintColor();
-    INT nAUCounter = g_pChitin->nAUCounter + reinterpret_cast<INT>(this);
+    INT nAUCounter = g_pChitin->nAUCounter + static_cast<INT>(reinterpret_cast<INT_PTR>(this));
 
     if ((dwFlags & 0x20000) != 0) {
         if ((dwFlags & 0x10000) != 0) {
@@ -252,7 +252,7 @@ BOOL CVidImage::GetAdd(INT& nRed, INT& nGreen, INT& nBlue, INT& nShiftBack, DWOR
             nGreen *= static_cast<BYTE>(~GetGValue(*m_paletteAffects.pRangeAdds[0]));
             nBlue *= static_cast<BYTE>(~GetBValue(*m_paletteAffects.pRangeAdds[0]));
         } else {
-            INT nAddPercentage = (nAUCounter + reinterpret_cast<INT>(this)) % (2 * nPeriod);
+            INT nAddPercentage = (nAUCounter + static_cast<INT>(reinterpret_cast<INT_PTR>(this))) % (2 * nPeriod);
             if (nPeriod < nAddPercentage) {
                 nAddPercentage = 2 * nPeriod - nAddPercentage;
             }
@@ -300,7 +300,7 @@ BOOL CVidImage::GetLight(INT& nRed, INT& nGreen, INT& nBlue, DWORD dwFlags)
 
     if (m_paletteAffects.aRangeLightPeriods[0] != 1) {
         INT nPeriod = m_paletteAffects.aRangeLightPeriods[0];
-        INT nLightPercentage = (nAUCounter + reinterpret_cast<INT>(this)) % (2 * nPeriod);
+        INT nLightPercentage = (nAUCounter + static_cast<INT>(reinterpret_cast<INT_PTR>(this))) % (2 * nPeriod);
         if (nPeriod < nLightPercentage) {
             nLightPercentage = 2 * nPeriod - nLightPercentage;
         }

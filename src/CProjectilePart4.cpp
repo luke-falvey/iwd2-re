@@ -734,7 +734,7 @@ void CProjectileArea84FB98::AIUpdate()
 
         POSITION pos = targets.GetHeadPosition();
         while (pos != NULL) {
-            Virtual98(reinterpret_cast<LONG>(targets.GetNext(pos)));
+            Virtual98(static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos))));
         }
     }
 

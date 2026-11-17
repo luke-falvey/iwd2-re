@@ -1701,7 +1701,7 @@ LONG CAIObjectType::sub_40CED0(CGameAIBase* caller, BOOL checkBackList) const
                 FALSE,
                 FALSE);
             if (targets.GetCount() != 0) {
-                nId = reinterpret_cast<LONG>(targets.GetHead());
+                nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetHead()));
             }
         }
     } else {
@@ -1809,7 +1809,7 @@ CGameObject* CAIObjectType::sub_40D0F0(CGameAIBase* caller, BOOL checkBackList) 
                     FALSE,
                     FALSE);
                 if (targets.GetCount() != 0) {
-                    nId = reinterpret_cast<LONG>(targets.GetHead());
+                    nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetHead()));
                 }
             }
         } else {
@@ -1856,7 +1856,7 @@ void CAIObjectType::Read(CString sData)
     int height = -1;
 
     sscanf(sData,
-        "%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld [%d.%d.%d.%d]",
+        "%d %d %d %d %d %d %d %d %d %d %d %d %d [%d.%d.%d.%d]",
         &nEnemyAlly,
         &nGeneral,
         &nRace,

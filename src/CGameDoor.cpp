@@ -391,7 +391,7 @@ void CGameDoor::AddEffect(CGameEffect* pEffect, BYTE list, BOOL noSave, BOOL imm
 
                 // NOTE: Original passes `m_id` where the callee expects a
                 // `CGameAIBase*` caller.
-                CGameObject* pObject = m_typeAI.sub_40CCA0(reinterpret_cast<CGameAIBase*>(m_id), FALSE);
+                CGameObject* pObject = m_typeAI.sub_40CCA0(reinterpret_cast<CGameAIBase*>(static_cast<INT_PTR>(m_id)), FALSE);
                 if (pObject != NULL) {
                     // NOTE: Uninline.
                     if (pObject->GetAIType().Equal(CAIObjectType(CGameObject::TYPE_SPRITE))) {
@@ -1465,7 +1465,7 @@ void CGameDoor::ToggleDoor(const CAIObjectType& cause, BOOL bIgnoreLock)
                 m_sndDoor.SetResRef(CResRef("AMB_D03B"), TRUE, TRUE);
             }
 
-            m_sndDoor.SetChannel(2, reinterpret_cast<DWORD>(m_pArea));
+            m_sndDoor.SetChannel(2, reinterpret_cast<DWORD_PTR>(m_pArea));
 
             CPoint ear;
             LONG earZ;
@@ -1555,7 +1555,7 @@ void CGameDoor::ToggleDoor(const CAIObjectType& cause, BOOL bIgnoreLock)
                 m_sndDoor.SetResRef(CResRef("AMB_D03A"), TRUE, TRUE);
             }
 
-            m_sndDoor.SetChannel(2, reinterpret_cast<DWORD>(m_pArea));
+            m_sndDoor.SetChannel(2, reinterpret_cast<DWORD_PTR>(m_pArea));
 
             CPoint ear;
             LONG earZ;

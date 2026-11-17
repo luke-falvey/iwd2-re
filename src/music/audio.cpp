@@ -30,7 +30,7 @@ static size_t audio_fread(void* buf, size_t size, size_t count, FILE* stream);
 static char* audio_fgets(char* buf, int maxCount, FILE* stream);
 static int defaultCompressionFunc(char* fname);
 static int decodeRead(void* data, void* buf, int size);
-static long getLong(FILE* stream);
+static LONG getLong(FILE* stream);
 static int fileLength(FILE* stream);
 
 // 0xA16430
@@ -505,7 +505,7 @@ void audioClose()
 }
 
 // NOTE: Inlined in `audioOpen`.
-long getLong(FILE* stream)
+LONG getLong(FILE* stream)
 {
     unsigned char c[4];
     audioReadPtr(c, 1, 4, stream);

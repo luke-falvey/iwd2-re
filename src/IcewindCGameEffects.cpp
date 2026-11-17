@@ -2459,7 +2459,7 @@ BOOL IcewindCGameEffectAnimalRage::ApplyEffect(CGameSprite* pSprite)
 
     POSITION pos = targets.GetHeadPosition();
     while (pos != NULL) {
-        LONG nTargetId = reinterpret_cast<LONG>(targets.GetNext(pos));
+        LONG nTargetId = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
         CGameSprite* pTarget;
         BYTE rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetShare(nTargetId,
@@ -5389,7 +5389,7 @@ BOOL IcewindCGameEffectDamageReduction::ApplyEffect(CGameSprite* pSprite)
         // FIXME: The original leaves the amount uninitialized here (the
         // compiler reuses the stack slot of `pSprite`), so `m_effectAmount`
         // is never used.
-        nAmount = reinterpret_cast<LONG>(pSprite);
+        nAmount = static_cast<LONG>(reinterpret_cast<INT_PTR>(pSprite));
     }
 
     CDamageReduction damageReduction(nAmount, m_dwFlags);

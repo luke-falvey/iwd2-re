@@ -775,7 +775,7 @@ void CProjectileArea::OnArrival()
         // NOTE: Uninline.
         field_586.SetResRef(CResRef(CString(field_4E2.field_10.c_str())), TRUE, TRUE);
 
-        field_586.SetChannel(14, reinterpret_cast<DWORD>(field_EA));
+        field_586.SetChannel(14, reinterpret_cast<DWORD_PTR>(field_EA));
         field_586.Play(m_pos.x, m_pos.y, 0, FALSE);
     }
 
@@ -784,7 +784,7 @@ void CProjectileArea::OnArrival()
         field_5EA.SetResRef(CResRef(CString(field_540.field_10.c_str())), TRUE, TRUE);
 
         field_5EA.SetLoopingFlag(TRUE);
-        field_5EA.SetChannel(14, reinterpret_cast<DWORD>(field_EA));
+        field_5EA.SetChannel(14, reinterpret_cast<DWORD_PTR>(field_EA));
     }
 }
 
@@ -829,7 +829,7 @@ std::list<LONG> CProjectileArea::Virtual90()
 
         POSITION pos = targets.GetHeadPosition();
         while (pos != NULL) {
-            LONG nId = reinterpret_cast<LONG>(targets.GetNext(pos));
+            LONG nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
             if (nId == it->first) {
                 bFound = TRUE;
                 break;
@@ -849,7 +849,7 @@ std::list<LONG> CProjectileArea::Virtual90()
 
     POSITION pos = targets.GetHeadPosition();
     while (pos != NULL) {
-        LONG nId = reinterpret_cast<LONG>(targets.GetNext(pos));
+        LONG nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(targets.GetNext(pos)));
 
         if (field_4C4.find(nId) == field_4C4.end()) {
             field_4C4[nId] = 0;
@@ -951,7 +951,7 @@ CProjectileArea84F14C::CProjectileArea84F14C(const CProjectileAreaVisual3* a1, C
 
     // NOTE: Inlined.
     m_sound.SetResRef(resRef, TRUE, TRUE);
-    m_sound.SetChannel(14, reinterpret_cast<DWORD>(pArea));
+    m_sound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pArea));
 
     m_bVisible = 1;
     m_ptFixedPos = pos;
@@ -997,7 +997,7 @@ CProjectileArea84F14C::CProjectileArea84F14C(const CProjectileAreaVisual2* a1, C
 
     // NOTE: Inlined.
     m_sound.SetResRef(resRef, TRUE, TRUE);
-    m_sound.SetChannel(14, reinterpret_cast<DWORD>(pArea));
+    m_sound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pArea));
 
     m_bVisible = 1;
     m_ptFixedPos = pos;

@@ -104,9 +104,9 @@ CGameAnimationTypeMonsterQuadrant::CGameAnimationTypeMonsterQuadrant(USHORT anim
         m_g2VidCellBase[quad].SetResRef(CResRef(m_resRef + "G2" + v1 + sSuffix), FALSE, TRUE, TRUE);
         m_g3VidCellBase[quad].SetResRef(CResRef(m_resRef + "G3" + v1 + sSuffix), FALSE, TRUE, TRUE);
 
-        m_g1VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g1VidCellBase);
-        m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g2VidCellBase);
-        m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g3VidCellBase);
+        m_g1VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g1VidCellBase));
+        m_g2VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g2VidCellBase));
+        m_g3VidCellBase[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g3VidCellBase));
     }
 
     m_currentVidCellBase = m_g1VidCellBase;
@@ -128,9 +128,9 @@ CGameAnimationTypeMonsterQuadrant::CGameAnimationTypeMonsterQuadrant(USHORT anim
             m_g2VidCellExtend[quad].SetResRef(CResRef(m_resRef + "G2" + v1 + sSuffix + "E"), FALSE, TRUE, TRUE);
             m_g3VidCellExtend[quad].SetResRef(CResRef(m_resRef + "G3" + v1 + sSuffix + "E"), FALSE, TRUE, TRUE);
 
-            m_g1VidCellExtend[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g1VidCellExtend);
-            m_g2VidCellExtend[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g2VidCellExtend);
-            m_g3VidCellExtend[quad].m_cPalette.m_nAUCounterBase = reinterpret_cast<int>(m_g3VidCellExtend);
+            m_g1VidCellExtend[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g1VidCellExtend));
+            m_g2VidCellExtend[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g2VidCellExtend));
+            m_g3VidCellExtend[quad].m_cPalette.m_nAUCounterBase = static_cast<int>(reinterpret_cast<INT_PTR>(m_g3VidCellExtend));
         }
     }
 

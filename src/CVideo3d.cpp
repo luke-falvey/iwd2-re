@@ -2596,7 +2596,7 @@ void CVidMode::AddDisposableTexture(INT nTextureId)
     POSITION pos = m_lDisposableTextureIds.GetHeadPosition();
     BOOL bFound = FALSE;
     while (pos != NULL) {
-        INT nCurrTextureId = reinterpret_cast<INT>(m_lDisposableTextureIds.GetNext(pos));
+        INT nCurrTextureId = static_cast<INT>(reinterpret_cast<INT_PTR>(m_lDisposableTextureIds.GetNext(pos)));
         if (nCurrTextureId == nTextureId) {
             bFound = TRUE;
             break;
@@ -2604,7 +2604,7 @@ void CVidMode::AddDisposableTexture(INT nTextureId)
     }
 
     if (!bFound) {
-        m_lDisposableTextureIds.AddTail(reinterpret_cast<INT*>(nTextureId));
+        m_lDisposableTextureIds.AddTail(reinterpret_cast<INT*>(static_cast<INT_PTR>(nTextureId)));
     }
 
     lock.Unlock();
@@ -2617,7 +2617,7 @@ void CVidMode::DeleteDisposableTextures()
     lock.Lock(INFINITE);
 
     while (!m_lDisposableTextureIds.IsEmpty()) {
-        GLuint texture = static_cast<GLuint>(reinterpret_cast<INT>(m_lDisposableTextureIds.RemoveHead()));
+        GLuint texture = static_cast<GLuint>(static_cast<INT>(reinterpret_cast<INT_PTR>(m_lDisposableTextureIds.RemoveHead())));
         CVideo3d::glDeleteTextures(1, &texture);
         g_pChitin->GetCurrentVideoMode()->CheckResults3d(0);
     }

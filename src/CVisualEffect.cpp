@@ -274,7 +274,7 @@ CVisualEffect::~CVisualEffect()
     POSITION pos = m_lChildren.GetHeadPosition();
     while (pos != NULL) {
         POSITION posCurrent = pos;
-        LONG nObjectId = reinterpret_cast<LONG>(m_lChildren.GetNext(pos));
+        LONG nObjectId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_lChildren.GetNext(pos)));
 
         CGameObject* pObject;
         BYTE rc;
@@ -319,7 +319,7 @@ void CVisualEffect::AIUpdate()
     POSITION pos = m_lChildren.GetHeadPosition();
     POSITION posCurrent = pos;
     while (pos != NULL) {
-        LONG nObjectId = reinterpret_cast<LONG>(m_lChildren.GetNext(pos));
+        LONG nObjectId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_lChildren.GetNext(pos)));
 
         CVisualEffectObject* pChild;
         BYTE rc;
@@ -440,7 +440,7 @@ void CVisualEffect::SetAllDelete()
 {
     POSITION pos = m_lChildren.GetHeadPosition();
     while (pos != NULL) {
-        LONG nObjectId = reinterpret_cast<LONG>(m_lChildren.GetNext(pos));
+        LONG nObjectId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_lChildren.GetNext(pos)));
 
         CGameObject* pObject;
         BYTE rc;

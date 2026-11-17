@@ -40,7 +40,7 @@ CGameChunk::CGameChunk(USHORT animationID, BYTE* pColors, const CString& sSoundN
 
     // NOTE: Inlined.
     m_sound.SetResRef(CResRef(sSoundName), TRUE, TRUE);
-    m_sound.SetChannel(14, reinterpret_cast<DWORD>(pArea));
+    m_sound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pArea));
 
     m_bFlying = 1;
     m_ptVelocity = a6;
@@ -256,7 +256,7 @@ CGame85BF7C::CGame85BF7C(USHORT animationID, BYTE* pColors, const CString& sSoun
 
     // NOTE: Inlined.
     m_sound.SetResRef(CResRef(sSoundName), TRUE, TRUE);
-    m_sound.SetChannel(14, reinterpret_cast<DWORD>(pArea));
+    m_sound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pArea));
 
     m_bVisible = 1;
     m_ptFixedPos = pos;
@@ -457,7 +457,7 @@ CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const C
     case 0:
         // NOTE: Inlined.
         m_sound.SetResRef(CResRef("EFF_M21"), TRUE, TRUE);
-        m_sound.SetChannel(14, reinterpret_cast<DWORD>(pArea));
+        m_sound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pArea));
         m_sound.Play(pos.x, pos.y, 0, 0);
         m_sSoundName = "";
         field_7E = ANIMATION_ID_NONE;
@@ -471,7 +471,7 @@ CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const C
     case 2:
         // NOTE: Inlined.
         m_sound.SetResRef(CResRef("EFF_M18a"), TRUE, TRUE);
-        m_sound.SetChannel(14, reinterpret_cast<DWORD>(pArea));
+        m_sound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pArea));
         m_sound.Play(pos.x, pos.y, 0, 0);
         m_sSoundName = "EFF_M18c";
         field_7E = ANIMATION_ID_500;
@@ -487,7 +487,7 @@ CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const C
     case 3:
         // NOTE: Inlined.
         m_sound.SetResRef(CResRef("EFF_M34"), TRUE, TRUE);
-        m_sound.SetChannel(14, reinterpret_cast<DWORD>(pArea));
+        m_sound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pArea));
         m_sound.Play(pos.x, pos.y, 0, 0);
         m_sSoundName = "";
         field_7E = ANIMATION_ID_600;
@@ -503,7 +503,7 @@ CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const C
     case 4:
         // NOTE: Inlined.
         m_sound.SetResRef(CResRef("EFF_M31b"), TRUE, TRUE);
-        m_sound.SetChannel(14, reinterpret_cast<DWORD>(pArea));
+        m_sound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pArea));
         m_sound.Play(pos.x, pos.y, 0, 0);
         m_sSoundName = "";
         field_7E = ANIMATION_ID_700;
@@ -518,7 +518,7 @@ CGame85BFE8::CGame85BFE8(BYTE a1, const BYTE* pColors, CGameArea* pArea, const C
     case 5:
         // NOTE: Inlined.
         m_sound.SetResRef(CResRef("EFF_M19"), TRUE, TRUE);
-        m_sound.SetChannel(14, reinterpret_cast<DWORD>(pArea));
+        m_sound.SetChannel(14, reinterpret_cast<DWORD_PTR>(pArea));
         m_sound.Play(pos.x, pos.y, 0, 0);
         m_sSoundName = "";
         field_7E = ANIMATION_ID_800;

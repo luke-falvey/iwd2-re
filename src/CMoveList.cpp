@@ -73,7 +73,7 @@ void CMoveList::sub_5170F0(CGameArea* pArea)
         } while (rc == CGameObjectArray::SHARED || rc == CGameObjectArray::DENIED);
 
         if (rc == CGameObjectArray::SUCCESS) {
-            pArea->field_AAA.AddTail(reinterpret_cast<int*>(pSprite->GetId()));
+            pArea->field_AAA.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(pSprite->GetId())));
             pSprite->AddEffect(pEffect, CGameAIBase::EFFECT_LIST_TIMED, TRUE, FALSE);
 
             g_pBaldurChitin->GetObjectGame()->GetObjectArray()->ReleaseDeny(pNode->m_nSpriteId,

@@ -1276,7 +1276,7 @@ void CInfGame::DestroyGame(BOOLEAN bProgressBarRequired, BOOLEAN bProgressBarInP
     }
 
     while (!m_lstGlobalCreatures.IsEmpty()) {
-        LONG iObject = reinterpret_cast<LONG>(m_lstGlobalCreatures.RemoveHead());
+        LONG iObject = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_lstGlobalCreatures.RemoveHead()));
         CGameObject* pObject;
         if (m_cObjectArray.Delete(iObject, CGameObjectArray::THREAD_ASYNCH, &pObject, -1) == CGameObjectArray::SUCCESS
             && pObject != NULL) {
@@ -2163,7 +2163,7 @@ CGameArea* CInfGame::LoadArea(CString areaName, BYTE nTravelScreenImageToUse, BO
     POSITION pos = m_lstGlobalCreatures.GetHeadPosition();
     while (pos != NULL) {
         CGameSprite* pSprite;
-        LONG iSprite = reinterpret_cast<LONG>(m_lstGlobalCreatures.GetNext(pos));
+        LONG iSprite = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_lstGlobalCreatures.GetNext(pos)));
         BYTE rc = m_cObjectArray.GetShare(iSprite,
             CGameObjectArray::THREAD_ASYNCH,
             reinterpret_cast<CGameObject**>(&pSprite),
@@ -2363,7 +2363,7 @@ void CInfGame::Marshal(BYTE** pGame, LONG* nGame, BOOLEAN bProgressBarInPlace)
         pos = m_lstGlobalCreatures.GetHeadPosition();
         index = 0;
         while (pos != NULL) {
-            LONG iSprite = reinterpret_cast<LONG>(m_lstGlobalCreatures.GetNext(pos));
+            LONG iSprite = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_lstGlobalCreatures.GetNext(pos)));
 
             if (bProgressBarInPlace) {
                 ProgressBarCallback(dwProgressPerCreature, FALSE);
@@ -3340,14 +3340,14 @@ void CInfGame::Unmarshal(BYTE* pGame, LONG nGame, BOOLEAN bProgressBarInPlace)
         pSprite->Unmarshal(pCreature22, FALSE, FALSE);
         pSprite->SetResRef(CResRef(pCreature22->m_creatureResRef));
 
-        m_lstGlobalCreatures.AddTail(reinterpret_cast<int*>(pSprite->m_id));
+        m_lstGlobalCreatures.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(pSprite->m_id)));
 
         if (pSprite->GetAIType().m_nEnemyAlly == CAIObjectType::EA_FAMILIAR) {
             // NOTE: Uninline.
             if (GetCharacterPortraitNum(pSprite->m_id) == -1) {
-                if (m_allies.Find(reinterpret_cast<int*>(pSprite->m_id)) == NULL
-                    && m_familiars.Find(reinterpret_cast<int*>(pSprite->m_id)) == NULL) {
-                    m_familiars.AddTail(reinterpret_cast<int*>(pSprite->m_id));
+                if (m_allies.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(pSprite->m_id))) == NULL
+                    && m_familiars.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(pSprite->m_id))) == NULL) {
+                    m_familiars.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(pSprite->m_id)));
                 }
             }
         }
@@ -6261,7 +6261,7 @@ void CInfGame::SelectAll(BOOLEAN bPlaySound)
 
     pos = m_familiars.GetHeadPosition();
     while (pos != NULL) {
-        iSprite = reinterpret_cast<LONG>(m_familiars.GetNext(pos));
+        iSprite = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_familiars.GetNext(pos)));
         rc = m_cObjectArray.GetShare(iSprite,
             CGameObjectArray::THREAD_ASYNCH,
             reinterpret_cast<CGameObject**>(&pSprite),
@@ -6296,7 +6296,7 @@ void CInfGame::SelectAll(BOOLEAN bPlaySound)
 
     pos = m_allies.GetHeadPosition();
     while (pos != NULL) {
-        iSprite = reinterpret_cast<LONG>(m_allies.GetNext(pos));
+        iSprite = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_allies.GetNext(pos)));
         rc = m_cObjectArray.GetShare(iSprite,
             CGameObjectArray::THREAD_ASYNCH,
             reinterpret_cast<CGameObject**>(&pSprite),
@@ -10379,7 +10379,7 @@ void CInfGame::UseMagicOnGround(CPoint pt)
 {
     CAIAction action;
 
-    LONG nCharacterId = reinterpret_cast<LONG>(m_group.m_memberList.GetHead());
+    LONG nCharacterId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_group.m_memberList.GetHead()));
 
     CGameSprite* pSprite;
 
@@ -10476,7 +10476,7 @@ void CInfGame::UseMagicOnObject(LONG target)
     CAIAction action;
     CAIObjectType targetType(0, 0, 0, 0, 0, 0, 0, 0, target, 0, 0);
 
-    LONG nCharacterId = reinterpret_cast<LONG>(m_group.m_memberList.GetHead());
+    LONG nCharacterId = static_cast<LONG>(reinterpret_cast<INT_PTR>(m_group.m_memberList.GetHead()));
 
     CGameSprite* pSprite;
 
@@ -10598,12 +10598,12 @@ BOOL CInfGame::AddCharacterToParty(LONG id, SHORT nPortraitNumber)
         return FALSE;
     }
 
-    if (m_allies.Find(reinterpret_cast<int*>(id)) != NULL) {
+    if (m_allies.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(id))) != NULL) {
         // NOTE: Uninline.
         RemoveCharacterFromAllies(id);
     }
 
-    if (m_familiars.Find(reinterpret_cast<int*>(id)) != NULL) {
+    if (m_familiars.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(id))) != NULL) {
         // NOTE: Uninline.
         RemoveCharacterFromFamiliars(id);
     }
@@ -10611,7 +10611,7 @@ BOOL CInfGame::AddCharacterToParty(LONG id, SHORT nPortraitNumber)
     POSITION pos = m_lstGlobalCreatures.GetHeadPosition();
     while (pos != NULL) {
         POSITION posOld = pos;
-        if (reinterpret_cast<int>(m_lstGlobalCreatures.GetNext(pos)) == id) {
+        if (static_cast<int>(reinterpret_cast<INT_PTR>(m_lstGlobalCreatures.GetNext(pos))) == id) {
             m_lstGlobalCreatures.RemoveAt(posOld);
             break;
         }
@@ -10680,7 +10680,7 @@ BOOL CInfGame::RemoveCharacterFromParty(LONG id, BOOL& overflow)
 
     if (nPortrait == -1) {
         for (int index = 0; index < m_characterOverflow.GetCount(); index++) {
-            if (reinterpret_cast<int>(m_characterOverflow.GetAt(index)) == id) {
+            if (static_cast<int>(reinterpret_cast<INT_PTR>(m_characterOverflow.GetAt(index))) == id) {
                 do {
                     rc = g_pBaldurChitin->GetObjectGame()->GetObjectArray()->GetDeny(id,
                         CGameObjectArray::THREAD_ASYNCH,
@@ -10748,7 +10748,7 @@ BOOL CInfGame::RemoveCharacterFromParty(LONG id, BOOL& overflow)
         }
     }
 
-    m_lstGlobalCreatures.AddHead(reinterpret_cast<int*>(id));
+    m_lstGlobalCreatures.AddHead(reinterpret_cast<int*>(static_cast<INT_PTR>(id)));
 
     m_nCharacters--;
     m_characterPortraits[m_nCharacters] = -1;
@@ -10797,7 +10797,7 @@ BOOL CInfGame::ClearCharacterSlot(INT nCharacterSlot)
     POSITION pos = m_lstGlobalCreatures.GetHeadPosition();
     while (pos != NULL) {
         POSITION posOld = pos;
-        if (reinterpret_cast<LONG>(m_lstGlobalCreatures.GetNext(pos)) == id) {
+        if (static_cast<LONG>(reinterpret_cast<INT_PTR>(m_lstGlobalCreatures.GetNext(pos))) == id) {
             m_lstGlobalCreatures.RemoveAt(posOld);
             break;
         }
@@ -10843,7 +10843,7 @@ BOOLEAN CInfGame::sub_5AE020(LONG* pCharacterIds, SHORT nOverflowCount, LONG* pO
     BOOL bOverflow;
 
     for (INT nIndex = 0; nIndex < m_characterOverflow.GetCount(); nIndex++) {
-        LONG nCharacterId = reinterpret_cast<int>(m_characterOverflow.GetAt(nIndex));
+        LONG nCharacterId = static_cast<int>(reinterpret_cast<INT_PTR>(m_characterOverflow.GetAt(nIndex)));
 
         BOOLEAN bFound = FALSE;
         for (SHORT nOverflow = 0; nOverflow < nOverflowCount; nOverflow++) {
@@ -10920,7 +10920,7 @@ BOOLEAN CInfGame::sub_5AE020(LONG* pCharacterIds, SHORT nOverflowCount, LONG* pO
 
         BOOLEAN bFound = FALSE;
         for (INT nIndex = 0; nIndex < m_characterOverflow.GetCount(); nIndex++) {
-            if (reinterpret_cast<int>(m_characterOverflow.GetAt(nIndex)) == nCharacterId) {
+            if (static_cast<int>(reinterpret_cast<INT_PTR>(m_characterOverflow.GetAt(nIndex))) == nCharacterId) {
                 bFound = TRUE;
             }
         }
@@ -10940,7 +10940,7 @@ BOOLEAN CInfGame::sub_5AE020(LONG* pCharacterIds, SHORT nOverflowCount, LONG* pO
             return FALSE;
         }
 
-        m_characterOverflow.Add(reinterpret_cast<int*>(nCharacterId));
+        m_characterOverflow.Add(reinterpret_cast<int*>(static_cast<INT_PTR>(nCharacterId)));
         m_nCharacterOverflowCount++;
 
         CAIObjectType typeAI(pSprite->GetAIType());
@@ -11003,7 +11003,7 @@ BOOLEAN CInfGame::sub_5AE020(LONG* pCharacterIds, SHORT nOverflowCount, LONG* pO
                 POSITION pos = m_lstGlobalCreatures.GetHeadPosition();
                 while (pos != NULL) {
                     POSITION posOld = pos;
-                    if (reinterpret_cast<LONG>(m_lstGlobalCreatures.GetNext(pos)) == nOldId) {
+                    if (static_cast<LONG>(reinterpret_cast<INT_PTR>(m_lstGlobalCreatures.GetNext(pos))) == nOldId) {
                         m_lstGlobalCreatures.RemoveAt(posOld);
                         break;
                     }
@@ -11287,15 +11287,15 @@ BOOL CInfGame::AddCharacterToAllies(LONG nCharacterId)
         return FALSE;
     }
 
-    if (m_allies.Find(reinterpret_cast<int*>(nCharacterId)) != NULL) {
+    if (m_allies.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(nCharacterId))) != NULL) {
         return FALSE;
     }
 
-    if (m_familiars.Find(reinterpret_cast<int*>(nCharacterId)) != NULL) {
+    if (m_familiars.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(nCharacterId))) != NULL) {
         return FALSE;
     }
 
-    m_allies.AddTail(reinterpret_cast<int*>(nCharacterId));
+    m_allies.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(nCharacterId)));
 
     return TRUE;
 }
@@ -11303,7 +11303,7 @@ BOOL CInfGame::AddCharacterToAllies(LONG nCharacterId)
 // 0x5BDA50
 BOOL CInfGame::RemoveCharacterFromAllies(LONG nCharacterId)
 {
-    POSITION pos = m_allies.Find(reinterpret_cast<int*>(nCharacterId));
+    POSITION pos = m_allies.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(nCharacterId)));
     if (pos == NULL) {
         return FALSE;
     }
@@ -11326,15 +11326,15 @@ BOOL CInfGame::AddCharacterToFamiliars(LONG nCharacterId)
         return FALSE;
     }
 
-    if (m_allies.Find(reinterpret_cast<int*>(nCharacterId)) != NULL) {
+    if (m_allies.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(nCharacterId))) != NULL) {
         return FALSE;
     }
 
-    if (m_familiars.Find(reinterpret_cast<int*>(nCharacterId)) != NULL) {
+    if (m_familiars.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(nCharacterId))) != NULL) {
         return FALSE;
     }
 
-    m_familiars.AddTail(reinterpret_cast<int*>(nCharacterId));
+    m_familiars.AddTail(reinterpret_cast<int*>(static_cast<INT_PTR>(nCharacterId)));
 
     return TRUE;
 }
@@ -11342,7 +11342,7 @@ BOOL CInfGame::AddCharacterToFamiliars(LONG nCharacterId)
 // 0x5BDB20
 BOOL CInfGame::RemoveCharacterFromFamiliars(LONG nCharacterId)
 {
-    POSITION pos = m_familiars.Find(reinterpret_cast<int*>(nCharacterId));
+    POSITION pos = m_familiars.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(nCharacterId)));
     if (pos == NULL) {
         return FALSE;
     }
@@ -12251,7 +12251,7 @@ BOOL CInfGame::CanEnterStore(STRREF& strError)
 // 0x5C2250
 BOOL CInfGame::AddCharacterToOverflow(LONG id)
 {
-    m_characterOverflow.Add(reinterpret_cast<int*>(id));
+    m_characterOverflow.Add(reinterpret_cast<int*>(static_cast<INT_PTR>(id)));
     m_nCharacterOverflowCount++;
     return TRUE;
 }
@@ -12384,7 +12384,7 @@ void CInfGame::FeedBack(SHORT feedBackId, LONG value, BOOLEAN a3)
                     if (!strRes.cSound.GetLooping()) {
                         strRes.cSound.SetFireForget(TRUE);
                     }
-                    strRes.cSound.SetChannel(14, reinterpret_cast<DWORD>(GetVisibleArea()));
+                    strRes.cSound.SetChannel(14, reinterpret_cast<DWORD_PTR>(GetVisibleArea()));
                     strRes.cSound.Play(FALSE);
                 }
 
@@ -12426,7 +12426,7 @@ void CInfGame::FeedBack(SHORT feedBackId, LONG value, BOOLEAN a3)
                     if (!strRes.cSound.GetLooping()) {
                         strRes.cSound.SetFireForget(TRUE);
                     }
-                    strRes.cSound.SetChannel(14, reinterpret_cast<DWORD>(GetVisibleArea()));
+                    strRes.cSound.SetChannel(14, reinterpret_cast<DWORD_PTR>(GetVisibleArea()));
                     strRes.cSound.Play(FALSE);
                 }
 
@@ -12492,7 +12492,7 @@ void CInfGame::FeedBack(SHORT feedBackId, LONG value, BOOLEAN a3)
                     if (!strRes.cSound.GetLooping()) {
                         strRes.cSound.SetFireForget(TRUE);
                     }
-                    strRes.cSound.SetChannel(14, reinterpret_cast<DWORD>(GetVisibleArea()));
+                    strRes.cSound.SetChannel(14, reinterpret_cast<DWORD_PTR>(GetVisibleArea()));
                     strRes.cSound.Play(FALSE);
                 }
 
@@ -13665,7 +13665,7 @@ void CInfGame::sub_5C3B20(LONG nCharacterId, CPoint ptStart, LONG nFace, CString
 
         g_pChitin->SetProgressBar(FALSE, 0, 0, 0, FALSE, 0, FALSE, 0, FALSE, FALSE, 0xFF);
 
-        g_pBaldurChitin->cSoundMixer.m_nActiveArea = reinterpret_cast<DWORD>(g_pBaldurChitin->GetObjectGame()->GetVisibleArea());
+        g_pBaldurChitin->cSoundMixer.m_nActiveArea = reinterpret_cast<DWORD_PTR>(g_pBaldurChitin->GetObjectGame()->GetVisibleArea());
         g_pBaldurChitin->cSoundMixer.UpdateSoundList();
         g_pBaldurChitin->m_pEngineWorld->m_weather.OnAreaChange(FALSE);
     }
@@ -14055,7 +14055,7 @@ void CInfGame::sub_5C4AD0(LONG nCharacterId, LONG nTriggerId, CString sArea)
 
         POSITION posFamiliar = pGame->m_familiars.GetHeadPosition();
         while (posFamiliar != NULL) {
-            LONG nId = reinterpret_cast<LONG>(pGame->m_familiars.GetNext(posFamiliar));
+            LONG nId = static_cast<LONG>(reinterpret_cast<INT_PTR>(pGame->m_familiars.GetNext(posFamiliar)));
 
             CGameSprite* pSprite;
             do {
@@ -14535,7 +14535,7 @@ void CInfGame::sub_5C4AD0(LONG nCharacterId, LONG nTriggerId, CString sArea)
 
         g_pChitin->SetProgressBar(FALSE, 0, 0, 0, FALSE, 0, FALSE, 0, FALSE, FALSE, 0xFF);
 
-        g_pBaldurChitin->cSoundMixer.m_nActiveArea = reinterpret_cast<DWORD>(pArea);
+        g_pBaldurChitin->cSoundMixer.m_nActiveArea = reinterpret_cast<DWORD_PTR>(pArea);
         g_pBaldurChitin->cSoundMixer.UpdateSoundList();
         g_pBaldurChitin->m_pEngineWorld->m_weather.OnAreaChange(FALSE);
 
@@ -16097,13 +16097,13 @@ void CInfGame::SetFormation(SHORT formation)
 // NOTE: Inlined.
 BOOL CInfGame::IsFamiliar(LONG id)
 {
-    return m_familiars.Find(reinterpret_cast<int*>(id)) != NULL;
+    return m_familiars.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(id))) != NULL;
 }
 
 // NOTE: Inlined.
 BOOL CInfGame::IsAlly(LONG id)
 {
-    return m_allies.Find(reinterpret_cast<int*>(id)) != NULL;
+    return m_allies.Find(reinterpret_cast<int*>(static_cast<INT_PTR>(id))) != NULL;
 }
 
 // -----------------------------------------------------------------------------

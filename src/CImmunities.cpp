@@ -487,7 +487,7 @@ BOOL CImmunitiesProjectile::OnList(DWORD projectileType)
 {
     POSITION pos = GetHeadPosition();
     while (pos != NULL) {
-        DWORD node = reinterpret_cast<DWORD>(GetNext(pos));
+        DWORD node = static_cast<DWORD>(reinterpret_cast<UINT_PTR>(GetNext(pos)));
         if (node == projectileType) {
             return TRUE;
         }
@@ -502,8 +502,8 @@ CImmunitiesProjectile& CImmunitiesProjectile::operator=(const CImmunitiesProject
 
     POSITION pos = other.GetHeadPosition();
     while (pos != NULL) {
-        DWORD projectileType = reinterpret_cast<DWORD>(other.GetNext(pos));
-        AddTail(reinterpret_cast<DWORD*>(projectileType));
+        DWORD projectileType = static_cast<DWORD>(reinterpret_cast<UINT_PTR>(other.GetNext(pos)));
+        AddTail(reinterpret_cast<DWORD*>(static_cast<UINT_PTR>(projectileType)));
     }
 
     return *this;
@@ -525,7 +525,7 @@ ULONG CImmunitiesProjectile::Marshal(BYTE** ptrPtr)
             // NOTE: The node holds the projectile type itself, not a pointer.
             DWORD* pId = GetNext(pos);
 
-            *reinterpret_cast<DWORD*>(ptr + offset) = reinterpret_cast<DWORD>(pId);
+            *reinterpret_cast<DWORD*>(ptr + offset) = static_cast<DWORD>(reinterpret_cast<UINT_PTR>(pId));
             offset += sizeof(DWORD);
         }
 
@@ -552,6 +552,6 @@ void CImmunitiesProjectile::Unmarshal(BYTE* data, ULONG nSize)
         offset += sizeof(DWORD);
 
         // NOTE: The node holds the value, not the pointer.
-        AddTail(reinterpret_cast<DWORD*>(*pId));
+        AddTail(reinterpret_cast<DWORD*>(static_cast<UINT_PTR>(*pId)));
     }
 }

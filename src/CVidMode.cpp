@@ -641,7 +641,7 @@ LONG CVidMode::DrawEllipseVOctant16(LONG x, LONG y, INT nArcLength, WORD* pSurfa
 
 // #binary-identical
 // 0x7967F0
-void CVidMode::DrawLightingEffect(const DDSURFACEDESC& ddsd, const CPoint& a3, const CSize& a4, unsigned long a5, unsigned long a6)
+void CVidMode::DrawLightingEffect(const DDSURFACEDESC& ddsd, const CPoint& a3, const CSize& a4, DWORD a5, DWORD a6)
 {
     if (g_pChitin->cVideo.m_bIs3dAccelerated) {
         return;
@@ -705,7 +705,7 @@ static inline WORD LightPixel16(WORD nPixel, BYTE nRed, BYTE nGreen, BYTE nBlue,
 }
 
 // 0x7968C0
-void CVidMode::DrawLightingEffect16(WORD* pSurface, LONG lPitch, const CPoint& a4, const CSize& a5, unsigned long a6, unsigned long a7)
+void CVidMode::DrawLightingEffect16(WORD* pSurface, LONG lPitch, const CPoint& a4, const CSize& a5, DWORD a6, DWORD a7)
 {
     BYTE* pPixelList = new BYTE[max(a5.cx, a5.cy)];
 
@@ -2385,7 +2385,7 @@ BOOL CVidMode::LockSurface(UINT nIndex, LPDDSURFACEDESC pSurfaceDesc, const CRec
 
     // __FILE__: C:\Projects\Icewind2\src\chitin\ChVideo.cpp
     // __LINE__: 5071
-    UTIL_ASSERT(g_pChitin->cVideo.GetBitsPerPixels() == 24 || !((LONG)(pSurfaceDesc->lpSurface) & 0x00000001));
+    UTIL_ASSERT(g_pChitin->cVideo.GetBitsPerPixels() == 24 || !(static_cast<LONG>(reinterpret_cast<INT_PTR>(pSurfaceDesc->lpSurface)) & 0x00000001));
 
     return hr == DD_OK;
 }
@@ -2836,7 +2836,7 @@ LONG CVidMode::DrawEllipseVOctant24(LONG x, LONG y, INT nArcLength, BYTE* pSurfa
 }
 
 // 0x7C8F70
-void CVidMode::DrawLightingEffect24(BYTE* pSurface, LONG lPitch, const CPoint& ptCenter, const CSize& axis, unsigned long a6, unsigned long a7)
+void CVidMode::DrawLightingEffect24(BYTE* pSurface, LONG lPitch, const CPoint& ptCenter, const CSize& axis, DWORD a6, DWORD a7)
 {
     BYTE* pPixelList = new BYTE[max(axis.cx, axis.cy)];
 
@@ -3888,7 +3888,7 @@ LONG CVidMode::DrawEllipseVOctant32(LONG x, LONG y, INT nArcLength, DWORD* pSurf
 }
 
 // 0x7CAC60
-void CVidMode::DrawLightingEffect32(DWORD* pSurface, LONG lPitch, const CPoint& ptCenter, const CSize& axis, unsigned long a6, unsigned long a7)
+void CVidMode::DrawLightingEffect32(DWORD* pSurface, LONG lPitch, const CPoint& ptCenter, const CSize& axis, DWORD a6, DWORD a7)
 {
     BYTE* pPixelList = new BYTE[max(axis.cx, axis.cy)];
 
