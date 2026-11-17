@@ -19,6 +19,9 @@ def checkpoint(game, golden_dir: Path, name: str, max_diff: float = 0.02, mask=N
     img = game.wait_stable(settle=settle, region=region, timeout=timeout)
     game.shots += 1
     img.save(game.out_dir / f"{game.shots:03d}-{name}.png")
+    if getattr(game, "no_compare", False):  # driver mode, no goldens on this machine
+        game.compare_skipped.append(name)
+        return img
     golden = golden_dir / f"{name}.png"
     # Some screens legitimately vary (the main menu is a day or night scene
     # depending on the system clock), so a checkpoint may have variants:

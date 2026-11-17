@@ -7,9 +7,26 @@ import ctypes
 import ctypes.wintypes as wt
 import time
 
-user32 = ctypes.WinDLL("user32", use_last_error=True)
-gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
-kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+import sys
+
+
+class _Fn:
+    """Stands in for a Windows function off Windows: settable, not callable."""
+    def __call__(self, *a, **k):
+        raise OSError("harness/win32.py is Windows-only")
+
+
+class _NoDLL:
+    def __getattr__(self, name):
+        fn = _Fn()
+        object.__setattr__(self, name, fn)
+        return fn
+
+
+_WinDLL = ctypes.WinDLL if sys.platform == "win32" else lambda *a, **k: _NoDLL()
+user32 = _WinDLL("user32", use_last_error=True)
+gdi32 = _WinDLL("gdi32", use_last_error=True)
+kernel32 = _WinDLL("kernel32", use_last_error=True)
 
 # Work in physical pixels. The game is launched with the HighDpiAware compat
 # layer so its 800x600 client area is 800x600 physical pixels, not stretched.
@@ -82,7 +99,7 @@ def cursor_pos() -> tuple[int, int]:
     return p.x, p.y
 
 
-EnumWindowsProc = ctypes.WINFUNCTYPE(wt.BOOL, wt.HWND, wt.LPARAM)
+EnumWindowsProc = getattr(ctypes, "WINFUNCTYPE", ctypes.CFUNCTYPE)(wt.BOOL, wt.HWND, wt.LPARAM)
 
 
 def windows_of_pid(pid: int, visible_only: bool = True) -> list[int]:

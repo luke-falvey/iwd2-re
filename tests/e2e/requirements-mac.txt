@@ -1,0 +1,13 @@
+# Python environment for the play tests on macOS (driver mode).
+# Recreate:
+#   python3 -m venv ~/iwd2-tools/venv
+#   ~/iwd2-tools/venv/bin/pip install -r tests/e2e/requirements-mac.txt
+# Tested with Homebrew python3 3.13 on Apple Silicon.
+# Direct imports: pytest, numpy, Pillow. The rest are pytest's dependencies.
+iniconfig==2.3.1
+numpy==2.5.5
+packaging==26.3
+pillow==13.0.0
+pluggy==1.7.0
+Pygments==2.21.0
+pytest==9.2.0

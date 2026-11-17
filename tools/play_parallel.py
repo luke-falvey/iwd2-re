@@ -32,7 +32,15 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--jobs", type=int, default=4)
     ap.add_argument("--target", default="reimpl", choices=["original", "reimpl"])
-    ap.add_argument("--play-root", default=r"C:\iwd2-play")
+    ap.add_argument("--play-root", default=r"C:\iwd2-play" if sys.platform == "win32"
+                    else str(Path.home() / "iwd2-play-port"))
+    ap.add_argument("--driver", action="store_true",
+                    help="macOS port: drive each game through its test driver (port 47800+N for job N) "
+                         "instead of tools/hook; one play folder per job (<play-root>-N)")
+    ap.add_argument("--port-base", type=int, default=47800, help="with --driver: the first job's port")
+    ap.add_argument("--no-compare", action="store_true", help="with --driver: skip golden comparisons")
+    ap.add_argument("--ref", default=os.environ.get("IWD2_REF_DIR"),
+                    help="off Windows: the reference game folder tools/make_play_dir.py copies from")
     ap.add_argument("--exe", default=None, help="override the exe to launch")
     ap.add_argument("--repeat", type=int, default=1, help="run each chosen scenario this many times")
     ap.add_argument("--no-retry", action="store_true", help="don't rerun failed scenarios alone")
@@ -53,7 +61,10 @@ def main() -> int:
     play_dirs = []
     for i in range(1, args.jobs + 1):
         d = Path(f"{args.play_root}-{i}")
-        if not (d / "CHITIN.KEY").exists():
+        if not (d / "CHITIN.KEY").exists() and sys.platform != "win32":
+            subprocess.run([sys.executable, "-I", str(REPO / "tools" / "make_play_dir.py"), "--ref", args.ref,
+                            "--play", str(d)], check=True)
+        elif not (d / "CHITIN.KEY").exists():
             subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File",
                             str(REPO / "tools" / "make_play_dir.ps1"), "-Play", str(d)], check=True)
         # Tile the windows (three across): screenshots are read from the
@@ -83,8 +94,11 @@ def main() -> int:
             except queue.Empty:
                 return
             start = time.time()
-            p = subprocess.run([sys.executable, "-m", "pytest", str(f), "--target", args.target, "--virtual",
-                                "--play-dir", str(play_dir), "--cpu", str(cpu), "-q"]
+            p = subprocess.run([sys.executable, "-m", "pytest", str(f), "--target", args.target]
+                               + (["--driver", "--port", str(args.port_base + play_dirs.index(play_dir))]
+                                  + (["--no-compare"] if args.no_compare else []) if args.driver else
+                                  ["--virtual", "--cpu", str(cpu)])
+                               + ["--play-dir", str(play_dir), "-q"]
                                + (["--exe", args.exe] if args.exe else []),
                                cwd=str(REPO), capture_output=True, text=True)
             lines = (p.stdout + p.stderr).splitlines()
