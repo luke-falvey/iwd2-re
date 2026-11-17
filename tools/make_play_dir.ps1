@@ -1,7 +1,7 @@
 # Build a disposable test copy of the game (IWD2_PLAY_DIR) from the pristine
 # reference (IWD2_REF_DIR). Large read-only folders are linked with junctions,
 # small and writable files are copied, and icewind2.ini is set up for testing
-# (windowed, 32 bpp, cheats on, intro movies off).
+# (windowed, 32 bpp, cheats on, intro movies off, weather off).
 #
 # Usage: powershell -ExecutionPolicy Bypass -File tools\make_play_dir.ps1 [-Ref C:\iwd2-ref] [-Play C:\iwd2-play] [-FullScreen]
 param(
@@ -66,6 +66,8 @@ $lines = Set-Ini $lines "Game Options" "Cheats" "1"
 # game only draws at the highest feedback levels.
 $lines = Set-Ini $lines "Game Options" "GUI Feedback Level" "5"
 $lines = Set-Ini $lines "Game Options" "Locator Feedback Level" "5"
+# A random storm darkens the area and the goldens are all in clear weather.
+$lines = Set-Ini $lines "Game Options" "Weather" "0"
 foreach ($m in "BISLOGO", "INFELOGO", "WOTC", "INTRO") { $lines = Set-Ini $lines "Movies" $m "1" }
 Set-Content -Path $ini -Value $lines -Encoding ASCII
 

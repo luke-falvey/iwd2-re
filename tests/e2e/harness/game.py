@@ -8,6 +8,7 @@ import math
 import os
 import random
 import subprocess
+import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -23,6 +24,60 @@ VK = {
     "ctrl": 0x11, "shift": 0x10, "alt": 0x12,
     **{f"f{i}": 0x6F + i for i in range(1, 13)},
 }
+
+
+# One real-input game at a time on this machine, across every worktree and
+# session: real input takes over the mouse and keyboard. The lock is an OS
+# lock on byte 0 of the file, so it goes away with a process that dies.
+# Nested holders in one process (a test that runs two games in turn) count.
+INPUT_LOCK = Path(os.environ.get("IWD2_INPUT_LOCK", r"C:\iwd2-tools\locks\real-input.lock"))
+INPUT_LOCK_WAIT = 3 * 3600.0
+_input_lock_fd: int | None = None
+_input_lock_count = 0
+
+
+def _acquire_input_lock() -> None:
+    global _input_lock_fd, _input_lock_count
+    if _input_lock_count:
+        _input_lock_count += 1
+        return
+    import msvcrt
+    INPUT_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(str(INPUT_LOCK), os.O_RDWR | os.O_CREAT)
+    start = last_note = time.time()
+    while True:
+        try:
+            os.lseek(fd, 0, os.SEEK_SET)
+            msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+            break
+        except OSError:
+            now = time.time()
+            if now - start > INPUT_LOCK_WAIT:
+                os.close(fd)
+                raise AssertionError(f"another real-input run held {INPUT_LOCK} for over "
+                                     f"{INPUT_LOCK_WAIT / 3600:.0f} h")
+            if now - last_note > 300 or last_note == start:
+                print(f"waiting for {INPUT_LOCK} (another real-input run)", file=sys.stderr, flush=True)
+                last_note = now
+            time.sleep(2.0)
+    _input_lock_fd = fd
+    _input_lock_count = 1
+
+
+def _release_input_lock() -> None:
+    global _input_lock_fd, _input_lock_count
+    if not _input_lock_count:
+        return
+    _input_lock_count -= 1
+    if _input_lock_count or _input_lock_fd is None:
+        return
+    import msvcrt
+    try:
+        os.lseek(_input_lock_fd, 0, os.SEEK_SET)
+        msvcrt.locking(_input_lock_fd, msvcrt.LK_UNLCK, 1)
+    finally:
+        os.close(_input_lock_fd)
+        _input_lock_fd = None
 
 
 def vk_for(k: str) -> int:
@@ -57,8 +112,37 @@ class Game:
     shared: object = None
     vpos: tuple = (400, 300)
     cpu: int | None = None  # virtual mode: the CPU this instance is pinned to
+    _holds_input_lock: bool = False
 
     # ---- lifecycle -------------------------------------------------------
+
+    def _disable_weather(self) -> None:
+        """Turn weather off in the play dir's icewind2.ini. Rain and snow
+        start at random (CWeather::CheckWeather, rand() seeded from the clock)
+        and a storm darkens the whole area, so a golden recorded in clear
+        weather fails whenever one starts. The goldens were all recorded in
+        clear weather, which is what the game shows with weather off."""
+        ini = self.play_dir / "icewind2.ini"
+        if not ini.exists():
+            return
+        lines = ini.read_text().splitlines()
+        if "Weather=0" in lines:
+            return
+        out, done, section = [], False, ""
+        for ln in lines:
+            if ln.startswith("["):
+                if section == "[Game Options]" and not done:
+                    out.append("Weather=0")
+                    done = True
+                section = ln.strip()
+            elif ln.startswith("Weather="):
+                ln, done = "Weather=0", True
+            out.append(ln)
+        if not done:
+            if section != "[Game Options]":
+                out.append("[Game Options]")
+            out.append("Weather=0")
+        ini.write_text("\n".join(out) + "\n")
 
     def launch(self, timeout: float = 60.0) -> None:
         exe = self.exe or self.default_exe()
@@ -72,6 +156,10 @@ class Game:
         self.rng = random.Random(self.seed)
         if self.virtual and self.cpu is not None:
             env["IWD2_HOOK_CPU"] = str(self.cpu)
+        if not self.virtual and not self._holds_input_lock:
+            _acquire_input_lock()
+            self._holds_input_lock = True
+        self._disable_weather()
         if self.virtual:
             hook = REPO / "build" / "hook" / "Release"
             self.proc = subprocess.Popen([str(hook / "iwd2launch.exe"), str(hook / "iwd2hook.dll"), str(exe)],
@@ -164,18 +252,28 @@ class Game:
         path = Path(os.environ.get("IWD2RE_CRASH_DIR", str(self.out_dir))) / "iwd2re-stacks.txt"
         if path.exists():
             path.unlink()
-        if not win32.signal_event(f"iwd2re-dump-{self.pid}"):
-            return None
-        for _ in range(240):
-            time.sleep(0.25)
-            if path.exists() and b"== end ==" in path.read_bytes():
-                return path
-        return None
+        if win32.signal_event(f"iwd2re-dump-{self.pid}"):
+            for _ in range(60):
+                time.sleep(0.25)
+                if path.exists() and b"== end ==" in path.read_bytes():
+                    return path
+        # The game's own dump thread did not answer (a thread holding a lock
+        # it needs is stuck): read the threads from outside instead. Resolve
+        # with tools/symbolize_raw.py.
+        ext = path.with_name("iwd2re-stacks-ext-raw.txt")
+        subprocess.run([sys.executable, str(Path(__file__).with_name("extdump.py")), str(self.pid), str(ext)],
+                       timeout=60)
+        return ext if ext.exists() else None
 
     def close(self) -> None:
-        if self.proc and self.proc.poll() is None:
-            self.proc.kill()
-            self.proc.wait(10)
+        try:
+            if self.proc and self.proc.poll() is None:
+                self.proc.kill()
+                self.proc.wait(10)
+        finally:
+            if self._holds_input_lock:
+                self._holds_input_lock = False
+                _release_input_lock()
 
     def __enter__(self) -> "Game":
         self.launch()
