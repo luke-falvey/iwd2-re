@@ -19,7 +19,6 @@ brought the game up to its menu screens. This repository continues that work.
 - **Known problems:**
   - Rarely, a new game stalls before Hedron's opening dialogue.
   - Party members sometimes stay behind at a door, so the area change does not happen.
-  - Movies are not played.
   - Multiplayer is untested.
 - **Graphics:** only the windowed 32-bit software renderer is used (`3D Acceleration=0`).
 - **A macOS (Apple Silicon) port** is in progress on the `port/macos` branch.
@@ -57,7 +56,7 @@ iwd2-re.exe
 `make_play_dir.ps1` sets the copy up for testing:
 - windowed;
 - cheats on;
-- intro movies off;
+- the opening movies marked as already seen (they still play at start-up);
 - weather off.
 
 Edit `icewind2.ini` in the copy to change these. Running the script again deletes the copy,

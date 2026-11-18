@@ -1,7 +1,8 @@
 # Build a disposable test copy of the game (IWD2_PLAY_DIR) from the pristine
 # reference (IWD2_REF_DIR). Large read-only folders are linked with junctions,
 # small and writable files are copied, and icewind2.ini is set up for testing
-# (windowed, 32 bpp, cheats on, intro movies off, weather off).
+# (windowed, 32 bpp, cheats on, opening movies marked as already seen,
+# weather off).
 #
 # Usage: powershell -ExecutionPolicy Bypass -File tools\make_play_dir.ps1 [-Ref C:\iwd2-ref] [-Play C:\iwd2-play] [-FullScreen]
 param(
