@@ -26,8 +26,18 @@
   handler's stack file is the way to get a backtrace.
 - Agents (Sonnet): 4 runs, about 828,000 tokens in total: shim headers 259k, shim kernel 333k,
   64-bit sites 121k, DirectSound 115k.
+- Harness `--driver` mode (merge 1a9a9064): fifth agent, about 104,000 tokens; agent total about
+  932,000 across five Sonnet runs.
+- First whole-suite run on the Mac, driver mode, `--no-compare`, 2 games at once (3965 s):
+  11 scenarios crashed with one bus error in `CVidPoly::FillConvexPoly` (a row offset computed
+  in unsigned 32-bit arithmetic, zero-extended when added to a 64-bit pointer). After the fix:
+  S1–S16 and S27 run to the end (S12's second half skips), no crashes, no hangs. S17–S26 skip
+  because their starting saves are banked from the original on the PC. S28 and S29 fail only
+  with "no golden image" (they compare by themselves).
 
 **Open:**
+- The play suite needs `tests/e2e/golden` (including `golden/bank`) from the PC before any
+  scenario counts as passed, and before S17–S26 can run at all.
 - Dimmed screens (behind a popup) show a checkerboard with a blue cast; to compare with a golden.
 - `IDirectDrawSurface::GetDC` (GDI text, only for double-byte fonts) is not supported.
 - Focus loss does not pause the game; questions in message boxes are answered "yes".
@@ -46,3 +56,5 @@
   `compat/cstring.h/.cpp`, `compat/collections.h` (`long` became `LONG`).
 - `CMakeLists.txt`, `tests/CMakeLists.txt`: non-Windows branches; `PortPointer.*` added to the
   source list for every build. `tools/gen_layout_asserts.py`: early return on 64-bit.
+- `CVidPoly.cpp` (`FillConvexPoly`): the row offset is cast to `LONG` before it is added to the
+  surface pointer; the same value in 32-bit builds.

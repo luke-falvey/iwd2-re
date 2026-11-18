@@ -536,7 +536,7 @@ them.
 | P0 Set up on the Mac | passed | 2026-11-18 | cmake, ninja, SDL3 3.4.20 pinned, `~/iwd2-play-port` |
 | P1 Everything compiles | passed | 2026-11-18 | 0 errors, 0 pointer-size warnings; unit tests 147 of 147 |
 | P2 Boots and plays | passed | 2026-11-18 | main menu, new game, Hedron's dialogue in Targos; sound not yet listened to |
-| P3 Test driver | in progress | 2026-11-18 | driver in the game done; harness `--driver` mode and goldens from the PC outstanding |
-| P4 Suite on the Mac | not started | | sound: the user listens |
+| P3 Test driver | in progress | 2026-11-18 | driver and harness `--driver` mode done; S1–S3 run to the end without comparisons; the gate waits for the goldens from the PC |
+| P4 Suite on the Mac | in progress | 2026-11-18 | no-compare run: 16 scenarios run to the end, no crashes or hangs; S17–S26 skip (banked saves are on the PC), S28/S29 need goldens; sound: the user listens |
 | M8 Mac application | not started | | signing is the user's decision |
 | M9 Movies, multiplayer | not started | | multiplayer only if asked |

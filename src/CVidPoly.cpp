@@ -197,10 +197,14 @@ BOOL CVidPoly::FillConvexPoly(WORD* pSurface, LONG lPitch, const CRect& rClipRec
     }
 
     if ((dwFlags & 0x8) != 0) {
-        pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(pSurface) + lPitch * (rClip.bottom - nMinYPt));
+        // NOTE: Port: The row offset is unsigned 32-bit arithmetic that wraps
+        // to a negative offset when the polygon starts above the clip
+        // rectangle. Cast to signed so that it is not zero-extended where
+        // pointers are 64 bits wide.
+        pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(pSurface) + static_cast<LONG>(lPitch * (rClip.bottom - nMinYPt)));
         lPitch = -lPitch;
     } else {
-        pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(pSurface) + (nMinYPt - rClip.top) * lPitch);
+        pSurface = reinterpret_cast<WORD*>(reinterpret_cast<BYTE*>(pSurface) + static_cast<LONG>((nMinYPt - rClip.top) * lPitch));
     }
 
     ptRefAdjusted.y += nMinYPt - rClip.top;
