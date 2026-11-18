@@ -6,10 +6,15 @@
 // "index module address symbol + offset". Resolve them to source lines with
 // `atos -o <exe> -l <load address> <addresses>`; the load address is the
 // first line of the file.
+//
+// SIGUSR1 appends the stack of the main thread to the same file and lets the
+// game carry on: `kill -USR1 <pid>` shows where a hung game is stuck (the
+// play-test harness does this before it kills a game that failed).
 
 #include <execinfo.h>
 #include <fcntl.h>
 #include <mach-o/dyld.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -48,6 +53,31 @@ void OnFatalSignal(int sig, siginfo_t* info, void*)
     raise(sig);
 }
 
+pthread_t g_mainThread;
+
+void OnDumpSignal(int sig)
+{
+    // The signal goes to any thread; pass it on to the main one.
+    if (!pthread_equal(pthread_self(), g_mainThread)) {
+        pthread_kill(g_mainThread, sig);
+        return;
+    }
+
+    void* frames[64];
+    int count = backtrace(frames, 64);
+
+    char head[120];
+    snprintf(head, sizeof(head), "\n*** stack of the main thread on request, image base %p\n",
+        static_cast<const void*>(_dyld_get_image_header(0)));
+
+    int fd = open("iwd2re-stacks.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (fd >= 0) {
+        Write(fd, head);
+        backtrace_symbols_fd(frames, count, fd);
+        close(fd);
+    }
+}
+
 } // namespace
 
 void InstallCrashHandler()
@@ -62,4 +92,13 @@ void InstallCrashHandler()
     for (size_t k = 0; k < sizeof(signals) / sizeof(signals[0]); k++) {
         sigaction(signals[k], &action, NULL);
     }
+
+    g_mainThread = pthread_self();
+
+    struct sigaction dump;
+    memset(&dump, 0, sizeof(dump));
+    dump.sa_handler = OnDumpSignal;
+    dump.sa_flags = SA_RESTART;
+    sigemptyset(&dump.sa_mask);
+    sigaction(SIGUSR1, &dump, NULL);
 }

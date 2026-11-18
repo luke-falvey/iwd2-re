@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -165,6 +166,13 @@ class DriverBackend:
         the crash stacks if the game wrote any, and a last frame there."""
         stacks = None
         src = self.play_dir / STACKS if self.play_dir else None
+        if self.proc is not None and self.proc.poll() is None:
+            # Still running: ask for the main thread's stack (crash_posix.cpp).
+            try:
+                self.proc.send_signal(signal.SIGUSR1)
+                time.sleep(0.5)
+            except OSError:
+                pass
         if src is not None and src.exists():
             stacks = self.out_dir / STACKS
             shutil.copyfile(src, stacks)

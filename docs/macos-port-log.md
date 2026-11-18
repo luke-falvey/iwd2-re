@@ -34,11 +34,14 @@
   S1–S16 and S27 run to the end (S12's second half skips), no crashes, no hangs. S17–S26 skip
   because their starting saves are banked from the original on the PC. S28 and S29 fail only
   with "no golden image" (they compare by themselves).
+- `kill -USR1 <pid>` appends the main thread's stack to `iwd2re-stacks.txt`; the harness asks
+  for it before it kills a game that failed, so a hang leaves a stack too.
 
 **Open:**
 - The play suite needs `tests/e2e/golden` (including `golden/bank`) from the PC before any
   scenario counts as passed, and before S17–S26 can run at all.
-- Dimmed screens (behind a popup) show a checkerboard with a blue cast; to compare with a golden.
+- Dimmed screens (behind a popup) show a checkerboard: that is the original's software path
+  (`CUIPanel::RenderDither`, black on every other pixel). Whether the colours match is for a golden.
 - `IDirectDrawSurface::GetDC` (GDI text, only for double-byte fonts) is not supported.
 - Focus loss does not pause the game; questions in message boxes are answered "yes".
 - `CAITrigger.cpp:107`: `sscanf("%d")` into a `SHORT` (original overrun, left as it is).
