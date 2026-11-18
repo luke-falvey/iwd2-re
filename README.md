@@ -16,9 +16,29 @@ brought the game up to its menu screens. This repository continues that work.
   and the rebuild with the same inputs and compare thousands of screenshots. Together they cover
   the game from the main menu to the opening of the Palisade battle in Targos. The latest full
   run passed 28 of 29.
+- **Movies** play through `binkw32.dll`, as in the original.
 - **Known problems:**
-  - Rarely, a new game stalls before Hedron's opening dialogue.
-  - Party members sometimes stay behind at a door, so the area change does not happen.
+  - **A new game sometimes stalls** after the party is chosen: roughly once in 100 to 150
+    new games in testing.
+    - What happens: the screen stays on the world view with "Paused for saving game" where
+      the Prologue screen should be. The game is still running; the Prologue screen draws
+      nothing.
+    - Ruled out: a deadlock between threads, lost input, the pause state, and an unfinished
+      save.
+    - Likely cause: the new game's autosave draws the world for its screenshot on the AI
+      thread while the main thread switches to the Prologue screen. The original's code has
+      the same race. A milder form leaves "PAUSED / UNPAUSED / Paused for chapter text" lines
+      in Hedron's opening dialogue.
+    - Workaround: start the new game again.
+  - **Party members sometimes stay behind at an exit or door,** and the party does not
+    change area. The members at the exit wait for everyone, as in the original; a straggler is
+    a member whose own walk ended early.
+    - Ruled out: lost clicks and the exit code itself (it matches the original). A bug in the
+      path search's start point is fixed and a walk's retries no longer give up on a target
+      square nobody can stand on; stragglers still happen, less often.
+    - Not known: why a member loses both its path and its path request after bumping into
+      another. The original does not show this.
+    - Workaround: click the straggler and send it to the exit.
   - Multiplayer is untested.
 - **Graphics:** only the windowed 32-bit software renderer is used (`3D Acceleration=0`).
 - **A macOS (Apple Silicon) port** is in progress on the `port/macos` branch.
