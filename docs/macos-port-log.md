@@ -36,6 +36,9 @@
   with "no golden image" (they compare by themselves).
 - `kill -USR1 <pid>` appends the main thread's stack to `iwd2re-stacks.txt`; the harness asks
   for it before it kills a game that failed, so a hang leaves a stack too.
+- `GetDeviceCaps` (one plane, 32 bits) and `GetStockObject` are no longer pending stubs; no
+  `[pending]` line is left in a game log. Risk R4 (sort ties): the game calls no `qsort` or
+  `std::sort` at all, so there is nothing to tie-break.
 
 **Open:**
 - The play suite needs `tests/e2e/golden` (including `golden/bank`) from the PC before any

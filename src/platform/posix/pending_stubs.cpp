@@ -22,7 +22,8 @@
 // ---- wingdi.h (17 stubs)
 HGDIOBJ SelectObject(HDC hdc, HGDIOBJ h) { PENDING_LOG("SelectObject"); return HGDIOBJ(); }
 BOOL DeleteObject(HGDIOBJ ho) { PENDING_LOG("DeleteObject"); return BOOL(); }
-HGDIOBJ GetStockObject(int i) { PENDING_LOG("GetStockObject"); return HGDIOBJ(); }
+// Only used as the window class background, which nothing here paints.
+HGDIOBJ GetStockObject(int i) { static int object; return reinterpret_cast<HGDIOBJ>(&object); }
 HBRUSH CreateSolidBrush(COLORREF color) { PENDING_LOG("CreateSolidBrush"); return HBRUSH(); }
 HFONT CreateFontA(int cHeight, int cWidth, int cEscapement, int cOrientation, int cWeight, DWORD bItalic, DWORD bUnderline, DWORD bStrikeOut, DWORD iCharSet, DWORD iOutPrecision, DWORD iClipPrecision, DWORD iQuality, DWORD iPitchAndFamily, LPCSTR pszFaceName) { PENDING_LOG("CreateFontA"); return HFONT(); }
 HPEN CreatePen(int iStyle, int cWidth, COLORREF color) { PENDING_LOG("CreatePen"); return HPEN(); }
@@ -33,7 +34,8 @@ BOOL ExtTextOutA(HDC hdc, int x, int y, UINT options, const RECT* lprect, LPCSTR
 BOOL TextOutA(HDC hdc, int x, int y, LPCSTR lpString, int c) { PENDING_LOG("TextOutA"); return BOOL(); }
 BOOL GetTextExtentPoint32A(HDC hdc, LPCSTR lpString, int c, LPSIZE lpsz) { PENDING_LOG("GetTextExtentPoint32A"); return BOOL(); }
 BOOL Polygon(HDC hdc, const POINT* apt, int cpt) { PENDING_LOG("Polygon"); return BOOL(); }
-int GetDeviceCaps(HDC hdc, int index) { PENDING_LOG("GetDeviceCaps"); return int(); }
+// The desktop is one plane of 32 bits per pixel (ddraw_soft.cpp).
+int GetDeviceCaps(HDC hdc, int index) { return index == PLANES ? 1 : index == BITSPIXEL ? 32 : 0; }
 int ChoosePixelFormat(HDC hdc, const PIXELFORMATDESCRIPTOR* ppfd) { PENDING_LOG("ChoosePixelFormat"); return int(); }
 BOOL SetPixelFormat(HDC hdc, int format, const PIXELFORMATDESCRIPTOR* ppfd) { PENDING_LOG("SetPixelFormat"); return BOOL(); }
 BOOL SwapBuffers(HDC hdc) { PENDING_LOG("SwapBuffers"); return BOOL(); }
